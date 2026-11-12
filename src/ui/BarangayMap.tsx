@@ -47,6 +47,12 @@ import { useReducedMotion, VillagerLayer } from "./VillagerLayer";
 import { DAY_SECONDS } from "./villagers";
 
 const INCOME_EVERY_MS = 3000;
+/** How far (in tiles) the title screen's view drifts each way. */
+const SCENIC_DRIFT = 3;
+/** One full sway of the title screen's drift, in seconds. */
+const SCENIC_PERIOD_SECONDS = 140;
+/** Tile size on the title screen: wide enough to see the barangay around the logo. */
+const SCENIC_TILE = 26;
 /** A press that moves less than this is a tap, not a drag. */
 const TAP_SLOP_PX = 8;
 
@@ -87,8 +93,10 @@ export function BarangayMap(props: {
   onBuildingMenu: (x: number, y: number, sx: number, sy: number) => void;
   /** The player tapped a resting spirit (the kapre): show its lore note. */
   onSpirit: (loreId: string, sx: number, sy: number) => void;
+  /** Background for the title screen: no input, no controls, slowly drifting (unless reduced motion). */
+  scenic?: boolean;
 }) {
-  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onBuildingMenu, onSpirit } = props;
+  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onBuildingMenu, onSpirit, scenic = false } = props;
   const plan = props.planState ?? state;
   const { map } = state;
   const area = useRef<HTMLDivElement>(null);
@@ -109,8 +117,21 @@ export function BarangayMap(props: {
   // Start centred on the plaza once the view has a size; re-centre if the barangay is replaced.
   const plazaKey = `${map.seed}:${map.plaza.x},${map.plaza.y}`;
   useEffect(() => {
-    if (view.w > 0) setCamRaw((c) => cameraOn(map.plaza, view, c?.tile));
-  }, [plazaKey, view.w > 0]);
+    if (view.w > 0 && scenic) {
+      // Title screen: zoomed out but always filling the screen (the drift included). On wide
+      // screens the barangay sits left of the menu; on phones, in the upper part by the logo.
+      const room = 2 * (SCENIC_DRIFT + 1);
+      const tile = Math.max(SCENIC_TILE, Math.ceil(view.w / (map.width - room)), Math.ceil(view.h / (map.height - room)));
+      // Matches the title screen's layout, which moves its menu to the right from 1024px (lg).
+      const wide = view.w >= 1024;
+      const want = {
+        x: map.plaza.x + 0.5 + (wide ? (view.w * 0.25) / tile : 0),
+        y: map.plaza.y + 0.5 + (wide ? 0 : (view.h * 0.2) / tile),
+      };
+      const keepIn = (v: number, half: number, size: number) => Math.min(size - half - SCENIC_DRIFT - 1, Math.max(half + SCENIC_DRIFT + 1, v));
+      setCamRaw({ tile, x: keepIn(want.x, view.w / 2 / tile, map.width), y: keepIn(want.y, view.h / 2 / tile, map.height) });
+    } else if (view.w > 0) setCamRaw((c) => cameraOn(map.plaza, view, c?.tile));
+  }, [plazaKey, view.w > 0, scenic && view.w >= 1024]);
 
   const centre = () => cam && setCam(cameraOn(map.plaza, view, cam.tile));
   const zoomBy = (factor: number) => cam && setCam(zoomAt(cam, view, factor, view.w / 2, view.h / 2));
@@ -138,7 +159,8 @@ export function BarangayMap(props: {
     return byTile;
   }, [state.buildings, map, content]);
 
-  const range = cam && view.w > 0 ? visibleRange(cam, view, map) : null;
+  // The scenic drift moves the view up to SCENIC_DRIFT tiles, so draw that much more around it.
+  const range = cam && view.w > 0 ? visibleRange(cam, view, map, scenic ? SCENIC_DRIFT + 1 : 1) : null;
   const rangeKey = range ? `${range.x0},${range.y0},${range.x1},${range.y1}` : "";
 
   // The grove that boosts the building being placed, if any (Kapre's grove for camps).
@@ -280,6 +302,7 @@ export function BarangayMap(props: {
 
   // Wheel zoom needs a non-passive listener to stop the page from scrolling.
   useEffect(() => {
+    if (scenic) return;
     const el = area.current!;
     const onWheel = (e: WheelEvent) => {
       e.preventDefault();
@@ -292,7 +315,7 @@ export function BarangayMap(props: {
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
-  }, [map]);
+  }, [map, scenic]);
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (!cam) return;
@@ -366,8 +389,27 @@ export function BarangayMap(props: {
     activate.current(x, y, r.left + r.width / 2, r.top);
   }, []);
 
-  useIncomeFloats(area, state, content, cam, view);
+  useIncomeFloats(area, state, content, cam, view, !scenic);
   const reducedMotion = useReducedMotion();
+
+  // Title screen: drift slowly over the barangay. The drift is only a couple of pixels a
+  // second, so ten small steps a second look smooth and cost far less than animating every frame.
+  const drift = useRef<HTMLDivElement>(null);
+  const driftPx = cam ? SCENIC_DRIFT * cam.tile : 0;
+  useEffect(() => {
+    const el = drift.current;
+    if (!el || !scenic || reducedMotion || !driftPx) return;
+    const move = () => {
+      const t = (2 * Math.PI * performance.now()) / 1000 / SCENIC_PERIOD_SECONDS;
+      el.style.transform = `translate3d(${(driftPx * Math.sin(t)).toFixed(2)}px, ${(driftPx * 0.5 * Math.sin(t * 0.7)).toFixed(2)}px, 0)`;
+    };
+    move();
+    const id = setInterval(move, 100);
+    return () => {
+      clearInterval(id);
+      el.style.transform = "";
+    };
+  }, [scenic, reducedMotion, driftPx]);
 
   const dayOffset = useMemo(() => -((Date.now() / 1000) % DAY_SECONDS), []);
   const typhoonComing = state.typhoon !== null;
@@ -424,21 +466,26 @@ export function BarangayMap(props: {
     <div className="relative min-h-0 flex-1">
       <div
         ref={area}
-        tabIndex={0}
-        role="application"
-        aria-label="Your barangay. Drag to move, scroll or pinch to zoom, arrow keys to pan, C to centre."
-        className={`forest-ground absolute inset-0 touch-none overflow-hidden outline-none select-none focus-visible:ring-4 focus-visible:ring-amber-300 focus-visible:ring-inset ${
-          placing ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"
-        }`}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-        onPointerLeave={() => setHover(null)}
-        onKeyDown={onKeyDown}
-        onContextMenu={onContextMenu}
-        {...dnd}
+        {...(scenic
+          ? { "aria-hidden": true, className: "forest-ground pointer-events-none absolute inset-0 overflow-hidden select-none" }
+          : {
+              tabIndex: 0,
+              role: "application",
+              "aria-label": "Your barangay. Drag to move, scroll or pinch to zoom, arrow keys to pan, C to centre.",
+              className: `forest-ground absolute inset-0 touch-none overflow-hidden outline-none select-none focus-visible:ring-4 focus-visible:ring-amber-300 focus-visible:ring-inset ${
+                placing ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"
+              }`,
+              onPointerDown,
+              onPointerMove,
+              onPointerUp,
+              onPointerCancel: onPointerUp,
+              onPointerLeave: () => setHover(null),
+              onKeyDown,
+              onContextMenu,
+              ...dnd,
+            })}
       >
+        <div ref={drift} className="absolute inset-0">
         {cam && (
           <div
             className="absolute top-0 left-0"
@@ -452,6 +499,11 @@ export function BarangayMap(props: {
           </div>
         )}
         {cam && view.w > 0 && <VillagerLayer state={state} content={content} cam={cam} view={view} reducedMotion={reducedMotion} />}
+        </div>
+        {/* The day/night and weather tints. Left out behind the title screen: its dark overlay hides
+            them, and a blended tint over the drifting map is costly to composite. */}
+        {!scenic && (
+          <>
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 mix-blend-multiply motion-safe:animate-day-night"
@@ -463,10 +515,13 @@ export function BarangayMap(props: {
             typhoonComing ? "bg-slate-800/35" : dry ? "bg-amber-300/15 mix-blend-multiply" : "bg-transparent"
           }`}
         />
+          </>
+        )}
       </div>
 
       {/* Camera controls sit outside the gesture area, so tapping them never pans the map. Mid-right
           keeps them clear of the event banners (top) and the gather buttons (bottom). */}
+      {!scenic && (
       <div className="absolute top-1/2 right-2 z-10 flex -translate-y-1/2 flex-col gap-2">
         <CamButton label="Zoom in" onClick={() => zoomBy(1.25)}>
           +
@@ -478,6 +533,7 @@ export function BarangayMap(props: {
           🏠
         </CamButton>
       </div>
+      )}
     </div>
   );
 }
@@ -503,11 +559,13 @@ function useIncomeFloats(
   content: Content,
   cam: Camera | null,
   view: View,
+  enabled: boolean,
 ) {
   const latest = useRef({ state, cam, view });
   latest.current = { state, cam, view };
 
   useEffect(() => {
+    if (!enabled) return;
     let turn = 0;
     const id = setInterval(() => {
       const { state: s, cam: c, view: v } = latest.current;
@@ -537,7 +595,7 @@ function useIncomeFloats(
       }
     }, INCOME_EVERY_MS);
     return () => clearInterval(id);
-  }, [area, content]);
+  }, [area, content, enabled]);
 }
 
 const GROUND: Record<Tile, string> = {

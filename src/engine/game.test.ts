@@ -5,8 +5,10 @@ import {
   build,
   buildingCost,
   buildingWorkers,
+  cleanName,
   gather,
   housing,
+  MAX_NAME_LENGTH,
   newGame,
   owned,
   rates,
@@ -33,7 +35,20 @@ describe("new game", () => {
   });
 
   it("has a barangay id and regional position", () => {
-    expect(newGame(content).barangay).toEqual({ id: "barangay-1", region: { x: 0, y: 0 } });
+    expect(newGame(content).barangay).toEqual({ id: "barangay-1", region: { x: 0, y: 0 }, name: "", datu: "" });
+  });
+
+  it("keeps the names the player chose, tidied", () => {
+    const s = newGame(content, 1, true, { name: "  Bagong   Ilog ", datu: "Lakan\u0007dula" });
+    expect(s.barangay).toMatchObject({ name: "Bagong Ilog", datu: "Lakandula" });
+    expect(newGame(content, 1, true, { name: "x".repeat(80) }).barangay.name).toHaveLength(MAX_NAME_LENGTH);
+    expect(cleanName(42)).toBe("");
+  });
+
+  it("names never change how the game plays", () => {
+    const a = tick(newGame(content, 5), content, 120);
+    const b = tick(newGame(content, 5, true, { name: "Malaya", datu: "Dakila" }), content, 120);
+    expect({ ...b, barangay: a.barangay }).toEqual(a);
   });
 });
 

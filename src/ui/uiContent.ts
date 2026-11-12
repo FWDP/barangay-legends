@@ -63,9 +63,29 @@ export interface AdvisorDef {
   lines: AdvisorLine[];
 }
 
+export const TITLE_TEXT = [
+  "tagline", "welcomeBack", "welcomeBackUnnamed", "continue", "newGame", "start", "youWillLead", "chooseNames",
+  "datuName", "barangayName", "reroll", "replaceTitle", "replaceText", "replaceConfirm", "cancel", "online",
+  "comingSoon", "help", "settings", "credits", "support", "supportSoon", "close", "free",
+] as const;
+export type TitleKey = (typeof TITLE_TEXT)[number];
+
+export interface TitleDef {
+  links: { source: string; contributors: string; support: string };
+  text: Record<TitleKey, Localized>;
+}
+
+/** Random default names for a new barangay and its datu. */
+export interface NameLists {
+  datu: string[];
+  barangay: string[];
+}
+
 export interface UiContent {
   help: Record<Lang, HelpDoc>;
   advisor: AdvisorDef;
+  title: TitleDef;
+  names: NameLists;
 }
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -168,7 +188,41 @@ export function validateAdvisor(raw: unknown, buildingIds: string[], file = "adv
   return raw as unknown as AdvisorDef;
 }
 
-export function buildUiContent(helpFiles: Record<string, unknown>, rawAdvisor: unknown, content: Content): UiContent {
+export function validateTitle(raw: unknown, file = "title"): TitleDef {
+  if (!isObject(raw) || !isObject(raw.links) || !isObject(raw.text)) throw new Error(`${file}: needs "links" and "text"`);
+  for (const k of ["source", "contributors", "support"]) {
+    const url = raw.links[k];
+    if (typeof url !== "string" || (url !== "" && !/^https:\/\//.test(url))) throw new Error(`${file}: links.${k} must be an https:// link or ""`);
+  }
+  if (!isText(raw.links.source)) throw new Error(`${file}: links.source is required`);
+  for (const k of TITLE_TEXT) localized(raw.text[k], `${file}: text.${k}`);
+  return raw as unknown as TitleDef;
+}
+
+export function validateNames(raw: unknown, file = "names"): NameLists {
+  if (!isObject(raw)) throw new Error(`${file}: must be a JSON object`);
+  for (const k of ["datu", "barangay"]) {
+    const list = raw[k];
+    if (!Array.isArray(list) || list.length === 0 || !list.every((n) => isText(n) && n.length <= 30)) {
+      throw new Error(`${file}: "${k}" needs at least one name of at most 30 characters`);
+    }
+  }
+  return raw as unknown as NameLists;
+}
+
+/** A random pick from each list (UI only: the engine's own randomness stays seeded). */
+export function randomNames(names: NameLists, random: () => number = Math.random): { datu: string; name: string } {
+  const pick = (l: string[]) => l[Math.floor(random() * l.length) % l.length];
+  return { datu: pick(names.datu), name: pick(names.barangay) };
+}
+
+export function buildUiContent(
+  helpFiles: Record<string, unknown>,
+  rawAdvisor: unknown,
+  content: Content,
+  rawTitle: unknown,
+  rawNames: unknown,
+): UiContent {
   const docs = Object.entries(helpFiles).map(([file, raw]) => validateHelp(raw, file));
   const help = {} as Record<Lang, HelpDoc>;
   for (const d of docs) {
@@ -181,11 +235,18 @@ export function buildUiContent(helpFiles: Record<string, unknown>, rawAdvisor: u
   for (const l of LANGS) {
     if (help[l].sections.map((s) => s.id).join(",") !== order) throw new Error(`help: ${l}.json must have the same sections as en.json, in order`);
   }
-  return { help, advisor: validateAdvisor(rawAdvisor, content.buildings.map((b) => b.id)) };
+  return {
+    help,
+    advisor: validateAdvisor(rawAdvisor, content.buildings.map((b) => b.id)),
+    title: validateTitle(rawTitle),
+    names: validateNames(rawNames),
+  };
 }
 
 export function loadUiContent(content: Content): UiContent {
   const help = import.meta.glob("../../content/help/*.json", { eager: true, import: "default" });
   const advisor = import.meta.glob("../../content/advisor.json", { eager: true, import: "default" });
-  return buildUiContent(help, Object.values(advisor)[0], content);
+  const title = import.meta.glob("../../content/title.json", { eager: true, import: "default" });
+  const names = import.meta.glob("../../content/names.json", { eager: true, import: "default" });
+  return buildUiContent(help, Object.values(advisor)[0], content, Object.values(title)[0], Object.values(names)[0]);
 }

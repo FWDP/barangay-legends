@@ -25,6 +25,8 @@ Other content you can edit the same way:
 
 - `content/help/en.json` and `content/help/fil.json`: the "?" help screen. Both files must have the same sections in the same order. Improvements to the Filipino are very welcome.
 - `content/advisor.json`: the elder adviser's tutorial steps and tips. Add a line with a new `id`, one of the listed `trigger` ids and text in English and Filipino, and the adviser will rotate it in. The file's `_comment` lists the triggers and the `{placeholders}` each one can use.
+- `content/names.json`: random default names for a new datu and barangay. Keep them made-up (not real historical datus or places) and at most 30 characters.
+- `content/title.json`: the title screen's text in English and Filipino, and its links (including the Support FWDP link).
 
 Rules for content pull requests:
 

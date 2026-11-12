@@ -35,7 +35,7 @@ import {
 } from "./region";
 import { DEFAULT_SEED } from "./rng";
 
-export const STATE_VERSION = 6;
+export const STATE_VERSION = 7;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -65,9 +65,21 @@ export interface Barangay {
   id: string;
   /** Position on the regional map. Only one barangay exists for now. */
   region: { x: number; y: number };
+  /** Names the player chose. Display only; "" when the player didn't name it. */
+  name: string;
+  datu: string;
 }
 
-export const DEFAULT_BARANGAY: Barangay = { id: "barangay-1", region: { x: 0, y: 0 } };
+export const DEFAULT_BARANGAY: Barangay = { id: "barangay-1", region: { x: 0, y: 0 }, name: "", datu: "" };
+
+/** Longest name kept for a barangay or datu. */
+export const MAX_NAME_LENGTH = 30;
+
+/** A name as stored: single spaces, no control characters, at most MAX_NAME_LENGTH characters. */
+export function cleanName(raw: unknown): string {
+  if (typeof raw !== "string") return "";
+  return [...raw.replace(/[\u0000-\u001f\u007f]/g, "").replace(/\s+/g, " ").trim()].slice(0, MAX_NAME_LENGTH).join("").trim();
+}
 
 export interface GameState {
   version: number;
@@ -119,7 +131,12 @@ export interface ClearingJob {
  * A new barangay. Pass a seed (e.g. from the clock in the UI) so each game's map and events
  * differ. `withRegion` is false for the AI neighbors themselves.
  */
-export function newGame(content: Content, seed: number = DEFAULT_SEED, withRegion = true): GameState {
+export function newGame(
+  content: Content,
+  seed: number = DEFAULT_SEED,
+  withRegion = true,
+  names: { name?: string; datu?: string } = {},
+): GameState {
   const { start } = content.rules;
   const resources = Object.fromEntries(RESOURCES.map((r) => [r, start.resources[r] ?? 0])) as Record<
     Resource,
@@ -127,7 +144,7 @@ export function newGame(content: Content, seed: number = DEFAULT_SEED, withRegio
   >;
   let state: GameState = {
     version: STATE_VERSION,
-    barangay: { id: DEFAULT_BARANGAY.id, region: { ...DEFAULT_BARANGAY.region } },
+    barangay: { id: DEFAULT_BARANGAY.id, region: { ...DEFAULT_BARANGAY.region }, name: cleanName(names.name), datu: cleanName(names.datu) },
     resources,
     villagers: start.villagers,
     buildings: [],

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { content } from "../engine/testUtils";
 import { browserLang, parseSettings, DEFAULT_SETTINGS } from "./settings";
-import { buildUiContent, fill, helpVars, loadUiContent, placeholders, validateAdvisor, validateHelp } from "./uiContent";
+import { buildUiContent, fill, helpVars, loadUiContent, placeholders, randomNames, validateAdvisor, validateHelp, validateNames, validateTitle } from "./uiContent";
 
 const ids = content.buildings.map((b) => b.id);
 const text = { en: "Hi", fil: "Kumusta" };
@@ -38,7 +38,7 @@ describe("help and adviser content", () => {
   it("rejects a translation that drops a section", () => {
     const ui = loadUiContent(content);
     const fil = { ...ui.help.fil, sections: ui.help.fil.sections.slice(1) };
-    expect(() => buildUiContent({ en: ui.help.en, fil }, advisor(), content)).toThrow(/same sections/);
+    expect(() => buildUiContent({ en: ui.help.en, fil }, advisor(), content, ui.title, ui.names)).toThrow(/same sections/);
   });
 
   it("rejects help with an unknown placeholder or missing body", () => {
@@ -55,6 +55,20 @@ describe("help and adviser content", () => {
     expect(() => validateAdvisor(advisor({ lines: [{ id: "a", trigger: "idle", text }] }), ids)).toThrow(/twice/);
     expect(() => validateAdvisor(advisor({ tutorial: [{ id: "a", done: { built: "castle" }, text }] }), ids)).toThrow(/unknown building/);
     expect(() => validateAdvisor(advisor({ tutorial: [{ id: "a", done: { event: "dance" }, text }] }), ids)).toThrow(/unknown event/);
+  });
+
+  it("checks the title screen text and links", () => {
+    const { title } = loadUiContent(content);
+    expect(() => validateTitle({ ...title, links: { ...title.links, support: "javascript:alert(1)" } })).toThrow(/https/);
+    expect(() => validateTitle({ ...title, text: { ...title.text, start: { en: "Start" } } })).toThrow(/"fil"/);
+  });
+
+  it("picks random default names from content/names.json", () => {
+    const { names } = loadUiContent(content);
+    expect(randomNames(names, () => 0)).toEqual({ datu: names.datu[0], name: names.barangay[0] });
+    expect(randomNames(names, () => 0.9999).datu).toBe(names.datu.at(-1));
+    expect(() => validateNames({ datu: [], barangay: ["A"] })).toThrow(/datu/);
+    expect(() => validateNames({ datu: ["x".repeat(31)], barangay: ["A"] })).toThrow(/30/);
   });
 
   it("fills placeholders and leaves unknown ones alone", () => {

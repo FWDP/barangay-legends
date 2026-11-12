@@ -21,12 +21,50 @@ function Volume(props: { label: string; value: number; muted: boolean; onChange:
   );
 }
 
+/** Sound on/off and volumes, adviser tips and language. Shared by the gear menu and the title screen. */
+export function Preferences(props: { muted: boolean; onToggleSound: () => void }) {
+  const { muted, onToggleSound } = props;
+  const settings = useSettings();
+  const lang = useLang();
+  return (
+    <>
+      <button
+        type="button"
+        aria-pressed={!muted}
+        className="game-btn w-full border-2 border-amber-950/60 bg-amber-100 px-3 py-2 text-left text-sm font-semibold text-amber-950"
+        onClick={onToggleSound}
+      >
+        {muted ? "🔇 Sound: off" : "🔊 Sound: on"}
+      </button>
+      <Volume label="🎶 Music" value={settings.musicVolume} muted={muted} onChange={(v) => updateSettings({ musicVolume: v })} />
+      <Volume label="🥁 Effects" value={settings.effectsVolume} muted={muted} onChange={(v) => updateSettings({ effectsVolume: v })} />
+      <button
+        type="button"
+        aria-pressed={settings.tips}
+        className="game-btn w-full border-2 border-amber-950/60 bg-amber-100 px-3 py-2 text-left text-sm font-semibold text-amber-950"
+        onClick={() => updateSettings({ tips: !settings.tips })}
+      >
+        {settings.tips ? "💬 Adviser tips: on" : "💬 Adviser tips: off"}
+      </button>
+      <label className="block text-xs font-semibold">
+        🌐 Language
+        <select
+          value={lang}
+          onChange={(e) => updateSettings({ language: e.target.value as "en" | "fil" })}
+          className="mt-1 w-full rounded-lg border-2 border-amber-950/60 bg-amber-100 px-2 py-1 text-sm text-amber-950"
+        >
+          <option value="en">English</option>
+          <option value="fil">Filipino</option>
+        </select>
+      </label>
+    </>
+  );
+}
+
 /** Small gear menu holding the rarely used things: sound, tips, language, start over and the source link. */
 export function SettingsMenu(props: { onReset: () => void; muted: boolean; onToggleSound: () => void }) {
   const { onReset, muted, onToggleSound } = props;
   const [open, setOpen] = useState(false);
-  const settings = useSettings();
-  const lang = useLang();
   const root = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
 
@@ -64,35 +102,7 @@ export function SettingsMenu(props: { onReset: () => void; muted: boolean; onTog
           className="wood-panel absolute top-full right-0 z-50 mt-2 max-h-[80dvh] w-60 space-y-2 overflow-y-auto rounded-xl border-2 border-amber-950/60 p-3 text-amber-50 shadow-xl"
         >
           <div className="text-outline font-display text-lg">Barangay Legends</div>
-          <button
-            type="button"
-            aria-pressed={!muted}
-            className="game-btn w-full border-2 border-amber-950/60 bg-amber-100 px-3 py-2 text-left text-sm font-semibold text-amber-950"
-            onClick={onToggleSound}
-          >
-            {muted ? "🔇 Sound: off" : "🔊 Sound: on"}
-          </button>
-          <Volume label="🎶 Music" value={settings.musicVolume} muted={muted} onChange={(v) => updateSettings({ musicVolume: v })} />
-          <Volume label="🥁 Effects" value={settings.effectsVolume} muted={muted} onChange={(v) => updateSettings({ effectsVolume: v })} />
-          <button
-            type="button"
-            aria-pressed={settings.tips}
-            className="game-btn w-full border-2 border-amber-950/60 bg-amber-100 px-3 py-2 text-left text-sm font-semibold text-amber-950"
-            onClick={() => updateSettings({ tips: !settings.tips })}
-          >
-            {settings.tips ? "💬 Adviser tips: on" : "💬 Adviser tips: off"}
-          </button>
-          <label className="block text-xs font-semibold">
-            🌐 Language (help and tips)
-            <select
-              value={lang}
-              onChange={(e) => updateSettings({ language: e.target.value as "en" | "fil" })}
-              className="mt-1 w-full rounded-lg border-2 border-amber-950/60 bg-amber-100 px-2 py-1 text-sm text-amber-950"
-            >
-              <option value="en">English</option>
-              <option value="fil">Filipino</option>
-            </select>
-          </label>
+          <Preferences muted={muted} onToggleSound={onToggleSound} />
           <button
             type="button"
             className="game-btn w-full border-2 border-red-950 bg-red-700 px-3 py-2 text-left text-sm font-semibold text-white"

@@ -1,5 +1,20 @@
 # Credits
 
+## Contributors
+
+Barangay Legends is made by [Filipino Web Development Peers (FWDP)](https://github.com/FWDP) and everyone who sends a pull request. See the full list on [GitHub](https://github.com/FWDP/barangay-legends/graphs/contributors). Salamat!
+
+## Licenses
+
+| What | License |
+| --- | --- |
+| Code | MIT (see `LICENSE`) |
+| Art and lore text | CC BY-SA 4.0 |
+| Font | SIL Open Font License 1.1 |
+| Name and logo | Reserved by FWDP |
+
+Barangay Legends is free to play. Nothing in the game is sold.
+
 ## Sound
 
 Every sound in the game is generated in the browser with the Web Audio API. There are **no audio files**, so nothing needs a license. The code is in `src/ui/sound.ts` (MIT, like the rest of the code).

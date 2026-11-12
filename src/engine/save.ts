@@ -1,7 +1,7 @@
 // Saving to the browser. The only engine module allowed to touch browser APIs,
 // and even here the storage is passed in so tests can use a fake.
 import { RESOURCES, type BuildingDef, type Content, type Resource } from "./content";
-import { newGame, placeAuto, STATE_VERSION, type ClearingJob, type GameState, type PlacedBuilding } from "./game";
+import { cleanName, newGame, placeAuto, STATE_VERSION, type ClearingJob, type GameState, type PlacedBuilding } from "./game";
 import {
   generateMap,
   inBounds,
@@ -106,6 +106,8 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
   // v5 → v6: undo, move and demolish. Adds the last build (nothing to undo after loading).
   // Bridges now store the river tiles they span; older bridges work theirs out when loaded.
   5: (raw) => ({ ...raw, version: 6, lastBuild: null }),
+  // v6 → v7: the player can name the barangay and the datu. Older barangays have no names.
+  6: (raw) => ({ ...raw, version: 7, barangay: isObject(raw.barangay) ? { ...raw.barangay, name: "", datu: "" } : raw.barangay }),
 };
 
 // ---------- Frozen v2 map rules (for the v1 → v2 migration only) ----------
@@ -231,7 +233,7 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean): GameSta
   if (isObject(b) && typeof b.id === "string" && b.id !== "" && isObject(b.region)) {
     const { x, y } = b.region;
     if (Number.isInteger(x) && Number.isInteger(y)) {
-      state.barangay = { id: b.id, region: { x: x as number, y: y as number } };
+      state.barangay = { id: b.id, region: { x: x as number, y: y as number }, name: cleanName(b.name), datu: cleanName(b.datu) };
     }
   }
 

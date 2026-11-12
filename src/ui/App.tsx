@@ -15,6 +15,7 @@ import { Hud } from "./Hud";
 import { SettingsMenu } from "./SettingsMenu";
 import { AdvisorBubble, useAdvisor } from "./Advisor";
 import { HelpPanel } from "./HelpPanel";
+import { TitleScreen } from "./TitleScreen";
 import { useLang, useSettings } from "./settings";
 import { initSound, isMuted, setMuted, sfx } from "./sound";
 import { loadUiContent } from "./uiContent";
@@ -106,7 +107,9 @@ function LoreToast(props: { loreId: string | null; onClose: () => void }) {
 }
 
 export function App() {
-  const { state, dispatch, onReset } = useGame();
+  // The title screen shows first; the game stands still behind it until the player picks.
+  const [screen, setScreen] = useState<"title" | "game">("title");
+  const { state, dispatch, onReset, startNew, hasSave } = useGame(screen === "game");
   const [muted, setMutedState] = useState(isMuted);
   const [selected, setSelected] = useState<string | null>(null);
   const [balete, setBalete] = useState<{ x: number; y: number } | null>(null);
@@ -129,7 +132,7 @@ export function App() {
   const advisor = useAdvisor(state, content, ui.advisor, {
     lang,
     tipsOn: settings.tips,
-    blocked: unseenReport(state, seenReport) !== undefined || loreNote !== null,
+    blocked: screen === "title" || unseenReport(state, seenReport) !== undefined || loreNote !== null,
   });
 
   // Moving uses the same placing mode as building, with the building picked up first.
@@ -256,6 +259,34 @@ export function App() {
     setMutedState(!muted);
     if (muted) sfx.click(); // just unmuted: confirm with a tick
   };
+
+  const helpPanel = <HelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} help={ui.help} lang={lang} content={content} />;
+
+  if (screen === "title") {
+    return (
+      <>
+        <TitleScreen
+          state={state}
+          hasSave={hasSave}
+          content={content}
+          ui={ui}
+          lang={lang}
+          muted={muted}
+          onToggleSound={toggleSound}
+          onHelp={() => setHelpOpen(true)}
+          onContinue={() => setScreen("game")}
+          onNewGame={(names, mode) => {
+            // Only local play exists; online (see online.ts) will branch here.
+            if (mode !== "local") return;
+            startNew(names);
+            setSeenReport(0);
+            setScreen("game");
+          }}
+        />
+        {helpPanel}
+      </>
+    );
+  }
 
   return (
     <div className="fixed inset-0 flex flex-col bg-green-800 pt-[env(safe-area-inset-top)] text-stone-800">
@@ -416,7 +447,7 @@ export function App() {
       <ReportDialog state={state} content={content} seen={seenReport} onSeen={setSeenReport} />
       <VictoryDialog state={state} content={content} waiting={unseenReport(state, seenReport) !== undefined} />
       <FloatLayer />
-      <HelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} help={ui.help} lang={lang} content={content} />
+      {helpPanel}
       <BaleteDialog
         target={balete}
         onCancel={() => setBalete(null)}

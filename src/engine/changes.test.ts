@@ -16,6 +16,7 @@ import {
   shelter,
   tick,
   undoSecondsLeft,
+  STATE_VERSION,
   type GameState,
 } from "./game";
 import { canPlace, countTiles, isClearable, isReachable, tileAt } from "./map";
@@ -358,7 +359,16 @@ describe("saving", () => {
     const v5 = { ...withState({}), version: 5 } as Record<string, unknown>;
     delete v5.lastBuild;
     const loaded = parseSave(JSON.stringify(v5), content)!;
-    expect(loaded.version).toBe(6);
+    expect(loaded.version).toBe(STATE_VERSION);
     expect(loaded.lastBuild).toBeNull();
+  });
+
+  it("migrates v6 saves to unnamed barangays, and keeps names through a save", () => {
+    const v6 = { ...withState({}), version: 6, barangay: { id: "barangay-1", region: { x: 0, y: 0 } } };
+    const loaded = parseSave(JSON.stringify(v6), content)!;
+    expect(loaded.version).toBe(STATE_VERSION);
+    expect(loaded.barangay).toEqual({ id: "barangay-1", region: { x: 0, y: 0 }, name: "", datu: "" });
+    const named = withState({ barangay: { id: "barangay-1", region: { x: 0, y: 0 }, name: "Malaya", datu: "Dakila" } });
+    expect(parseSave(JSON.stringify(named), content)!.barangay).toMatchObject({ name: "Malaya", datu: "Dakila" });
   });
 });

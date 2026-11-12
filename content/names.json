@@ -1,0 +1,13 @@
+{
+  "_comment": "Random default names on the title screen. Made-up names built from Tagalog and Visayan words; none is meant to be a real historical datu or place, and none repeats a neighbor in content/neighbors. Add more in a pull request (at most 30 characters each).",
+  "datu": [
+    "Dakila", "Magiting", "Banaag", "Tanglaw", "Sinag", "Kidlat", "Habagat", "Amihan",
+    "Hiraya", "Mayumi", "Ligaya", "Marikit", "Tala", "Bituin", "Liwayway", "Bagwis",
+    "Alon", "Dumalo", "Sagisag", "Lakas"
+  ],
+  "barangay": [
+    "Sapang Bato", "Bagong Ilog", "Matang Tubig", "Ilaya", "Wawa", "Kawayanan",
+    "Tubigan", "Dalampasigan", "Pulong Kawayan", "Lawang Bato", "Ilog Pinag", "Balite",
+    "Kalumpang", "Hiyas ng Ilog", "Bukal", "Pampang"
+  ]
+}

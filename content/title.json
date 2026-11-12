@@ -1,0 +1,34 @@
+{
+  "_comment": "Title screen text in every language, and its links. 'support' is the Support FWDP donation page (GitHub Sponsors or Ko-fi, per docs/game-design.md); leave it empty until FWDP has one and the button says so. Text may use {datu} and {barangay}.",
+  "links": {
+    "source": "https://github.com/FWDP/barangay-legends",
+    "contributors": "https://github.com/FWDP/barangay-legends/graphs/contributors",
+    "support": ""
+  },
+  "text": {
+    "tagline": { "en": "Grow a barangay by the river.", "fil": "Palaguin ang barangay sa tabi ng ilog." },
+    "welcomeBack": { "en": "Welcome back, Datu {datu} of {barangay}.", "fil": "Maligayang pagbabalik, Datu {datu} ng {barangay}." },
+    "welcomeBackUnnamed": { "en": "Welcome back, Datu.", "fil": "Maligayang pagbabalik, Datu." },
+    "continue": { "en": "Continue", "fil": "Ituloy" },
+    "newGame": { "en": "New game", "fil": "Bagong laro" },
+    "start": { "en": "Start", "fil": "Magsimula" },
+    "youWillLead": { "en": "You will lead as Datu {datu} of {barangay}.", "fil": "Mamumuno ka bilang Datu {datu} ng {barangay}." },
+    "chooseNames": { "en": "Choose names", "fil": "Pumili ng pangalan" },
+    "datuName": { "en": "Datu name", "fil": "Pangalan ng datu" },
+    "barangayName": { "en": "Barangay name", "fil": "Pangalan ng barangay" },
+    "reroll": { "en": "Pick other names", "fil": "Ibang pangalan" },
+    "replaceTitle": { "en": "Start a new barangay?", "fil": "Magsimula ng bagong barangay?" },
+    "replaceText": { "en": "This replaces your current barangay, its villagers and resources. It can't be undone.", "fil": "Papalitan nito ang kasalukuyan mong barangay, ang mga tao at yaman nito. Hindi na ito maibabalik." },
+    "replaceConfirm": { "en": "Start new game", "fil": "Simulan ang bagong laro" },
+    "cancel": { "en": "Cancel", "fil": "Huwag" },
+    "online": { "en": "Online play", "fil": "Laro online" },
+    "comingSoon": { "en": "Coming soon", "fil": "Malapit na" },
+    "help": { "en": "How to play", "fil": "Paano maglaro" },
+    "settings": { "en": "Settings", "fil": "Mga setting" },
+    "credits": { "en": "Credits", "fil": "Pagkilala" },
+    "support": { "en": "Support FWDP", "fil": "Suportahan ang FWDP" },
+    "supportSoon": { "en": "Support link coming soon", "fil": "Malapit na ang link" },
+    "close": { "en": "Close", "fil": "Isara" },
+    "free": { "en": "Free and open source. Nothing is for sale.", "fil": "Libre at bukas ang code. Walang ibinebenta." }
+  }
+}

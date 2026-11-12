@@ -13,8 +13,11 @@ export function Hud(props: { state: GameState; content: Content; children: React
 
   return (
     <header className="wood-panel relative z-30 flex items-center gap-1 border-b-2 border-amber-950/60 px-1.5 py-1.5 sm:gap-2 sm:px-3">
-      <h1 className="text-outline mr-2 hidden font-display text-xl tracking-wide text-amber-100 md:block">
-        Barangay Legends
+      <h1
+        className="text-outline mr-2 hidden max-w-48 truncate font-display text-xl tracking-wide text-amber-100 md:block"
+        title={state.barangay.datu ? `Datu ${state.barangay.datu}` : undefined}
+      >
+        {state.barangay.name || "Barangay Legends"}
       </h1>
       <ResourceChip resource="rice" amount={state.resources.rice} rates={r} note={notes(state, content).rice} />
       <ResourceChip resource="wood" amount={state.resources.wood} rates={r} note={notes(state, content).wood} />
