@@ -34,7 +34,12 @@ export interface BuildingDef {
   /** Villager capacity added per copy. */
   housing?: number;
   adjacencyBonus?: AdjacencyBonus;
-  unlock: { start?: boolean };
+  /** Where it can be built. Default "cleared" land; a bridge goes on the river. */
+  placeOn?: "cleared" | "river";
+  /** A bridge turns up to maxSpan river tiles into a crossing, opening the far bank. */
+  bridge?: { maxSpan: number };
+  /** Available from the start, or once the barangay has this many villagers. */
+  unlock: { start?: boolean; villagers?: number };
   sources: string[];
 }
 
@@ -50,15 +55,39 @@ export interface Rules {
   gatherPerClick: number;
   secondsPerNewVillager: number;
   map: MapRules;
+  clearing: ClearingRules;
 }
 
-/** Columns, left to right: river | buildable land | forest. Rows grow from the plaza row (0). */
+/** A lore note: short text with at least one source. */
+export interface LoreNote {
+  id: string;
+  name: string;
+  description: string;
+  tradition?: string;
+  sources: string[];
+  [extra: string]: unknown;
+}
+
+/** The generated map: forest with a winding river, a few balete trees and a cleared start. */
 export interface MapRules {
   width: number;
-  riverColumns: number;
-  forestColumns: number;
-  /** The map starts with rows -minRadius..minRadius. */
-  minRadius: number;
+  height: number;
+  /** The start area is a square of (2r + 1) tiles around the plaza. */
+  startClearRadius: number;
+  riverWidth: number;
+  baleteTrees: number;
+  /** Balete trees grow at least this many tiles from the plaza. */
+  baleteMinDistance: number;
+}
+
+/** Clearing a forest tile: villagers work for a while and bring back some wood. */
+export interface ClearingRules {
+  baseSeconds: number;
+  /** Each tile cleared so far multiplies the time by this. */
+  secondsGrowth: number;
+  /** Villagers taken off other work while clearing. */
+  workers: number;
+  wood: number;
 }
 
 /** Gutom: at 0 rice villagers stop working; after a grace period, families leave. */
@@ -140,10 +169,35 @@ export interface Events {
   typhoon?: TyphoonEvent;
 }
 
+/**
+ * A grove: while a tile of this kind stands (a balete), buildings of one type within `radius`
+ * tiles (straight-line distance between tile centres) produce `percent` more of a resource.
+ * Several groves never stack on the same building: it gets the bonus once.
+ */
+export interface GroveBlessing {
+  id: string;
+  type: "grove";
+  name: string;
+  description: string;
+  tile: "balete";
+  radius: number;
+  affects: string;
+  resource: Resource;
+  percent: number;
+  /** How often the spirit shows itself: chance per balete in each time window (UI only). */
+  sighting?: { chancePercent: number; windowSeconds: number };
+  tradition: string;
+  /** Lore note id (content/lore) shown when the player taps the spirit. */
+  lore?: string;
+  sources: string[];
+}
+
 export interface Content {
   buildings: BuildingDef[];
   rules: Rules;
   events: Events;
+  lore: Record<string, LoreNote>;
+  groves: GroveBlessing[];
 }
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
@@ -201,7 +255,17 @@ export function validateBuilding(raw: unknown, file = "building"): BuildingDef {
   if (raw.produces !== undefined && !raw.workers) {
     throw new Error(`${file}: a building that produces needs "workers"`);
   }
+  if (raw.placeOn !== undefined && raw.placeOn !== "cleared" && raw.placeOn !== "river") {
+    throw new Error(`${file}: "placeOn" must be "cleared" or "river"`);
+  }
+  if (raw.bridge !== undefined && (!isObject(raw.bridge) || !Number.isInteger(raw.bridge.maxSpan) || (raw.bridge.maxSpan as number) < 1)) {
+    throw new Error(`${file}: "bridge.maxSpan" must be a whole number >= 1`);
+  }
+  if (raw.placeOn === "river" && raw.bridge === undefined) throw new Error(`${file}: a building on the river must be a "bridge"`);
   if (!isObject(raw.unlock)) throw new Error(`${file}: "unlock" must be an object`);
+  if (raw.unlock.villagers !== undefined && !isNonNegNumber(raw.unlock.villagers)) {
+    throw new Error(`${file}: "unlock.villagers" must be a number >= 0`);
+  }
   if (
     !Array.isArray(raw.sources) ||
     raw.sources.length === 0 ||
@@ -228,14 +292,19 @@ export function validateRules(raw: unknown): Rules {
   }
   const map = raw.map;
   if (!isObject(map)) throw new Error('rules: missing "map"');
-  for (const key of ["width", "riverColumns", "forestColumns", "minRadius"]) {
+  for (const key of ["width", "height", "startClearRadius", "riverWidth", "baleteTrees", "baleteMinDistance"]) {
     if (!Number.isInteger(map[key]) || (map[key] as number) < 0) {
       throw new Error(`rules: "map.${key}" must be a whole number >= 0`);
     }
   }
-  if ((map.width as number) - (map.riverColumns as number) - (map.forestColumns as number) < 3) {
-    throw new Error("rules: the map needs at least 3 land columns between the river and the forest");
+  const r = map.startClearRadius as number;
+  if ((map.width as number) < 4 * r + 12 || (map.height as number) < 2 * r + 5) {
+    throw new Error("rules: the map is too small for the start area, the river and forest on both banks");
   }
+  const clearing = raw.clearing;
+  if (!isObject(clearing)) throw new Error('rules: missing "clearing"');
+  checkNumbers(clearing, ["baseSeconds", "secondsGrowth", "wood"], "rules: clearing", false);
+  checkNumbers(clearing, ["workers"], "rules: clearing", true);
   return raw as unknown as Rules;
 }
 
@@ -308,10 +377,38 @@ export function validateEvent(raw: unknown, file = "event"): EventDef {
 }
 
 /** Validates building, rules and event files and checks they fit together. */
+export function validateLore(raw: unknown, file = "lore"): LoreNote {
+  if (!isObject(raw)) throw new Error(`${file}: must be a JSON object`);
+  checkStrings(raw, ["id", "name", "description"], file);
+  if (!Array.isArray(raw.sources) || raw.sources.length === 0 || !raw.sources.every((x) => typeof x === "string" && x !== "")) {
+    throw new Error(`${file}: lore needs at least one source`);
+  }
+  return raw as LoreNote;
+}
+
+export function validateGrove(raw: unknown, file = "blessing"): GroveBlessing {
+  if (!isObject(raw)) throw new Error(`${file}: must be a JSON object`);
+  checkStrings(raw, ["id", "name", "description", "affects", "tradition"], file);
+  if (raw.type !== "grove") throw new Error(`${file}: unknown blessing type "${String(raw.type)}"`);
+  if (raw.tile !== "balete") throw new Error(`${file}: "tile" must be "balete"`);
+  if (!(RESOURCES as readonly string[]).includes(raw.resource as string)) throw new Error(`${file}: unknown resource "${String(raw.resource)}"`);
+  checkNumbers(raw, ["radius", "percent"], file, true);
+  if (raw.sighting !== undefined) {
+    const s = raw.sighting;
+    if (!isObject(s) || !isNonNegNumber(s.chancePercent) || !isNonNegNumber(s.windowSeconds) || s.windowSeconds === 0) {
+      throw new Error(`${file}: "sighting" needs "chancePercent" and "windowSeconds" > 0`);
+    }
+  }
+  if (!Array.isArray(raw.sources) || raw.sources.length === 0) throw new Error(`${file}: a blessing from folklore needs a source`);
+  return raw as unknown as GroveBlessing;
+}
+
 export function buildContent(
   buildingFiles: Record<string, unknown>,
   rawRules: unknown,
   eventFiles: Record<string, unknown> = {},
+  loreFiles: Record<string, unknown> = {},
+  blessingFiles: Record<string, unknown> = {},
 ): Content {
   const buildings = Object.entries(buildingFiles)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -346,7 +443,20 @@ export function buildContent(
     }
     (events as Record<string, EventDef>)[event.type] = event;
   }
-  return { buildings, rules, events };
+  const lore: Record<string, LoreNote> = {};
+  for (const [file, raw] of Object.entries(loreFiles)) {
+    const note = validateLore(raw, file);
+    lore[note.id] = note;
+  }
+  const groves = Object.entries(blessingFiles)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([file, raw]) => {
+      const grove = validateGrove(raw, file);
+      if (!ids.has(grove.affects)) throw new Error(`${file}: "affects" names unknown building "${grove.affects}"`);
+      if (grove.lore && !lore[grove.lore]) throw new Error(`${file}: "lore" names unknown lore note "${grove.lore}"`);
+      return grove;
+    });
+  return { buildings, rules, events, lore, groves };
 }
 
 /** Loads every JSON file in content/ at build time (Vite bundles them). */
@@ -357,5 +467,7 @@ export function loadContent(): Content {
   });
   const rules = import.meta.glob("../../content/rules.json", { eager: true, import: "default" });
   const events = import.meta.glob("../../content/events/*.json", { eager: true, import: "default" });
-  return buildContent(files, Object.values(rules)[0], events);
+  const lore = import.meta.glob("../../content/lore/*.json", { eager: true, import: "default" });
+  const blessings = import.meta.glob("../../content/blessings/*.json", { eager: true, import: "default" });
+  return buildContent(files, Object.values(rules)[0], events, lore, blessings);
 }

@@ -1,0 +1,23 @@
+{
+  "id": "tulay",
+  "name": "Tulay",
+  "description": "A bamboo footbridge across the river. Opens the far bank for clearing.",
+  "icon": "🎋",
+  "order": 5,
+  "cost": {
+    "wood": 60
+  },
+  "repairCost": {
+    "wood": 15
+  },
+  "placeOn": "river",
+  "bridge": {
+    "maxSpan": 3
+  },
+  "unlock": {
+    "villagers": 20
+  },
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+  ]
+}

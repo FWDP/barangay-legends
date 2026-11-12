@@ -15,6 +15,34 @@
   --animate-fade-out: fade-out 900ms ease-out forwards;
   --animate-day-night: day-night 240s linear infinite;
   --animate-flicker: flicker 600ms ease-in-out infinite alternate;
+  --animate-smoke: smoke 2.6s ease-out infinite;
+  --animate-peek: peek 5s ease-in-out infinite;
+
+  /* The kapre's cigar smoke drifting up out of the balete. */
+  @keyframes smoke {
+    0% {
+      opacity: 0;
+      transform: translate(0, 0) scale(0.6);
+    }
+    30% {
+      opacity: 0.85;
+    }
+    100% {
+      opacity: 0;
+      transform: translate(30%, -120%) scale(1.2);
+    }
+  }
+  /* Slow blinking eyes among the leaves. */
+  @keyframes peek {
+    0%,
+    86%,
+    100% {
+      transform: scaleY(1);
+    }
+    90% {
+      transform: scaleY(0.1);
+    }
+  }
 
   @keyframes flicker {
     from {
@@ -180,4 +208,22 @@
   background-image:
     repeating-linear-gradient(170deg, rgb(255 255 255 / 0.22) 0 2px, transparent 2px 11px),
     linear-gradient(90deg, #0284c7, #38bdf8 55%, #0ea5e9);
+}
+
+/* Deep forest beyond the edge of the map. */
+@utility forest-ground {
+  background-color: #14532d;
+  background-image:
+    radial-gradient(circle at 25% 30%, rgb(5 46 22 / 0.7) 0 18%, transparent 19%),
+    radial-gradient(circle at 75% 70%, rgb(5 46 22 / 0.6) 0 16%, transparent 17%);
+  background-size: 48px 48px;
+}
+
+/* Bamboo planks of a tulay, laid across the river with a rail on each side. */
+@utility bridge-tile {
+  background-color: #c9a85a;
+  background-image:
+    repeating-linear-gradient(90deg, rgb(90 60 20 / 0.45) 0 2px, transparent 2px 22%),
+    linear-gradient(180deg, #6b4a1c 0 10%, #d8bb6c 10% 90%, #6b4a1c 90%);
+  box-shadow: 0 2px 3px rgb(0 0 0 / 0.35);
 }

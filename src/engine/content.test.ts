@@ -18,7 +18,7 @@ describe("content", () => {
   it("loads every building file in content/ and passes the schema check", () => {
     const content = loadContent();
     // In menu order ("order" in each file), not file-name order.
-    expect(content.buildings.map((b) => b.id)).toEqual(["bahay-kubo", "palayan", "woodcutter-camp", "babaylan-hut"]);
+    expect(content.buildings.map((b) => b.id)).toEqual(["bahay-kubo", "palayan", "woodcutter-camp", "babaylan-hut", "tulay"]);
   });
 
   it("matches the Week 1 numbers in docs/game-design.md", () => {
@@ -61,10 +61,25 @@ describe("content", () => {
     expect(() => buildContent({ "a.json": bad }, rules)).toThrow(/unknown terrain or building "volcano"/);
   });
 
-  it("rejects a map with no room between river and forest", () => {
+  it("rejects a map too small for the start area, river and forest", () => {
     const { buildings, rules } = loadContent();
     const files = Object.fromEntries(buildings.map((b) => [b.id, b]));
-    expect(() => buildContent(files, { ...rules, map: { ...rules.map, width: 4 } })).toThrow(/land columns/);
+    expect(() => buildContent(files, { ...rules, map: { ...rules.map, width: 12 } })).toThrow(/too small/);
+  });
+
+  it("has map, clearing and Tulay values in content", () => {
+    const { buildings, rules, lore } = loadContent();
+    expect(rules.map).toMatchObject({ width: 60, height: 40, startClearRadius: 3 });
+    expect(rules.clearing).toMatchObject({ baseSeconds: 6, workers: 2, wood: 3 });
+    expect(buildings.find((b) => b.id === "tulay")).toMatchObject({ placeOn: "river", unlock: { villagers: 20 }, bridge: { maxSpan: 3 } });
+    expect(lore.balete.sources.length).toBeGreaterThan(0);
+  });
+
+  it("rejects a river building that is not a bridge, and lore without sources", () => {
+    const { buildings, rules } = loadContent();
+    const files = Object.fromEntries(buildings.map((b) => [b.id, b]));
+    expect(() => buildContent({ "x.json": { ...good, placeOn: "river" } }, rules)).toThrow(/bridge/);
+    expect(() => buildContent(files, rules, {}, { "l.json": { id: "l", name: "L", description: "d", sources: [] } })).toThrow(/source/);
   });
 
   it("rejects duplicate ids", () => {

@@ -8,7 +8,7 @@ const burning = (s: GameState) => s.buildings.filter((b) => b.burningSince !== u
 const damaged = (s: GameState) => s.buildings.filter((b) => b.damaged);
 
 // Plain tiles (no adjacency bonus) for production checks.
-const fields = [at("palayan", 3, 2), at("woodcutter-camp", 3, -2)];
+const fields = [at("palayan", 3, 6), at("woodcutter-camp", 3, 2)];
 
 describe("seeded RNG", () => {
   it("is deterministic and stays in [0, 1)", () => {
@@ -35,7 +35,7 @@ describe("seeded RNG", () => {
 });
 
 describe("Gutom (hunger)", () => {
-  const hungry = withState({ resources: { rice: 0, wood: 0 }, villagers: 5, buildings: [...fields, at("bahay-kubo", 5, -1)] });
+  const hungry = withState({ resources: { rice: 0, wood: 0 }, villagers: 5, buildings: [...fields, at("bahay-kubo", 5, 3)] });
 
   it("stops all work at 0 rice", () => {
     expect(availableWorkers(hungry)).toBe(0);
@@ -110,10 +110,10 @@ describe("Sakit (sickness)", () => {
   });
 
   it("heals twice as fast with a Babaylan's Hut, but not a damaged one", () => {
-    const hut = withState({ resources: fed, sick: [60], buildings: [at("babaylan-hut", 2, 2)] });
+    const hut = withState({ resources: fed, sick: [60], buildings: [at("babaylan-hut", 2, 6)] });
     expect(healRate(hut, calm)).toBe(2);
     expect(run(hut, 30.5).sick).toHaveLength(0);
-    const broken = { ...hut, buildings: [{ ...at("babaylan-hut", 2, 2), damaged: true }] };
+    const broken = { ...hut, buildings: [{ ...at("babaylan-hut", 2, 6), damaged: true }] };
     expect(healRate(broken, calm)).toBe(1);
   });
 
@@ -125,8 +125,8 @@ describe("Sakit (sickness)", () => {
   });
 
   it("spreads faster when many bahay kubo share walls", () => {
-    const apart = [at("bahay-kubo", 1, -3), at("bahay-kubo", 3, -3), at("bahay-kubo", 7, -3)];
-    const crowded = [at("bahay-kubo", 2, -1), at("bahay-kubo", 3, -1), at("bahay-kubo", 2, -2), at("bahay-kubo", 3, -2)];
+    const apart = [at("bahay-kubo", 1, 1), at("bahay-kubo", 3, 1), at("bahay-kubo", 7, 1)];
+    const crowded = [at("bahay-kubo", 2, 3), at("bahay-kubo", 3, 3), at("bahay-kubo", 2, 2), at("bahay-kubo", 3, 2)];
     expect(adjacentPairs(withState({ buildings: apart }), "bahay-kubo")).toBe(0);
     expect(adjacentPairs(withState({ buildings: crowded }), "bahay-kubo")).toBe(4);
     const chance = (buildings: typeof apart) => spreadChance(withState({ villagers: 8, sick: [60], buildings }), content);
@@ -153,36 +153,36 @@ describe("Sunog (fire)", () => {
       resources: fed,
       time: 400,
       buildings: [
-        { ...at("bahay-kubo", 2, 2), burningSince },
-        at("bahay-kubo", 3, 2), // next door
-        at("palayan", 2, 3), // next door, but not a house
-        at("bahay-kubo", 6, 2), // far away
+        { ...at("bahay-kubo", 2, 6), burningSince },
+        at("bahay-kubo", 3, 6), // next door
+        at("palayan", 2, 7), // next door, but not a house
+        at("bahay-kubo", 6, 6), // far away
       ],
     });
 
   it("never starts in the first 5 minutes, then lights a bahay kubo", () => {
     const always = withEvents({ fire: { chancePerSecond: 1 } }, calm);
-    const s = withState({ resources: fed, buildings: [at("bahay-kubo", 5, -1), at("palayan", 2, 2)] });
+    const s = withState({ resources: fed, buildings: [at("bahay-kubo", 5, 3), at("palayan", 2, 6)] });
     expect(burning(run(s, 299, always))).toHaveLength(0);
-    expect(burning(run(s, 300.5, always))).toEqual([{ ...at("bahay-kubo", 5, -1), burningSince: 300 }]);
+    expect(burning(run(s, 300.5, always))).toEqual([{ ...at("bahay-kubo", 5, 3), burningSince: 300 }]);
   });
 
   it("spreads to adjacent bahay kubo after a while, and only to them", () => {
     const s = run(row(400), sunog.spreadAfterSeconds + 0.5);
     const lit = burning(s).map((b) => `${b.x},${b.y}`);
-    expect(lit).toEqual(["2,2", "3,2"]);
+    expect(lit).toEqual(["2,6", "3,6"]);
   });
 
   it("burns a house down into a damaged one that shelters nobody", () => {
     const start = row(400);
     const s = run(start, sunog.burnDownSeconds + 0.5);
-    expect(damaged(s).map((b) => `${b.x},${b.y}`)).toContain("2,2");
+    expect(damaged(s).map((b) => `${b.x},${b.y}`)).toContain("2,6");
     expect(housing(s, calm)).toBeLessThan(housing(start, calm));
   });
 
   it("goes out when tapped, before it can spread", () => {
     let s = run(row(400), 5);
-    s = apply(s, calm, { type: "extinguish", x: 2, y: 2 });
+    s = apply(s, calm, { type: "extinguish", x: 2, y: 6 });
     expect(burning(s)).toHaveLength(0);
     s = run(s, 60);
     expect(burning(s)).toHaveLength(0);
@@ -191,7 +191,7 @@ describe("Sunog (fire)", () => {
 
   it("ignores taps on buildings that aren't burning", () => {
     const s = row(undefined);
-    expect(apply(s, calm, { type: "extinguish", x: 3, y: 2 })).toBe(s);
+    expect(apply(s, calm, { type: "extinguish", x: 3, y: 6 })).toBe(s);
   });
 });
 
@@ -200,7 +200,7 @@ describe("Bagyo (typhoon)", () => {
   const always = withEvents({ typhoon: { chancePerSecond: 1 } }, calm);
   const village = withState({
     resources: { rice: 1000, wood: 0 },
-    buildings: [at("bahay-kubo", 5, -1), at("bahay-kubo", 4, -1), at("palayan", 1, 0), at("woodcutter-camp", 8, 0), at("palayan", 1, 1)],
+    buildings: [at("bahay-kubo", 5, 3), at("bahay-kubo", 4, 3), at("palayan", 1, 4), at("woodcutter-camp", 8, 4), at("palayan", 1, 5)],
   });
 
   it("never comes in the first 5 minutes", () => {
@@ -223,11 +223,11 @@ describe("Bagyo (typhoon)", () => {
   });
 
   it("damaged buildings produce nothing until repaired with wood", () => {
-    const s = withState({ villagers: 2, resources: { rice: 100, wood: 0 }, buildings: [{ ...at("palayan", 3, 2), damaged: true }] });
+    const s = withState({ villagers: 2, resources: { rice: 100, wood: 0 }, buildings: [{ ...at("palayan", 3, 6), damaged: true }] });
     expect(rates(s, calm).produced.rice).toBe(0);
-    expect(apply(s, calm, { type: "repair", x: 3, y: 2 })).toBe(s); // can't afford 8 wood yet
+    expect(apply(s, calm, { type: "repair", x: 3, y: 6 })).toBe(s); // can't afford 8 wood yet
     const rich = { ...s, resources: { rice: 100, wood: 10 } };
-    const fixed = apply(rich, calm, { type: "repair", x: 3, y: 2 });
+    const fixed = apply(rich, calm, { type: "repair", x: 3, y: 6 });
     expect(fixed.resources.wood).toBe(2);
     expect(damaged(fixed)).toHaveLength(0);
     expect(rates(fixed, calm).produced.rice).toBeCloseTo(1);
@@ -240,9 +240,9 @@ describe("every loss is recoverable", () => {
       resources: { rice: 0, wood: 100 },
       villagers: 2,
       buildings: [
-        { ...at("bahay-kubo", 5, -1), damaged: true },
-        { ...at("bahay-kubo", 4, -1), damaged: true },
-        { ...at("palayan", 1, 0), damaged: true },
+        { ...at("bahay-kubo", 5, 3), damaged: true },
+        { ...at("bahay-kubo", 4, 3), damaged: true },
+        { ...at("palayan", 1, 4), damaged: true },
       ],
     });
     for (const b of [...s.buildings]) s = apply(s, calm, { type: "repair", x: b.x, y: b.y });
@@ -264,12 +264,12 @@ describe("determinism", () => {
     ...newGame(busy, seed),
     resources: { rice: 5000, wood: 0 },
     buildings: [
-      at("bahay-kubo", 5, -1),
-      at("bahay-kubo", 4, -1),
-      at("bahay-kubo", 6, -1),
-      at("bahay-kubo", 5, 1),
-      at("palayan", 1, 0),
-      at("woodcutter-camp", 8, 0),
+      at("bahay-kubo", 5, 3),
+      at("bahay-kubo", 4, 3),
+      at("bahay-kubo", 6, 3),
+      at("bahay-kubo", 5, 5),
+      at("palayan", 1, 4),
+      at("woodcutter-camp", 8, 4),
     ],
   });
   const summary = (s: GameState) => ({

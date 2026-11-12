@@ -1,0 +1,11 @@
+{
+  "id": "balete",
+  "name": "Old balete tree",
+  "description": "An ancient strangler fig. In Tagalog and other lowland folklore, old balete trees are home to spirits such as the kapre, and people passing them ask permission or keep their distance.",
+  "clearWarning": "This removes Kapre's grove: nearby woodcutters lose +{percent}% wood. This can't be undone.",
+  "tradition": "Tagalog and other lowland folklore",
+  "sources": [
+    "Maximo D. Ramos, The Creatures of Philippine Lower Mythology (University of the Philippines Press, 1971)",
+    "https://en.wikipedia.org/wiki/Kapre"
+  ]
+}

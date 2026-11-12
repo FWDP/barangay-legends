@@ -1,5 +1,5 @@
 {
-  "_comment": "Core balance numbers. Values marked in docs/game-design.md are copied here; the rest are playtest guesses. map: columns are river | land | forest; rows are counted from the plaza row (0) and grow when you build on the outermost row.",
+  "_comment": "Core balance numbers. Values marked in docs/game-design.md are copied here; the rest are playtest guesses. map: size and features of the generated map. clearing: the cost of turning forest into buildable land; seconds grow by secondsGrowth for every tile the player has cleared.",
   "start": {
     "resources": {
       "rice": 10,
@@ -16,9 +16,17 @@
   "gatherPerClick": 1,
   "secondsPerNewVillager": 10,
   "map": {
-    "width": 11,
-    "riverColumns": 1,
-    "forestColumns": 2,
-    "minRadius": 3
+    "width": 60,
+    "height": 40,
+    "startClearRadius": 3,
+    "riverWidth": 2,
+    "baleteTrees": 4,
+    "baleteMinDistance": 7
+  },
+  "clearing": {
+    "baseSeconds": 6,
+    "secondsGrowth": 1.04,
+    "workers": 2,
+    "wood": 3
   }
 }

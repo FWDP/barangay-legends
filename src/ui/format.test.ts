@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadContent } from "../engine/content";
-import { bonusPreviewText, bonusRuleText, formatBreakdown, formatRate } from "./format";
+import { baleteWarning, bonusPreviewText, bonusRuleText, formatBreakdown, formatRate, groveRuleText } from "./format";
 
 const rates = {
   produced: { rice: 5, wood: 0.8 },
@@ -35,5 +35,15 @@ describe("bonus text", () => {
     expect(bonusPreviewText(def("palayan"), 0.1)).toBe("+10% rice");
     expect(bonusPreviewText(def("woodcutter-camp"), 0.1)).toBe("+10% wood");
     expect(bonusPreviewText(def("palayan"), 0)).toBe("No bonus");
+    expect(bonusPreviewText(def("woodcutter-camp"), 0.1, { name: "Kapre's grove", bonus: 0.25 })).toBe(
+      "+10% wood · 🌳 Kapre's grove +25%",
+    );
+    expect(bonusPreviewText(def("woodcutter-camp"), 0, { name: "Kapre's grove", bonus: 0.25 })).toBe("🌳 Kapre's grove +25%");
+  });
+
+  it("describes the grove and the balete warning from content", () => {
+    expect(groveRuleText(def("woodcutter-camp"), content)).toBe("🌳 Kapre's grove: +25% wood within 3 tiles of an old balete tree");
+    expect(groveRuleText(def("palayan"), content)).toBeNull();
+    expect(baleteWarning(content)).toBe("This removes Kapre's grove: nearby woodcutters lose +25% wood. This can't be undone.");
   });
 });

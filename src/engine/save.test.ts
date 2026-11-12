@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { apply, build, gather, newGame, owned, tick } from "./game";
-import { bonusAt, canPlace } from "./map";
+import { apply, gather, newGame, owned, tick } from "./game";
+import { bonusAt, countTiles, generateMap, NEIGHBOURS, tileAt } from "./map";
 import { clearSave, loadGame, migrate, parseSave, SAVE_KEY, saveGame } from "./save";
-import { at, content } from "./testUtils";
+import { at, calm, content, withState } from "./testUtils";
 
 function fakeStorage() {
   const data = new Map<string, string>();
@@ -14,62 +14,62 @@ function fakeStorage() {
   };
 }
 
-const v1Save = {
-  version: 1,
-  resources: { rice: 220, wood: 140 },
-  villagers: 15,
-  buildings: { "bahay-kubo": 6, palayan: 4, "woodcutter-camp": 3, castle: 2 },
-  migration: 0.25,
-};
+const def = (id: string) => content.buildings.find((b) => b.id === id)!;
+const roundTrip = (s: unknown) => parseSave(JSON.stringify(s), content);
 
 describe("save", () => {
-  it("round-trips a game, including building positions", () => {
+  it("round-trips a game, including the map, positions and a clearing job", () => {
     const storage = fakeStorage();
-    let s = newGame(content);
-    for (let i = 0; i < 15; i++) s = gather(s, content, "wood");
-    s = tick(build(s, content, "palayan", 1, 2), content, 3.5);
+    let s = newGame(content, 5);
+    for (let i = 0; i < 20; i++) s = gather(s, content, "rice");
+    const { plaza } = s.map;
+    const edge = { x: plaza.x, y: plaza.y - content.rules.map.startClearRadius - 1 };
+    s = tick(apply(s, calm, { type: "clear", ...edge }), calm, 2.5);
+    expect(s.clearing).not.toBeNull();
     saveGame(s, storage);
     expect(loadGame(content, storage)).toEqual(s);
   });
 
   it("starts a new game when there is no save, a broken save or a future version", () => {
     const storage = fakeStorage();
-    expect(loadGame(content, storage)).toEqual(newGame(content));
+    expect(loadGame(content, storage, 3)).toEqual(newGame(content, 3));
     storage.setItem(SAVE_KEY, "{not json");
-    expect(loadGame(content, storage)).toEqual(newGame(content));
+    expect(loadGame(content, storage, 3)).toEqual(newGame(content, 3));
     storage.setItem(SAVE_KEY, JSON.stringify({ version: 999 }));
-    expect(loadGame(content, storage)).toEqual(newGame(content));
+    expect(loadGame(content, storage, 3)).toEqual(newGame(content, 3));
   });
 
-  it("drops unknown buildings, bad numbers and buildings on invalid tiles", () => {
-    const s = parseSave(
-      JSON.stringify({
-        version: 3,
-        barangay: { id: "barangay-7", region: { x: 2, y: -1 } },
-        resources: { rice: -5, wood: 7 },
-        villagers: 3,
-        buildings: [
-          at("palayan", 1, 0),
-          at("castle", 2, 0),
-          at("palayan", 1, 0), // overlaps the first
-          at("palayan", 0, 1), // river
-          at("woodcutter-camp", 5, 0), // plaza
-          at("bahay-kubo", 3, 40), // off the map
-          { type: "bahay-kubo", x: "3", y: 1 },
-          at("bahay-kubo", 4, 1),
-        ],
-        migration: 0.5,
-      }),
-      content,
-    );
-    expect(s).toMatchObject({
-      version: 3,
-      barangay: { id: "barangay-7", region: { x: 2, y: -1 } },
-      resources: { rice: 10, wood: 7 },
-      villagers: 3,
-      buildings: [at("palayan", 1, 0), at("bahay-kubo", 4, 1)],
-      migration: 0.5,
-    });
+  it("starts new games from the seed it is given", () => {
+    expect(loadGame(content, fakeStorage(), 99).rng).toBe(99);
+    expect(loadGame(content, fakeStorage(), 99).map.seed).toBe(99);
+  });
+
+  it("drops unknown buildings, bad numbers and buildings on tiles that don't fit", () => {
+    const s = withState({ resources: { rice: 1, wood: 7 }, villagers: 3 });
+    const saved = {
+      ...s,
+      resources: { rice: -5, wood: 7 },
+      buildings: [
+        at("palayan", 1, 4),
+        at("castle", 2, 4),
+        at("palayan", 1, 4), // overlaps the first
+        at("palayan", 0, 5), // river
+        at("bahay-kubo", 9, 5), // forest
+        at("woodcutter-camp", 5, 4), // plaza
+        at("tulay", 3, 3), // a bridge on dry land
+        { type: "bahay-kubo", x: "3", y: 1 },
+        at("bahay-kubo", 4, 5),
+      ],
+    };
+    const loaded = roundTrip(saved)!;
+    expect(loaded.buildings).toEqual([at("palayan", 1, 4), at("bahay-kubo", 4, 5)]);
+    expect(loaded.resources).toEqual({ rice: newGame(content).resources.rice, wood: 7 });
+  });
+
+  it("rejects a save whose map is broken", () => {
+    const s = withState({});
+    expect(roundTrip({ ...s, map: { ...s.map, tiles: "xyz" } })).toBeNull();
+    expect(roundTrip({ ...s, map: { ...s.map, plaza: { x: 0, y: 0 } } })).toBeNull(); // plaza on the river
   });
 
   it("survives storage that throws", () => {
@@ -85,104 +85,153 @@ describe("save", () => {
       },
     };
     expect(() => saveGame(newGame(content), broken)).not.toThrow();
-    expect(loadGame(content, broken)).toEqual(newGame(content));
+    expect(loadGame(content, broken, 1)).toEqual(newGame(content, 1));
     expect(() => clearSave(broken)).not.toThrow();
   });
 });
 
-describe("v1 → v2 → v3 migration", () => {
-  const migrated = parseSave(JSON.stringify(v1Save), content)!;
+describe("migration from v3 (before the generated map)", () => {
+  // A v3 save: positions on the old 11-column map (river at x = 0, plaza at (5, 0)).
+  const v3Save = {
+    version: 3,
+    barangay: { id: "barangay-1", region: { x: 0, y: 0 } },
+    resources: { rice: 220, wood: 140 },
+    villagers: 15,
+    migration: 0,
+    time: 120,
+    rng: 777,
+    hunger: 0,
+    sick: [],
+    typhoon: null,
+    nextEventAt: {},
+    buildings: [
+      at("bahay-kubo", 5, -1),
+      at("bahay-kubo", 4, -1),
+      { ...at("bahay-kubo", 6, -1), damaged: true },
+      at("palayan", 1, 0),
+      at("palayan", 1, 1),
+      at("woodcutter-camp", 8, 0),
+      at("bahay-kubo", 3, -9), // far north: still fits on the new map
+    ],
+  };
+  const s = roundTrip(v3Save)!;
 
-  it("keeps resources, villagers and building counts, and drops unknown buildings", () => {
-    expect(migrated.version).toBe(3);
-    expect(migrated.resources).toEqual({ rice: 220, wood: 140 });
-    expect(migrated.villagers).toBe(15);
-    expect(migrated.migration).toBe(0.25);
-    expect(owned(migrated, "bahay-kubo")).toBe(6);
-    expect(owned(migrated, "palayan")).toBe(4);
-    expect(owned(migrated, "woodcutter-camp")).toBe(3);
-    expect(migrated.buildings).toHaveLength(13);
-    expect(migrated.barangay).toEqual(newGame(content).barangay);
+  it("generates the map from the save's seed", () => {
+    expect(s.version).toBe(4);
+    expect(s.map.seed).toBe(777);
+    expect(s.map.plaza).toEqual(generateMap(content, 777).plaza);
+    expect(s.clearing).toBeNull();
+    expect(s.tilesCleared).toBe(0);
   });
 
-  it("auto-places every building on its own valid land tile", () => {
-    const tiles = new Set(migrated.buildings.map((b) => `${b.x},${b.y}`));
-    expect(tiles.size).toBe(13);
-    migrated.buildings.forEach((b, i) => {
-      const before = { ...migrated, buildings: migrated.buildings.slice(0, i) };
-      expect(canPlace(before, content, b.x, b.y)).toBe(true);
-    });
+  it("keeps every building, its state and the rest of the save", () => {
+    expect(s.buildings).toHaveLength(7);
+    expect(owned(s, "bahay-kubo")).toBe(4);
+    expect(owned(s, "palayan")).toBe(2);
+    expect(owned(s, "woodcutter-camp")).toBe(1);
+    expect(s.buildings.filter((b) => b.damaged)).toHaveLength(1);
+    expect(s).toMatchObject({ resources: { rice: 220, wood: 140 }, villagers: 15, time: 120, rng: 777 });
   });
 
-  it("places fields and camps where they earn their bonus", () => {
-    const def = (id: string) => content.buildings.find((b) => b.id === id)!;
-    for (const b of migrated.buildings.filter((b) => b.type !== "bahay-kubo")) {
-      expect(bonusAt({ ...migrated, buildings: migrated.buildings.filter((o) => o !== b) }, content, def(b.type), b.x, b.y)).toBeGreaterThan(0);
+  it("keeps the layout around the plaza (mirrored if the river is on the other side)", () => {
+    const { plaza } = s.map;
+    const offsets = s.buildings.map((b) => [Math.abs(b.x - plaza.x), b.y - plaza.y]);
+    expect(offsets).toEqual([
+      [0, -1],
+      [1, -1],
+      [1, -1],
+      [4, 0],
+      [4, 1],
+      [3, 0],
+      [2, -9],
+    ]);
+  });
+
+  it("puts every building on cleared land, and clears the tiles around it", () => {
+    for (const b of s.buildings) {
+      expect(tileAt(s.map, b.x, b.y)).toBe("cleared");
+      for (const [dx, dy] of NEIGHBOURS) expect(["cleared", "river", "bridge"]).toContain(tileAt(s.map, b.x + dx, b.y + dy));
+    }
+  });
+
+  it("keeps the fields by the river", () => {
+    for (const b of s.buildings.filter((b) => b.type === "palayan")) {
+      expect(bonusAt(s, def("palayan"), b.x, b.y)).toBeGreaterThan(0);
     }
   });
 
   it("is deterministic", () => {
-    expect(parseSave(JSON.stringify(v1Save), content)).toEqual(migrated);
-  });
-
-  it("migrates through the table one version at a time", () => {
-    expect(migrate({ ...v1Save }, content)?.version).toBe(3);
-    expect(migrate({ version: 0 }, content)).toBeNull(); // no migration from v0
-  });
-
-  it("produces a save that keeps working with commands", () => {
-    const s = apply({ ...migrated, resources: { rice: 0, wood: 999 } }, content, {
-      type: "build",
-      building: "palayan",
-      x: 1,
-      y: 3,
-    });
-    expect(owned(s, "palayan")).toBe(5);
+    expect(roundTrip(v3Save)).toEqual(s);
   });
 });
 
-describe("v2 → v3 migration (events)", () => {
-  const v2Save = {
-    version: 2,
-    barangay: { id: "barangay-1", region: { x: 0, y: 0 } },
-    resources: { rice: 50, wood: 20 },
-    villagers: 7,
-    buildings: [at("bahay-kubo", 5, -1), at("palayan", 1, 0)],
-    migration: 0,
+describe("older saves still load through every migration", () => {
+  const v1Save = {
+    version: 1,
+    resources: { rice: 220, wood: 140 },
+    villagers: 15,
+    buildings: { "bahay-kubo": 6, palayan: 4, "woodcutter-camp": 3, castle: 2 },
+    migration: 0.25,
   };
 
-  it("adds the event fields with safe defaults and keeps everything else", () => {
-    const s = parseSave(JSON.stringify(v2Save), content)!;
-    expect(s).toMatchObject({ ...v2Save, version: 3, time: 0, hunger: 0, sick: [], typhoon: null, nextEventAt: {} });
-    expect(Number.isInteger(s.rng)).toBe(true);
+  it("v1 (building counts) → v4", () => {
+    const s = roundTrip(v1Save)!;
+    expect(s.version).toBe(4);
+    expect(s).toMatchObject({ resources: { rice: 220, wood: 140 }, villagers: 15, migration: 0.25 });
+    expect([owned(s, "bahay-kubo"), owned(s, "palayan"), owned(s, "woodcutter-camp")]).toEqual([6, 4, 3]);
+    expect(new Set(s.buildings.map((b) => `${b.x},${b.y}`)).size).toBe(13);
+    for (const b of s.buildings) expect(tileAt(s.map, b.x, b.y)).toBe("cleared");
+    expect(roundTrip(v1Save)).toEqual(s);
   });
 
-  it("gives each old save its own deterministic seed", () => {
-    const a = parseSave(JSON.stringify(v2Save), content)!;
-    const b = parseSave(JSON.stringify({ ...v2Save, buildings: [at("bahay-kubo", 4, -1)] }), content)!;
-    expect(parseSave(JSON.stringify(v2Save), content)!.rng).toBe(a.rng);
-    expect(b.rng).not.toBe(a.rng);
+  it("v1 → v2 still produces the original v2 layout (the migration's map rules are frozen)", () => {
+    const v2 = migrate({ ...v1Save }, content, 2)!;
+    const where = (type: string) =>
+      (v2.buildings as { type: string; x: number; y: number }[])
+        .filter((b) => b.type === type)
+        .map((b) => `${b.x},${b.y}`)
+        .sort();
+    // The layout the v2 engine produced for this save (river at x = 0, plaza at (5, 0)).
+    expect(where("bahay-kubo")).toEqual(["4,-1", "4,0", "5,-1", "5,1", "6,-1", "6,0"]);
+    expect(where("palayan")).toEqual(["1,0", "2,0", "3,-1", "3,0"]);
+    expect(where("woodcutter-camp")).toEqual(["8,-1", "8,0", "8,1"]);
   });
 
-  it("round-trips event state: sickness, fire, damage, typhoon and cooldowns", () => {
+  it("v2 → v4 keeps buildings and adds events and the map", () => {
+    const v2Save = {
+      version: 2,
+      barangay: { id: "barangay-1", region: { x: 0, y: 0 } },
+      resources: { rice: 50, wood: 20 },
+      villagers: 7,
+      buildings: [at("bahay-kubo", 5, -1), at("palayan", 1, 0)],
+      migration: 0,
+    };
+    const s = roundTrip(v2Save)!;
+    expect(s).toMatchObject({ version: 4, time: 0, hunger: 0, sick: [], typhoon: null, tilesCleared: 0 });
+    expect(s.buildings).toHaveLength(2);
+    expect(countTiles(s.map, "cleared")).toBeGreaterThanOrEqual((2 * content.rules.map.startClearRadius + 1) ** 2);
+  });
+
+  it("returns null for versions it has no migration for", () => {
+    expect(migrate({ version: 0 }, content)).toBeNull();
+  });
+});
+
+describe("event state round trip", () => {
+  it("keeps sickness, fire, damage, typhoon and cooldowns", () => {
     const storage = fakeStorage();
-    const s = {
-      ...newGame(content, 42),
+    const s = withState({
       time: 400,
       hunger: 3,
       sick: [12, 40],
       typhoon: { strikeAt: 430 },
       nextEventAt: { sakit: 500 },
       buildings: [
-        { type: "bahay-kubo", x: 5, y: -1, burningSince: 395 },
-        { type: "bahay-kubo", x: 4, y: -1, damaged: true },
+        { ...at("bahay-kubo", 5, 3), burningSince: 395 },
+        { ...at("bahay-kubo", 4, 3), damaged: true },
       ],
-    };
+    });
     saveGame(s, storage);
     expect(loadGame(content, storage)).toEqual(s);
-  });
-
-  it("starts new games from the seed it is given", () => {
-    expect(loadGame(content, fakeStorage(), 99).rng).toBe(99);
   });
 });

@@ -34,9 +34,31 @@ export function bonusRuleText(def: BuildingDef, content: Content): string | null
   return `+${bonus.percent}% next to ${list}`;
 }
 
-/** e.g. "+10% rice" for a ghost preview; "No bonus" when the tile gives none. */
-export function bonusPreviewText(def: BuildingDef, bonus: number): string {
-  if (bonus <= 0) return "No bonus";
-  const resources = RESOURCES.filter((r) => (def.produces?.[r] ?? 0) > 0);
-  return `+${Math.round(bonus * 100)}% ${resources.join(" & ") || "bonus"}`;
+/**
+ * Ghost preview label, e.g. "+10% wood · 🌳 Kapre's grove +25%"; "No bonus" when the tile
+ * gives none. `grove` is the grove bonus there, if any, with the grove's name.
+ */
+export function bonusPreviewText(def: BuildingDef, bonus: number, grove?: { name: string; bonus: number }): string {
+  const parts: string[] = [];
+  if (bonus > 0) {
+    const resources = RESOURCES.filter((r) => (def.produces?.[r] ?? 0) > 0);
+    parts.push(`+${Math.round(bonus * 100)}% ${resources.join(" & ") || "bonus"}`);
+  }
+  if (grove && grove.bonus > 0) parts.push(`🌳 ${grove.name} +${Math.round(grove.bonus * 100)}%`);
+  return parts.length ? parts.join(" · ") : "No bonus";
+}
+
+/** e.g. "🌳 Kapre's grove: +25% wood within 3 tiles of an old balete", for building cards. */
+export function groveRuleText(def: BuildingDef, content: Content): string | null {
+  const grove = content.groves.find((g) => g.affects === def.id);
+  if (!grove) return null;
+  const tile = content.lore[grove.tile]?.name.toLowerCase() ?? grove.tile;
+  return `🌳 ${grove.name}: +${grove.percent}% ${grove.resource} within ${grove.radius} tiles of an ${tile}`;
+}
+
+/** The balete warning with the grove's real numbers filled in. */
+export function baleteWarning(content: Content): string {
+  const grove = content.groves.find((g) => g.tile === "balete");
+  const text = String(content.lore.balete?.clearWarning ?? "This can't be undone.");
+  return text.replace("{percent}", String(grove?.percent ?? 0));
 }

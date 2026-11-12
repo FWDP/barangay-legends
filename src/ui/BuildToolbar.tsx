@@ -1,6 +1,7 @@
 import { RESOURCES, type BuildingDef, type Content } from "../engine/content";
 import { buildingCost, canAfford, owned, staffedBuildings, type GameState } from "../engine/game";
-import { bonusRuleText, RESOURCE_ICON } from "./format";
+import { isUnlocked } from "../engine/map";
+import { bonusRuleText, groveRuleText, RESOURCE_ICON } from "./format";
 
 function effectText(b: BuildingDef): string {
   const parts: string[] = [];
@@ -11,6 +12,7 @@ function effectText(b: BuildingDef): string {
   }
   if (b.workers) parts.push(`${b.workers} workers`);
   if (b.heals) parts.push(`sick villagers heal ${b.heals.percentFaster}% faster`);
+  if (b.bridge) parts.push("crosses the river, opening the far bank");
   return parts.join(", ");
 }
 
@@ -33,15 +35,15 @@ export function BuildToolbar(props: {
       className="bamboo-panel relative z-20 border-t-2 border-amber-950/50 px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]"
     >
       <ul className="mx-auto flex max-w-4xl snap-x gap-1.5 overflow-x-auto px-1 pt-1 pb-1 sm:gap-2">
-        {content.buildings
-          .filter((b) => b.unlock.start)
-          .map((b) => {
+        {content.buildings.map((b) => {
             const count = owned(state, b.id);
             const cost = buildingCost(content, b, count);
-            const affordable = canAfford(state, cost);
+            const unlocked = isUnlocked(state, b);
+            const affordable = unlocked && canAfford(state, cost);
             const costParts = RESOURCES.filter((r) => cost[r] > 0);
             const isSelected = selected === b.id;
             const bonus = bonusRuleText(b, content);
+            const groveRule = groveRuleText(b, content);
             return (
               <li key={b.id} className="min-w-[5rem] flex-1 snap-start sm:min-w-[6.6rem]">
                 <button
@@ -56,8 +58,12 @@ export function BuildToolbar(props: {
                   }}
                   onDragEnd={() => onSelect(null)}
                   aria-pressed={isSelected}
-                  title={[b.description, effectText(b), bonus].filter(Boolean).join(". ") + "."}
-                  aria-label={`${isSelected ? "Placing" : "Build"} ${b.name} for ${costParts.map((r) => `${cost[r]} ${r}`).join(", ")}. You have ${count}.`}
+                  title={[b.description, effectText(b), bonus, groveRule].filter(Boolean).join(". ") + "."}
+                  aria-label={
+                    unlocked
+                      ? `${isSelected ? "Placing" : "Build"} ${b.name} for ${costParts.map((r) => `${cost[r]} ${r}`).join(", ")}. You have ${count}.`
+                      : `${b.name}: unlocks at ${b.unlock.villagers} villagers.`
+                  }
                   className={`game-btn mat-card flex h-full w-full flex-col items-center gap-0.5 border-2 px-1.5 pt-1.5 pb-1 text-stone-800 shadow-md disabled:cursor-not-allowed ${
                     isSelected
                       ? "-translate-y-1 border-amber-500 ring-4 ring-amber-300"
@@ -74,12 +80,15 @@ export function BuildToolbar(props: {
                   </span>
                   <span className="hidden text-[11px] leading-tight text-stone-500 sm:block">{effectText(b)}</span>
                   {bonus && <span className="hidden text-[11px] leading-tight text-amber-800 sm:block">✨ {bonus}</span>}
+                  {groveRule && <span className="hidden text-[11px] leading-tight text-emerald-800 sm:block">{groveRule}</span>}
                   <span
                     className={`mt-auto w-full rounded-md px-1 py-0.5 text-[11px] leading-tight font-semibold sm:text-sm ${
-                      affordable ? "bg-green-700 text-white" : "bg-stone-300 text-stone-500"
+                      affordable ? "bg-green-700 text-white" : unlocked ? "bg-stone-300 text-stone-500" : "bg-stone-700 text-stone-100"
                     }`}
                   >
-                    {costParts.map((r) => `${RESOURCE_ICON[r]} ${cost[r]} ${r}`).join(" ")}
+                    {unlocked
+                      ? costParts.map((r) => `${RESOURCE_ICON[r]} ${cost[r]} ${r}`).join(" ")
+                      : `🔒 ${b.unlock.villagers} 👥`}
                   </span>
                 </button>
               </li>

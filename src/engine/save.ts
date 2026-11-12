@@ -1,8 +1,18 @@
 // Saving to the browser. The only engine module allowed to touch browser APIs,
 // and even here the storage is passed in so tests can use a fake.
-import { RESOURCES, type Content } from "./content";
-import { newGame, placeAuto, STATE_VERSION, type GameState, type PlacedBuilding } from "./game";
-import { canPlace } from "./map";
+import { RESOURCES, type BuildingDef, type Content } from "./content";
+import { newGame, placeAuto, STATE_VERSION, type ClearingJob, type GameState, type PlacedBuilding } from "./game";
+import {
+  generateMap,
+  inBounds,
+  isPlaza,
+  isTileCode,
+  NEIGHBOURS,
+  setTiles,
+  tileAt,
+  type MapState,
+  type Tile,
+} from "./map";
 
 export const SAVE_KEY = "barangay-legends/save";
 
@@ -14,20 +24,23 @@ const isObject = (v: unknown): v is RawSave => typeof v === "object" && v !== nu
 
 /**
  * One migration per save format change: MIGRATIONS[n] turns a version-n save into version n+1.
- * Never edit an old migration; add a new one and bump STATE_VERSION.
+ * Never change what an old migration produces; add a new one and bump STATE_VERSION.
+ * Migrations must not depend on engine code that may change later, so the old map rules a
+ * migration needs are frozen in this file.
  */
 const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = {
-  // v1 → v2: buildings were counts ({ palayan: 2 }); now each one has a tile. Existing buildings
-  // are auto-placed (best bonus, then nearest the plaza), houses first, in content order.
+  // v1 → v2: buildings were counts ({ palayan: 2 }); now each one has a tile on the v2 map
+  // (see LEGACY_V2). Buildings are auto-placed (best bonus, then nearest the plaza), houses
+  // first, in content order.
   1: (raw, content) => {
-    let state: GameState = { ...newGame(content), buildings: [] };
+    let buildings: PlacedBuilding[] = [];
     const counts = isObject(raw.buildings) ? raw.buildings : {};
     for (const def of content.buildings) {
       const n = counts[def.id];
       if (!finiteNonNeg(n)) continue;
-      for (let i = 0; i < Math.floor(n); i++) state = placeAuto(state, content, def.id);
+      for (let i = 0; i < Math.floor(n); i++) buildings = [...buildings, legacyV2AutoPlace(buildings, def)];
     }
-    return { ...raw, version: 2, buildings: state.buildings };
+    return { ...raw, version: 2, buildings };
   },
   // v2 → v3: events. Adds the game clock, RNG seed, hunger, sickness, typhoon and cooldowns.
   // Old barangays restart the clock at 0, so they also get the disaster-free first minutes.
@@ -37,7 +50,81 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
     const seed = hashString(JSON.stringify(buildings));
     return { ...raw, version: 3, time: 0, rng: seed, hunger: 0, sick: [], typhoon: null, nextEventAt: {} };
   },
+  // v3 → v4: the generated map. A map is generated from the save's seed, and the old
+  // buildings move onto it around the new plaza, keeping their layout. If the river ends up
+  // on the other side, the layout is mirrored so fields stay by the river and camps by the
+  // forest. Every building's tile and the tiles around it become cleared land.
+  3: (raw, content) => {
+    const seed = Number.isInteger(raw.rng) ? (raw.rng as number) >>> 0 : 0;
+    let map = generateMap(content, seed);
+    const { plaza } = map;
+    let riverX = 0;
+    while (riverX < map.width && tileAt(map, riverX, plaza.y) !== "river") riverX++;
+    const riverOnLeft = riverX < plaza.x;
+    const flip = riverOnLeft ? 1 : -1;
+    const defs = new Map(content.buildings.map((d) => [d.id, d]));
+    const moved: RawSave[] = [];
+    const clear: { x: number; y: number; tile: Tile }[] = [];
+    const leftOver: string[] = [];
+    for (const item of Array.isArray(raw.buildings) ? raw.buildings : []) {
+      if (!isObject(item) || typeof item.type !== "string" || !defs.has(item.type)) continue;
+      if (typeof item.x !== "number" || typeof item.y !== "number") continue;
+      const x = plaza.x + flip * (item.x - LEGACY_V2.plaza.x);
+      const y = plaza.y + (item.y - LEGACY_V2.plaza.y);
+      if (!inBounds(map, x, y) || isPlaza(map, x, y)) {
+        leftOver.push(item.type);
+        continue;
+      }
+      moved.push({ ...item, x, y });
+      for (const [dx, dy] of [[0, 0], ...NEIGHBOURS]) {
+        const t = tileAt(map, x + dx, y + dy);
+        // The building's own tile is always land; around it, only forest is cleared.
+        if ((dx === 0 && dy === 0) || t === "forest" || t === "balete") clear.push({ x: x + dx, y: y + dy, tile: "cleared" });
+      }
+    }
+    map = setTiles(map, clear);
+    // Anything that fell off the map is auto-placed on cleared land instead.
+    let state = { ...newGame(content, seed), map, buildings: moved as unknown as PlacedBuilding[] };
+    for (const type of leftOver) state = placeAuto(state, content, type);
+    return { ...raw, version: 4, map: state.map, buildings: state.buildings, clearing: null, tilesCleared: 0 };
+  },
 };
+
+// ---------- Frozen v2 map rules (for the v1 → v2 migration only) ----------
+
+/** The v2 map: river in column 0, land in 1..8, forest in 9..10, plaza at (5, 0), rows from -3. */
+const LEGACY_V2 = { width: 11, riverColumns: 1, forestColumns: 2, plaza: { x: 5, y: 0 }, minRadius: 3 };
+
+function legacyV2Terrain(x: number, y: number): "river" | "forest" | "plaza" | "land" | null {
+  if (x < 0 || x >= LEGACY_V2.width) return null;
+  if (x < LEGACY_V2.riverColumns) return "river";
+  if (x >= LEGACY_V2.width - LEGACY_V2.forestColumns) return "forest";
+  return x === LEGACY_V2.plaza.x && y === LEGACY_V2.plaza.y ? "plaza" : "land";
+}
+
+function legacyV2AutoPlace(buildings: PlacedBuilding[], def: BuildingDef): PlacedBuilding {
+  const radius = buildings.reduce((r, b) => Math.max(r, Math.abs(b.y) + 1), LEGACY_V2.minRadius);
+  const taken = new Map(buildings.map((b) => [`${b.x},${b.y}`, b.type]));
+  const bonusAt = (x: number, y: number) =>
+    def.adjacencyBonus &&
+    NEIGHBOURS.some(([dx, dy]) => {
+      const t = legacyV2Terrain(x + dx, y + dy);
+      const other = taken.get(`${x + dx},${y + dy}`);
+      return (t !== null && def.adjacencyBonus!.nextTo.includes(t)) || (other !== undefined && def.adjacencyBonus!.nextTo.includes(other));
+    })
+      ? def.adjacencyBonus.percent
+      : 0;
+  let best: { x: number; y: number; bonus: number; dist: number } | null = null;
+  for (let y = -radius; y <= radius; y++) {
+    for (let x = 0; x < LEGACY_V2.width; x++) {
+      if (legacyV2Terrain(x, y) !== "land" || taken.has(`${x},${y}`)) continue;
+      const bonus = bonusAt(x, y);
+      const dist = (x - LEGACY_V2.plaza.x) ** 2 + y ** 2;
+      if (!best || bonus > best.bonus || (bonus === best.bonus && dist < best.dist)) best = { x, y, bonus, dist };
+    }
+  }
+  return { type: def.id, x: best!.x, y: best!.y };
+}
 
 /** FNV-1a: a small, stable string hash. */
 function hashString(text: string): number {
@@ -46,15 +133,33 @@ function hashString(text: string): number {
   return h >>> 0;
 }
 
-/** Brings an older save up to the current version. Returns null for unknown or future versions. */
-export function migrate(raw: RawSave, content: Content): RawSave | null {
+/**
+ * Brings an older save up to version `to` (the current version by default). Returns null for
+ * unknown or future versions.
+ */
+export function migrate(raw: RawSave, content: Content, to = STATE_VERSION): RawSave | null {
   let data = raw;
-  while (typeof data.version === "number" && data.version < STATE_VERSION) {
+  while (typeof data.version === "number" && data.version < to) {
     const step = MIGRATIONS[data.version];
     if (!step) return null;
     data = step(data, content);
   }
-  return data.version === STATE_VERSION ? data : null;
+  return data.version === to ? data : null;
+}
+
+function parseMap(raw: unknown): MapState | null {
+  if (!isObject(raw) || !isObject(raw.plaza)) return null;
+  const { width, height, seed, tiles } = raw;
+  if (!Number.isInteger(width) || !Number.isInteger(height) || !Number.isInteger(seed) || typeof tiles !== "string") return null;
+  if (tiles.length !== (width as number) * (height as number) || ![...tiles].every(isTileCode)) return null;
+  const map: MapState = {
+    width: width as number,
+    height: height as number,
+    seed: (seed as number) >>> 0,
+    tiles,
+    plaza: { x: raw.plaza.x as number, y: raw.plaza.y as number },
+  };
+  return tileAt(map, map.plaza.x, map.plaza.y) === "cleared" ? map : null;
 }
 
 /** Turns saved JSON back into a state. Unknown or broken fields fall back to new-game values. */
@@ -68,8 +173,10 @@ export function parseSave(json: string, content: Content): GameState | null {
   if (!isObject(raw)) return null;
   const data = migrate(raw, content);
   if (!data) return null;
+  const map = parseMap(data.map);
+  if (!map) return null;
 
-  const state = newGame(content);
+  const state: GameState = { ...newGame(content, map.seed), map };
   const resources = isObject(data.resources) ? data.resources : {};
   for (const r of RESOURCES) {
     const v = resources[r];
@@ -92,6 +199,7 @@ export function parseSave(json: string, content: Content): GameState | null {
       Object.entries(data.nextEventAt).filter((e): e is [string, number] => finiteNonNeg(e[1])),
     );
   }
+  if (finiteNonNeg(data.tilesCleared)) state.tilesCleared = Math.floor(data.tilesCleared);
 
   const b = data.barangay;
   if (isObject(b) && typeof b.id === "string" && b.id !== "" && isObject(b.region)) {
@@ -101,22 +209,33 @@ export function parseSave(json: string, content: Content): GameState | null {
     }
   }
 
-  if (Array.isArray(data.buildings)) {
-    // Re-place each building in order, dropping unknown types, overlaps and tiles that aren't land.
-    const known = new Set(content.buildings.map((d) => d.id));
-    let placed: GameState = { ...state, buildings: [] };
-    for (const item of data.buildings as unknown[]) {
-      if (!isObject(item) || typeof item.type !== "string" || !known.has(item.type)) continue;
-      const { x, y } = item;
-      if (typeof x !== "number" || typeof y !== "number" || !canPlace(placed, content, x, y)) continue;
-      const building: PlacedBuilding = { type: item.type, x, y };
-      if (item.damaged === true) building.damaged = true;
-      else if (finiteNonNeg(item.burningSince) && item.burningSince <= state.time && content.events.fire) {
-        building.burningSince = item.burningSince;
-      }
-      placed = { ...placed, buildings: [...placed.buildings, building] };
+  // Buildings: known types on a fitting tile (cleared land, or a bridge for bridges), no overlaps.
+  const defs = new Map(content.buildings.map((d) => [d.id, d]));
+  const taken = new Set<string>();
+  state.buildings = [];
+  for (const item of Array.isArray(data.buildings) ? (data.buildings as unknown[]) : []) {
+    if (!isObject(item) || typeof item.type !== "string") continue;
+    const def = defs.get(item.type);
+    const { x, y } = item;
+    if (!def || typeof x !== "number" || typeof y !== "number" || taken.has(`${x},${y}`)) continue;
+    const tile = tileAt(map, x, y);
+    const fits = def.placeOn === "river" ? tile === "bridge" : tile === "cleared" && !isPlaza(map, x, y);
+    if (!fits) continue;
+    const building: PlacedBuilding = { type: item.type, x, y };
+    if (item.damaged === true) building.damaged = true;
+    else if (finiteNonNeg(item.burningSince) && item.burningSince <= state.time && content.events.fire) {
+      building.burningSince = item.burningSince;
     }
-    state.buildings = placed.buildings;
+    taken.add(`${x},${y}`);
+    state.buildings.push(building);
+  }
+
+  const job = data.clearing;
+  if (isObject(job) && finiteNonNeg(job.progress) && finiteNonNeg(job.seconds) && typeof job.x === "number" && typeof job.y === "number") {
+    const tile = tileAt(map, job.x, job.y);
+    if (tile === "forest" || tile === "balete") {
+      state.clearing = { x: job.x, y: job.y, progress: job.progress, seconds: job.seconds } satisfies ClearingJob;
+    }
   }
   return state;
 }

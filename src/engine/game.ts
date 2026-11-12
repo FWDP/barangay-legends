@@ -1,10 +1,24 @@
 // Game state and rules. Pure functions only: no React, no browser APIs, and no unseeded
 // randomness or wall-clock time. Time is passed in; randomness comes from the RNG in the state.
 import { RESOURCES, type BuildingDef, type Content, type Resource, type ResourceAmounts } from "./content";
-import { DEFAULT_SEED, isHungry, seasonMultiplier, updateEvents } from "./events";
-import { autoPlaceTile, buildingAt, buildingBonuses, canPlace } from "./map";
+import { isHungry, seasonMultiplier, updateEvents } from "./events";
+import {
+  autoPlaceTile,
+  bridgeSpan,
+  buildingAt,
+  buildingBonuses,
+  buildingGroveBonuses,
+  canPlace,
+  clearBlocker,
+  clearSeconds,
+  generateMap,
+  isUnlocked,
+  setTiles,
+  type MapState,
+} from "./map";
+import { DEFAULT_SEED } from "./rng";
 
-export const STATE_VERSION = 3;
+export const STATE_VERSION = 4;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -49,9 +63,23 @@ export interface GameState {
   typhoon: { strikeAt: number } | null;
   /** Earliest game second each disaster may start again (cooldowns). */
   nextEventAt: Record<string, number>;
+  /** The generated map, including every tile the player has cleared or bridged. */
+  map: MapState;
+  /** Land being cleared right now (one job at a time), or null. */
+  clearing: ClearingJob | null;
+  /** Tiles the player has cleared. Makes each new clearing take longer. */
+  tilesCleared: number;
 }
 
-/** A new barangay. Pass a seed (e.g. from the clock in the UI) so each game's events differ. */
+export interface ClearingJob {
+  x: number;
+  y: number;
+  /** Seconds worked so far, and seconds needed (fixed when the job starts). */
+  progress: number;
+  seconds: number;
+}
+
+/** A new barangay. Pass a seed (e.g. from the clock in the UI) so each game's map and events differ. */
 export function newGame(content: Content, seed: number = DEFAULT_SEED): GameState {
   const { start } = content.rules;
   const resources = Object.fromEntries(RESOURCES.map((r) => [r, start.resources[r] ?? 0])) as Record<
@@ -71,6 +99,9 @@ export function newGame(content: Content, seed: number = DEFAULT_SEED): GameStat
     sick: [],
     typhoon: null,
     nextEventAt: {},
+    map: generateMap(content, seed),
+    clearing: null,
+    tilesCleared: 0,
   };
   for (const def of content.buildings) {
     for (let i = 0; i < (start.buildings[def.id] ?? 0); i++) state = placeAuto(state, content, def.id);
@@ -81,9 +112,9 @@ export function newGame(content: Content, seed: number = DEFAULT_SEED): GameStat
 /** Adds a building for free on the best free tile. Used for starting buildings and old saves. */
 export function placeAuto(state: GameState, content: Content, id: string): GameState {
   const def = content.buildings.find((b) => b.id === id);
-  if (!def) return state;
-  const { x, y } = autoPlaceTile(state, content, def);
-  return { ...state, buildings: [...state.buildings, { type: id, x, y }] };
+  const tile = def && autoPlaceTile(state, content, def);
+  if (!tile) return state;
+  return { ...state, buildings: [...state.buildings, { type: id, x: tile.x, y: tile.y }] };
 }
 
 /** Copies built, including damaged ones (they still count for cost scaling). */
@@ -122,10 +153,16 @@ export function housing(state: GameState, content: Content): number {
   );
 }
 
-/** Villagers able to work: none while hungry (gutom), and never the sick (sakit). */
-export function availableWorkers(state: GameState): number {
+/** Villagers able to work: none while hungry (gutom), never the sick (sakit). */
+export function healthyWorkers(state: GameState): number {
   if (isHungry(state)) return 0;
   return Math.max(0, state.villagers - state.sick.length);
+}
+
+/** Villagers free for buildings: healthy ones, minus any busy clearing land. */
+export function availableWorkers(state: GameState, content?: Content): number {
+  const clearing = state.clearing && content ? content.rules.clearing.workers : 0;
+  return Math.max(0, healthyWorkers(state) - clearing);
 }
 
 /** Spreads available workers across worker slots one at a time, round-robin in content order. */
@@ -138,7 +175,7 @@ export function assignWorkers(state: GameState, content: Content): Record<string
     ]),
   );
   const assigned: Record<string, number> = Object.fromEntries(producers.map((b) => [b.id, 0]));
-  let free = availableWorkers(state);
+  let free = availableWorkers(state, content);
   let progress = true;
   while (free > 0 && progress) {
     progress = false;
@@ -160,7 +197,10 @@ export function assignWorkers(state: GameState, content: Content): Record<string
  */
 export function buildingWorkers(state: GameState, content: Content): number[] {
   const perType = assignWorkers(state, content);
-  const bonuses = buildingBonuses(state, content);
+  const groves = buildingGroveBonuses(state, content);
+  const bonuses = buildingBonuses(state, content).map(
+    (b, i) => b + Object.values(groves[i]).reduce((sum, g) => sum + (g ?? 0), 0),
+  );
   const defs = new Map(content.buildings.map((d) => [d.id, d]));
   const order = state.buildings.map((_, i) => i).sort((a, b) => bonuses[b] - bonuses[a] || a - b);
   const left = { ...perType };
@@ -198,11 +238,15 @@ export interface Rates {
 export function rates(state: GameState, content: Content): Rates {
   const workers = buildingWorkers(state, content);
   const bonuses = buildingBonuses(state, content);
+  const groves = buildingGroveBonuses(state, content);
   const defs = new Map(content.buildings.map((d) => [d.id, d]));
   const produced = Object.fromEntries(RESOURCES.map((r) => [r, 0])) as Record<Resource, number>;
   state.buildings.forEach((b, i) => {
     const def = defs.get(b.type);
-    for (const r of RESOURCES) produced[r] += workers[i] * (def?.produces?.[r] ?? 0) * (1 + bonuses[i]);
+    for (const r of RESOURCES) {
+      // Adjacency and grove bonuses add up: a camp by the forest in a kapre's grove gets +10% +25%.
+      produced[r] += workers[i] * (def?.produces?.[r] ?? 0) * (1 + bonuses[i] + (groves[i][r] ?? 0));
+    }
   });
   for (const r of RESOURCES) produced[r] *= seasonMultiplier(content, state.time, r);
   const eaten = Object.fromEntries(RESOURCES.map((r) => [r, 0])) as Record<Resource, number>;
@@ -221,13 +265,33 @@ export function gather(state: GameState, content: Content, resource: Resource): 
   };
 }
 
-/** Builds one copy at (x, y) if affordable and the tile is free land. Returns the same state object if not. */
+/**
+ * Builds one copy at (x, y) if it is unlocked, affordable and the tile fits (cleared land, or
+ * a river crossing for a bridge). A bridge also turns the river tiles it spans into bridge.
+ * Returns the same state object if the build is refused.
+ */
 export function build(state: GameState, content: Content, id: string, x: number, y: number): GameState {
   const def = content.buildings.find((b) => b.id === id);
-  if (!def || !canPlace(state, content, x, y)) return state;
+  if (!def || !isUnlocked(state, def) || !canPlace(state, content, def, x, y)) return state;
   const cost = buildingCost(content, def, owned(state, id));
   if (!canAfford(state, cost)) return state;
-  return { ...state, resources: pay(state, cost), buildings: [...state.buildings, { type: id, x, y }] };
+  const span = def.bridge ? (bridgeSpan(state.map, def, x, y) ?? []) : [];
+  return {
+    ...state,
+    resources: pay(state, cost),
+    buildings: [...state.buildings, { type: id, x, y }],
+    map: setTiles(state.map, span.map((t) => ({ ...t, tile: "bridge" as const }))),
+  };
+}
+
+/**
+ * Starts clearing a forest tile next to cleared land. Villagers work on it for a while
+ * (see clearSeconds), then it becomes cleared land and gives wood. One job at a time.
+ * Felling a balete needs confirmBalete: it can never grow back.
+ */
+export function clearLand(state: GameState, content: Content, x: number, y: number, confirmBalete = false): GameState {
+  if (clearBlocker(state, content, x, y, confirmBalete, healthyWorkers(state)) !== null) return state;
+  return { ...state, clearing: { x, y, progress: 0, seconds: clearSeconds(state, content) } };
 }
 
 /** Puts out a burning building (free: the player taps it). */
@@ -270,7 +334,8 @@ export type Command =
   | { type: "gather"; resource: Resource }
   | { type: "build"; building: string; x: number; y: number }
   | { type: "extinguish"; x: number; y: number }
-  | { type: "repair"; x: number; y: number };
+  | { type: "repair"; x: number; y: number }
+  | { type: "clear"; x: number; y: number; confirmBalete?: boolean };
 
 export function apply(state: GameState, content: Content, command: Command): GameState {
   switch (command.type) {
@@ -282,6 +347,8 @@ export function apply(state: GameState, content: Content, command: Command): Gam
       return extinguish(state, command.x, command.y);
     case "repair":
       return repair(state, content, command.x, command.y);
+    case "clear":
+      return clearLand(state, content, command.x, command.y, command.confirmBalete === true);
   }
 }
 
@@ -339,5 +406,22 @@ function step(state: GameState, content: Content, dt: number): GameState {
     migration = 0;
   }
 
-  return updateEvents({ ...state, resources, villagers, migration, hunger }, content, dt);
+  let next: GameState = { ...state, resources, villagers, migration, hunger };
+  next = advanceClearing(next, content, dt, hungry);
+  return updateEvents(next, content, dt);
+}
+
+/** Clearing progresses while the barangay is fed and enough healthy villagers can work on it. */
+function advanceClearing(state: GameState, content: Content, dt: number, hungry: boolean): GameState {
+  const job = state.clearing;
+  if (!job || hungry || healthyWorkers(state) < content.rules.clearing.workers) return state;
+  const progress = job.progress + dt;
+  if (progress < job.seconds - EPSILON) return { ...state, clearing: { ...job, progress } };
+  return {
+    ...state,
+    clearing: null,
+    tilesCleared: state.tilesCleared + 1,
+    resources: { ...state.resources, wood: state.resources.wood + content.rules.clearing.wood },
+    map: setTiles(state.map, [{ x: job.x, y: job.y, tile: "cleared" }]),
+  };
 }
