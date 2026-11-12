@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { apply, gather, newGame, owned, tick } from "./game";
+import { apply, gather, newGame, owned, STATE_VERSION, tick } from "./game";
 import { bonusAt, countTiles, generateMap, NEIGHBOURS, tileAt } from "./map";
 import { clearSave, loadGame, migrate, parseSave, SAVE_KEY, saveGame } from "./save";
 import { at, calm, content, withState } from "./testUtils";
@@ -117,7 +117,7 @@ describe("migration from v3 (before the generated map)", () => {
   const s = roundTrip(v3Save)!;
 
   it("generates the map from the save's seed", () => {
-    expect(s.version).toBe(4);
+    expect(s.version).toBe(STATE_VERSION);
     expect(s.map.seed).toBe(777);
     expect(s.map.plaza).toEqual(generateMap(content, 777).plaza);
     expect(s.clearing).toBeNull();
@@ -174,9 +174,9 @@ describe("older saves still load through every migration", () => {
     migration: 0.25,
   };
 
-  it("v1 (building counts) → v4", () => {
+  it("v1 (building counts) → current", () => {
     const s = roundTrip(v1Save)!;
-    expect(s.version).toBe(4);
+    expect(s.version).toBe(STATE_VERSION);
     expect(s).toMatchObject({ resources: { rice: 220, wood: 140 }, villagers: 15, migration: 0.25 });
     expect([owned(s, "bahay-kubo"), owned(s, "palayan"), owned(s, "woodcutter-camp")]).toEqual([6, 4, 3]);
     expect(new Set(s.buildings.map((b) => `${b.x},${b.y}`)).size).toBe(13);
@@ -197,7 +197,7 @@ describe("older saves still load through every migration", () => {
     expect(where("woodcutter-camp")).toEqual(["8,-1", "8,0", "8,1"]);
   });
 
-  it("v2 → v4 keeps buildings and adds events and the map", () => {
+  it("v2 → current keeps buildings and adds events, the map and the region", () => {
     const v2Save = {
       version: 2,
       barangay: { id: "barangay-1", region: { x: 0, y: 0 } },
@@ -207,7 +207,8 @@ describe("older saves still load through every migration", () => {
       migration: 0,
     };
     const s = roundTrip(v2Save)!;
-    expect(s).toMatchObject({ version: 4, time: 0, hunger: 0, sick: [], typhoon: null, tilesCleared: 0 });
+    expect(s).toMatchObject({ version: STATE_VERSION, lastBuild: null, time: 0, hunger: 0, sick: [], typhoon: null, tilesCleared: 0, warriors: 0 });
+    expect(s.region?.neighbors).toHaveLength(content.neighbors.length);
     expect(s.buildings).toHaveLength(2);
     expect(countTiles(s.map, "cleared")).toBeGreaterThanOrEqual((2 * content.rules.map.startClearRadius + 1) ** 2);
   });
@@ -232,6 +233,7 @@ describe("event state round trip", () => {
       ],
     });
     saveGame(s, storage);
-    expect(loadGame(content, storage)).toEqual(s);
+    // A player save always gets a region (rebuilt from content when missing).
+    expect({ ...loadGame(content, storage), region: null }).toEqual(s);
   });
 });

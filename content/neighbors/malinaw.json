@@ -1,0 +1,27 @@
+{
+  "id": "malinaw",
+  "name": "Barangay Malinaw",
+  "datu": "Dayang Dalisay",
+  "trait": "peaceful",
+  "description": "A quiet settlement of farmers by clear water.",
+  "river": {
+    "position": 0.32,
+    "bank": "right"
+  },
+  "start": {
+    "villagers": 6,
+    "warriors": 0,
+    "resources": {
+      "rice": 60,
+      "wood": 40
+    },
+    "buildings": {
+      "bahay-kubo": 3,
+      "palayan": 2,
+      "woodcutter-camp": 1
+    }
+  },
+  "trust": 45,
+  "fictional": true,
+  "note": "Fictional barangay and datu, made up for the game; not a historical person or place."
+}

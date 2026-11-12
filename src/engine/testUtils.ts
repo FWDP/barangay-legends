@@ -45,6 +45,8 @@ export function withState(patch: Partial<GameState> & { buildings?: PlacedBuildi
     buildings: [at("bahay-kubo", 5, 3)],
     clearing: null,
     tilesCleared: 0,
+    // No region unless a test asks for one, so other tests aren't affected by neighbors.
+    region: null,
     ...patch,
   };
 }

@@ -1,0 +1,27 @@
+{
+  "id": "pulang-lupa",
+  "name": "Barangay Pulang-Lupa",
+  "datu": "Datu Bagwis",
+  "trait": "trader",
+  "description": "Traders who paddle salt and jars up and down the river.",
+  "river": {
+    "position": 0.12,
+    "bank": "left"
+  },
+  "start": {
+    "villagers": 7,
+    "warriors": 1,
+    "resources": {
+      "rice": 60,
+      "wood": 40
+    },
+    "buildings": {
+      "bahay-kubo": 3,
+      "palayan": 2,
+      "woodcutter-camp": 1
+    }
+  },
+  "trust": 35,
+  "fictional": true,
+  "note": "Fictional barangay and datu, made up for the game; not a historical person or place."
+}

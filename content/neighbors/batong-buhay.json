@@ -1,0 +1,27 @@
+{
+  "id": "batong-buhay",
+  "name": "Barangay Batong-Buhay",
+  "datu": "Datu Kidlat",
+  "trait": "aggressive",
+  "description": "Hard-bitten warriors who prize renown from raids.",
+  "river": {
+    "position": 0.9,
+    "bank": "right"
+  },
+  "start": {
+    "villagers": 9,
+    "warriors": 4,
+    "resources": {
+      "rice": 60,
+      "wood": 40
+    },
+    "buildings": {
+      "bahay-kubo": 4,
+      "palayan": 2,
+      "woodcutter-camp": 1
+    }
+  },
+  "trust": 15,
+  "fictional": true,
+  "note": "Fictional barangay and datu, made up for the game; not a historical person or place."
+}

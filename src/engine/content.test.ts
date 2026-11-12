@@ -18,7 +18,7 @@ describe("content", () => {
   it("loads every building file in content/ and passes the schema check", () => {
     const content = loadContent();
     // In menu order ("order" in each file), not file-name order.
-    expect(content.buildings.map((b) => b.id)).toEqual(["bahay-kubo", "palayan", "woodcutter-camp", "babaylan-hut", "tulay"]);
+    expect(content.buildings.map((b) => b.id)).toEqual(["bahay-kubo", "palayan", "woodcutter-camp", "babaylan-hut", "tulay", "kuta"]);
   });
 
   it("matches the Week 1 numbers in docs/game-design.md", () => {

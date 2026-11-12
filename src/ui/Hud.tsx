@@ -20,13 +20,14 @@ export function Hud(props: { state: GameState; content: Content; children: React
       <ResourceChip resource="wood" amount={state.resources.wood} rates={r} note={notes(state, content).wood} />
       <Chip
         icon="👥"
-        label={`Villagers: ${state.villagers} of ${housing(state, content)}, ${working} working${state.sick.length ? `, ${state.sick.length} sick` : ""}`}
+        label={`Villagers: ${state.villagers} of ${housing(state, content)}, ${working} working${state.warriors ? `, ${state.warriors} warriors` : ""}${state.sick.length ? `, ${state.sick.length} sick` : ""}`}
       >
         <span className="block font-display text-base leading-none tabular-nums sm:text-lg">
           {state.villagers}/{housing(state, content)}
         </span>
         <span className="block text-[10px] leading-tight whitespace-nowrap text-amber-200/90">
-          {working} working{state.sick.length > 0 && <span className="text-red-200"> · 🤒{state.sick.length}</span>}
+          {working} working{state.warriors > 0 && <span className="hidden sm:inline"> · ⚔️{state.warriors}</span>}
+          {state.sick.length > 0 && <span className="text-red-200"> · 🤒{state.sick.length}</span>}
         </span>
       </Chip>
       <SeasonChip state={state} content={content} />

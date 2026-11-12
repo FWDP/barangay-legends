@@ -1,0 +1,21 @@
+{
+  "id": "kuta",
+  "name": "Kuta",
+  "description": "A palisade of sharpened bamboo and timber around part of the barangay.",
+  "icon": "🛡️",
+  "order": 6,
+  "cost": {
+    "wood": 40,
+    "rice": 10
+  },
+  "repairCost": {
+    "wood": 12
+  },
+  "defense": 12,
+  "unlock": {
+    "villagers": 10
+  },
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+  ]
+}

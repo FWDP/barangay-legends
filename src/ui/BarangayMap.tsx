@@ -8,6 +8,7 @@ import {
   useState,
   type DragEvent,
   type KeyboardEvent,
+  type MouseEvent,
   type PointerEvent,
   type ReactNode,
   type RefObject,
@@ -69,15 +70,25 @@ interface BuildingInfo {
 export function BarangayMap(props: {
   state: GameState;
   content: Content;
-  /** The building the player is placing, if any. */
+  /** The building the player is placing (or moving), if any. */
   placing: BuildingDef | null;
+  /** While moving: where the building stands now. */
+  moveFrom?: { x: number; y: number } | null;
+  /**
+   * The state valid tiles and bonuses are worked out on. While moving, the building is
+   * picked up first, so it doesn't count as its own neighbour.
+   */
+  planState?: GameState;
   onPlace: (x: number, y: number) => void;
-  /** A tap on a tile outside placing mode: fire, repair, clear land. (sx, sy) is the screen point. */
+  /** A tap on a tile outside placing mode: building menu, fire, repair, clear land. (sx, sy) is the screen point. */
   onTapTile: (x: number, y: number, sx: number, sy: number) => void;
+  /** Right-click on a building (desktop): open its menu. */
+  onBuildingMenu: (x: number, y: number, sx: number, sy: number) => void;
   /** The player tapped a resting spirit (the kapre): show its lore note. */
   onSpirit: (loreId: string, sx: number, sy: number) => void;
 }) {
-  const { state, content, placing, onPlace, onTapTile, onSpirit } = props;
+  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onBuildingMenu, onSpirit } = props;
+  const plan = props.planState ?? state;
   const { map } = state;
   const area = useRef<HTMLDivElement>(null);
   const [view, setView] = useState<View>({ w: 0, h: 0 });
@@ -135,15 +146,17 @@ export function BarangayMap(props: {
   // Valid tiles for the building being placed, within the view, with the bonus each would get.
   const placement = useMemo(() => {
     if (!placing || !range) return null;
-    const taken = occupancy(state);
+    const taken = occupancy(plan);
     return new Map<string, { adjacency: number; grove: number }>(
-      validTiles(state, content, placing, range).map((t) => {
-        const adjacency = adjacencyBonusAt(map, taken, placing, t.x, t.y);
-        const g = grove ? groveBonusAt(map, content, placing, t.x, t.y, grove.resource) : 0;
-        return [`${t.x},${t.y}`, { adjacency, grove: g }];
-      }),
+      validTiles(plan, content, placing, range)
+        .filter((t) => !(moveFrom && t.x === moveFrom.x && t.y === moveFrom.y))
+        .map((t) => {
+          const adjacency = adjacencyBonusAt(plan.map, taken, placing, t.x, t.y);
+          const g = grove ? groveBonusAt(plan.map, content, placing, t.x, t.y, grove.resource) : 0;
+          return [`${t.x},${t.y}`, { adjacency, grove: g }];
+        }),
     );
-  }, [placing, state.buildings, map, content, rangeKey]);
+  }, [placing, plan.buildings, plan.map, content, rangeKey, moveFrom?.x, moveFrom?.y]);
 
   // The grove's reach, drawn as a soft glow while placing a building it boosts.
   const glow = useMemo(() => {
@@ -297,6 +310,16 @@ export function BarangayMap(props: {
     e.preventDefault();
   };
 
+  // Right-click on a building opens the same menu as tapping it (desktop).
+  const onContextMenu = (e: MouseEvent<HTMLDivElement>) => {
+    if (!cam) return;
+    const p = local(e);
+    const t = screenToTile(cam, view, p.x, p.y);
+    if (!buildings.has(`${t.x},${t.y}`)) return;
+    e.preventDefault();
+    if (!placing) onBuildingMenu(t.x, t.y, e.clientX, e.clientY);
+  };
+
   // Drag and drop from the build toolbar (desktop).
   const dropTile = (e: DragEvent) => {
     if (!cam) return null;
@@ -334,7 +357,7 @@ export function BarangayMap(props: {
     [spiritLore],
   );
 
-  // Keyboard activation of a burning or damaged building.
+  // Keyboard activation of a building: its menu, or putting out a fire, or repairing.
   const activate = useRef(onTapTile);
   activate.current = onTapTile;
   const onActivate = useCallback((x: number, y: number, el: Element) => {
@@ -370,6 +393,7 @@ export function BarangayMap(props: {
             plaza={isPlaza(map, x, y)}
             building={building}
             fresh={building ? fresh.has(building.key) : false}
+            lifted={moveFrom?.x === x && moveFrom?.y === y}
             target={placement ? (placement.has(key) ? totalBonus(placement.get(key)!) : "blocked") : null}
             ghost={
               placing && hovered && placement?.has(key)
@@ -410,6 +434,7 @@ export function BarangayMap(props: {
         onPointerCancel={onPointerUp}
         onPointerLeave={() => setHover(null)}
         onKeyDown={onKeyDown}
+        onContextMenu={onContextMenu}
         {...dnd}
       >
         {cam && (
@@ -527,6 +552,8 @@ const Cell = memo(function Cell(props: {
   plaza: boolean;
   building: BuildingInfo | null;
   fresh: boolean;
+  /** The building here is being moved. */
+  lifted: boolean;
   /** While placing: the bonus this tile would give, or "blocked". Null when not placing. */
   target: number | "blocked" | null;
   ghost: GhostInfo | null;
@@ -541,7 +568,7 @@ const Cell = memo(function Cell(props: {
   progress: number | null;
   onActivate: (x: number, y: number, el: Element) => void;
 }) {
-  const { x, y, tile, plaza, building, fresh, target, ghost, glow, spirit, onSpiritKey, clearable, hint, progress, onActivate } = props;
+  const { x, y, tile, plaza, building, fresh, lifted, target, ghost, glow, spirit, onSpiritKey, clearable, hint, progress, onActivate } = props;
   const h = hash(x, y);
   const valid = typeof target === "number";
   const paddy = building?.def.produces?.rice;
@@ -599,7 +626,7 @@ const Cell = memo(function Cell(props: {
         </span>
       )}
       {building ? (
-        <Building x={x} y={y} info={building} fresh={fresh} onActivate={onActivate} />
+        <Building x={x} y={y} info={building} fresh={fresh} lifted={lifted} onActivate={onActivate} />
       ) : ghost ? (
         <Ghost info={ghost} />
       ) : null}
@@ -711,9 +738,10 @@ function Building(props: {
   y: number;
   info: BuildingInfo;
   fresh: boolean;
+  lifted: boolean;
   onActivate: (x: number, y: number, el: Element) => void;
 }) {
-  const { x, y, info, fresh, onActivate } = props;
+  const { x, y, info, fresh, lifted, onActivate } = props;
   const { def, bonus, damaged, burning, repairText } = info;
   // Decided once, at mount: only buildings that were just built bounce in.
   const [bounce] = useState(fresh);
@@ -722,31 +750,29 @@ function Building(props: {
     : damaged
       ? `${def.name}, damaged. Tap to repair for ${repairText}`
       : bonus > 0
-        ? `${def.name}, +${Math.round(bonus * 100)}% bonus`
-        : def.name;
-  const tappable = burning || damaged;
+        ? `${def.name}, +${Math.round(bonus * 100)}% bonus. Tap to move or demolish`
+        : `${def.name}. Tap to move or demolish`;
   return (
     <>
+      {lifted && (
+        <div aria-hidden className="pointer-events-none absolute inset-[5%] rounded-md border-2 border-dashed border-amber-300 bg-amber-900/30" />
+      )}
       <span
-        role={tappable ? "button" : "img"}
-        tabIndex={tappable ? 0 : undefined}
-        onKeyDown={
-          tappable
-            ? (e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onActivate(x, y, e.currentTarget);
-                }
-              }
-            : undefined
-        }
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.stopPropagation();
+            onActivate(x, y, e.currentTarget);
+          }
+        }}
         aria-label={label}
         title={label}
         data-building={info.key}
         className={`relative leading-none drop-shadow-[0_2px_1px_rgb(0_0_0_/_0.35)] select-none ${bounce ? "motion-safe:animate-bounce-in" : ""} ${
           damaged ? "opacity-60 grayscale" : ""
-        } ${tappable ? "cursor-pointer" : ""}`}
+        } ${lifted ? "opacity-40" : ""} cursor-pointer`}
       >
         {def.icon}
       </span>

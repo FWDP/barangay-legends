@@ -4,6 +4,12 @@ import type { Rates } from "../engine/game";
 export const RESOURCE_ICON: Record<Resource, string> = { rice: "🍚", wood: "🪵" };
 const PRODUCED_LABEL: Record<Resource, string> = { rice: "farmed", wood: "chopped" };
 
+/** A cost or refund as icons, e.g. "🪵 9" or "🍚 2 🪵 3"; "free" when it is all zero. */
+export function costText(amounts: Partial<Record<Resource, number>>): string {
+  const parts = RESOURCES.filter((r) => (amounts[r] ?? 0) > 0).map((r) => `${RESOURCE_ICON[r]} ${amounts[r]}`);
+  return parts.length > 0 ? parts.join(" ") : "free";
+}
+
 export function formatAmount(n: number): string {
   return Math.floor(n).toLocaleString("en");
 }
@@ -61,4 +67,16 @@ export function baleteWarning(content: Content): string {
   const grove = content.groves.find((g) => g.tile === "balete");
   const text = String(content.lore.balete?.clearWarning ?? "This can't be undone.");
   return text.replace("{percent}", String(grove?.percent ?? 0));
+}
+
+/** e.g. "1h 02m 05s", "12m 30s", "45s". */
+export function formatDuration(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  if (h > 0) return `${h}h ${pad(m)}m ${pad(sec)}s`;
+  if (m > 0) return `${m}m ${pad(sec)}s`;
+  return `${sec}s`;
 }

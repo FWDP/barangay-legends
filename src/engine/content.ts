@@ -33,6 +33,8 @@ export interface BuildingDef {
   workers?: number;
   /** Villager capacity added per copy. */
   housing?: number;
+  /** Defense added against raids (e.g. a Kuta). */
+  defense?: number;
   adjacencyBonus?: AdjacencyBonus;
   /** Where it can be built. Default "cleared" land; a bridge goes on the river. */
   placeOn?: "cleared" | "river";
@@ -54,8 +56,86 @@ export interface Rules {
   costGrowth: number;
   gatherPerClick: number;
   secondsPerNewVillager: number;
+  /** When there are more villagers than houses shelter (a house was demolished), one leaves this often. */
+  secondsPerVillagerLeavingOvercrowded: number;
+  placement: PlacementRules;
   map: MapRules;
   clearing: ClearingRules;
+  military: MilitaryRules;
+  diplomacy: DiplomacyRules;
+}
+
+/** Changing your mind about a building: undo, move or demolish it. */
+export interface PlacementRules {
+  /** How long after building the "Undo" button stays; undo returns the full cost. */
+  undoSeconds: number;
+  /** Moving costs this percent of the building's current price (rounded up). */
+  moveCostPercent: number;
+  /** Demolishing returns this percent of what the last copy cost (rounded down). */
+  demolishRefundPercent: number;
+}
+
+export interface MilitaryRules {
+  /** A Mandirigma: trained from a villager, who then guards and fights instead of working. */
+  warrior: { cost: ResourceAmounts; attack: number; defense: number };
+  /** Defense every barangay has before warriors and walls. */
+  baseDefense: number;
+  /** Share of the warriors sent (or defending) lost by each side. */
+  winnerLossPercent: number;
+  loserLossPercent: number;
+  /** Share of the loser's rice and wood a winning raid carries off as tribute. */
+  lootPercent: number;
+}
+
+export interface TraitDef {
+  label: string;
+  trustGainPercent: number;
+  influenceGainPercent: number;
+  /** Extra goods received when trading with them. */
+  tradeBonusPercent: number;
+  offerChanceMultiplier: number;
+  /** Raids the player after the truce. */
+  raids: boolean;
+  /** Share of their villagers they keep as warriors. */
+  warriorPercent: number;
+}
+
+export interface DiplomacyRules {
+  truceSeconds: number;
+  startInfluence: number;
+  trade: { give: number; receivePercent: number; influence: number; trust: number; loyalty: number };
+  marriage: { trustNeeded: number; cost: ResourceAmounts; influence: number; trust: number };
+  sandugo: { cost: ResourceAmounts; trust: number; allyDefensePercent: number };
+  raid: { influence: number; renown: number; trustLossAll: number; trustLossTarget: number; cooldownSeconds: number };
+  tribute: { percent: number; everySeconds: number };
+  loyalty: {
+    start: number;
+    decayPerMinute: number;
+    rebelBelow: number;
+    rebelInfluence: number;
+    guardSeconds: number;
+    guardPerMinute: number;
+  };
+  aiRaid: { chancePerSecond: number; cooldownSeconds: number; warningSeconds: number; lootPercent: number; defendRenown: number };
+  offers: { chancePerSecond: number; expireSeconds: number; give: number; receivePercent: number };
+  aiDecisionSeconds: number;
+  traits: Record<string, TraitDef>;
+}
+
+/** An AI neighbor barangay along the regional river. */
+export interface NeighborDef {
+  id: string;
+  name: string;
+  datu: string;
+  trait: string;
+  description: string;
+  /** Where it sits on the regional river: 0 = upstream, 1 = downstream, and which bank. */
+  river: { position: number; bank: "left" | "right" };
+  start: { villagers: number; warriors: number; resources: ResourceAmounts; buildings: Record<string, number> };
+  /** Starting trust towards the player, 0..100. */
+  trust: number;
+  fictional?: boolean;
+  note?: string;
 }
 
 /** A lore note: short text with at least one source. */
@@ -198,6 +278,7 @@ export interface Content {
   events: Events;
   lore: Record<string, LoreNote>;
   groves: GroveBlessing[];
+  neighbors: NeighborDef[];
 }
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
@@ -252,6 +333,7 @@ export function validateBuilding(raw: unknown, file = "building"): BuildingDef {
     }
     if (!isNonNegNumber(bonus.percent)) throw new Error(`${file}: "adjacencyBonus.percent" must be a number >= 0`);
   }
+  if (raw.defense !== undefined && !isNonNegNumber(raw.defense)) throw new Error(`${file}: "defense" must be a number >= 0`);
   if (raw.produces !== undefined && !raw.workers) {
     throw new Error(`${file}: a building that produces needs "workers"`);
   }
@@ -301,10 +383,53 @@ export function validateRules(raw: unknown): Rules {
   if ((map.width as number) < 4 * r + 12 || (map.height as number) < 2 * r + 5) {
     throw new Error("rules: the map is too small for the start area, the river and forest on both banks");
   }
+  if (!isNonNegNumber(raw.secondsPerVillagerLeavingOvercrowded) || raw.secondsPerVillagerLeavingOvercrowded <= 0) {
+    throw new Error('rules: "secondsPerVillagerLeavingOvercrowded" must be a number > 0');
+  }
+  const placement = raw.placement;
+  if (!isObject(placement)) throw new Error('rules: missing "placement"');
+  checkNumbers(placement, ["undoSeconds", "moveCostPercent", "demolishRefundPercent"], "rules: placement");
+  if ((placement.demolishRefundPercent as number) > 100) throw new Error("rules: placement.demolishRefundPercent can't be over 100");
   const clearing = raw.clearing;
   if (!isObject(clearing)) throw new Error('rules: missing "clearing"');
   checkNumbers(clearing, ["baseSeconds", "secondsGrowth", "wood"], "rules: clearing", false);
   checkNumbers(clearing, ["workers"], "rules: clearing", true);
+  const military = raw.military;
+  if (!isObject(military) || !isObject(military.warrior)) throw new Error('rules: missing "military.warrior"');
+  checkAmounts(military.warrior.cost, "rules: military.warrior.cost");
+  checkNumbers(military.warrior, ["attack", "defense"], "rules: military.warrior");
+  checkNumbers(military, ["baseDefense", "winnerLossPercent", "loserLossPercent", "lootPercent"], "rules: military");
+  const d = raw.diplomacy;
+  if (!isObject(d)) throw new Error('rules: missing "diplomacy"');
+  checkNumbers(d, ["truceSeconds", "startInfluence"], "rules: diplomacy");
+  checkNumbers(d, ["aiDecisionSeconds"], "rules: diplomacy", true);
+  const sections: Record<string, string[]> = {
+    trade: ["give", "receivePercent", "influence", "trust", "loyalty"],
+    marriage: ["trustNeeded", "influence", "trust"],
+    sandugo: ["trust", "allyDefensePercent"],
+    raid: ["influence", "renown", "trustLossAll", "trustLossTarget", "cooldownSeconds"],
+    tribute: ["percent", "everySeconds"],
+    loyalty: ["start", "decayPerMinute", "rebelBelow", "rebelInfluence", "guardSeconds", "guardPerMinute"],
+    aiRaid: ["chancePerSecond", "cooldownSeconds", "warningSeconds", "lootPercent", "defendRenown"],
+    offers: ["chancePerSecond", "expireSeconds", "give", "receivePercent"],
+  };
+  for (const [section, keys] of Object.entries(sections)) {
+    if (!isObject(d[section])) throw new Error(`rules: missing "diplomacy.${section}"`);
+    checkNumbers(d[section] as Record<string, unknown>, keys, `rules: diplomacy.${section}`);
+  }
+  checkAmounts((d.marriage as Record<string, unknown>).cost, "rules: diplomacy.marriage.cost");
+  checkAmounts((d.sandugo as Record<string, unknown>).cost, "rules: diplomacy.sandugo.cost");
+  if ((d.tribute as Record<string, number>).everySeconds <= 0) throw new Error("rules: diplomacy.tribute.everySeconds must be > 0");
+  if (!isObject(d.traits) || Object.keys(d.traits).length === 0) throw new Error('rules: missing "diplomacy.traits"');
+  for (const [name, trait] of Object.entries(d.traits)) {
+    if (!isObject(trait) || typeof trait.raids !== "boolean") throw new Error(`rules: trait "${name}" needs "raids" true or false`);
+    checkStrings(trait, ["label"], `rules: trait ${name}`);
+    checkNumbers(
+      trait,
+      ["trustGainPercent", "influenceGainPercent", "tradeBonusPercent", "offerChanceMultiplier", "warriorPercent"],
+      `rules: trait ${name}`,
+    );
+  }
   return raw as unknown as Rules;
 }
 
@@ -403,12 +528,32 @@ export function validateGrove(raw: unknown, file = "blessing"): GroveBlessing {
   return raw as unknown as GroveBlessing;
 }
 
+/** Checks one neighbor file. Trait and building ids are checked in buildContent. */
+export function validateNeighbor(raw: unknown, file = "neighbor"): NeighborDef {
+  if (!isObject(raw)) throw new Error(`${file}: must be a JSON object`);
+  checkStrings(raw, ["id", "name", "datu", "trait", "description"], file);
+  if (!/^[a-z0-9-]+$/.test(raw.id as string)) throw new Error(`${file}: "id" may only use a-z, 0-9 and "-"`);
+  const river = raw.river;
+  if (!isObject(river) || !isNonNegNumber(river.position) || (river.position as number) > 1 || (river.bank !== "left" && river.bank !== "right")) {
+    throw new Error(`${file}: "river" needs a "position" from 0 to 1 and a "bank" of "left" or "right"`);
+  }
+  const start = raw.start;
+  if (!isObject(start)) throw new Error(`${file}: missing "start"`);
+  checkNumbers(start, ["villagers", "warriors"], `${file}: start`);
+  if ((start.warriors as number) > (start.villagers as number)) throw new Error(`${file}: warriors are villagers, so there can't be more warriors than villagers`);
+  checkAmounts(start.resources, `${file}: start.resources`);
+  if (!isObject(start.buildings)) throw new Error(`${file}: "start.buildings" must be an object`);
+  if (!isNonNegNumber(raw.trust) || (raw.trust as number) > 100) throw new Error(`${file}: "trust" must be 0..100`);
+  return raw as unknown as NeighborDef;
+}
+
 export function buildContent(
   buildingFiles: Record<string, unknown>,
   rawRules: unknown,
   eventFiles: Record<string, unknown> = {},
   loreFiles: Record<string, unknown> = {},
   blessingFiles: Record<string, unknown> = {},
+  neighborFiles: Record<string, unknown> = {},
 ): Content {
   const buildings = Object.entries(buildingFiles)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -456,7 +601,19 @@ export function buildContent(
       if (grove.lore && !lore[grove.lore]) throw new Error(`${file}: "lore" names unknown lore note "${grove.lore}"`);
       return grove;
     });
-  return { buildings, rules, events, lore, groves };
+  const neighbors = Object.entries(neighborFiles)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([file, raw]) => {
+      const n = validateNeighbor(raw, file);
+      if (!rules.diplomacy.traits[n.trait]) throw new Error(`${file}: unknown trait "${n.trait}"`);
+      for (const id of Object.keys(n.start.buildings)) {
+        if (!ids.has(id)) throw new Error(`${file}: start.buildings mentions unknown building "${id}"`);
+      }
+      return n;
+    })
+    .sort((a, b) => a.river.position - b.river.position);
+  if (new Set(neighbors.map((n) => n.id)).size !== neighbors.length) throw new Error("Two neighbors share an id");
+  return { buildings, rules, events, lore, groves, neighbors };
 }
 
 /** Loads every JSON file in content/ at build time (Vite bundles them). */
@@ -469,5 +626,6 @@ export function loadContent(): Content {
   const events = import.meta.glob("../../content/events/*.json", { eager: true, import: "default" });
   const lore = import.meta.glob("../../content/lore/*.json", { eager: true, import: "default" });
   const blessings = import.meta.glob("../../content/blessings/*.json", { eager: true, import: "default" });
-  return buildContent(files, Object.values(rules)[0], events, lore, blessings);
+  const neighbors = import.meta.glob("../../content/neighbors/*.json", { eager: true, import: "default" });
+  return buildContent(files, Object.values(rules)[0], events, lore, blessings, neighbors);
 }

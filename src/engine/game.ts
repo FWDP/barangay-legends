@@ -12,13 +12,30 @@ import {
   clearBlocker,
   clearSeconds,
   generateMap,
+  isClearable,
   isUnlocked,
+  reachableLand,
   setTiles,
+  standingBridgeTiles,
   type MapState,
+  type Point,
 } from "./map";
+import {
+  acceptOffer,
+  createRegion,
+  declineOffer,
+  guard,
+  marry,
+  raid,
+  sandugo,
+  trade,
+  train,
+  updateRegion,
+  type RegionState,
+} from "./region";
 import { DEFAULT_SEED } from "./rng";
 
-export const STATE_VERSION = 4;
+export const STATE_VERSION = 6;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -29,6 +46,19 @@ export interface PlacedBuilding {
   damaged?: boolean;
   /** Game time the fire started, while it burns. */
   burningSince?: number;
+  /** Bridges only: the river tiles it spans (turned back into river if it is demolished). */
+  span?: Point[];
+}
+
+/** The most recent build, so it can be undone for a few seconds (rules.placement.undoSeconds). */
+export interface LastBuild {
+  type: string;
+  x: number;
+  y: number;
+  /** What was paid; undo returns all of it. */
+  cost: Record<Resource, number>;
+  /** Game time it was built. */
+  at: number;
 }
 
 export interface Barangay {
@@ -69,6 +99,12 @@ export interface GameState {
   clearing: ClearingJob | null;
   /** Tiles the player has cleared. Makes each new clearing take longer. */
   tilesCleared: number;
+  /** Mandirigma: villagers trained as warriors. They eat and need housing but don't farm. */
+  warriors: number;
+  /** The region around the player's barangay (neighbors, war, diplomacy). Null for AI neighbors. */
+  region: RegionState | null;
+  /** The last building placed, while it can still be undone (see undoSecondsLeft). */
+  lastBuild: LastBuild | null;
 }
 
 export interface ClearingJob {
@@ -79,8 +115,11 @@ export interface ClearingJob {
   seconds: number;
 }
 
-/** A new barangay. Pass a seed (e.g. from the clock in the UI) so each game's map and events differ. */
-export function newGame(content: Content, seed: number = DEFAULT_SEED): GameState {
+/**
+ * A new barangay. Pass a seed (e.g. from the clock in the UI) so each game's map and events
+ * differ. `withRegion` is false for the AI neighbors themselves.
+ */
+export function newGame(content: Content, seed: number = DEFAULT_SEED, withRegion = true): GameState {
   const { start } = content.rules;
   const resources = Object.fromEntries(RESOURCES.map((r) => [r, start.resources[r] ?? 0])) as Record<
     Resource,
@@ -102,7 +141,11 @@ export function newGame(content: Content, seed: number = DEFAULT_SEED): GameStat
     map: generateMap(content, seed),
     clearing: null,
     tilesCleared: 0,
+    warriors: 0,
+    region: null,
+    lastBuild: null,
   };
+  if (withRegion && content.neighbors.length > 0) state.region = createRegion(content, 0, seed);
   for (const def of content.buildings) {
     for (let i = 0; i < (start.buildings[def.id] ?? 0); i++) state = placeAuto(state, content, def.id);
   }
@@ -153,10 +196,24 @@ export function housing(state: GameState, content: Content): number {
   );
 }
 
+/**
+ * Villagers the houses can shelter, counting damaged houses as standing: a family stays in a
+ * house that is waiting for repair, but leaves if its house is demolished.
+ */
+export function shelter(state: GameState, content: Content): number {
+  const defs = new Map(content.buildings.map((d) => [d.id, d]));
+  return state.buildings.reduce((sum, b) => sum + (defs.get(b.type)?.housing ?? 0), content.rules.baseHousing);
+}
+
+/** Villagers with no house to live in. They leave one at a time (rules.secondsPerVillagerLeavingOvercrowded). */
+export function overcrowded(state: GameState, content: Content): number {
+  return Math.max(0, state.villagers - shelter(state, content));
+}
+
 /** Villagers able to work: none while hungry (gutom), never the sick (sakit). */
 export function healthyWorkers(state: GameState): number {
   if (isHungry(state)) return 0;
-  return Math.max(0, state.villagers - state.sick.length);
+  return Math.max(0, state.villagers - state.sick.length - state.warriors);
 }
 
 /** Villagers free for buildings: healthy ones, minus any busy clearing land. */
@@ -276,12 +333,154 @@ export function build(state: GameState, content: Content, id: string, x: number,
   const cost = buildingCost(content, def, owned(state, id));
   if (!canAfford(state, cost)) return state;
   const span = def.bridge ? (bridgeSpan(state.map, def, x, y) ?? []) : [];
+  const placed: PlacedBuilding = span.length > 0 ? { type: id, x, y, span } : { type: id, x, y };
   return {
     ...state,
     resources: pay(state, cost),
-    buildings: [...state.buildings, { type: id, x, y }],
+    buildings: [...state.buildings, placed],
     map: setTiles(state.map, span.map((t) => ({ ...t, tile: "bridge" as const }))),
+    lastBuild: { type: id, x, y, cost, at: state.time },
   };
+}
+
+// ---------- Undo, move and demolish ----------
+
+const defById = (content: Content, id: string) => content.buildings.find((b) => b.id === id);
+
+/** The river tiles a placed bridge covers (none for other buildings). */
+export function bridgeTiles(state: GameState, content: Content, b: PlacedBuilding): Point[] {
+  const def = defById(content, b.type);
+  if (!def?.bridge) return [];
+  return b.span ?? standingBridgeTiles(state.map, def, b.x, b.y);
+}
+
+/**
+ * The state with one building picked up: gone from the list, and a bridge's tiles back to
+ * river. Cleared land stays cleared and felled balete trees stay felled. A clearing job on land
+ * that is now cut off stops. Nothing is paid or refunded here.
+ */
+export function withoutBuilding(state: GameState, content: Content, target: PlacedBuilding): GameState {
+  const span = bridgeTiles(state, content, target);
+  const map = setTiles(state.map, span.map((t) => ({ ...t, tile: "river" as const })));
+  const job = state.clearing;
+  return {
+    ...state,
+    buildings: state.buildings.filter((b) => b !== target),
+    map,
+    clearing: job && !isClearable(map, job.x, job.y) ? null : job,
+  };
+}
+
+function addResources(state: GameState, amounts: Record<Resource, number>): Record<Resource, number> {
+  const resources = { ...state.resources };
+  for (const r of RESOURCES) resources[r] += amounts[r];
+  return resources;
+}
+
+/** Seconds left to undo the last build, or 0 if there is nothing to undo. */
+export function undoSecondsLeft(state: GameState, content: Content): number {
+  const last = state.lastBuild;
+  if (!last) return 0;
+  const b = buildingAt(state, last.x, last.y);
+  if (b?.type !== last.type) return 0;
+  return Math.max(0, last.at + content.rules.placement.undoSeconds - state.time);
+}
+
+/** Takes back the last build within the undo window and returns its full cost. */
+export function undo(state: GameState, content: Content): GameState {
+  const last = state.lastBuild;
+  if (!last || undoSecondsLeft(state, content) <= 0) return state;
+  const s = withoutBuilding(state, content, buildingAt(state, last.x, last.y)!);
+  return { ...s, resources: addResources(s, last.cost), lastBuild: null };
+}
+
+/** Moving costs a share (rules.placement.moveCostPercent) of what the next copy would cost, rounded up. */
+export function moveCost(state: GameState, content: Content, type: string): Record<Resource, number> {
+  const def = defById(content, type);
+  const price = def ? buildingCost(content, def, owned(state, type)) : asCost({});
+  const pct = content.rules.placement.moveCostPercent / 100;
+  return Object.fromEntries(RESOURCES.map((r) => [r, Math.ceil(price[r] * pct)])) as Record<Resource, number>;
+}
+
+/**
+ * Can the building at (x, y) move to (toX, toY)? Checked as if it were already picked up, so
+ * a bridge can move to another crossing. A burning building can't be moved.
+ */
+export function canMove(state: GameState, content: Content, x: number, y: number, toX: number, toY: number): boolean {
+  const target = buildingAt(state, x, y);
+  const def = target && defById(content, target.type);
+  if (!target || !def || target.burningSince !== undefined || (x === toX && y === toY)) return false;
+  return canPlace(withoutBuilding(state, content, target), content, def, toX, toY);
+}
+
+/**
+ * Moves a building to another valid tile for moveCost. It keeps its place in the build order,
+ * so its workers stay assigned, and keeps any damage.
+ */
+export function move(state: GameState, content: Content, x: number, y: number, toX: number, toY: number): GameState {
+  if (!canMove(state, content, x, y, toX, toY)) return state;
+  const target = buildingAt(state, x, y)!;
+  const def = defById(content, target.type)!;
+  const cost = moveCost(state, content, target.type);
+  if (!canAfford(state, cost)) return state;
+  const lifted = withoutBuilding(state, content, target);
+  const span = def.bridge ? (bridgeSpan(lifted.map, def, toX, toY) ?? []) : [];
+  const moved: PlacedBuilding = { ...target, x: toX, y: toY };
+  delete moved.span;
+  if (span.length > 0) moved.span = span;
+  const map = setTiles(lifted.map, span.map((t) => ({ ...t, tile: "bridge" as const })));
+  const job = state.clearing;
+  return {
+    ...state,
+    resources: pay(state, cost),
+    buildings: state.buildings.map((b) => (b === target ? moved : b)),
+    map,
+    clearing: job && !isClearable(map, job.x, job.y) ? null : job,
+    lastBuild: null,
+  };
+}
+
+/** Demolishing returns a share (rules.placement.demolishRefundPercent) of what the last copy cost, rounded down. */
+export function demolishRefund(state: GameState, content: Content, type: string): Record<Resource, number> {
+  const def = defById(content, type);
+  const n = owned(state, type);
+  if (!def || n === 0) return asCost({});
+  const paid = buildingCost(content, def, n - 1);
+  const pct = content.rules.placement.demolishRefundPercent / 100;
+  return Object.fromEntries(RESOURCES.map((r) => [r, Math.floor(paid[r] * pct)])) as Record<Resource, number>;
+}
+
+export interface DemolishPreview {
+  refund: Record<Resource, number>;
+  /** Villagers left without a house; they leave one at a time. */
+  villagersLeaving: number;
+  /** A bridge whose loss cuts off land (the far bank can't grow until a new bridge is built). */
+  cutsOffLand: boolean;
+}
+
+/** What demolishing the building at (x, y) would do, for the confirmation. Null if there's none. */
+export function demolishPreview(state: GameState, content: Content, x: number, y: number): DemolishPreview | null {
+  const target = buildingAt(state, x, y);
+  if (!target) return null;
+  const after = withoutBuilding(state, content, target);
+  return {
+    refund: demolishRefund(state, content, target.type),
+    villagersLeaving: overcrowded(after, content) - overcrowded(state, content),
+    cutsOffLand: after.map !== state.map && reachableLand(after.map) < reachableLand(state.map),
+  };
+}
+
+/**
+ * Tears a building down for demolishRefund. Its workers go back to the free pool. Villagers a
+ * demolished house no longer shelters leave one at a time (see step). A demolished bridge turns
+ * back into river; buildings on the far bank keep working.
+ */
+export function demolish(state: GameState, content: Content, x: number, y: number): GameState {
+  const target = buildingAt(state, x, y);
+  if (!target) return state;
+  const refund = demolishRefund(state, content, target.type);
+  const s = withoutBuilding(state, content, target);
+  return { ...s, resources: addResources(s, refund), lastBuild: null };
 }
 
 /**
@@ -333,9 +532,20 @@ export function repair(state: GameState, content: Content, x: number, y: number)
 export type Command =
   | { type: "gather"; resource: Resource }
   | { type: "build"; building: string; x: number; y: number }
+  | { type: "undo" }
+  | { type: "move"; x: number; y: number; toX: number; toY: number }
+  | { type: "demolish"; x: number; y: number }
   | { type: "extinguish"; x: number; y: number }
   | { type: "repair"; x: number; y: number }
-  | { type: "clear"; x: number; y: number; confirmBalete?: boolean };
+  | { type: "clear"; x: number; y: number; confirmBalete?: boolean }
+  | { type: "train" }
+  | { type: "trade"; neighbor: string; give: Resource }
+  | { type: "marry"; neighbor: string }
+  | { type: "sandugo"; neighbor: string }
+  | { type: "raid"; neighbor: string; warriors: number }
+  | { type: "guard"; neighbor: string; warriors: number }
+  | { type: "acceptOffer" }
+  | { type: "declineOffer" };
 
 export function apply(state: GameState, content: Content, command: Command): GameState {
   switch (command.type) {
@@ -343,12 +553,34 @@ export function apply(state: GameState, content: Content, command: Command): Gam
       return gather(state, content, command.resource);
     case "build":
       return build(state, content, command.building, command.x, command.y);
+    case "undo":
+      return undo(state, content);
+    case "move":
+      return move(state, content, command.x, command.y, command.toX, command.toY);
+    case "demolish":
+      return demolish(state, content, command.x, command.y);
     case "extinguish":
       return extinguish(state, command.x, command.y);
     case "repair":
       return repair(state, content, command.x, command.y);
     case "clear":
       return clearLand(state, content, command.x, command.y, command.confirmBalete === true);
+    case "train":
+      return train(state, content);
+    case "trade":
+      return trade(state, content, command.neighbor, command.give);
+    case "marry":
+      return marry(state, content, command.neighbor);
+    case "sandugo":
+      return sandugo(state, content, command.neighbor);
+    case "raid":
+      return raid(state, content, command.neighbor, command.warriors);
+    case "guard":
+      return guard(state, content, command.neighbor, command.warriors);
+    case "acceptOffer":
+      return acceptOffer(state, content);
+    case "declineOffer":
+      return declineOffer(state);
   }
 }
 
@@ -383,6 +615,7 @@ function step(state: GameState, content: Content, dt: number): GameState {
   let villagers = state.villagers;
   let migration = state.migration;
   const cap = housing(state, content);
+  const homes = shelter(state, content);
 
   if (hungry) {
     const leaving = gutom ? Math.min(dt, Math.max(0, hunger - gutom.graceSeconds)) : 0;
@@ -395,6 +628,14 @@ function step(state: GameState, content: Content, dt: number): GameState {
       }
     }
     if (villagers === 0 || Math.abs(migration) < EPSILON) migration = 0;
+  } else if (villagers > homes) {
+    // A house was demolished: the families without one leave, one at a time.
+    migration = Math.min(migration, 0) - dt / rules.secondsPerVillagerLeavingOvercrowded;
+    while (migration <= -1 + EPSILON && villagers > homes) {
+      villagers--;
+      migration += 1;
+    }
+    if (villagers <= homes || Math.abs(migration) < EPSILON) migration = 0;
   } else if (villagers < cap && resources.rice > 0) {
     migration = Math.max(migration, 0) + dt / rules.secondsPerNewVillager;
     while (migration >= 1 - EPSILON && villagers < cap) {
@@ -406,9 +647,12 @@ function step(state: GameState, content: Content, dt: number): GameState {
     migration = 0;
   }
 
-  let next: GameState = { ...state, resources, villagers, migration, hunger };
+  // Warriors are villagers: if families leave, warriors go with them.
+  const warriors = Math.min(state.warriors, villagers);
+  let next: GameState = { ...state, resources, villagers, migration, hunger, warriors };
   next = advanceClearing(next, content, dt, hungry);
-  return updateEvents(next, content, dt);
+  next = updateEvents(next, content, dt);
+  return next.region ? updateRegion(next, content, state.time, dt) : next;
 }
 
 /** Clearing progresses while the barangay is fed and enough healthy villagers can work on it. */

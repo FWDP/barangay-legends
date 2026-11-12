@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import type { Resource } from "../engine/content";
-import { buildingCost, canAfford, healthyWorkers, owned, repairCost } from "../engine/game";
+import { buildingCost, canAfford, canMove, healthyWorkers, moveCost, owned, repairCost, withoutBuilding } from "../engine/game";
 import { buildingAt, canPlace, clearBlocker, clearSeconds, isUnlocked, tileAt, type ClearBlocker } from "../engine/map";
 import { BarangayMap } from "./BarangayMap";
+import { BuildingMenu, DemolishDialog, UndoBar, type MenuTarget } from "./BuildingActions";
 import { BuildToolbar } from "./BuildToolbar";
+import { latestReportId, OfferBar, ReportDialog, unseenReport, VictoryDialog } from "./RegionOverlays";
+import { RegionView } from "./RegionView";
 import { activeBanners, EventBanner } from "./EventBanners";
 import { FloatLayer, spawnFloat } from "./floats";
-import { baleteWarning, bonusRuleText, groveRuleText, RESOURCE_ICON } from "./format";
+import { baleteWarning, bonusRuleText, costText, groveRuleText, RESOURCE_ICON } from "./format";
 import { GatherButtons } from "./GatherButtons";
 import { Hud } from "./Hud";
 import { SettingsMenu } from "./SettingsMenu";
@@ -101,20 +104,47 @@ export function App() {
   const [selected, setSelected] = useState<string | null>(null);
   const [balete, setBalete] = useState<{ x: number; y: number } | null>(null);
   const [loreNote, setLoreNote] = useState<string | null>(null);
+  const [view, setView] = useState<"barangay" | "rehiyon">("barangay");
+  // Reports already in the save when it loads count as seen.
+  const [seenReport, setSeenReport] = useState(() => latestReportId(state));
+  const [menu, setMenu] = useState<MenuTarget | null>(null);
+  const [moving, setMoving] = useState<{ x: number; y: number } | null>(null);
+  const [demolishing, setDemolishing] = useState<{ x: number; y: number } | null>(null);
   const closeLore = useCallback(() => setLoreNote(null), []);
-  const placing = content.buildings.find((b) => b.id === selected) ?? null;
-  const placingAffordable = placing ? canAfford(state, buildingCost(content, placing, owned(state, placing.id))) : false;
+  const closeMenu = useCallback(() => setMenu(null), []);
 
-  // Drop the selection if it stops being affordable, and let Esc cancel placing.
+  // Moving uses the same placing mode as building, with the building picked up first.
+  const moved = moving ? buildingAt(state, moving.x, moving.y) : undefined;
+  const movedDef = moved ? (content.buildings.find((b) => b.id === moved.type) ?? null) : null;
+  const moveCostNow = moved ? moveCost(state, content, moved.type) : null;
+  const moveAffordable = moveCostNow ? canAfford(state, moveCostNow) : false;
+  const planState = useMemo(
+    () => (moved ? withoutBuilding(state, content, moved) : undefined),
+    [moved, state.buildings, state.map, state.clearing],
+  );
+  const building = content.buildings.find((b) => b.id === selected) ?? null;
+  const placing = movedDef ?? building;
+  const placingAffordable = moving
+    ? moveAffordable && moved?.burningSince === undefined
+    : building
+      ? canAfford(state, buildingCost(content, building, owned(state, building.id)))
+      : false;
+
+  const cancelPlacing = useCallback(() => {
+    setSelected(null);
+    setMoving(null);
+  }, []);
+  // Drop the selection if it stops being affordable (or the moved building is gone), and let Esc cancel placing.
   useEffect(() => {
-    if (placing && !placingAffordable) setSelected(null);
-  }, [placing, placingAffordable]);
+    if (placing && !placingAffordable) cancelPlacing();
+    if (moving && !moved) setMoving(null);
+  }, [placing, placingAffordable, moving, moved, cancelPlacing]);
   useEffect(() => {
-    if (!selected) return;
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setSelected(null);
+    if (!selected && !moving) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && cancelPlacing();
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [selected]);
+  }, [selected, moving, cancelPlacing]);
 
   // Once the player owns every starting producer (a palayan and a woodcutter camp), gathering
   // is no longer the main income, so the buttons step back.
@@ -143,13 +173,25 @@ export function App() {
   );
 
   const place = (x: number, y: number) => {
+    if (moving) {
+      if (!placingAffordable || !canMove(state, content, moving.x, moving.y, x, y)) return;
+      dispatch({ type: "move", x: moving.x, y: moving.y, toX: x, toY: y });
+      sfx.build();
+      setMoving(null);
+      return;
+    }
     if (!placing || !placingAffordable || !isUnlocked(state, placing) || !canPlace(state, content, placing, x, y)) return;
     dispatch({ type: "build", building: placing.id, x, y });
     sfx.build();
     setSelected(null);
   };
 
-  /** Tapping a tile: put out a fire, repair damage, or start clearing forest. */
+  const openMenu = (x: number, y: number, sx: number, sy: number) => {
+    sfx.click();
+    setMenu({ x, y, sx, sy });
+  };
+
+  /** Tapping a tile: put out a fire, repair damage, open a building's menu, or start clearing forest. */
   const tapTile = (x: number, y: number, sx: number, sy: number) => {
     const say = (text: string) => spawnFloat(sx, sy, text, "info");
     const b = buildingAt(state, x, y);
@@ -168,6 +210,10 @@ export function App() {
       } else {
         say(`Need ${cost.wood} ${RESOURCE_ICON.wood}`);
       }
+      return;
+    }
+    if (b) {
+      openMenu(x, y, sx, sy);
       return;
     }
     const tile = tileAt(state.map, x, y);
@@ -193,6 +239,26 @@ export function App() {
   return (
     <div className="fixed inset-0 flex flex-col bg-green-800 pt-[env(safe-area-inset-top)] text-stone-800">
       <Hud state={state} content={content}>
+        {state.region && (
+          <button
+            type="button"
+            onClick={() => {
+              cancelPlacing();
+              setMenu(null);
+              setView(view === "barangay" ? "rehiyon" : "barangay");
+            }}
+            aria-label={view === "barangay" ? "Open Rehiyon, the regional map" : "Back to your barangay"}
+            title={view === "barangay" ? "Rehiyon" : "Barangay"}
+            className={`game-btn flex h-9 items-center gap-1 border-2 border-amber-950/60 px-2 font-display text-sm text-amber-950 ${
+              state.region.incomingRaid ? "bg-red-300 motion-safe:animate-pulse" : "bg-amber-200"
+            }`}
+          >
+            <span aria-hidden className="text-lg leading-none">
+              {view === "barangay" ? "🗺️" : "🛖"}
+            </span>
+            <span className="hidden sm:inline">{view === "barangay" ? "Rehiyon" : "Barangay"}</span>
+          </button>
+        )}
         <button
           type="button"
           onClick={toggleSound}
@@ -206,20 +272,27 @@ export function App() {
       </Hud>
 
       <main className="relative flex min-h-0 flex-1 flex-col">
+        {view === "rehiyon" ? (
+          <RegionView state={state} content={content} dispatch={dispatch} onLore={setLoreNote} />
+        ) : (
         <BarangayMap
           state={state}
           content={content}
           placing={placing}
+          moveFrom={moving}
+          planState={planState}
           onPlace={place}
           onTapTile={tapTile}
+          onBuildingMenu={openMenu}
           onSpirit={(id) => {
             sfx.click();
             setLoreNote(id);
           }}
         />
+        )}
         <LoreToast loreId={loreNote} onClose={closeLore} />
         <div className="pointer-events-none absolute top-2 left-1/2 z-10 flex w-max max-w-[calc(100%-1rem)] -translate-x-1/2 flex-col items-center gap-1.5">
-          {placing && (
+          {view === "barangay" && placing && (
             <div
               role="status"
               className="wood-panel pointer-events-auto flex items-center gap-2 rounded-xl border-2 border-amber-950/70 py-1.5 pr-1.5 pl-3 text-amber-50 shadow-lg"
@@ -228,30 +301,83 @@ export function App() {
                 {placing.icon}
               </span>
               <span className="text-sm leading-tight">
-                <span className="text-outline block font-display text-base">Place {placing.name}</span>
+                <span className="text-outline block font-display text-base">
+                  {moving ? "Move" : "Place"} {placing.name}
+                </span>
                 <span className="block text-xs text-amber-100/90">
                   Tap a highlighted tile
+                  {moveCostNow && <> · costs {costText(moveCostNow)}</>}
                   {bonusRuleText(placing, content) && <> · ✨ {bonusRuleText(placing, content)}</>}
                   {groveRuleText(placing, content) && <> · {groveRuleText(placing, content)}</>}
                 </span>
               </span>
               <button
                 type="button"
-                onClick={() => setSelected(null)}
+                onClick={cancelPlacing}
                 className="game-btn border-2 border-amber-950/60 bg-amber-200 px-2.5 py-1 text-sm font-semibold text-amber-950"
               >
                 Cancel
               </button>
             </div>
           )}
+          {view === "barangay" && !placing && (
+            <UndoBar
+              state={state}
+              content={content}
+              onUndo={() => {
+                dispatch({ type: "undo" });
+                sfx.click();
+              }}
+            />
+          )}
+          <OfferBar state={state} content={content} dispatch={dispatch} />
           {banners.map((b) => (
             <EventBanner key={b.id} banner={b} />
           ))}
         </div>
-        <GatherButtons amount={content.rules.gatherPerClick} quiet={hasAutomation} onGather={gather} />
+        {view === "barangay" && <GatherButtons amount={content.rules.gatherPerClick} quiet={hasAutomation} onGather={gather} />}
       </main>
 
-      <BuildToolbar state={state} content={content} selected={selected} onSelect={setSelected} />
+      {view === "barangay" && (
+        <BuildToolbar
+          state={state}
+          content={content}
+          selected={selected}
+          onSelect={(id) => {
+            setMoving(null);
+            setSelected(id);
+          }}
+        />
+      )}
+      <BuildingMenu
+        state={state}
+        content={content}
+        target={view === "barangay" ? menu : null}
+        onClose={closeMenu}
+        onMove={(x, y) => {
+          setMenu(null);
+          setSelected(null);
+          setMoving({ x, y });
+        }}
+        onDemolish={(x, y) => {
+          setMenu(null);
+          setDemolishing({ x, y });
+        }}
+      />
+      <DemolishDialog
+        state={state}
+        content={content}
+        target={demolishing}
+        onCancel={() => setDemolishing(null)}
+        onConfirm={() => {
+          if (!demolishing) return;
+          dispatch({ type: "demolish", x: demolishing.x, y: demolishing.y });
+          sfx.build();
+          setDemolishing(null);
+        }}
+      />
+      <ReportDialog state={state} content={content} seen={seenReport} onSeen={setSeenReport} />
+      <VictoryDialog state={state} content={content} waiting={unseenReport(state, seenReport) !== undefined} />
       <FloatLayer />
       <BaleteDialog
         target={balete}

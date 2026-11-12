@@ -142,6 +142,60 @@ export function buildingAt(state: GameState, x: number, y: number): PlacedBuildi
   return state.buildings.find((b) => b.x === x && b.y === y);
 }
 
+// ---------- Reach: the land villagers can walk to ----------
+
+const reachCache = new WeakMap<MapState, Uint8Array>();
+
+/**
+ * Which tiles villagers can walk to from the plaza (1 = yes). Only open river blocks the way;
+ * bridges cross it. Without a bridge the far bank is cut off: buildings already there keep
+ * working, but no new land can be cleared or built on. Maps are never mutated, so the result
+ * is cached per map.
+ */
+export function reachMap(map: MapState): Uint8Array {
+  const cached = reachCache.get(map);
+  if (cached) return cached;
+  const W = map.width;
+  const reach = new Uint8Array(W * map.height);
+  const river = TILE_CODE.river;
+  const startAt = map.plaza.y * W + map.plaza.x;
+  if (inBounds(map, map.plaza.x, map.plaza.y) && map.tiles[startAt] !== river) {
+    const queue = [startAt];
+    reach[startAt] = 1;
+    while (queue.length > 0) {
+      const i = queue.pop()!;
+      const x = i % W;
+      const y = (i - x) / W;
+      for (const [dx, dy] of NEIGHBOURS) {
+        const nx = x + dx;
+        const ny = y + dy;
+        if (!inBounds(map, nx, ny)) continue;
+        const j = ny * W + nx;
+        if (reach[j] || map.tiles[j] === river) continue;
+        reach[j] = 1;
+        queue.push(j);
+      }
+    }
+  }
+  reachCache.set(map, reach);
+  return reach;
+}
+
+export function isReachable(map: MapState, x: number, y: number): boolean {
+  return inBounds(map, x, y) && reachMap(map)[y * map.width + x] === 1;
+}
+
+/** Land tiles (not river or bridge) the barangay can reach. Fewer after a demolition = land cut off. */
+export function reachableLand(map: MapState): number {
+  const reach = reachMap(map);
+  let n = 0;
+  for (let i = 0; i < reach.length; i++) {
+    const c = map.tiles[i];
+    if (reach[i] && c !== TILE_CODE.bridge && c !== TILE_CODE.river) n++;
+  }
+  return n;
+}
+
 /** Is this building available yet (from the start, or at a villager count)? */
 export function isUnlocked(state: GameState, def: BuildingDef): boolean {
   if (def.unlock.start) return true;
@@ -149,14 +203,15 @@ export function isUnlocked(state: GameState, def: BuildingDef): boolean {
 }
 
 /**
- * The river tiles a bridge at (x, y) would span: starting from a tile next to cleared land,
- * straight across until the far bank, at most maxSpan tiles. Null if there's no such crossing.
+ * The river tiles a bridge at (x, y) would span: starting from a tile next to cleared land the
+ * barangay can reach, straight across until the far bank, at most maxSpan tiles. Null if
+ * there's no such crossing.
  */
 export function bridgeSpan(map: MapState, def: BuildingDef, x: number, y: number): Point[] | null {
   if (!def.bridge || tileAt(map, x, y) !== "river") return null;
   for (const [dx, dy] of NEIGHBOURS) {
     // We come from cleared land on the opposite side and build towards (dx, dy).
-    if (tileAt(map, x - dx, y - dy) !== "cleared") continue;
+    if (tileAt(map, x - dx, y - dy) !== "cleared" || !isReachable(map, x - dx, y - dy)) continue;
     const span: Point[] = [];
     let cx = x;
     let cy = y;
@@ -171,11 +226,36 @@ export function bridgeSpan(map: MapState, def: BuildingDef, x: number, y: number
   return null;
 }
 
-/** Can this building go at (x, y)? Cleared, free, not the plaza; or a river crossing for bridges. */
+/**
+ * The bridge tiles a standing bridge at (x, y) covers, for bridges saved before spans were
+ * stored: straight across from land, over bridge tiles, to land on the other side.
+ */
+export function standingBridgeTiles(map: MapState, def: BuildingDef, x: number, y: number): Point[] {
+  const isLand = (t: Tile | null) => t === "cleared" || t === "forest" || t === "balete";
+  if (!def.bridge || tileAt(map, x, y) !== "bridge") return [];
+  for (const [dx, dy] of NEIGHBOURS) {
+    if (!isLand(tileAt(map, x - dx, y - dy))) continue;
+    const span: Point[] = [];
+    let cx = x;
+    let cy = y;
+    while (tileAt(map, cx, cy) === "bridge" && span.length < def.bridge.maxSpan) {
+      span.push({ x: cx, y: cy });
+      cx += dx;
+      cy += dy;
+    }
+    if (isLand(tileAt(map, cx, cy))) return span;
+  }
+  return [{ x, y }];
+}
+
+/**
+ * Can this building go at (x, y)? Cleared, free, not the plaza and reachable (not on a bank cut
+ * off by a lost bridge); or a river crossing for bridges.
+ */
 export function canPlace(state: GameState, _content: Content, def: BuildingDef, x: number, y: number): boolean {
   if (!inBounds(state.map, x, y) || buildingAt(state, x, y)) return false;
   if (def.placeOn === "river") return bridgeSpan(state.map, def, x, y) !== null;
-  return tileAt(state.map, x, y) === "cleared" && !isPlaza(state.map, x, y);
+  return tileAt(state.map, x, y) === "cleared" && !isPlaza(state.map, x, y) && isReachable(state.map, x, y);
 }
 
 /** Every tile where the building could go, optionally limited to a rectangle (the view). */
@@ -304,10 +384,10 @@ export function clearSeconds(state: GameState, content: Content): number {
   return c.baseSeconds * c.secondsGrowth ** state.tilesCleared;
 }
 
-/** Forest (or a balete) that touches cleared land or a bridge. */
+/** Forest (or a balete) that touches cleared land or a bridge, on land the barangay can reach. */
 export function isClearable(map: MapState, x: number, y: number): boolean {
   const tile = tileAt(map, x, y);
-  if (tile !== "forest" && tile !== "balete") return false;
+  if ((tile !== "forest" && tile !== "balete") || !isReachable(map, x, y)) return false;
   return NEIGHBOURS.some(([dx, dy]) => {
     const n = tileAt(map, x + dx, y + dy);
     return n === "cleared" || n === "bridge";

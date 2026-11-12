@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadContent } from "../engine/content";
-import { baleteWarning, bonusPreviewText, bonusRuleText, formatBreakdown, formatRate, groveRuleText } from "./format";
+import { costText, formatDuration, baleteWarning, bonusPreviewText, bonusRuleText, formatBreakdown, formatRate, groveRuleText } from "./format";
 
 const rates = {
   produced: { rice: 5, wood: 0.8 },
@@ -45,5 +45,21 @@ describe("bonus text", () => {
     expect(groveRuleText(def("woodcutter-camp"), content)).toBe("🌳 Kapre's grove: +25% wood within 3 tiles of an old balete tree");
     expect(groveRuleText(def("palayan"), content)).toBeNull();
     expect(baleteWarning(content)).toBe("This removes Kapre's grove: nearby woodcutters lose +25% wood. This can't be undone.");
+  });
+});
+
+describe("durations", () => {
+  it("reads naturally", () => {
+    expect(formatDuration(45)).toBe("45s");
+    expect(formatDuration(750)).toBe("12m 30s");
+    expect(formatDuration(3725)).toBe("1h 02m 05s");
+  });
+});
+
+describe("costText", () => {
+  it("lists the resources that cost something, or says free", () => {
+    expect(costText({ rice: 0, wood: 9 })).toBe("🪵 9");
+    expect(costText({ rice: 2, wood: 3 })).toBe("🍚 2 🪵 3");
+    expect(costText({ rice: 0, wood: 0 })).toBe("free");
   });
 });

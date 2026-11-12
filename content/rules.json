@@ -1,5 +1,5 @@
 {
-  "_comment": "Core balance numbers. Values marked in docs/game-design.md are copied here; the rest are playtest guesses. map: size and features of the generated map. clearing: the cost of turning forest into buildable land; seconds grow by secondsGrowth for every tile the player has cleared.",
+  "_comment": "Core balance numbers. Values marked in docs/game-design.md are copied here; the rest are playtest guesses. map: size and features of the generated map. placement: undo window after building, moving cost (percent of the current price) and demolish refund (percent of what the last copy cost). secondsPerVillagerLeavingOvercrowded: when demolished houses leave more villagers than shelter, one leaves this often. clearing: the cost of turning forest into buildable land; seconds grow by secondsGrowth for every tile the player has cleared. military/diplomacy: warriors, battles and the four paths to absorb a neighbor (trade, marriage alliance, sandugo, mangayaw); all placeholders for playtesting.",
   "start": {
     "resources": {
       "rice": 10,
@@ -15,6 +15,12 @@
   "costGrowth": 1.15,
   "gatherPerClick": 1,
   "secondsPerNewVillager": 10,
+  "secondsPerVillagerLeavingOvercrowded": 10,
+  "placement": {
+    "undoSeconds": 5,
+    "moveCostPercent": 10,
+    "demolishRefundPercent": 50
+  },
   "map": {
     "width": 60,
     "height": 40,
@@ -28,5 +34,118 @@
     "secondsGrowth": 1.04,
     "workers": 2,
     "wood": 3
+  },
+  "military": {
+    "warrior": {
+      "cost": {
+        "rice": 15,
+        "wood": 10
+      },
+      "attack": 3,
+      "defense": 2
+    },
+    "baseDefense": 4,
+    "winnerLossPercent": 10,
+    "loserLossPercent": 40,
+    "lootPercent": 25
+  },
+  "diplomacy": {
+    "truceSeconds": 600,
+    "startInfluence": 0,
+    "trade": {
+      "give": 20,
+      "receivePercent": 80,
+      "influence": 4,
+      "trust": 6,
+      "loyalty": 12
+    },
+    "marriage": {
+      "trustNeeded": 50,
+      "cost": {
+        "rice": 150,
+        "wood": 100
+      },
+      "influence": 35,
+      "trust": 10
+    },
+    "sandugo": {
+      "cost": {
+        "rice": 60,
+        "wood": 60
+      },
+      "trust": 15,
+      "allyDefensePercent": 50
+    },
+    "raid": {
+      "influence": 25,
+      "renown": 10,
+      "trustLossAll": 10,
+      "trustLossTarget": 30,
+      "cooldownSeconds": 120
+    },
+    "tribute": {
+      "percent": 10,
+      "everySeconds": 60
+    },
+    "loyalty": {
+      "start": 80,
+      "decayPerMinute": 4,
+      "rebelBelow": 20,
+      "rebelInfluence": 50,
+      "guardSeconds": 120,
+      "guardPerMinute": 8
+    },
+    "aiRaid": {
+      "chancePerSecond": 0.004,
+      "cooldownSeconds": 300,
+      "warningSeconds": 60,
+      "lootPercent": 15,
+      "defendRenown": 5
+    },
+    "offers": {
+      "chancePerSecond": 0.004,
+      "expireSeconds": 60,
+      "give": 20,
+      "receivePercent": 110
+    },
+    "aiDecisionSeconds": 20,
+    "traits": {
+      "trader": {
+        "label": "Trader",
+        "trustGainPercent": 100,
+        "influenceGainPercent": 100,
+        "tradeBonusPercent": 25,
+        "offerChanceMultiplier": 3,
+        "raids": false,
+        "warriorPercent": 10
+      },
+      "peaceful": {
+        "label": "Peaceful",
+        "trustGainPercent": 150,
+        "influenceGainPercent": 100,
+        "tradeBonusPercent": 0,
+        "offerChanceMultiplier": 1,
+        "raids": false,
+        "warriorPercent": 5
+      },
+      "proud": {
+        "label": "Proud",
+        "trustGainPercent": 75,
+        "influenceGainPercent": 50,
+        "tradeBonusPercent": 0,
+        "offerChanceMultiplier": 1,
+        "raids": false,
+        "warriorPercent": 25
+      },
+      "aggressive": {
+        "label": "Aggressive",
+        "trustGainPercent": 50,
+        "influenceGainPercent": 100,
+        "tradeBonusPercent": 0,
+        "offerChanceMultiplier": 0.5,
+        "raids": true,
+        "warriorPercent": 35
+      }
+    }
   }
 }

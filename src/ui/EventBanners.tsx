@@ -1,6 +1,6 @@
 import type { Content } from "../engine/content";
 import { healRate, isBurning, seasonAt, secondsUntilLeaving } from "../engine/events";
-import type { GameState } from "../engine/game";
+import { overcrowded, type GameState } from "../engine/game";
 
 export interface Banner {
   id: string;
@@ -42,6 +42,17 @@ export function activeBanners(state: GameState, content: Content): Banner[] {
       tone: "warning",
     });
   }
+  const raid = state.region?.incomingRaid;
+  if (raid) {
+    const who = content.neighbors.find((n) => n.id === raid.from);
+    banners.push({
+      id: "raid",
+      icon: "🔥",
+      title: `Raid in ${clock(raid.strikeAt - state.time)}`,
+      text: `${who?.datu ?? "A datu"} of ${who?.name ?? raid.from} is coming. Train Mandirigma, build a Kuta; your buildings will stand.`,
+      tone: "danger",
+    });
+  }
   const leaving = secondsUntilLeaving(state, content);
   if (hunger && leaving !== null) {
     banners.push({
@@ -53,6 +64,17 @@ export function activeBanners(state: GameState, content: Content): Banner[] {
           ? `Nobody can work. Gather rice! Families leave in ${Math.ceil(leaving)}s.`
           : `A family leaves every ${hunger.secondsPerVillagerLeaving}s. Gather rice!`,
       tone: "danger",
+    });
+  }
+  const homeless = overcrowded(state, content);
+  if (homeless > 0 && leaving === null) {
+    const house = content.buildings.find((b) => b.housing);
+    banners.push({
+      id: "overcrowded",
+      icon: house?.icon ?? "🛖",
+      title: `${homeless} without a home`,
+      text: `A family leaves every ${content.rules.secondsPerVillagerLeavingOvercrowded}s.${house ? ` Build a ${house.name} to keep them.` : ""}`,
+      tone: "warning",
     });
   }
   if (sickness && state.sick.length > 0) {

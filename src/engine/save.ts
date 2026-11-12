@@ -1,6 +1,6 @@
 // Saving to the browser. The only engine module allowed to touch browser APIs,
 // and even here the storage is passed in so tests can use a fake.
-import { RESOURCES, type BuildingDef, type Content } from "./content";
+import { RESOURCES, type BuildingDef, type Content, type Resource } from "./content";
 import { newGame, placeAuto, STATE_VERSION, type ClearingJob, type GameState, type PlacedBuilding } from "./game";
 import {
   generateMap,
@@ -9,10 +9,22 @@ import {
   isTileCode,
   NEIGHBOURS,
   setTiles,
+  standingBridgeTiles,
   tileAt,
   type MapState,
   type Tile,
 } from "./map";
+import {
+  aiContent,
+  createRegion,
+  newNeighborState,
+  type NeighborState,
+  type NeighborStatus,
+  type Path,
+  type RegionState,
+  type Report,
+  type TradeOffer,
+} from "./region";
 
 export const SAVE_KEY = "barangay-legends/save";
 
@@ -88,6 +100,12 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
     for (const type of leftOver) state = placeAuto(state, content, type);
     return { ...raw, version: 4, map: state.map, buildings: state.buildings, clearing: null, tilesCleared: 0 };
   },
+  // v4 → v5: the region. Adds warriors (none yet). The region itself is left empty here and
+  // created from content when the save loads, with the truce starting from the save's clock.
+  4: (raw) => ({ ...raw, version: 5, warriors: 0, region: null }),
+  // v5 → v6: undo, move and demolish. Adds the last build (nothing to undo after loading).
+  // Bridges now store the river tiles they span; older bridges work theirs out when loaded.
+  5: (raw) => ({ ...raw, version: 6, lastBuild: null }),
 };
 
 // ---------- Frozen v2 map rules (for the v1 → v2 migration only) ----------
@@ -173,10 +191,18 @@ export function parseSave(json: string, content: Content): GameState | null {
   if (!isObject(raw)) return null;
   const data = migrate(raw, content);
   if (!data) return null;
+  return parseState(data, content, true);
+}
+
+/**
+ * Reads one barangay's state from current-version data: the player's (with its region) or
+ * an AI neighbor's (without). Returns null if the map is broken.
+ */
+function parseState(data: RawSave, content: Content, isPlayer: boolean): GameState | null {
   const map = parseMap(data.map);
   if (!map) return null;
 
-  const state: GameState = { ...newGame(content, map.seed), map };
+  const state: GameState = { ...newGame(content, map.seed, false), map };
   const resources = isObject(data.resources) ? data.resources : {};
   for (const r of RESOURCES) {
     const v = resources[r];
@@ -222,6 +248,10 @@ export function parseSave(json: string, content: Content): GameState | null {
     const fits = def.placeOn === "river" ? tile === "bridge" : tile === "cleared" && !isPlaza(map, x, y);
     if (!fits) continue;
     const building: PlacedBuilding = { type: item.type, x, y };
+    if (def.bridge) {
+      const span = parseSpan(item.span, map, def.bridge.maxSpan, x, y);
+      building.span = span ?? standingBridgeTiles(map, def, x, y);
+    }
     if (item.damaged === true) building.damaged = true;
     else if (finiteNonNeg(item.burningSince) && item.burningSince <= state.time && content.events.fire) {
       building.burningSince = item.burningSince;
@@ -237,7 +267,106 @@ export function parseSave(json: string, content: Content): GameState | null {
       state.clearing = { x: job.x, y: job.y, progress: job.progress, seconds: job.seconds } satisfies ClearingJob;
     }
   }
+  const last = data.lastBuild;
+  if (
+    isObject(last) &&
+    typeof last.type === "string" &&
+    finiteNonNeg(last.at) &&
+    last.at <= state.time &&
+    isObject(last.cost) &&
+    state.buildings.some((b) => b.type === last.type && b.x === last.x && b.y === last.y)
+  ) {
+    const paid = last.cost as RawSave;
+    const cost = Object.fromEntries(RESOURCES.map((r) => [r, finiteNonNeg(paid[r]) ? paid[r] : 0])) as Record<Resource, number>;
+    state.lastBuild = { type: last.type, x: last.x as number, y: last.y as number, cost, at: last.at };
+  }
+  if (finiteNonNeg(data.warriors)) state.warriors = Math.min(Math.floor(data.warriors), state.villagers);
+  if (isPlayer && content.neighbors.length > 0) state.region = parseRegion(data.region, content, state);
   return state;
+}
+
+/** A saved bridge span: bridge tiles in a straight line from the bridge's own tile. */
+function parseSpan(raw: unknown, map: MapState, maxSpan: number, x: number, y: number): { x: number; y: number }[] | null {
+  if (!Array.isArray(raw) || raw.length === 0 || raw.length > maxSpan) return null;
+  const span = raw.filter(isObject).map((p) => ({ x: p.x as number, y: p.y as number }));
+  if (span.length !== raw.length || span[0].x !== x || span[0].y !== y) return null;
+  const straight = span.every((p, i) => Math.abs(p.x - x) + Math.abs(p.y - y) === i && (p.x === x || p.y === y));
+  return straight && span.every((p) => tileAt(map, p.x, p.y) === "bridge") ? span : null;
+}
+
+const STATUSES: NeighborStatus[] = ["independent", "tributary", "ally"];
+const PATHS: Path[] = ["trade", "marriage", "sandugo", "mangayaw"];
+const isResource = (v: unknown): v is Resource => (RESOURCES as readonly unknown[]).includes(v);
+const pct = (v: unknown, fallback: number) => (finiteNonNeg(v) ? Math.min(100, v) : fallback);
+
+/** Reads the region; anything missing or broken is rebuilt from content. */
+function parseRegion(raw: unknown, content: Content, player: GameState): RegionState {
+  const fresh = createRegion(content, player.time, player.rng);
+  if (!isObject(raw)) return fresh;
+  const saved = new Map(
+    (Array.isArray(raw.neighbors) ? raw.neighbors : []).filter(isObject).map((n) => [n.id as string, n as RawSave]),
+  );
+  const neighbors: NeighborState[] = fresh.neighbors.map((base) => {
+    const n = saved.get(base.id);
+    if (!n) return base;
+    const def = content.neighbors.find((d) => d.id === base.id)!;
+    const state = (isObject(n.state) && parseState(n.state, aiContent(content), false)) || newNeighborState(content, def, player.rng);
+    const status = STATUSES.includes(n.status as NeighborStatus) ? (n.status as NeighborStatus) : "independent";
+    const g = n.guard;
+    return {
+      ...base,
+      state,
+      trust: pct(n.trust, base.trust),
+      influence: pct(n.influence, base.influence),
+      status,
+      marriage: n.marriage === true,
+      loyalty: pct(n.loyalty, 0),
+      guard:
+        status === "tributary" && isObject(g) && finiteNonNeg(g.warriors) && finiteNonNeg(g.until)
+          ? { warriors: Math.floor(g.warriors), until: g.until }
+          : null,
+      raidCooldownUntil: finiteNonNeg(n.raidCooldownUntil) ? n.raidCooldownUntil : 0,
+      nextDecisionAt: finiteNonNeg(n.nextDecisionAt) ? n.nextDecisionAt : base.nextDecisionAt,
+    };
+  });
+  const ids = new Set(neighbors.map((n) => n.id));
+  const incoming = raw.incomingRaid;
+  const offer = raw.offer;
+  const victory = raw.victory;
+  const paths = (Array.isArray(raw.paths) ? raw.paths : []).filter((p): p is Path => PATHS.includes(p as Path));
+  return {
+    ...fresh,
+    neighbors,
+    renown: finiteNonNeg(raw.renown) ? raw.renown : 0,
+    truceUntil: finiteNonNeg(raw.truceUntil) ? raw.truceUntil : fresh.truceUntil,
+    incomingRaid:
+      isObject(incoming) && ids.has(incoming.from as string) && finiteNonNeg(incoming.strikeAt)
+        ? { from: incoming.from as string, strikeAt: incoming.strikeAt }
+        : null,
+    nextAiRaidAt: finiteNonNeg(raw.nextAiRaidAt) ? raw.nextAiRaidAt : 0,
+    offer:
+      isObject(offer) &&
+      ids.has(offer.from as string) &&
+      isObject(offer.give) &&
+      isObject(offer.want) &&
+      isResource(offer.give.resource) &&
+      isResource(offer.want.resource) &&
+      finiteNonNeg(offer.give.amount) &&
+      finiteNonNeg(offer.want.amount) &&
+      finiteNonNeg(offer.expiresAt)
+        ? (offer as unknown as TradeOffer)
+        : null,
+    reports: (Array.isArray(raw.reports) ? raw.reports : [])
+      .filter((r): r is Report => isObject(r) && finiteNonNeg(r.id) && typeof r.kind === "string" && ids.has(r.neighbor as string))
+      .slice(-12),
+    nextReportId: finiteNonNeg(raw.nextReportId) ? Math.floor(raw.nextReportId) : 1,
+    nextTributeAt: finiteNonNeg(raw.nextTributeAt) ? raw.nextTributeAt : fresh.nextTributeAt,
+    paths,
+    victory:
+      isObject(victory) && finiteNonNeg(victory.time) && Array.isArray(victory.paths)
+        ? { time: victory.time, paths: victory.paths.filter((p): p is Path => PATHS.includes(p as Path)) }
+        : null,
+  };
 }
 
 export function saveGame(state: GameState, storage: KeyValueStore = localStorage): void {
