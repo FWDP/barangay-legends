@@ -4,12 +4,22 @@ import type { Content } from "../engine/content";
 import { choiceDef } from "../engine/choices";
 import { seasonAt } from "../engine/events";
 import type { GameState } from "../engine/game";
+import type { OfflineReport } from "../engine/offline";
 import { neighborDef, type Report } from "../engine/region";
 
 /** Shorter absences aren't worth a story. */
 export const AWAY_MIN_SECONDS = 60;
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+/** "about a minute", "about 12 minutes", "about 3 hours". */
+export function duration(seconds: number): string {
+  const minutes = Math.round(seconds / 60);
+  if (minutes <= 1) return "about a minute";
+  if (minutes < 60) return `about ${minutes} minutes`;
+  const hours = Math.round(seconds / 3600);
+  return hours === 1 ? "about an hour" : `about ${hours} hours`;
+}
 const goods = (g?: Partial<Record<string, number>>) =>
   Object.entries(g ?? {})
     .filter(([, n]) => (n ?? 0) > 0)
@@ -39,8 +49,7 @@ function reportLine(r: Report, content: Content): string | null {
 export function awayStory(before: GameState, after: GameState, content: Content): string[] {
   const seconds = after.time - before.time;
   if (seconds < AWAY_MIN_SECONDS) return [];
-  const minutes = Math.round(seconds / 60);
-  const lines: string[] = [`You were gone for ${minutes <= 1 ? "about a minute" : `about ${minutes} minutes`}.`];
+  const lines: string[] = [`You were gone for ${duration(seconds)}.`];
 
   // The season turning.
   const s0 = seasonAt(content, before.time)?.season;
@@ -81,6 +90,50 @@ export function awayStory(before: GameState, after: GameState, content: Content)
   if (offer) lines.push(`A bangka from ${neighborDef(content, offer.from)?.name ?? offer.from} is waiting at the dock with goods to trade.`);
   if (after.region?.incomingRaid) lines.push(`Warriors from ${neighborDef(content, after.region.incomingRaid.from)?.name ?? "a rival"} are on their way!`);
   if (after.typhoon) lines.push("Dark clouds gather over the sea: a typhoon is coming.");
+  const choice = after.choice && choiceDef(content, after.choice.id);
+  if (choice) lines.push(`A matter waits for the datu: ${choice.title.replace(/[.?!]$/, "")}.`);
+
+  if (lines.length === 1) lines.push("The barangay went about its days quietly.");
+  return lines;
+}
+
+/**
+ * The story of time spent with the game closed (see engine/offline.ts). Only gentle things
+ * happen offline, so this tells of harvests, newcomers, recovery and tribute, and of what is
+ * still waiting for the datu.
+ */
+export function offlineStory(report: OfflineReport, before: GameState, after: GameState, content: Content): string[] {
+  if (report.seconds <= 0) return [];
+  const lines = [`You were gone for ${duration(report.away)}.`];
+  if (report.away > report.seconds) lines.push(`The barangay kept working for ${duration(report.seconds).replace("about ", "")}, then rested until you came back.`);
+
+  const s0 = seasonAt(content, before.time)?.season;
+  const s1 = seasonAt(content, after.time)?.season;
+  const year = content.events.seasons?.seasons.reduce((t, s) => t + s.durationSeconds, 0) ?? 0;
+  if (s1 && year > 0 && report.seconds >= year) lines.push(`The seasons turned while you were gone. Now it is ${s1.name}.`);
+  else if (s0 && s1 && s0.id !== s1.id) lines.push(`${s0.name} gave way to ${s1.name}. ${s1.description}`);
+
+  const rice = Math.round(report.produced.rice);
+  const wood = Math.round(report.produced.wood);
+  const work = [rice > 0 && `${rice} rice from the fields`, wood > 0 && `${wood} wood from the forest`].filter(Boolean);
+  if (work.length) lines.push(`Your people brought in ${work.join(" and ")}, and ate ${Math.round(report.eaten)} rice.`);
+  else if (report.eaten > 0) lines.push(`Your people ate ${Math.round(report.eaten)} rice.`);
+  if (report.hungrySeconds >= 60) lines.push("For a while the granary was empty, so the work stopped, but everyone waited for your return. Gather rice!");
+  if (report.arrived > 0) lines.push(`${plural(report.arrived, "newcomer", "newcomers")} settled in the barangay.`);
+  if (report.recovered > 0) lines.push(`${plural(report.recovered, "sick villager", "sick villagers")} got well again.`);
+  if (report.cleared > 0) lines.push("The villagers finished clearing the forest they were working on.");
+
+  const tribute = [report.tribute.rice > 0 && `${report.tribute.rice} rice`, report.tribute.wood > 0 && `${report.tribute.wood} wood`].filter(Boolean);
+  if (tribute.length) lines.push(`Your tributaries sent ${tribute.join(" and ")} as tribute.`);
+  if (report.offerExpired) lines.push(`A bangka from ${neighborDef(content, report.offerExpired)?.name ?? report.offerExpired} waited at the dock, then sailed home.`);
+
+  // Warnings paused while away, and anything else waiting.
+  const raid = after.region?.incomingRaid;
+  if (raid) lines.push(`Warriors from ${neighborDef(content, raid.from)?.name ?? "a rival"} are still on their way. Get ready!`);
+  if (after.typhoon) lines.push("A typhoon is still coming. Keep wood for repairs.");
+  if (after.buildings.some((b) => b.burningSince !== undefined)) lines.push("A fire is still burning. Put it out!");
+  const offer = after.region?.offer;
+  if (offer) lines.push(`A bangka from ${neighborDef(content, offer.from)?.name ?? offer.from} is waiting at the dock.`);
   const choice = after.choice && choiceDef(content, after.choice.id);
   if (choice) lines.push(`A matter waits for the datu: ${choice.title.replace(/[.?!]$/, "")}.`);
 

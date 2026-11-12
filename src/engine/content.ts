@@ -64,6 +64,21 @@ export interface Rules {
   military: MilitaryRules;
   diplomacy: DiplomacyRules;
   choices: ChoiceRules;
+  offline: OfflineRules;
+}
+
+/** Progress while the game is closed (see engine/offline.ts). */
+export interface OfflineRules {
+  /** At most this much time away is credited (8 hours). */
+  maxSeconds: number;
+  /** Shorter absences are not credited. */
+  minSeconds: number;
+  /** Simulated in steps of about this size... */
+  stepSeconds: number;
+  /** ...but never more than this many steps, so a long absence stays quick to compute. */
+  maxSteps: number;
+  /** Each neighbor makes one AI decision this often offline (less often than online, to stay fast). */
+  aiDecisionSeconds: number;
 }
 
 /** How often choice events come up. */
@@ -484,6 +499,10 @@ export function validateRules(raw: unknown): Rules {
   if (!isObject(ch)) throw new Error('rules: missing "choices"');
   checkNumbers(ch, ["startsAfterSeconds", "minGapSeconds", "chancePerSecond"], "rules: choices");
   if ((ch.chancePerSecond as number) > 1) throw new Error("rules: choices.chancePerSecond can't be over 1");
+  const off = raw.offline;
+  if (!isObject(off)) throw new Error('rules: missing "offline"');
+  checkNumbers(off, ["maxSeconds", "minSeconds"], "rules: offline");
+  checkNumbers(off, ["stepSeconds", "maxSteps", "aiDecisionSeconds"], "rules: offline", true);
   checkAmounts((d.marriage as Record<string, unknown>).cost, "rules: diplomacy.marriage.cost");
   checkAmounts((d.sandugo as Record<string, unknown>).cost, "rules: diplomacy.sandugo.cost");
   if ((d.tribute as Record<string, number>).everySeconds <= 0) throw new Error("rules: diplomacy.tribute.everySeconds must be > 0");

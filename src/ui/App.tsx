@@ -21,7 +21,7 @@ import { initSound, isMuted, setMuted, sfx } from "./sound";
 import { loadUiContent } from "./uiContent";
 import { content, useGame } from "./useGame";
 import { useGameSounds } from "./useGameSounds";
-import { awayStory } from "./away";
+import { awayStory, offlineStory } from "./away";
 import { AwayDialog, ChoiceBanner, ChoiceDialog } from "./StoryDialogs";
 import { useReducedMotion, type Clash } from "./VillagerLayer";
 import { CLASH_MS, SAIL_SECONDS } from "./visitors";
@@ -114,7 +114,9 @@ function LoreToast(props: { loreId: string | null; onClose: () => void }) {
 export function App() {
   // The title screen shows first; the game stands still behind it until the player picks.
   const [screen, setScreen] = useState<"title" | "game">("title");
-  const { state, dispatch, onReset, startNew, hasSave } = useGame(screen === "game");
+  // The "While you were away" story pauses the game, so its warnings don't run while the player reads.
+  const [away, setAway] = useState<string[] | null>(null);
+  const { state, dispatch, onReset, startNew, hasSave, continueGame } = useGame(screen === "game" && away === null);
   const [muted, setMutedState] = useState(isMuted);
   const [selected, setSelected] = useState<string | null>(null);
   const [balete, setBalete] = useState<{ x: number; y: number } | null>(null);
@@ -162,7 +164,6 @@ export function App() {
   }, [raidComing]);
 
   // "While you were away": what happened while the tab was hidden (the game keeps running).
-  const [away, setAway] = useState<string[] | null>(null);
   const latestState = useRef(state);
   latestState.current = state;
   useEffect(() => {
@@ -330,7 +331,15 @@ export function App() {
           muted={muted}
           onToggleSound={toggleSound}
           onHelp={() => setHelpOpen(true)}
-          onContinue={() => setScreen("game")}
+          onContinue={() => {
+            // Credit the time since the last save, then tell what happened.
+            const away = continueGame();
+            if (away) {
+              const lines = offlineStory(away.report, away.before, away.after, content);
+              if (lines.length) setAway(lines);
+            }
+            setScreen("game");
+          }}
           onNewGame={(names, mode) => {
             // Only local play exists; online (see online.ts) will branch here.
             if (mode !== "local") return;

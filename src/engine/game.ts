@@ -36,7 +36,7 @@ import {
 import { DEFAULT_SEED } from "./rng";
 import { choose, updateChoices, type PendingChoice } from "./choices";
 
-export const STATE_VERSION = 8;
+export const STATE_VERSION = 9;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */

@@ -110,6 +110,9 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
   6: (raw) => ({ ...raw, version: 7, barangay: isObject(raw.barangay) ? { ...raw.barangay, name: "", datu: "" } : raw.barangay }),
   // v7 → v8: choice events. Nothing waiting, none seen yet.
   7: (raw) => ({ ...raw, version: 8, choice: null, recentChoices: [] }),
+  // v8 → v9: saves record when they were written (savedAt, wall-clock ms from the UI) for offline
+  // progress. Older saves have no time, so they get no offline credit.
+  8: (raw) => ({ ...raw, version: 9 }),
 };
 
 // ---------- Frozen v2 map rules (for the v1 → v2 migration only) ----------
@@ -382,9 +385,13 @@ function parseRegion(raw: unknown, content: Content, player: GameState): RegionS
   };
 }
 
-export function saveGame(state: GameState, storage: KeyValueStore = localStorage): void {
+/**
+ * Writes the game. `savedAt` is the wall-clock time in ms, passed in by the UI (the engine never
+ * reads the clock); it lets offline progress credit the time away on the next load.
+ */
+export function saveGame(state: GameState, storage: KeyValueStore = localStorage, savedAt?: number): void {
   try {
-    storage.setItem(SAVE_KEY, JSON.stringify(state));
+    storage.setItem(SAVE_KEY, JSON.stringify(savedAt !== undefined && Number.isFinite(savedAt) ? { ...state, savedAt } : state));
   } catch {
     // Storage full or blocked (private mode): the game still plays, it just won't persist.
   }
@@ -399,6 +406,17 @@ export function loadGame(content: Content, storage: KeyValueStore = localStorage
     // Storage blocked: start fresh.
   }
   return newGame(content, seed);
+}
+
+/** When the save was written (wall-clock ms), or null for older saves or none. */
+export function readSavedAt(storage: KeyValueStore = localStorage): number | null {
+  try {
+    const json = storage.getItem(SAVE_KEY);
+    const raw = json ? JSON.parse(json) : null;
+    return isObject(raw) && finiteNonNeg(raw.savedAt) ? raw.savedAt : null;
+  } catch {
+    return null;
+  }
 }
 
 export function clearSave(storage: KeyValueStore = localStorage): void {
