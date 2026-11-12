@@ -1,0 +1,13 @@
+{
+  "id": "sunog",
+  "type": "fire",
+  "name": "Sunog",
+  "icon": "🔥",
+  "description": "A house catches fire. Tap it to put the fire out before it spreads to the houses next to it.",
+  "startsAfterSeconds": 300,
+  "chancePerSecond": 0.002,
+  "cooldownSeconds": 240,
+  "target": "bahay-kubo",
+  "spreadAfterSeconds": 12,
+  "burnDownSeconds": 25
+}

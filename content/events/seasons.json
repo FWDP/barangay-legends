@@ -1,0 +1,29 @@
+{
+  "id": "seasons",
+  "type": "seasons",
+  "name": "Seasons",
+  "description": "The year turns between the rainy season and the dry season.",
+  "seasons": [
+    {
+      "id": "tag-ulan",
+      "name": "Tag-ulan",
+      "icon": "🌧️",
+      "description": "Rainy season. The fields are full of water.",
+      "durationSeconds": 300,
+      "productionPercent": {}
+    },
+    {
+      "id": "tag-araw",
+      "name": "Tag-araw",
+      "icon": "☀️",
+      "description": "Dry season. Rice fields yield half.",
+      "durationSeconds": 300,
+      "productionPercent": {
+        "rice": 50
+      }
+    }
+  ],
+  "sources": [
+    "https://www.pagasa.dost.gov.ph/information/climate-philippines"
+  ]
+}

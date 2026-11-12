@@ -45,3 +45,13 @@ docs/                design docs
 - Before finishing a task, run `npm test` and `npm run build`, and fix any errors.
 - Keep dependencies minimal. Ask before adding a new one.
 - Balance numbers come from `docs/game-design.md` and `content/`. Don't invent new ones in code.
+
+## Future-proofing for war and multiplayer
+
+The long-term plan is war, raids and alliances against neighboring barangays: AI first, then real players via a database (Supabase). Don't build any of that yet, but keep these rules so it can be added without a rewrite:
+
+- Every player action is a serializable command object (build, gather, place, later attack). Game state is derived by applying commands to the engine.
+- The engine is deterministic: seeded RNG stored in GameState, no Math.random() or Date.now() inside src/engine (time is passed in).
+- src/engine has no React or browser APIs, so it can run on a server later.
+- Each barangay has an id and a regional map position, even though there is only one for now.
+- Save data is versioned, with a migration for every format change.

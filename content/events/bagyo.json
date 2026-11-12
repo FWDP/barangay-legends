@@ -1,0 +1,18 @@
+{
+  "id": "bagyo",
+  "type": "typhoon",
+  "name": "Bagyo",
+  "icon": "🌀",
+  "description": "A typhoon is coming. When it hits, it damages a few buildings, which cost wood to repair.",
+  "startsAfterSeconds": 300,
+  "chancePerSecond": 0.0015,
+  "cooldownSeconds": 420,
+  "warningSeconds": 60,
+  "damagedBuildings": {
+    "min": 2,
+    "max": 3
+  },
+  "sources": [
+    "https://www.pagasa.dost.gov.ph/climate/tropical-cyclone-information"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "id": "babaylan-hut",
+  "name": "Babaylan's Hut",
+  "description": "Home of the babaylan, the community's healer and ritual specialist. Sick villagers recover faster.",
+  "icon": "🌿",
+  "order": 4,
+  "cost": {
+    "wood": 40,
+    "rice": 20
+  },
+  "repairCost": {
+    "wood": 20
+  },
+  "heals": {
+    "percentFaster": 100
+  },
+  "unlock": {
+    "start": true
+  },
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "https://en.wikipedia.org/wiki/Babaylan"
+  ]
+}

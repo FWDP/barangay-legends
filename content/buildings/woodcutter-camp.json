@@ -1,0 +1,29 @@
+{
+  "id": "woodcutter-camp",
+  "name": "Woodcutter Camp",
+  "description": "A forest clearing where two villagers cut timber and bamboo.",
+  "icon": "🪓",
+  "order": 3,
+  "cost": {
+    "rice": 10
+  },
+  "repairCost": {
+    "wood": 5
+  },
+  "produces": {
+    "wood": 0.4
+  },
+  "workers": 2,
+  "adjacencyBonus": {
+    "nextTo": [
+      "forest"
+    ],
+    "percent": 10
+  },
+  "unlock": {
+    "start": true
+  },
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+  ]
+}

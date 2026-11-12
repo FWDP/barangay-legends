@@ -1,0 +1,21 @@
+{
+  "id": "bahay-kubo",
+  "name": "Bahay Kubo",
+  "description": "A raised house of bamboo and nipa that shelters a family.",
+  "icon": "🛖",
+  "order": 1,
+  "cost": {
+    "wood": 10
+  },
+  "repairCost": {
+    "wood": 5
+  },
+  "housing": 2,
+  "unlock": {
+    "start": true
+  },
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "https://en.wikipedia.org/wiki/Nipa_hut"
+  ]
+}

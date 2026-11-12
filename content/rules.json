@@ -1,0 +1,24 @@
+{
+  "_comment": "Core balance numbers. Values marked in docs/game-design.md are copied here; the rest are playtest guesses. map: columns are river | land | forest; rows are counted from the plaza row (0) and grow when you build on the outermost row.",
+  "start": {
+    "resources": {
+      "rice": 10,
+      "wood": 0
+    },
+    "villagers": 5,
+    "buildings": {
+      "bahay-kubo": 1
+    }
+  },
+  "baseHousing": 3,
+  "riceEatenPerVillagerPerSecond": 0.1,
+  "costGrowth": 1.15,
+  "gatherPerClick": 1,
+  "secondsPerNewVillager": 10,
+  "map": {
+    "width": 11,
+    "riverColumns": 1,
+    "forestColumns": 2,
+    "minRadius": 3
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "id": "gutom",
+  "type": "hunger",
+  "name": "Gutom",
+  "icon": "🍚",
+  "description": "When the rice runs out, villagers are too hungry to work. If the hunger lasts, families leave.",
+  "graceSeconds": 30,
+  "secondsPerVillagerLeaving": 10
+}

@@ -1,0 +1,17 @@
+{
+  "id": "sakit",
+  "type": "sickness",
+  "name": "Sakit",
+  "icon": "🤒",
+  "description": "A sickness keeps villagers from working. It spreads faster where houses are crowded together.",
+  "startsAfterSeconds": 300,
+  "chancePerSecond": 0.004,
+  "cooldownSeconds": 180,
+  "sickSeconds": 60,
+  "firstCases": 1,
+  "spreadChancePerSecond": 0.02,
+  "crowding": {
+    "building": "bahay-kubo",
+    "percentPerAdjacentPair": 50
+  }
+}

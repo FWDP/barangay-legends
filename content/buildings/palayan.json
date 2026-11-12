@@ -1,0 +1,31 @@
+{
+  "id": "palayan",
+  "name": "Palayan",
+  "description": "A terraced rice field worked by two villagers.",
+  "icon": "🌾",
+  "order": 2,
+  "cost": {
+    "wood": 15
+  },
+  "repairCost": {
+    "wood": 8
+  },
+  "produces": {
+    "rice": 0.5
+  },
+  "workers": 2,
+  "adjacencyBonus": {
+    "nextTo": [
+      "river",
+      "palayan"
+    ],
+    "percent": 10
+  },
+  "unlock": {
+    "start": true
+  },
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "https://whc.unesco.org/en/list/722"
+  ]
+}
