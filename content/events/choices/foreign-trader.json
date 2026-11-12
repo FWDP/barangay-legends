@@ -1,0 +1,33 @@
+{
+  "id": "foreign-trader",
+  "title": "A trader with rare goods",
+  "icon": "🏺",
+  "story": "A trader who has sailed from a far port lays out his wares: glazed porcelain jars and strings of glass beads. Such things would make a fine gift for {datu} of {neighbor}.",
+  "neighbor": "independent",
+  "conditions": { "minVillagers": 6 },
+  "choices": [
+    {
+      "id": "buy-gift",
+      "label": "Buy a jar as a gift for {neighbor}",
+      "result": "The porcelain jar is carried upriver with your greetings. {datu} will remember the gift.",
+      "effects": { "resources": { "rice": -25, "wood": -15 }, "influence": 15, "trust": 10 }
+    },
+    {
+      "id": "buy-beads",
+      "label": "Buy a few beads",
+      "result": "Your people admire the beads at the next feast. A small thing, gladly given.",
+      "effects": { "resources": { "rice": -8 }, "trust": 3 }
+    },
+    {
+      "id": "decline",
+      "label": "Send him on his way",
+      "result": "The trader packs his jars and sails on to the next barangay.",
+      "effects": {}
+    }
+  ],
+  "_note": "Imported porcelain and beads were prestige goods: datus gave and displayed them to win and keep allies.",
+  "sources": [
+    "Laura Lee Junker, Raiding, Trading, and Feasting: The Political Economy of Philippine Chiefdoms (University of Hawai'i Press, 1999), on prestige goods and alliance-building",
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+  ]
+}

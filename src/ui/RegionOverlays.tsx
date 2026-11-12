@@ -59,9 +59,10 @@ export const latestReportId = (state: GameState) => (state.region?.reports ?? []
 export const unseenReport = (state: GameState, seen: number) => (state.region?.reports ?? []).find((r) => r.id > seen);
 
 /** Shows each new report once, as a short dialog. */
-export function ReportDialog(props: { state: GameState; content: Content; seen: number; onSeen: (id: number) => void }) {
-  const { state, content, seen, onSeen: setSeen } = props;
-  const next = unseenReport(state, seen);
+export function ReportDialog(props: { state: GameState; content: Content; seen: number; onSeen: (id: number) => void; hold?: boolean }) {
+  const { state, content, seen, onSeen: setSeen, hold = false } = props;
+  // Held back while the battle plays out on the map.
+  const next = hold ? undefined : unseenReport(state, seen);
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const d = dialog.current;
@@ -101,12 +102,45 @@ export function ReportDialog(props: { state: GameState; content: Content; seen: 
   );
 }
 
-/** A neighbor's trade offer, with accept and decline. */
-export function OfferBar({ state, content, dispatch }: { state: GameState; content: Content; dispatch: (c: Command) => void }) {
+/**
+ * A neighbor's trade offer, with accept and decline. On the barangay map it starts folded: a
+ * bangka sails in and docks, and tapping the boat (or this bar) opens the offer.
+ */
+export function OfferBar(props: {
+  state: GameState;
+  content: Content;
+  dispatch: (c: Command) => void;
+  /** Show only a short line about the boat until the player opens it. */
+  folded?: boolean;
+  /** The boat is still on its way. */
+  sailing?: boolean;
+  onOpen?: () => void;
+}) {
+  const { state, content, dispatch, folded = false, sailing = false, onOpen } = props;
   const offer = state.region?.offer;
   if (!offer) return null;
   const who = neighborDef(content, offer.from);
   const canPay = state.resources[offer.want.resource] >= offer.want.amount;
+  if (folded) {
+    return (
+      <button
+        type="button"
+        onClick={onOpen}
+        className="wood-panel pointer-events-auto flex max-w-full items-center gap-2 rounded-xl border-2 border-amber-950/70 px-3 py-1.5 text-left text-xs leading-tight text-amber-50 shadow-lg sm:text-sm"
+      >
+        <span className="text-xl leading-none" aria-hidden>
+          🛶
+        </span>
+        <span>
+          {sailing ? (
+            <>A bangka from <span className="font-display">{who?.name ?? offer.from}</span> is sailing in…</>
+          ) : (
+            <>A bangka from <span className="font-display">{who?.name ?? offer.from}</span> has docked. Tap the boat, or here, to trade · {clock(offer.expiresAt - state.time)}</>
+          )}
+        </span>
+      </button>
+    );
+  }
   return (
     <div role="status" className="wood-panel pointer-events-auto flex max-w-full flex-wrap items-center gap-2 rounded-xl border-2 border-amber-950/70 px-3 py-1.5 text-amber-50 shadow-lg">
       <span className="text-xl leading-none" aria-hidden>

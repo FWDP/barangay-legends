@@ -5,6 +5,7 @@ import type { GameState } from "../engine/game";
 import { activeBanners } from "./EventBanners";
 import { latestReportId } from "./RegionOverlays";
 import { sfx } from "./sound";
+import { CLASH_MS } from "./visitors";
 
 /** Delay between the battle drums and the result. */
 const RESULT_DELAY_MS = 1300;
@@ -35,6 +36,7 @@ export function useGameSounds(state: GameState, content: Content) {
     lastReport.current = latest;
     if (!battle) return;
     sfx.battleStart();
-    setTimeout(() => (battle.win ? sfx.battleWon() : sfx.battleLost()), RESULT_DELAY_MS);
+    // A raid on the barangay plays out at the Kuta first (CLASH_MS); the result sounds as it ends.
+    setTimeout(() => (battle.win ? sfx.battleWon() : sfx.battleLost()), battle.kind === "defense" ? CLASH_MS : RESULT_DELAY_MS);
   }, [latest]);
 }

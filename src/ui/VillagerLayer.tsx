@@ -8,6 +8,36 @@ import { overcrowded, type GameState } from "../engine/game";
 import type { Point } from "../engine/map";
 import { origin, type Camera, type View } from "./camera";
 import { dayPhase, destination, exitPoint, isNight, MAX_SPRITES, planVillagers, presentVillagers, SPEED, walk, type Role, type VillagerPlan } from "./villagers";
+import {
+  along,
+  boatArriving,
+  boatLeaving,
+  fromTop,
+  landingIndex,
+  LEAVE_SECONDS,
+  raidApproach,
+  raiderCount,
+  reach,
+  riverPath,
+} from "./visitors";
+
+/** A battle at the Kuta being shown right now (see App): who won, and when it ends (ms). */
+export interface Clash {
+  win: boolean;
+  until: number;
+}
+
+/** The raid the layer is showing, remembered after the engine has resolved it. */
+interface RaidMemory {
+  from: string;
+  top: boolean;
+  target: Point;
+  count: number;
+  /** performance.now() when it struck, when the clash ended, and whether the barangay won. */
+  struckAt?: number;
+  retreatAt?: number;
+  win?: boolean;
+}
 
 interface Sprite {
   p: Point;
@@ -42,7 +72,9 @@ export function useReducedMotion(): boolean {
   return reduced;
 }
 
-function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, tile: number, id: number, role: Role | "leaving", sprite: Sprite, t: number) {
+type Look = Role | "leaving" | "raider" | "looter";
+
+function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, tile: number, id: number, role: Look, sprite: Sprite, t: number) {
   const s = Math.max(7, tile * 0.32);
   const swing = sprite.moving ? Math.sin(sprite.stride) * s * 0.12 : 0;
   // Workers busy at their post bob a little.
@@ -66,7 +98,8 @@ function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, tile: num
   g.stroke();
 
   const top = y - s * 0.72 - bob;
-  g.fillStyle = sick ? "#7c9a5a" : CLOTH[id % CLOTH.length];
+  const raider = role === "raider" || role === "looter";
+  g.fillStyle = sick ? "#7c9a5a" : raider ? "#3b0a0a" : CLOTH[id % CLOTH.length];
   g.beginPath();
   g.roundRect(x - s * 0.17, top, s * 0.34, s * 0.44, s * 0.08);
   g.fill();
@@ -96,6 +129,26 @@ function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, tile: num
     g.lineTo(x + s * 0.3, top - s * 0.38);
     g.lineTo(x + s * 0.18, top - s * 0.38);
     g.fill();
+  } else if (raider) {
+    // A red head cloth, a long shield and a blade.
+    g.fillStyle = "#dc2626";
+    g.fillRect(x - s * 0.14, top - s * 0.2, s * 0.28, s * 0.06);
+    g.fillStyle = "#78350f";
+    g.beginPath();
+    g.ellipse(x - s * 0.24, top + s * 0.2, s * 0.08, s * 0.24, 0, 0, Math.PI * 2);
+    g.fill();
+    g.strokeStyle = "#e7e5e4";
+    g.lineWidth = Math.max(1, s * 0.05);
+    g.beginPath();
+    g.moveTo(x + s * 0.2, top + s * 0.25);
+    g.lineTo(x + s * 0.32, top - s * 0.15);
+    g.stroke();
+    if (role === "looter") {
+      g.fillStyle = "#a16207";
+      g.beginPath();
+      g.arc(x + s * 0.05, top + s * 0.05, s * 0.14, 0, Math.PI * 2);
+      g.fill();
+    }
   } else if (role === "leaving") {
     // A bundle on the back.
     g.fillStyle = "#a16207";
@@ -106,15 +159,97 @@ function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, tile: num
   g.globalAlpha = 1;
 }
 
+/** A boat seen from above, pointing along `heading`: a bangka with outriggers, or a karakoa. */
+function drawBoat(g: CanvasRenderingContext2D, x: number, y: number, tile: number, heading: number, kind: "bangka" | "karakoa", t: number) {
+  const L = tile * (kind === "karakoa" ? 1.7 : 0.95);
+  const W = tile * (kind === "karakoa" ? 0.34 : 0.22);
+  g.save();
+  g.translate(x, y);
+  g.rotate(heading);
+  // Outrigger floats on both sides.
+  g.strokeStyle = "#5b3a1a";
+  g.lineWidth = Math.max(1, tile * 0.04);
+  for (const side of [-1, 1]) {
+    g.beginPath();
+    g.moveTo(-L * 0.35, side * W * 1.6);
+    g.lineTo(L * 0.35, side * W * 1.6);
+    g.moveTo(-L * 0.12, 0);
+    g.lineTo(-L * 0.12, side * W * 1.6);
+    g.moveTo(L * 0.12, 0);
+    g.lineTo(L * 0.12, side * W * 1.6);
+    g.stroke();
+  }
+  // The hull, pointed at both ends.
+  g.fillStyle = kind === "karakoa" ? "#7c2d12" : "#6b4423";
+  g.beginPath();
+  g.moveTo(-L / 2, 0);
+  g.quadraticCurveTo(0, -W, L / 2, 0);
+  g.quadraticCurveTo(0, W, -L / 2, 0);
+  g.fill();
+  if (kind === "karakoa") {
+    // Painted bands, a row of paddlers and a banner at the stern.
+    g.strokeStyle = "#fbbf24";
+    g.lineWidth = Math.max(1, tile * 0.03);
+    g.beginPath();
+    g.moveTo(-L * 0.4, 0);
+    g.lineTo(L * 0.4, 0);
+    g.stroke();
+    g.fillStyle = "#1c1410";
+    for (let i = -3; i <= 3; i++) {
+      g.beginPath();
+      g.arc(i * L * 0.1, Math.sin(t * 6 + i) * W * 0.15, W * 0.22, 0, Math.PI * 2);
+      g.fill();
+    }
+    g.fillStyle = "#dc2626";
+    g.fillRect(-L * 0.5, -W * 1.4, W * 0.9, W * 0.6);
+  } else {
+    // A small sail and one paddler.
+    g.fillStyle = "#f5e6c8";
+    g.beginPath();
+    g.moveTo(L * 0.05, 0);
+    g.lineTo(-L * 0.25, -W * 1.5);
+    g.lineTo(-L * 0.25, W * 0.2);
+    g.fill();
+    g.fillStyle = "#1c1410";
+    g.beginPath();
+    g.arc(L * 0.25, 0, W * 0.3, 0, Math.PI * 2);
+    g.fill();
+  }
+  g.restore();
+}
+
+/** Flashes of blades where the two sides meet. */
+function drawSparks(g: CanvasRenderingContext2D, x: number, y: number, tile: number, t: number) {
+  const beat = Math.floor(t * 6);
+  g.strokeStyle = "#fde047";
+  g.lineWidth = Math.max(1, tile * 0.04);
+  for (let i = 0; i < 3; i++) {
+    const a = ((beat * 7 + i * 13) % 17) / 17;
+    const sx = x + (a - 0.5) * tile * 0.9;
+    const sy = y - tile * 0.25 + (((beat * 5 + i * 3) % 7) / 7 - 0.5) * tile * 0.5;
+    const r = tile * 0.09;
+    g.beginPath();
+    g.moveTo(sx - r, sy);
+    g.lineTo(sx + r, sy);
+    g.moveTo(sx, sy - r);
+    g.lineTo(sx, sy + r);
+    g.stroke();
+  }
+}
+
 /**
  * The villager canvas. Pointer events pass straight through to the map. With reduced motion,
  * villagers stand still at their spots and the canvas only redraws when the game changes.
  */
-export function VillagerLayer(props: { state: GameState; content: Content; cam: Camera; view: View; reducedMotion: boolean }) {
-  const { state, content, cam, view, reducedMotion } = props;
+export function VillagerLayer(props: { state: GameState; content: Content; cam: Camera; view: View; reducedMotion: boolean; clash?: Clash | null }) {
+  const { state, content, cam, view, reducedMotion, clash = null } = props;
   const canvas = useRef<HTMLCanvasElement>(null);
-  const latest = useRef({ state, cam, view });
-  latest.current = { state, cam, view };
+  const latest = useRef({ state, cam, view, clash });
+  latest.current = { state, cam, view, clash };
+  // Trade boat and raid shown last frame, for boats casting off and raiders going home.
+  const boat = useRef<{ from: string; top: boolean; leftAt?: number; p?: Point; heading?: number } | null>(null);
+  const raid = useRef<RaidMemory | null>(null);
+  const river = useRef<{ map: GameState["map"] | null; path: Point[] }>({ map: null, path: [] });
   const sprites = useRef(new Map<number, Sprite>());
   const leavers = useRef<Leaver[]>([]);
   const before = useRef<GameState | null>(null);
@@ -152,7 +287,7 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
     let area = { x0: 0, y0: 0, x1: 0, y1: 0 };
 
     const draw = (dt: number, t: number) => {
-      const { state: s, cam: c, view: v } = latest.current;
+      const { state: s, cam: c, view: v, clash: fight } = latest.current;
       const o = origin(c, v);
       const T = c.tile;
       // Plans only change when the game does (ten times a second), not every frame.
@@ -167,8 +302,102 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
         return x > -T && y > -T && x < v.w + T && y < v.h + T ? { x, y } : null;
       };
 
-      const drawn: { x: number; y: number; f: () => void }[] = [];
+      const drawn: { x: number; y: number; r?: number; f: () => void }[] = [];
       let animating = leavers.current.length > 0;
+
+      // ---- Visitors: trade boats and raiders, from the region's offer and raid ----
+      if (river.current.map !== s.map) river.current = { map: s.map, path: riverPath(s.map) };
+      const path = river.current.path;
+      const now = performance.now();
+      const plaza = s.map.plaza;
+      if (path.length > 2) {
+        const offer = s.region?.offer ?? null;
+        const offers = content.rules.diplomacy.offers;
+        if (offer) {
+          const top = fromTop(content, offer.from);
+          const since = s.time - (offer.expiresAt - offers.expireSeconds);
+          const where = boatArriving(path, plaza, top, reducedMotion ? Infinity : since);
+          const prev = boat.current?.from === offer.from && !boat.current.leftAt ? boat.current.p : undefined;
+          // Ease toward the target: the game moves ten times a second, the canvas thirty.
+          const p = prev && !reducedMotion ? { x: prev.x + (where.p.x - prev.x) * Math.min(1, dt * 8), y: prev.y + (where.p.y - prev.y) * Math.min(1, dt * 8) } : where.p;
+          boat.current = { from: offer.from, top, p, heading: where.heading };
+          if (!where.docked) animating = true;
+        } else if (boat.current && !reducedMotion) {
+          boat.current.leftAt ??= now;
+          const away = boatLeaving(path, plaza, boat.current.top, (now - boat.current.leftAt) / 1000);
+          if (away) {
+            boat.current.p = away.p;
+            boat.current.heading = away.heading;
+            animating = true;
+          } else boat.current = null;
+        } else boat.current = null;
+        const b = boat.current;
+        const bp = b?.p && visible(b.p);
+        if (b && bp) drawn.push({ x: bp.x, y: bp.y, r: T * 0.7, f: () => drawBoat(g, bp.x, bp.y, T, b.heading ?? Math.PI / 2, "bangka", t) });
+
+        const incoming = s.region?.incomingRaid ?? null;
+        const defs = new Map(content.buildings.map((d) => [d.id, d]));
+        const kuta = s.buildings.find((x) => (defs.get(x.type)?.defense ?? 0) > 0 && !x.damaged);
+        const target = kuta ? { x: kuta.x, y: kuta.y } : plaza;
+        const warning = content.rules.diplomacy.aiRaid.warningSeconds;
+        let scene: { karakoa: { p: Point; heading: number } | null; raiders: Point[]; look: Look; sparks: Point | null } | null = null;
+        if (incoming) {
+          const top = fromTop(content, incoming.from);
+          const warriors = s.region?.neighbors.find((n) => n.id === incoming.from)?.state.warriors ?? 3;
+          raid.current = { from: incoming.from, top, target, count: raiderCount(warriors) };
+          const progress = reducedMotion ? 1 : Math.min(1, Math.max(0, 1 - (incoming.strikeAt - s.time) / warning));
+          const a = raidApproach(path, plaza, target, top, progress, raid.current.count);
+          scene = { karakoa: a.karakoa, raiders: a.raiders, look: "raider", sparks: null };
+          animating = !reducedMotion;
+        } else if (raid.current && !reducedMotion) {
+          const r = raid.current;
+          r.struckAt ??= now;
+          const land = along(reach(path, landingIndex(path, r.top), r.top), 1);
+          const atKuta = raidApproach(path, plaza, r.target, r.top, 1, r.count).raiders;
+          if (fight && now < fight.until) {
+            // The clash: both sides lunge back and forth at the Kuta.
+            r.win = fight.win;
+            scene = {
+              karakoa: land,
+              raiders: atKuta.map((p, i) => ({ x: p.x + Math.sin(t * 11 + i * 2) * 0.12, y: p.y - 0.25 + Math.cos(t * 9 + i) * 0.06 })),
+              look: "raider",
+              sparks: { x: r.target.x + 0.5, y: r.target.y + 0.5 },
+            };
+          } else if (!fight && r.retreatAt === undefined && now - r.struckAt < 600) {
+            // The report is on its way; hold the line for a moment.
+            scene = { karakoa: land, raiders: atKuta, look: "raider", sparks: null };
+          } else {
+            r.retreatAt ??= now;
+            // Beaten raiders flee at a run; winners walk back with their loot.
+            const span = r.win === false ? LEAVE_SECONDS : LEAVE_SECONDS * 0.55;
+            const back = (now - r.retreatAt) / 1000 / span;
+            if (back < 1) {
+              const walking = raidApproach(path, plaza, r.target, r.top, 1 - back * (1 - 0.3), r.count).raiders;
+              scene = { karakoa: land, raiders: walking, look: r.win === false ? "looter" : "raider", sparks: null };
+            } else if (back < 2) {
+              const line = reach(path, landingIndex(path, r.top), r.top).reverse();
+              scene = { karakoa: along(line, back - 1), raiders: [], look: "raider", sparks: null };
+            } else raid.current = null;
+          }
+          animating = true;
+        } else raid.current = null;
+        if (scene) {
+          const k = scene.karakoa && visible(scene.karakoa.p);
+          if (k && scene.karakoa) {
+            const heading = scene.karakoa.heading;
+            drawn.push({ x: k.x, y: k.y, r: T * 1.1, f: () => drawBoat(g, k.x, k.y, T, heading, "karakoa", t) });
+          }
+          scene.raiders.forEach((p, i) => {
+            const at = visible(p);
+            const look = scene!.look;
+            const sprite: Sprite = { p, moving: !reducedMotion && !scene!.sparks, stride: t * 9 + i };
+            if (at) drawn.push({ x: at.x, y: at.y, f: () => drawPerson(g, at.x, at.y, T, 2000 + i, look, sprite, t) });
+          });
+          const sp = scene.sparks && visible(scene.sparks);
+          if (sp) drawn.push({ x: sp.x, y: sp.y + T, r: T * 0.8, f: () => drawSparks(g, sp.x, sp.y, T, t) });
+        }
+      }
+
       const seen = new Set<number>();
       for (const plan of plans) {
         seen.add(plan.id);
@@ -216,7 +445,10 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
       shown = animating ? "" : scene;
       const pad = Math.max(7, T * 0.32) * 1.2;
       const box = drawn.reduce(
-        (b, d) => ({ x0: Math.min(b.x0, d.x - pad), y0: Math.min(b.y0, d.y - pad * 1.4), x1: Math.max(b.x1, d.x + pad), y1: Math.max(b.y1, d.y + pad * 0.4) }),
+        (b, d) => {
+          const r = d.r ?? pad;
+          return { x0: Math.min(b.x0, d.x - r), y0: Math.min(b.y0, d.y - r * 1.4), x1: Math.max(b.x1, d.x + r), y1: Math.max(b.y1, d.y + r) };
+        },
         { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity },
       );
       const inside = box.x0 >= area.x0 && box.y0 >= area.y0 && box.x1 <= area.x1 && box.y1 <= area.y1;
@@ -259,7 +491,7 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
     // With reduced motion, redraw whenever the game, camera or view changes.
-  }, [content, reducedMotion, reducedMotion ? state : null, reducedMotion ? cam : null, reducedMotion ? view : null]);
+  }, [content, reducedMotion, reducedMotion ? state : null, reducedMotion ? cam : null, reducedMotion ? view : null, reducedMotion ? clash : null]);
 
   return <canvas ref={canvas} aria-hidden width={1} height={1} className="pointer-events-none absolute top-0 left-0" />;
 }

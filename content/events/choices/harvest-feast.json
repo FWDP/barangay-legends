@@ -1,0 +1,32 @@
+{
+  "id": "harvest-feast",
+  "title": "A feast after the harvest",
+  "icon": "🍲",
+  "story": "The rains have filled the fields and the granaries. The elders say a feast would honor the anito and show {neighbor} that this barangay prospers.",
+  "neighbor": "any",
+  "conditions": { "season": "tag-ulan", "minVillagers": 8 },
+  "choices": [
+    {
+      "id": "grand",
+      "label": "A grand feast, with guests from {neighbor}",
+      "result": "Drums and songs carry across the water. The guests from {neighbor} go home full and talking of your generosity.",
+      "effects": { "resources": { "rice": -40 }, "trust": 12, "influence": 8 }
+    },
+    {
+      "id": "small",
+      "label": "A feast for our own families",
+      "result": "The barangay eats well for a night. Everyone works a little harder the next day.",
+      "effects": { "resources": { "rice": -12, "wood": 6 } }
+    },
+    {
+      "id": "save",
+      "label": "Save the rice",
+      "result": "The rice stays in the granary. The dry months will come soon enough.",
+      "effects": {}
+    }
+  ],
+  "_note": "Competitive feasting was a central way for datus to show wealth and bind allies and followers.",
+  "sources": [
+    "Laura Lee Junker, Raiding, Trading, and Feasting: The Political Economy of Philippine Chiefdoms (University of Hawai'i Press, 1999), on feasting and alliances"
+  ]
+}

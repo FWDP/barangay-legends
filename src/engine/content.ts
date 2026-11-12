@@ -63,6 +63,68 @@ export interface Rules {
   clearing: ClearingRules;
   military: MilitaryRules;
   diplomacy: DiplomacyRules;
+  choices: ChoiceRules;
+}
+
+/** How often choice events come up. */
+export interface ChoiceRules {
+  /** None before this game time. */
+  startsAfterSeconds: number;
+  /** At least this long between two choice events (counted from when one appears). */
+  minGapSeconds: number;
+  /** Chance one starts, rolled once per game second when allowed. */
+  chancePerSecond: number;
+}
+
+/** What a choice does. Every field is optional; numbers may be negative. */
+export interface ChoiceEffects {
+  resources?: ResourceAmountsSigned;
+  /** Newcomers (only as many as there is room for) or villagers who leave. */
+  villagers?: number;
+  /** Villagers who fall sick (positive) or are cured (negative). */
+  sick?: number;
+  /** With the event's neighbor. */
+  trust?: number;
+  influence?: number;
+}
+
+export type ResourceAmountsSigned = Partial<Record<Resource, number>>;
+
+export interface ChoiceOption {
+  id: string;
+  label: string;
+  /** What happens, shown after choosing. */
+  result: string;
+  effects: ChoiceEffects;
+}
+
+/** When a choice event may come up. All listed conditions must hold. */
+export interface ChoiceConditions {
+  /** Season id(s) from content/events/seasons.json. */
+  season?: string[];
+  /** A standing building of this type. */
+  hasBuilding?: string;
+  /** No building of this type. */
+  lacksBuilding?: string;
+  /** At least one sandugo ally (the event's neighbor is then an ally). */
+  allied?: boolean;
+  minVillagers?: number;
+}
+
+/** A short story with 2–3 choices (content/events/choices). */
+export interface ChoiceEventDef {
+  id: string;
+  title: string;
+  icon: string;
+  /** May use {neighbor} and {datu}. */
+  story: string;
+  /** The event involves a neighbor: any, an ally, or an independent one. */
+  neighbor?: "any" | "ally" | "independent";
+  conditions: ChoiceConditions;
+  /** Relative chance against other eligible events (default 1). */
+  weight: number;
+  choices: ChoiceOption[];
+  sources: string[];
 }
 
 /** Changing your mind about a building: undo, move or demolish it. */
@@ -279,6 +341,7 @@ export interface Content {
   lore: Record<string, LoreNote>;
   groves: GroveBlessing[];
   neighbors: NeighborDef[];
+  choices: ChoiceEventDef[];
 }
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
@@ -417,6 +480,10 @@ export function validateRules(raw: unknown): Rules {
     if (!isObject(d[section])) throw new Error(`rules: missing "diplomacy.${section}"`);
     checkNumbers(d[section] as Record<string, unknown>, keys, `rules: diplomacy.${section}`);
   }
+  const ch = raw.choices;
+  if (!isObject(ch)) throw new Error('rules: missing "choices"');
+  checkNumbers(ch, ["startsAfterSeconds", "minGapSeconds", "chancePerSecond"], "rules: choices");
+  if ((ch.chancePerSecond as number) > 1) throw new Error("rules: choices.chancePerSecond can't be over 1");
   checkAmounts((d.marriage as Record<string, unknown>).cost, "rules: diplomacy.marriage.cost");
   checkAmounts((d.sandugo as Record<string, unknown>).cost, "rules: diplomacy.sandugo.cost");
   if ((d.tribute as Record<string, number>).everySeconds <= 0) throw new Error("rules: diplomacy.tribute.everySeconds must be > 0");
@@ -547,6 +614,72 @@ export function validateNeighbor(raw: unknown, file = "neighbor"): NeighborDef {
   return raw as unknown as NeighborDef;
 }
 
+const CHOICE_EFFECTS = ["resources", "villagers", "sick", "trust", "influence"];
+const MAX_CHOICE_EFFECT = 1000;
+
+/** Checks one choice event file. Building and season ids are checked in buildContent. */
+export function validateChoice(raw: unknown, file = "choice"): ChoiceEventDef {
+  if (!isObject(raw)) throw new Error(`${file}: must be a JSON object`);
+  checkStrings(raw, ["id", "title", "icon", "story"], file);
+  if (!/^[a-z0-9-]+$/.test(raw.id as string)) throw new Error(`${file}: "id" may only use a-z, 0-9 and "-"`);
+  if (raw.neighbor !== undefined && !["any", "ally", "independent"].includes(raw.neighbor as string)) {
+    throw new Error(`${file}: "neighbor" must be "any", "ally" or "independent"`);
+  }
+  if (raw.weight === undefined) raw.weight = 1;
+  if (!isNonNegNumber(raw.weight) || raw.weight === 0) throw new Error(`${file}: "weight" must be a number > 0`);
+  const c = raw.conditions ?? {};
+  if (!isObject(c)) throw new Error(`${file}: "conditions" must be an object`);
+  if (typeof c.season === "string") c.season = [c.season];
+  if (c.season !== undefined && (!Array.isArray(c.season) || c.season.length === 0 || !c.season.every((x) => typeof x === "string"))) {
+    throw new Error(`${file}: "conditions.season" must be a season id or a list of them`);
+  }
+  for (const k of ["hasBuilding", "lacksBuilding"]) {
+    if (c[k] !== undefined && (typeof c[k] !== "string" || c[k] === "")) throw new Error(`${file}: "conditions.${k}" must be a building id`);
+  }
+  if (c.allied !== undefined && c.allied !== true) throw new Error(`${file}: "conditions.allied" can only be true`);
+  if (c.minVillagers !== undefined && (!Number.isInteger(c.minVillagers) || (c.minVillagers as number) < 0)) {
+    throw new Error(`${file}: "conditions.minVillagers" must be a whole number >= 0`);
+  }
+  for (const k of Object.keys(c)) {
+    if (!["season", "hasBuilding", "lacksBuilding", "allied", "minVillagers"].includes(k)) throw new Error(`${file}: unknown condition "${k}"`);
+  }
+  raw.conditions = c;
+  if (!Array.isArray(raw.choices) || raw.choices.length < 2 || raw.choices.length > 3) throw new Error(`${file}: needs 2 or 3 "choices"`);
+  const ids = new Set<string>();
+  const usesNeighbor = raw.neighbor !== undefined || c.allied === true;
+  raw.choices.forEach((o, i) => {
+    const where = `${file}: choices[${i}]`;
+    if (!isObject(o)) throw new Error(`${where} must be an object`);
+    checkStrings(o, ["id", "label", "result"], where);
+    if (ids.has(o.id as string)) throw new Error(`${where}: id "${String(o.id)}" is used twice`);
+    ids.add(o.id as string);
+    const e = o.effects;
+    if (!isObject(e)) throw new Error(`${where}: needs "effects" (use {} for none)`);
+    for (const [k, v] of Object.entries(e)) {
+      if (!CHOICE_EFFECTS.includes(k)) throw new Error(`${where}: unknown effect "${k}"`);
+      if (k === "resources") {
+        if (!isObject(v)) throw new Error(`${where}: effects.resources must be an object`);
+        for (const [r, n] of Object.entries(v)) {
+          if (!(RESOURCES as readonly string[]).includes(r)) throw new Error(`${where}: unknown resource "${r}"`);
+          if (!Number.isInteger(n) || Math.abs(n as number) > MAX_CHOICE_EFFECT) throw new Error(`${where}: effects.resources.${r} must be a whole number`);
+        }
+      } else if (!Number.isInteger(v) || Math.abs(v as number) > MAX_CHOICE_EFFECT) {
+        throw new Error(`${where}: effects.${k} must be a whole number`);
+      }
+      if ((k === "trust" || k === "influence") && !usesNeighbor) throw new Error(`${where}: "${k}" needs the event to name a "neighbor" (or be "allied")`);
+    }
+  });
+  const texts = [raw.story as string, ...(raw.choices as Record<string, string>[]).flatMap((o) => [o.label, o.result])];
+  for (const p of texts.flatMap((t) => [...t.matchAll(/\{(\w+)\}/g)])) {
+    if (p[1] !== "neighbor" && p[1] !== "datu") throw new Error(`${file}: unknown placeholder {${p[1]}}`);
+    if (!usesNeighbor) throw new Error(`${file}: {${p[1]}} needs the event to name a "neighbor"`);
+  }
+  if (!Array.isArray(raw.sources) || raw.sources.length === 0 || !raw.sources.every((x) => typeof x === "string" && x !== "")) {
+    throw new Error(`${file}: a choice event needs at least one source for its history`);
+  }
+  return raw as unknown as ChoiceEventDef;
+}
+
 export function buildContent(
   buildingFiles: Record<string, unknown>,
   rawRules: unknown,
@@ -554,6 +687,7 @@ export function buildContent(
   loreFiles: Record<string, unknown> = {},
   blessingFiles: Record<string, unknown> = {},
   neighborFiles: Record<string, unknown> = {},
+  choiceFiles: Record<string, unknown> = {},
 ): Content {
   const buildings = Object.entries(buildingFiles)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -613,7 +747,20 @@ export function buildContent(
     })
     .sort((a, b) => a.river.position - b.river.position);
   if (new Set(neighbors.map((n) => n.id)).size !== neighbors.length) throw new Error("Two neighbors share an id");
-  return { buildings, rules, events, lore, groves, neighbors };
+  const seasonIds = events.seasons?.seasons.map((s) => s.id) ?? [];
+  const choices = Object.entries(choiceFiles)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([file, raw]) => {
+      const c = validateChoice(raw, file);
+      for (const k of ["hasBuilding", "lacksBuilding"] as const) {
+        const id = c.conditions[k];
+        if (id && !ids.has(id)) throw new Error(`${file}: conditions.${k} names unknown building "${id}"`);
+      }
+      for (const id of c.conditions.season ?? []) if (!seasonIds.includes(id)) throw new Error(`${file}: unknown season "${id}"`);
+      return c;
+    });
+  if (new Set(choices.map((c) => c.id)).size !== choices.length) throw new Error("Two choice events share an id");
+  return { buildings, rules, events, lore, groves, neighbors, choices };
 }
 
 /** Loads every JSON file in content/ at build time (Vite bundles them). */
@@ -627,5 +774,6 @@ export function loadContent(): Content {
   const lore = import.meta.glob("../../content/lore/*.json", { eager: true, import: "default" });
   const blessings = import.meta.glob("../../content/blessings/*.json", { eager: true, import: "default" });
   const neighbors = import.meta.glob("../../content/neighbors/*.json", { eager: true, import: "default" });
-  return buildContent(files, Object.values(rules)[0], events, lore, blessings, neighbors);
+  const choices = import.meta.glob("../../content/events/choices/*.json", { eager: true, import: "default" });
+  return buildContent(files, Object.values(rules)[0], events, lore, blessings, neighbors, choices);
 }

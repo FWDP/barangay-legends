@@ -1,0 +1,32 @@
+{
+  "id": "envoy-betel",
+  "title": "An envoy brings betel",
+  "icon": "🌰",
+  "story": "An envoy from {neighbor} arrives with a gift of betel nut and lime, sent by {datu} as a greeting between datus. How will you receive them?",
+  "neighbor": "any",
+  "conditions": {},
+  "choices": [
+    {
+      "id": "feast",
+      "label": "Receive them with a meal",
+      "result": "You chew betel together and share a meal. The envoy carries warm words home to {datu}.",
+      "effects": { "resources": { "rice": -10 }, "trust": 10, "influence": 4 }
+    },
+    {
+      "id": "simple",
+      "label": "Accept the gift politely",
+      "result": "You accept the betel and send the envoy home with your greetings.",
+      "effects": { "trust": 3 }
+    },
+    {
+      "id": "refuse",
+      "label": "Refuse the gift",
+      "result": "The envoy leaves with the betel still in hand. {datu} will hear of the insult.",
+      "effects": { "trust": -12 }
+    }
+  ],
+  "_note": "Offering and chewing betel (nganga) together was a common courtesy and part of meetings, agreements and rites.",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994), on betel chewing in social life"
+  ]
+}

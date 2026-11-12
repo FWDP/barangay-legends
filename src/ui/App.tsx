@@ -21,6 +21,11 @@ import { initSound, isMuted, setMuted, sfx } from "./sound";
 import { loadUiContent } from "./uiContent";
 import { content, useGame } from "./useGame";
 import { useGameSounds } from "./useGameSounds";
+import { awayStory } from "./away";
+import { AwayDialog, ChoiceBanner, ChoiceDialog } from "./StoryDialogs";
+import { useReducedMotion, type Clash } from "./VillagerLayer";
+import { CLASH_MS, SAIL_SECONDS } from "./visitors";
+import type { GameState } from "../engine/game";
 
 const ui = loadUiContent(content);
 
@@ -128,11 +133,62 @@ export function App() {
 
   useEffect(() => initSound(), []);
   useGameSounds(state, content);
+  const reducedMotion = useReducedMotion();
+
+  // A raid on the barangay plays out at the Kuta for a few seconds before its report shows.
+  const [clash, setClash] = useState<(Clash & { id: number }) | null>(null);
+  const newest = latestReportId(state);
+  useEffect(() => {
+    const r = state.region?.reports.find((x) => x.id === newest);
+    if (!r || r.id <= seenReport || r.kind !== "defense") return;
+    // Only when the player is watching it happen: on the map, tab visible, motion allowed.
+    if (screen !== "game" || view !== "barangay" || reducedMotion || document.visibilityState !== "visible" || state.time - r.time > 2) return;
+    setClash({ id: r.id, win: r.win === true, until: performance.now() + CLASH_MS });
+    setTimeout(() => setClash((c) => (c?.id === r.id ? null : c)), CLASH_MS);
+  }, [newest]);
+
+  // The trade offer opens when the player taps the docked bangka (or the bar).
+  const [offerOpen, setOfferOpen] = useState(false);
+  const offer = state.region?.offer ?? null;
+  const offerKey = offer ? `${offer.from}@${offer.expiresAt}` : "";
+  useEffect(() => setOfferOpen(false), [offerKey]);
+  const sailing = !!offer && !reducedMotion && state.time - (offer.expiresAt - content.rules.diplomacy.offers.expireSeconds) < SAIL_SECONDS;
+
+  // A choice event, never shown during a raid.
+  const [choiceOpen, setChoiceOpen] = useState(false);
+  const raidComing = !!state.region?.incomingRaid;
+  useEffect(() => {
+    if (raidComing) setChoiceOpen(false);
+  }, [raidComing]);
+
+  // "While you were away": what happened while the tab was hidden (the game keeps running).
+  const [away, setAway] = useState<string[] | null>(null);
+  const latestState = useRef(state);
+  latestState.current = state;
+  useEffect(() => {
+    let before: GameState | null = null;
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        before = latestState.current;
+        return;
+      }
+      if (!before) return;
+      const after = latestState.current;
+      const lines = awayStory(before, after, content);
+      before = null;
+      if (lines.length === 0) return;
+      setAway(lines);
+      // The story already told of any battles: don't show their reports one by one too.
+      setSeenReport(latestReportId(after));
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
   // The adviser never talks over a battle report or a lore note.
   const advisor = useAdvisor(state, content, ui.advisor, {
     lang,
     tipsOn: settings.tips,
-    blocked: screen === "title" || unseenReport(state, seenReport) !== undefined || loreNote !== null,
+    blocked: screen === "title" || clash !== null || choiceOpen || away !== null || unseenReport(state, seenReport) !== undefined || loreNote !== null,
   });
 
   // Moving uses the same placing mode as building, with the building picked up first.
@@ -353,6 +409,11 @@ export function App() {
             sfx.click();
             setLoreNote(id);
           }}
+          clash={clash}
+          onBoat={() => {
+            sfx.click();
+            setOfferOpen(true);
+          }}
         />
         )}
         <LoreToast loreId={loreNote} onClose={closeLore} />
@@ -395,7 +456,24 @@ export function App() {
               }}
             />
           )}
-          <OfferBar state={state} content={content} dispatch={dispatch} />
+          <OfferBar
+            state={state}
+            content={content}
+            dispatch={dispatch}
+            folded={view === "barangay" && !offerOpen}
+            sailing={sailing}
+            onOpen={() => !sailing && setOfferOpen(true)}
+          />
+          {!raidComing && (
+            <ChoiceBanner
+              state={state}
+              content={content}
+              onOpen={() => {
+                sfx.click();
+                setChoiceOpen(true);
+              }}
+            />
+          )}
           {banners.map((b) => (
             <EventBanner key={b.id} banner={b} />
           ))}
@@ -444,7 +522,9 @@ export function App() {
           setDemolishing(null);
         }}
       />
-      <ReportDialog state={state} content={content} seen={seenReport} onSeen={setSeenReport} />
+      <ReportDialog state={state} content={content} seen={seenReport} onSeen={setSeenReport} hold={clash !== null || away !== null} />
+      <ChoiceDialog state={state} content={content} open={choiceOpen && !raidComing} onClose={() => setChoiceOpen(false)} dispatch={dispatch} />
+      <AwayDialog lines={away} onClose={() => setAway(null)} />
       <VictoryDialog state={state} content={content} waiting={unseenReport(state, seenReport) !== undefined} />
       <FloatLayer />
       {helpPanel}

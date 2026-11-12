@@ -108,6 +108,8 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
   5: (raw) => ({ ...raw, version: 6, lastBuild: null }),
   // v6 → v7: the player can name the barangay and the datu. Older barangays have no names.
   6: (raw) => ({ ...raw, version: 7, barangay: isObject(raw.barangay) ? { ...raw.barangay, name: "", datu: "" } : raw.barangay }),
+  // v7 → v8: choice events. Nothing waiting, none seen yet.
+  7: (raw) => ({ ...raw, version: 8, choice: null, recentChoices: [] }),
 };
 
 // ---------- Frozen v2 map rules (for the v1 → v2 migration only) ----------
@@ -228,6 +230,9 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean): GameSta
     );
   }
   if (finiteNonNeg(data.tilesCleared)) state.tilesCleared = Math.floor(data.tilesCleared);
+  if (Array.isArray(data.recentChoices)) {
+    state.recentChoices = data.recentChoices.filter((id): id is string => typeof id === "string" && content.choices.some((c) => c.id === id)).slice(-3);
+  }
 
   const b = data.barangay;
   if (isObject(b) && typeof b.id === "string" && b.id !== "" && isObject(b.region)) {
@@ -284,6 +289,12 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean): GameSta
   }
   if (finiteNonNeg(data.warriors)) state.warriors = Math.min(Math.floor(data.warriors), state.villagers);
   if (isPlayer && content.neighbors.length > 0) state.region = parseRegion(data.region, content, state);
+  // A waiting choice event: a known event, and a neighbor that still exists (or none).
+  const ch = data.choice;
+  if (isPlayer && isObject(ch) && typeof ch.id === "string" && content.choices.some((c) => c.id === ch.id) && finiteNonNeg(ch.at)) {
+    const neighbor = typeof ch.neighbor === "string" && state.region?.neighbors.some((n) => n.id === ch.neighbor) ? ch.neighbor : null;
+    state.choice = { id: ch.id, neighbor, at: ch.at };
+  }
   return state;
 }
 

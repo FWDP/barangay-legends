@@ -1,5 +1,5 @@
 {
-  "_comment": "Core balance numbers. Values marked in docs/game-design.md are copied here; the rest are playtest guesses. map: size and features of the generated map. placement: undo window after building, moving cost (percent of the current price) and demolish refund (percent of what the last copy cost). secondsPerVillagerLeavingOvercrowded: when demolished houses leave more villagers than shelter, one leaves this often. clearing: the cost of turning forest into buildable land; seconds grow by secondsGrowth for every tile the player has cleared. military/diplomacy: warriors, battles and the four paths to absorb a neighbor (trade, marriage alliance, sandugo, mangayaw); all placeholders for playtesting.",
+  "_comment": "Core balance numbers. Values marked in docs/game-design.md are copied here; the rest are playtest guesses. map: size and features of the generated map. placement: undo window after building, moving cost (percent of the current price) and demolish refund (percent of what the last copy cost). secondsPerVillagerLeavingOvercrowded: when demolished houses leave more villagers than shelter, one leaves this often. clearing: the cost of turning forest into buildable land; seconds grow by secondsGrowth for every tile the player has cleared. military/diplomacy: warriors, battles and the four paths to absorb a neighbor (trade, marriage alliance, sandugo, mangayaw); all placeholders for playtesting. choices: choice events (content/events/choices); minGapSeconds is the 4-minute limit, the start time and chance are playtest guesses.",
   "start": {
     "resources": {
       "rice": 10,
@@ -147,5 +147,10 @@
         "warriorPercent": 35
       }
     }
+  },
+  "choices": {
+    "startsAfterSeconds": 180,
+    "minGapSeconds": 240,
+    "chancePerSecond": 0.02
   }
 }

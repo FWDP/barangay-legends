@@ -43,7 +43,8 @@ import {
 } from "./camera";
 import { spawnFloat } from "./floats";
 import { bonusPreviewText, RESOURCE_ICON } from "./format";
-import { useReducedMotion, VillagerLayer } from "./VillagerLayer";
+import { useReducedMotion, VillagerLayer, type Clash } from "./VillagerLayer";
+import { dockPoint, riverPath, SAIL_SECONDS } from "./visitors";
 import { DAY_SECONDS } from "./villagers";
 
 const INCOME_EVERY_MS = 3000;
@@ -95,8 +96,12 @@ export function BarangayMap(props: {
   onSpirit: (loreId: string, sx: number, sy: number) => void;
   /** Background for the title screen: no input, no controls, slowly drifting (unless reduced motion). */
   scenic?: boolean;
+  /** A battle being shown at the Kuta (see App). */
+  clash?: Clash | null;
+  /** The player tapped the trade boat at the dock. */
+  onBoat?: () => void;
 }) {
-  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onBuildingMenu, onSpirit, scenic = false } = props;
+  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat } = props;
   const plan = props.planState ?? state;
   const { map } = state;
   const area = useRef<HTMLDivElement>(null);
@@ -227,6 +232,8 @@ export function BarangayMap(props: {
     moved: boolean;
     /** The press started on a resting spirit. */
     spirit?: boolean;
+    /** The press started on the trade boat. */
+    boat?: boolean;
     pinch?: { dist: number; mid: { x: number; y: number } };
   } | null>(null);
   const local = (e: { clientX: number; clientY: number }) => {
@@ -255,7 +262,8 @@ export function BarangayMap(props: {
     const p = local(e);
     pointers.current.set(e.pointerId, p);
     const spirit = !!(e.target as Element).closest?.("[data-spirit]");
-    if (pointers.current.size === 1) gesture.current = { x: p.x, y: p.y, cam, moved: false, spirit };
+    const boat = !!(e.target as Element).closest?.("[data-boat]");
+    if (pointers.current.size === 1) gesture.current = { x: p.x, y: p.y, cam, moved: false, spirit, boat };
     else if (pointers.current.size === 2) gesture.current = { x: p.x, y: p.y, cam, moved: true, pinch: pinchOf() };
   };
 
@@ -289,7 +297,8 @@ export function BarangayMap(props: {
     if (pointers.current.size === 0) {
       if (g && !g.moved && e.type === "pointerup") {
         const p = local(e);
-        if (g.spirit && sighting?.lore) onSpirit(sighting.lore, e.clientX, e.clientY);
+        if (g.boat && onBoat) onBoat();
+        else if (g.spirit && sighting?.lore) onSpirit(sighting.lore, e.clientX, e.clientY);
         else tapAt(p.x, p.y, e.clientX, e.clientY);
       }
       gesture.current = null;
@@ -461,6 +470,11 @@ export function BarangayMap(props: {
     }
   }
   const o = cam ? origin(cam, view) : { x: 0, y: 0 };
+  // The docked trade boat's tap target (the boat itself is drawn on the villager canvas).
+  const path = useMemo(() => riverPath(map), [map]);
+  const offer = state.region?.offer ?? null;
+  const docked = offer && !scenic && onBoat && path.length > 2 && (reducedMotion || state.time - (offer.expiresAt - content.rules.diplomacy.offers.expireSeconds) >= SAIL_SECONDS);
+  const dock = docked ? { p: dockPoint(path, map.plaza), name: content.neighbors.find((n) => n.id === offer.from)?.name ?? offer.from } : null;
 
   return (
     <div className="relative min-h-0 flex-1">
@@ -498,7 +512,29 @@ export function BarangayMap(props: {
             {cells}
           </div>
         )}
-        {cam && view.w > 0 && <VillagerLayer state={state} content={content} cam={cam} view={view} reducedMotion={reducedMotion} />}
+        {cam && view.w > 0 && <VillagerLayer state={state} content={content} cam={cam} view={view} reducedMotion={reducedMotion} clash={clash} />}
+        {cam && dock && (
+          <span
+            data-boat
+            role="button"
+            tabIndex={0}
+            aria-label={`A bangka from ${dock.name} has docked. Open the trade offer`}
+            title={`Bangka from ${dock.name}: tap to trade`}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                e.stopPropagation();
+                onBoat?.();
+              }
+            }}
+            className="absolute z-10 flex -translate-x-1/2 -translate-y-1/2 cursor-pointer items-start justify-center rounded-full outline-none focus-visible:ring-4 focus-visible:ring-amber-300"
+            style={{ left: o.x + dock.p.x * cam.tile, top: o.y + dock.p.y * cam.tile, width: cam.tile * 1.3, height: cam.tile * 1.3 }}
+          >
+            <span aria-hidden className="text-outline -mt-[0.9em] rounded-full bg-amber-300 px-1.5 font-display text-[11px] leading-snug text-amber-950 shadow motion-safe:animate-bounce">
+              🛶 Trade
+            </span>
+          </span>
+        )}
         </div>
         {/* The day/night and weather tints. Left out behind the title screen: its dark overlay hides
             them, and a blended tint over the drifting map is costly to composite. */}

@@ -1,0 +1,31 @@
+{
+  "id": "stranger-sick-child",
+  "title": "A stranger with a sick child",
+  "icon": "🛶",
+  "story": "At dusk a woman beaches a small boat below the houses. Her child burns with fever. She has come from upriver and asks for a place by your fire.",
+  "conditions": { "minVillagers": 4 },
+  "choices": [
+    {
+      "id": "take-in",
+      "label": "Take them in",
+      "result": "The family shares its rice and a mat. The child's fever spreads to one of your own, but the mother stays to work your fields.",
+      "effects": { "resources": { "rice": -5 }, "villagers": 1, "sick": 1 }
+    },
+    {
+      "id": "give-food",
+      "label": "Give rice for the journey",
+      "result": "She thanks you and paddles on toward the next barangay, a bundle of rice at her feet.",
+      "effects": { "resources": { "rice": -8 } }
+    },
+    {
+      "id": "turn-away",
+      "label": "Turn them away",
+      "result": "The boat slips back into the dark. Some of your people whisper about it for days.",
+      "effects": {}
+    }
+  ],
+  "_note": "Travel by boat along rivers and coasts was the everyday way people and news moved between barangays.",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994), on river and coastal travel between settlements"
+  ]
+}

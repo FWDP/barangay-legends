@@ -1,0 +1,32 @@
+{
+  "id": "babaylan-ritual",
+  "title": "The babaylan asks for an offering",
+  "icon": "🌿",
+  "story": "Sickness lingers in the barangay. The babaylan says the anito must be fed: a pig, rice and wine set out at the hut, with chants through the night.",
+  "conditions": { "hasBuilding": "babaylan-hut", "minVillagers": 5 },
+  "choices": [
+    {
+      "id": "full-rite",
+      "label": "Hold the full rite",
+      "result": "The chanting lasts until dawn. In the days after, the sick rise from their mats.",
+      "effects": { "resources": { "rice": -20, "wood": -5 }, "sick": -3 }
+    },
+    {
+      "id": "small-offering",
+      "label": "A small offering",
+      "result": "A little rice is set out at the hut. One of the sick feels better by morning.",
+      "effects": { "resources": { "rice": -6 }, "sick": -1 }
+    },
+    {
+      "id": "wait",
+      "label": "Wait and see",
+      "result": "The babaylan bows and returns to the hut. The sick must mend on their own.",
+      "effects": {}
+    }
+  ],
+  "_note": "Babaylan (Visayan) and catalonan (Tagalog) were ritual specialists, very often women, who led healing rites with offerings to the anito.",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994), chapters on Visayan and Tagalog religion",
+    "Juan de Plasencia, Customs of the Tagalogs (1589), in Blair and Robertson, The Philippine Islands 1493–1898, vol. 7"
+  ]
+}

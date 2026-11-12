@@ -34,8 +34,9 @@ import {
   type RegionState,
 } from "./region";
 import { DEFAULT_SEED } from "./rng";
+import { choose, updateChoices, type PendingChoice } from "./choices";
 
-export const STATE_VERSION = 7;
+export const STATE_VERSION = 8;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -117,6 +118,10 @@ export interface GameState {
   region: RegionState | null;
   /** The last building placed, while it can still be undone (see undoSecondsLeft). */
   lastBuild: LastBuild | null;
+  /** A choice event waiting for the datu's answer (content/events/choices), or null. */
+  choice: PendingChoice | null;
+  /** Choice events seen most recently, kept out of the next draws. */
+  recentChoices: string[];
 }
 
 export interface ClearingJob {
@@ -161,6 +166,8 @@ export function newGame(
     warriors: 0,
     region: null,
     lastBuild: null,
+    choice: null,
+    recentChoices: [],
   };
   if (withRegion && content.neighbors.length > 0) state.region = createRegion(content, 0, seed);
   for (const def of content.buildings) {
@@ -562,7 +569,8 @@ export type Command =
   | { type: "raid"; neighbor: string; warriors: number }
   | { type: "guard"; neighbor: string; warriors: number }
   | { type: "acceptOffer" }
-  | { type: "declineOffer" };
+  | { type: "declineOffer" }
+  | { type: "choose"; option: string };
 
 export function apply(state: GameState, content: Content, command: Command): GameState {
   switch (command.type) {
@@ -598,6 +606,8 @@ export function apply(state: GameState, content: Content, command: Command): Gam
       return acceptOffer(state, content);
     case "declineOffer":
       return declineOffer(state);
+    case "choose":
+      return choose(state, content, command.option);
   }
 }
 
@@ -669,7 +679,8 @@ function step(state: GameState, content: Content, dt: number): GameState {
   let next: GameState = { ...state, resources, villagers, migration, hunger, warriors };
   next = advanceClearing(next, content, dt, hungry);
   next = updateEvents(next, content, dt);
-  return next.region ? updateRegion(next, content, state.time, dt) : next;
+  if (next.region) next = updateRegion(next, content, state.time, dt);
+  return updateChoices(next, content, state.time, dt);
 }
 
 /** Clearing progresses while the barangay is fed and enough healthy villagers can work on it. */

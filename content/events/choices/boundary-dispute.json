@@ -1,0 +1,32 @@
+{
+  "id": "boundary-dispute",
+  "title": "Two families and one field",
+  "icon": "⚖️",
+  "story": "Two families stand before you, each claiming the same strip of land by the paddies. The elders have gathered to hear how the datu will judge.",
+  "conditions": { "minVillagers": 8 },
+  "choices": [
+    {
+      "id": "split",
+      "label": "Divide the field between them",
+      "result": "Neither family is pleased, but both go back to work. The harvest goes on.",
+      "effects": { "resources": { "rice": 5 } }
+    },
+    {
+      "id": "fine",
+      "label": "Fine both families",
+      "result": "Each pays a fine in rice, as custom allows. One family packs up and leaves in anger.",
+      "effects": { "resources": { "rice": 15 }, "villagers": -1 }
+    },
+    {
+      "id": "elders",
+      "label": "Let the elders decide",
+      "result": "The elders talk late into the night and settle it. It costs a feast, but the peace holds.",
+      "effects": { "resources": { "rice": -10 } }
+    }
+  ],
+  "_note": "Disputes were heard by the datu with the elders, and settled by custom, often with fines paid in goods.",
+  "sources": [
+    "Juan de Plasencia, Customs of the Tagalogs (1589), in Blair and Robertson, The Philippine Islands 1493–1898, vol. 7, on how datus judged disputes",
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+  ]
+}

@@ -83,11 +83,11 @@ const clamp100 = (v: number) => Math.min(100, Math.max(0, v));
 // ---------- Setup ----------
 
 const aiContents = new WeakMap<Content, Content>();
-/** AI neighbors share the player's rules, minus random disasters (nobody is there to fight fires). */
+/** AI neighbors share the player's rules, minus random disasters and choice events (nobody is there to fight fires or decide). */
 export function aiContent(content: Content): Content {
   let c = aiContents.get(content);
   if (!c) {
-    c = { ...content, events: { hunger: content.events.hunger, seasons: content.events.seasons } };
+    c = { ...content, events: { hunger: content.events.hunger, seasons: content.events.seasons }, choices: [] };
     aiContents.set(content, c);
   }
   return c;
@@ -272,6 +272,23 @@ function addInfluence(region: RegionState, n: NeighborState, amount: number, con
   if (influence < 100 - EPSILON) return [region, { ...n, influence }];
   const tributary: NeighborState = { ...n, influence: 100, status: "tributary", loyalty: content.rules.diplomacy.loyalty.start };
   return [addReport(region, { time, kind: "tributary", neighbor: n.id }), tributary];
+}
+
+/**
+ * Changes how one neighbor sees the player (a choice event's effect). Trust follows the
+ * neighbor's temperament like any other gain; influence follows the usual rules, so it can
+ * make them a tributary.
+ */
+export function adjustRelations(state: GameState, content: Content, id: string, change: { trust?: number; influence?: number }): GameState {
+  return withNeighbor(state, id, (n, region) => {
+    let next: NeighborState = change.trust ? { ...n, trust: addTrust(n, change.trust, traitOf(content, id)) } : n;
+    let r = region;
+    if (change.influence) {
+      if (change.influence > 0) [r, next] = addInfluence(r, next, change.influence, content, state.time);
+      else if (next.status === "independent") next = { ...next, influence: clamp100(next.influence + change.influence) };
+    }
+    return [{ ...state, region: r }, next];
+  });
 }
 
 /** Trade: give a parcel of one resource for the other. Builds trust and influence; keeps tributaries loyal. */

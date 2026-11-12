@@ -1,0 +1,32 @@
+{
+  "id": "ally-storm-help",
+  "title": "Your sandugo ally asks for help",
+  "icon": "🩸",
+  "story": "A messenger from {neighbor} arrives soaked from the river. A storm has torn the roofs from their houses, and {datu} asks for timber, as one bound to you by blood.",
+  "conditions": { "allied": true },
+  "choices": [
+    {
+      "id": "send-wood",
+      "label": "Send timber",
+      "result": "Your canoes carry beams and bamboo upriver. {datu} sends back word of deep thanks.",
+      "effects": { "resources": { "wood": -25 }, "trust": 12 }
+    },
+    {
+      "id": "send-little",
+      "label": "Send what can be spared",
+      "result": "A few bundles of bamboo go upriver. It is not much, and {datu} knows it.",
+      "effects": { "resources": { "wood": -8 }, "trust": 3 }
+    },
+    {
+      "id": "refuse",
+      "label": "We have nothing to spare",
+      "result": "The messenger leaves without a word. A blood compact is not easily forgotten, nor is a refusal.",
+      "effects": { "trust": -15 }
+    }
+  ],
+  "_note": "A sandugo (blood compact) bound two leaders and their people to help one another.",
+  "sources": [
+    "Antonio Pigafetta, Report on the First Voyage Around the World (1525), on the blood compact at Limasawa and Cebu",
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+  ]
+}
