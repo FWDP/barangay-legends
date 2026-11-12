@@ -21,6 +21,11 @@ Example: `content/buildings/palayan.json`
 }
 ```
 
+Other content you can edit the same way:
+
+- `content/help/en.json` and `content/help/fil.json`: the "?" help screen. Both files must have the same sections in the same order. Improvements to the Filipino are very welcome.
+- `content/advisor.json`: the elder adviser's tutorial steps and tips. Add a line with a new `id`, one of the listed `trigger` ids and text in English and Filipino, and the adviser will rotate it in. The file's `_comment` lists the triggers and the `{placeholders}` each one can use.
+
 Rules for content pull requests:
 
 - The schema check must pass (`npm test` runs it).
@@ -37,6 +42,10 @@ Rules for content pull requests:
 5. Run `npm test` and `npm run build` before opening the pull request.
 
 Using Claude Code? `CLAUDE.md` holds the project rules, and Claude Code reads it automatically.
+
+## Sound
+
+Sounds are generated with the Web Audio API in `src/ui/sound.ts`. Sound files must be CC0, and every file needs a row in `docs/credits.md` with its source.
 
 ## Art
 

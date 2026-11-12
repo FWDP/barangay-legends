@@ -43,9 +43,10 @@ import {
 } from "./camera";
 import { spawnFloat } from "./floats";
 import { bonusPreviewText, RESOURCE_ICON } from "./format";
+import { useReducedMotion, VillagerLayer } from "./VillagerLayer";
+import { DAY_SECONDS } from "./villagers";
 
 const INCOME_EVERY_MS = 3000;
-const DAY_SECONDS = 240;
 /** A press that moves less than this is a tap, not a drag. */
 const TAP_SLOP_PX = 8;
 
@@ -366,6 +367,7 @@ export function BarangayMap(props: {
   }, []);
 
   useIncomeFloats(area, state, content, cam, view);
+  const reducedMotion = useReducedMotion();
 
   const dayOffset = useMemo(() => -((Date.now() / 1000) % DAY_SECONDS), []);
   const typhoonComing = state.typhoon !== null;
@@ -449,6 +451,7 @@ export function BarangayMap(props: {
             {cells}
           </div>
         )}
+        {cam && view.w > 0 && <VillagerLayer state={state} content={content} cam={cam} view={view} reducedMotion={reducedMotion} />}
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 mix-blend-multiply motion-safe:animate-day-night"

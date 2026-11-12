@@ -2,7 +2,7 @@
 // demolish confirmation with its warnings, and the short-lived Undo button after building.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Content } from "../engine/content";
-import { canAfford, demolishPreview, moveCost, undoSecondsLeft, type GameState } from "../engine/game";
+import { buildingWorkers, canAfford, demolishPreview, moveCost, undoSecondsLeft, type GameState } from "../engine/game";
 import { buildingAt } from "../engine/map";
 import { costText } from "./format";
 
@@ -65,6 +65,9 @@ export function BuildingMenu(props: {
   const cost = moveCost(state, content, building.type);
   const affordable = canAfford(state, cost);
   const refund = demolishPreview(state, content, target.x, target.y)?.refund ?? {};
+  // Who works here: villagers fill worker buildings on their own.
+  const slots = def.workers ?? 0;
+  const working = slots ? buildingWorkers(state, content)[state.buildings.indexOf(building)] : 0;
 
   return (
     <div
@@ -80,6 +83,12 @@ export function BuildingMenu(props: {
         </span>
         {def.name}
       </p>
+      {slots > 0 && (
+        <p className="px-1 pb-1.5 text-xs text-stone-600">
+          👥 {working} of {slots} workers
+          {working < slots && !building.damaged && <span className="block text-[11px] text-stone-500">Free villagers fill it on their own. More houses bring more.</span>}
+        </p>
+      )}
       <div className="flex flex-col gap-1.5">
         <button
           type="button"

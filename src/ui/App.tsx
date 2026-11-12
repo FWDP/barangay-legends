@@ -13,8 +13,15 @@ import { baleteWarning, bonusRuleText, costText, groveRuleText, RESOURCE_ICON } 
 import { GatherButtons } from "./GatherButtons";
 import { Hud } from "./Hud";
 import { SettingsMenu } from "./SettingsMenu";
-import { isMuted, setMuted, sfx } from "./sound";
+import { AdvisorBubble, useAdvisor } from "./Advisor";
+import { HelpPanel } from "./HelpPanel";
+import { useLang, useSettings } from "./settings";
+import { initSound, isMuted, setMuted, sfx } from "./sound";
+import { loadUiContent } from "./uiContent";
 import { content, useGame } from "./useGame";
+import { useGameSounds } from "./useGameSounds";
+
+const ui = loadUiContent(content);
 
 const CLEAR_BLOCKED: Record<Exclude<ClearBlocker, "balete">, string> = {
   "not-forest": "Nothing to clear",
@@ -110,8 +117,20 @@ export function App() {
   const [menu, setMenu] = useState<MenuTarget | null>(null);
   const [moving, setMoving] = useState<{ x: number; y: number } | null>(null);
   const [demolishing, setDemolishing] = useState<{ x: number; y: number } | null>(null);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const settings = useSettings();
+  const lang = useLang();
   const closeLore = useCallback(() => setLoreNote(null), []);
   const closeMenu = useCallback(() => setMenu(null), []);
+
+  useEffect(() => initSound(), []);
+  useGameSounds(state, content);
+  // The adviser never talks over a battle report or a lore note.
+  const advisor = useAdvisor(state, content, ui.advisor, {
+    lang,
+    tipsOn: settings.tips,
+    blocked: unseenReport(state, seenReport) !== undefined || loreNote !== null,
+  });
 
   // Moving uses the same placing mode as building, with the building picked up first.
   const moved = moving ? buildingAt(state, moving.x, moving.y) : undefined;
@@ -159,6 +178,7 @@ export function App() {
     (r: Resource, e: MouseEvent<HTMLButtonElement>) => {
       dispatch({ type: "gather", resource: r });
       sfx.gather(r);
+      advisor.note("gather");
       // Keyboard presses have no pointer position, so float from the button instead.
       const rect = e.currentTarget.getBoundingClientRect();
       const fromPointer = e.clientX !== 0 || e.clientY !== 0;
@@ -169,7 +189,7 @@ export function App() {
         r,
       );
     },
-    [dispatch],
+    [dispatch, advisor.note],
   );
 
   const place = (x: number, y: number) => {
@@ -188,6 +208,7 @@ export function App() {
 
   const openMenu = (x: number, y: number, sx: number, sy: number) => {
     sfx.click();
+    advisor.note("menu");
     setMenu({ x, y, sx, sy });
   };
 
@@ -246,10 +267,11 @@ export function App() {
               cancelPlacing();
               setMenu(null);
               setView(view === "barangay" ? "rehiyon" : "barangay");
+              if (view === "barangay") advisor.note("rehiyon");
             }}
             aria-label={view === "barangay" ? "Open Rehiyon, the regional map" : "Back to your barangay"}
             title={view === "barangay" ? "Rehiyon" : "Barangay"}
-            className={`game-btn flex h-9 items-center gap-1 border-2 border-amber-950/60 px-2 font-display text-sm text-amber-950 ${
+            className={`game-btn flex h-8 items-center gap-1 border-2 border-amber-950/60 px-1.5 font-display sm:h-9 sm:px-2 text-sm text-amber-950 ${
               state.region.incomingRaid ? "bg-red-300 motion-safe:animate-pulse" : "bg-amber-200"
             }`}
           >
@@ -267,6 +289,18 @@ export function App() {
           className="game-btn hidden size-9 items-center justify-center border-2 border-amber-950/60 bg-amber-200 text-lg sm:flex"
         >
           {muted ? "🔇" : "🔊"}
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            sfx.click();
+            setHelpOpen(true);
+          }}
+          aria-label={ui.help[lang].ui.title}
+          title={ui.help[lang].ui.title}
+          className="game-btn flex size-8 items-center justify-center border-2 border-amber-950/60 bg-amber-200 font-display text-lg text-amber-950 sm:size-9"
+        >
+          ?
         </button>
         <SettingsMenu onReset={onReset} muted={muted} onToggleSound={toggleSound} />
       </Hud>
@@ -335,6 +369,7 @@ export function App() {
             <EventBanner key={b.id} banner={b} />
           ))}
         </div>
+        <AdvisorBubble message={advisor.message} advisor={ui.advisor} lang={lang} onDismiss={advisor.dismiss} onSkip={advisor.skip} />
         {view === "barangay" && <GatherButtons amount={content.rules.gatherPerClick} quiet={hasAutomation} onGather={gather} />}
       </main>
 
@@ -344,6 +379,7 @@ export function App() {
           content={content}
           selected={selected}
           onSelect={(id) => {
+            if (id && id !== selected) sfx.pick();
             setMoving(null);
             setSelected(id);
           }}
@@ -358,6 +394,7 @@ export function App() {
           setMenu(null);
           setSelected(null);
           setMoving({ x, y });
+          sfx.pick();
         }}
         onDemolish={(x, y) => {
           setMenu(null);
@@ -379,6 +416,7 @@ export function App() {
       <ReportDialog state={state} content={content} seen={seenReport} onSeen={setSeenReport} />
       <VictoryDialog state={state} content={content} waiting={unseenReport(state, seenReport) !== undefined} />
       <FloatLayer />
+      <HelpPanel open={helpOpen} onClose={() => setHelpOpen(false)} help={ui.help} lang={lang} content={content} />
       <BaleteDialog
         target={balete}
         onCancel={() => setBalete(null)}

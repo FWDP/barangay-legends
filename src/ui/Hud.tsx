@@ -12,7 +12,7 @@ export function Hud(props: { state: GameState; content: Content; children: React
   const working = Object.values(assignWorkers(state, content)).reduce((a, b) => a + b, 0);
 
   return (
-    <header className="wood-panel relative z-30 flex items-center gap-1.5 border-b-2 border-amber-950/60 px-2 py-1.5 sm:gap-2 sm:px-3">
+    <header className="wood-panel relative z-30 flex items-center gap-1 border-b-2 border-amber-950/60 px-1.5 py-1.5 sm:gap-2 sm:px-3">
       <h1 className="text-outline mr-2 hidden font-display text-xl tracking-wide text-amber-100 md:block">
         Barangay Legends
       </h1>
@@ -31,7 +31,7 @@ export function Hud(props: { state: GameState; content: Content; children: React
         </span>
       </Chip>
       <SeasonChip state={state} content={content} />
-      <div className="ml-auto flex items-center gap-1.5">{children}</div>
+      <div className="ml-auto flex items-center gap-1 sm:gap-1.5">{children}</div>
     </header>
   );
 }
@@ -53,14 +53,14 @@ function SeasonChip({ state, content }: { state: GameState; content: Content }) 
   if (!now) return null;
   return (
     <div
-      className="flex items-center gap-1 rounded-lg bg-black/25 px-1.5 py-1 text-amber-50 shadow-inner sm:px-2"
+      className="flex flex-col items-center rounded-lg bg-black/25 px-1 py-0.5 text-amber-50 shadow-inner sm:flex-row sm:gap-1 sm:px-2 sm:py-1"
       title={`${now.season.name}: ${now.season.description}`}
       aria-label={`Season: ${now.season.name}, ${clock(now.remaining)} left. ${now.season.description}`}
     >
-      <span className="text-lg sm:text-xl" aria-hidden>
+      <span className="text-base leading-none sm:text-xl" aria-hidden>
         {now.season.icon}
       </span>
-      <span className="text-left leading-none">
+      <span className="text-center leading-none sm:text-left">
         <span className="hidden font-display text-sm sm:block">{now.season.name}</span>
         <span className="block text-[10px] text-amber-200/90 tabular-nums">{clock(now.remaining)}</span>
       </span>
@@ -97,7 +97,7 @@ function ResourceChip(props: { resource: Resource; amount: number; rates: Rates;
     <div className="group relative" data-resource={resource}>
       <button
         type="button"
-        className="flex min-w-[4.2rem] cursor-help items-center gap-1 rounded-lg bg-black/25 px-1.5 py-1 text-amber-50 shadow-inner sm:min-w-24 sm:gap-1.5 sm:px-2"
+        className="flex min-w-[3.9rem] cursor-help items-center gap-1 rounded-lg bg-black/25 px-1.5 py-1 text-amber-50 shadow-inner sm:min-w-24 sm:gap-1.5 sm:px-2"
         aria-label={`${RESOURCE_LABEL[resource]}: ${formatAmount(amount)}, ${formatRate(net)}`}
         aria-expanded={open}
         aria-describedby={tipId}

@@ -1,0 +1,67 @@
+{
+  "_comment": "Help screen text, English. Sections appear in this order. 'art' is a row of emoji drawn as the section's picture. Text may use {riceEaten} and {gatherPerClick}, filled in from content/rules.json so the numbers never go stale. Translations live next to this file with the same section ids.",
+  "lang": "en",
+  "label": "English",
+  "ui": {
+    "title": "How to play",
+    "close": "Close",
+    "language": "Language"
+  },
+  "sections": [
+    {
+      "id": "goal",
+      "icon": "🏵️",
+      "art": ["🛖", "🌾", "👥", "🛶"],
+      "title": "Your goal",
+      "body": [
+        "You are a new datu. Grow a small barangay by the river into a thriving settlement.",
+        "Gather, build, and look after your people. Later, bring the neighboring barangays to your side, by friendship or by force."
+      ]
+    },
+    {
+      "id": "resources",
+      "icon": "🌾",
+      "art": ["🌾", "➕", "🪵"],
+      "title": "Rice and wood",
+      "body": [
+        "Tap Gather Rice or Gather Wood for +{gatherPerClick} each time.",
+        "Every villager eats {riceEaten} rice a second. If the rice runs out, nobody works, and after a while families leave.",
+        "Tap a resource at the top to see where it comes from and where it goes."
+      ]
+    },
+    {
+      "id": "buildings",
+      "icon": "🛖",
+      "art": ["🛖", "👥", "🌾", "🪓"],
+      "title": "Buildings and workers",
+      "body": [
+        "Pick a building from the bar at the bottom, then tap a highlighted tile. Each copy costs a bit more than the last.",
+        "A Bahay Kubo houses more villagers. New families arrive while there is room and rice.",
+        "Healthy villagers go to work on their own, filling the fields and camps. Tap a building to see who works there, or to move or demolish it.",
+        "Tap the forest next to your land to clear it and make room to grow."
+      ]
+    },
+    {
+      "id": "seasons",
+      "icon": "🌦️",
+      "art": ["🌧️", "☀️", "🌀", "🔥", "🤒"],
+      "title": "Seasons and events",
+      "body": [
+        "The year turns between Tag-ulan, the rainy season, and Tag-araw, the dry season, when the fields yield less. Save rice before the dry months.",
+        "Typhoons are announced before they strike: keep wood for repairs. Tap a burning house to put the fire out before it spreads. Sickness keeps villagers from work; a Babaylan's hut helps them heal."
+      ]
+    },
+    {
+      "id": "rehiyon",
+      "icon": "🗺️",
+      "art": ["🛖", "🛶", "💍", "🩸", "⚔️", "🏵️"],
+      "title": "The Rehiyon",
+      "body": [
+        "Open the Rehiyon map to meet the barangays along the river. Each has its own datu and temperament.",
+        "Trade: swap rice and wood. It builds trust and influence. Marriage alliance: once trust is high, a marriage ties your families together. Sandugo: a blood compact makes an ally who helps defend you.",
+        "Mangayaw (raid): train Mandirigma warriors and raid a rival for tribute. Raids win influence but cost trust with everyone. Build a Kuta to defend against raids on you.",
+        "When a neighbor's influence is full, they become your tributary and send part of their harvest. Keep them loyal, or they rebel. Bring every barangay to your side to become Paramount Datu."
+      ]
+    }
+  ]
+}

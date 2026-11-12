@@ -1,0 +1,152 @@
+{
+  "_comment": "The datu's elder adviser. 'portrait' is an emoji, or an image in public/art written as '/art/<file>.png'. The tutorial runs in order; a step is done when its 'done' condition holds: {\"event\": \"gather\" | \"menu\" | \"rehiyon\"} (the player gathered, opened a building's menu, opened the Rehiyon map) or {\"built\": \"<building id>\"} (more of that building than the barangay started with). Tips: each line has an id, a trigger id and text in every language. Triggers: rice-low, unstaffed, event-typhoon, event-fire, event-sickness, trade-offer, raid-warning, idle, unlocked. Text may use {building}, {neighbor}, {datu} and {seconds} where the trigger provides them. Add more lines for a trigger and the adviser rotates through them; each line is shown at most 3 times.",
+  "name": "Dalisay",
+  "title": { "en": "Elder adviser to the datu", "fil": "Matandang tagapayo ng datu" },
+  "portrait": "👵🏽",
+  "fictional": true,
+  "ui": {
+    "skip": { "en": "Skip tutorial", "fil": "Laktawan" },
+    "dismiss": { "en": "Tap to dismiss", "fil": "Pindutin para isara" },
+    "step": { "en": "Step", "fil": "Hakbang" }
+  },
+  "tutorial": [
+    {
+      "id": "gather",
+      "done": { "event": "gather" },
+      "text": {
+        "en": "Welcome, Datu. Our people eat rice every moment of the day. Tap Gather Rice or Gather Wood to bring some in.",
+        "fil": "Maligayang pagdating, Datu. Kumakain ng palay ang ating mga tao sa buong araw. Pindutin ang Gather Rice o Gather Wood para mangalap."
+      }
+    },
+    {
+      "id": "build-house",
+      "done": { "built": "bahay-kubo" },
+      "text": {
+        "en": "More homes bring more families. Gather wood, pick the Bahay Kubo below, then tap a glowing tile.",
+        "fil": "Mas maraming bahay, mas maraming pamilya. Mangalap ng kahoy, piliin ang Bahay Kubo sa ibaba, saka pindutin ang tile na may ilaw."
+      }
+    },
+    {
+      "id": "build-field",
+      "done": { "built": "palayan" },
+      "text": {
+        "en": "Now a Palayan, a rice field, so the rice grows without your hands. Fields by the river yield more.",
+        "fil": "Ngayon, isang Palayan para tumubo ang palay kahit hindi ka nangangalap. Mas malaki ang ani ng palayan sa tabi ng ilog."
+      }
+    },
+    {
+      "id": "workers",
+      "done": { "event": "menu" },
+      "text": {
+        "en": "Healthy villagers take up work on their own. Tap your Palayan to see who works there.",
+        "fil": "Kusang nagtatrabaho ang malulusog na tao. Pindutin ang iyong Palayan para makita kung sino ang nagtatrabaho roon."
+      }
+    },
+    {
+      "id": "rehiyon",
+      "done": { "event": "rehiyon" },
+      "text": {
+        "en": "We are not alone on this river. Open the Rehiyon map (🗺️ at the top) to meet our neighbors.",
+        "fil": "Hindi tayo nag-iisa sa ilog na ito. Buksan ang mapa ng Rehiyon (🗺️ sa itaas) para makilala ang ating mga karatig."
+      }
+    }
+  ],
+  "lines": [
+    {
+      "id": "rice-low-1",
+      "trigger": "rice-low",
+      "text": {
+        "en": "Datu, the rice will run out in about {seconds} seconds. Gather rice or build a Palayan.",
+        "fil": "Datu, mauubos ang palay sa loob ng mga {seconds} segundo. Mangalap ng palay o magtayo ng Palayan."
+      }
+    },
+    {
+      "id": "rice-low-2",
+      "trigger": "rice-low",
+      "text": {
+        "en": "Our granary grows thin. Hungry hands do not work. More rice, quickly!",
+        "fil": "Numinipis ang ating kamalig. Hindi nagtatrabaho ang gutom. Dagdagan ang palay, bilis!"
+      }
+    },
+    {
+      "id": "unstaffed-1",
+      "trigger": "unstaffed",
+      "text": {
+        "en": "The {building} stands empty. We need more villagers: build a Bahay Kubo so families can join us.",
+        "fil": "Walang tao sa {building}. Kailangan natin ng mas maraming tao: magtayo ng Bahay Kubo para may tirahan ang mga bagong pamilya."
+      }
+    },
+    {
+      "id": "unstaffed-2",
+      "trigger": "unstaffed",
+      "text": {
+        "en": "Nobody works the {building}. More homes, or fewer warriors, would free some hands.",
+        "fil": "Walang nagtatrabaho sa {building}. Mas maraming bahay, o mas kaunting mandirigma, ang magbibigay ng manggagawa."
+      }
+    },
+    {
+      "id": "typhoon-1",
+      "trigger": "event-typhoon",
+      "text": {
+        "en": "The sky darkens over the sea. A bagyo is coming: keep wood aside for repairs.",
+        "fil": "Dumidilim ang langit sa dagat. May paparating na bagyo: magtabi ng kahoy para sa pagkukumpuni."
+      }
+    },
+    {
+      "id": "fire-1",
+      "trigger": "event-fire",
+      "text": {
+        "en": "Sunog! Tap the burning house to put the fire out before it spreads.",
+        "fil": "Sunog! Pindutin ang nasusunog na bahay para patayin ang apoy bago ito kumalat."
+      }
+    },
+    {
+      "id": "sickness-1",
+      "trigger": "event-sickness",
+      "text": {
+        "en": "Sickness has come. The sick cannot work. A Babaylan's Hut helps them heal faster.",
+        "fil": "May sakit sa barangay. Hindi makapagtrabaho ang maysakit. Tumutulong ang Kubo ng Babaylan para mas mabilis silang gumaling."
+      }
+    },
+    {
+      "id": "trade-offer-1",
+      "trigger": "trade-offer",
+      "text": {
+        "en": "A boat from {neighbor} offers a trade. Fair trades build trust along the river.",
+        "fil": "May bangka mula sa {neighbor} na nag-aalok ng palitan. Ang patas na kalakalan ay nagpapatibay ng tiwala sa ilog."
+      }
+    },
+    {
+      "id": "raid-warning-1",
+      "trigger": "raid-warning",
+      "text": {
+        "en": "Warriors of {datu} of {neighbor} are coming in {seconds} seconds! Train Mandirigma and raise a Kuta.",
+        "fil": "Paparating ang mga mandirigma ni {datu} ng {neighbor} sa loob ng {seconds} segundo! Magsanay ng Mandirigma at magtayo ng Kuta."
+      }
+    },
+    {
+      "id": "idle-1",
+      "trigger": "idle",
+      "text": {
+        "en": "The barangay has not grown in a while. Clear some forest, or build where the land is good.",
+        "fil": "Matagal nang hindi lumalago ang barangay. Maghawan ng gubat, o magtayo kung saan maganda ang lupa."
+      }
+    },
+    {
+      "id": "idle-2",
+      "trigger": "idle",
+      "text": {
+        "en": "Have you visited our neighbors lately? Trade on the Rehiyon map brings goods and friends.",
+        "fil": "Nadalaw mo na ba ang ating mga karatig? Ang kalakalan sa mapa ng Rehiyon ay nagdadala ng kalakal at kaibigan."
+      }
+    },
+    {
+      "id": "unlocked-1",
+      "trigger": "unlocked",
+      "text": {
+        "en": "Our people know how to build a {building} now. Look for it in the bar below.",
+        "fil": "Marunong nang magtayo ng {building} ang ating mga tao. Hanapin ito sa ibaba."
+      }
+    }
+  ]
+}

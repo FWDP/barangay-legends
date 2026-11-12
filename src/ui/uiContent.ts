@@ -1,0 +1,191 @@
+// Text for the help screen (content/help/*.json) and the adviser (content/advisor.json).
+// Presentation only: none of it changes game rules. Checked here so a contributor's typo
+// fails `npm test` instead of showing a blank bubble.
+import type { Content } from "../engine/content";
+import { LANGS, type Lang } from "./settings";
+
+export type Localized = Record<Lang, string>;
+
+export interface HelpSection {
+  id: string;
+  icon: string;
+  /** A row of emoji drawn as the section's picture. */
+  art: string[];
+  title: string;
+  body: string[];
+}
+
+export interface HelpDoc {
+  lang: Lang;
+  label: string;
+  ui: { title: string; close: string; language: string };
+  sections: HelpSection[];
+}
+
+export const TRIGGERS = [
+  "raid-warning",
+  "event-fire",
+  "rice-low",
+  "event-typhoon",
+  "event-sickness",
+  "trade-offer",
+  "unlocked",
+  "unstaffed",
+  "idle",
+] as const;
+/** Listed most urgent first: when several hold at once, the adviser speaks about the first. */
+export type TriggerId = (typeof TRIGGERS)[number];
+
+export const TUTORIAL_EVENTS = ["gather", "menu", "rehiyon"] as const;
+export type TutorialEvent = (typeof TUTORIAL_EVENTS)[number];
+
+export type StepDone = { event: TutorialEvent } | { built: string };
+
+export interface TutorialStep {
+  id: string;
+  done: StepDone;
+  text: Localized;
+}
+
+export interface AdvisorLine {
+  id: string;
+  trigger: TriggerId;
+  text: Localized;
+}
+
+export interface AdvisorDef {
+  name: string;
+  title: Localized;
+  /** An emoji, or an image path under public/art. */
+  portrait: string;
+  ui: { skip: Localized; dismiss: Localized; step: Localized };
+  tutorial: TutorialStep[];
+  lines: AdvisorLine[];
+}
+
+export interface UiContent {
+  help: Record<Lang, HelpDoc>;
+  advisor: AdvisorDef;
+}
+
+const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+const isText = (v: unknown): v is string => typeof v === "string" && v.trim() !== "";
+
+function localized(v: unknown, where: string): Localized {
+  if (!isObject(v)) throw new Error(`${where} needs text for ${LANGS.join(" and ")}`);
+  for (const l of LANGS) if (!isText(v[l])) throw new Error(`${where} is missing "${l}" text`);
+  return v as Localized;
+}
+
+/** Placeholders like {building} used in a piece of text. */
+export const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]);
+
+/** Replaces {name} with vars[name]; unknown placeholders stay as they are. */
+export function fill(text: string, vars: Record<string, string | number>): string {
+  return text.replace(/\{(\w+)\}/g, (m, k: string) => (k in vars ? String(vars[k]) : m));
+}
+
+const HELP_VARS = ["riceEaten", "gatherPerClick"];
+/** Numbers the help text may mention, taken from the rules so they never go stale. */
+export const helpVars = (content: Content) => ({
+  riceEaten: content.rules.riceEatenPerVillagerPerSecond,
+  gatherPerClick: content.rules.gatherPerClick,
+});
+
+export function validateHelp(raw: unknown, file = "help"): HelpDoc {
+  if (!isObject(raw)) throw new Error(`${file}: must be a JSON object`);
+  if (!(LANGS as readonly unknown[]).includes(raw.lang)) throw new Error(`${file}: "lang" must be one of ${LANGS.join(", ")}`);
+  if (!isText(raw.label)) throw new Error(`${file}: "label" must be a non-empty string`);
+  if (!isObject(raw.ui) || !["title", "close", "language"].every((k) => isText((raw.ui as Record<string, unknown>)[k]))) {
+    throw new Error(`${file}: "ui" needs "title", "close" and "language"`);
+  }
+  if (!Array.isArray(raw.sections) || raw.sections.length === 0) throw new Error(`${file}: needs at least one section`);
+  raw.sections.forEach((s, i) => {
+    const where = `${file}: sections[${i}]`;
+    if (!isObject(s) || !isText(s.id) || !isText(s.icon) || !isText(s.title)) throw new Error(`${where} needs "id", "icon" and "title"`);
+    if (!Array.isArray(s.art) || !s.art.every(isText)) throw new Error(`${where}: "art" must be a list of emoji`);
+    if (!Array.isArray(s.body) || s.body.length === 0 || !s.body.every(isText)) throw new Error(`${where}: "body" needs at least one paragraph`);
+    for (const p of s.body as string[]) {
+      for (const name of placeholders(p)) if (!HELP_VARS.includes(name)) throw new Error(`${where}: unknown placeholder {${name}}`);
+    }
+  });
+  return raw as unknown as HelpDoc;
+}
+
+const LINE_VARS: Record<TriggerId, string[]> = {
+  "raid-warning": ["neighbor", "datu", "seconds"],
+  "event-fire": [],
+  "rice-low": ["seconds"],
+  "event-typhoon": ["seconds"],
+  "event-sickness": [],
+  "trade-offer": ["neighbor", "datu"],
+  unlocked: ["building"],
+  unstaffed: ["building"],
+  idle: [],
+};
+
+export function validateAdvisor(raw: unknown, buildingIds: string[], file = "advisor"): AdvisorDef {
+  if (!isObject(raw)) throw new Error(`${file}: must be a JSON object`);
+  if (!isText(raw.name) || !isText(raw.portrait)) throw new Error(`${file}: needs "name" and "portrait"`);
+  localized(raw.title, `${file}: title`);
+  if (!isObject(raw.ui)) throw new Error(`${file}: missing "ui"`);
+  for (const k of ["skip", "dismiss", "step"]) localized(raw.ui[k], `${file}: ui.${k}`);
+  if (!Array.isArray(raw.tutorial)) throw new Error(`${file}: "tutorial" must be a list`);
+  const ids = new Set<string>();
+  const unique = (id: unknown, where: string) => {
+    if (!isText(id)) throw new Error(`${where} needs an "id"`);
+    if (ids.has(id)) throw new Error(`${where}: id "${id}" is used twice`);
+    ids.add(id);
+  };
+  raw.tutorial.forEach((s, i) => {
+    const where = `${file}: tutorial[${i}]`;
+    if (!isObject(s)) throw new Error(`${where} must be an object`);
+    unique(s.id, where);
+    localized(s.text, `${where}.text`);
+    const d = s.done;
+    if (isObject(d) && "event" in d) {
+      if (!(TUTORIAL_EVENTS as readonly unknown[]).includes(d.event)) throw new Error(`${where}: unknown event "${String(d.event)}"`);
+    } else if (isObject(d) && "built" in d) {
+      if (!buildingIds.includes(d.built as string)) throw new Error(`${where}: unknown building "${String(d.built)}"`);
+    } else {
+      throw new Error(`${where}: "done" needs an "event" or a "built" building id`);
+    }
+  });
+  if (!Array.isArray(raw.lines)) throw new Error(`${file}: "lines" must be a list`);
+  raw.lines.forEach((line, i) => {
+    const where = `${file}: lines[${i}]`;
+    if (!isObject(line)) throw new Error(`${where} must be an object`);
+    unique(line.id, where);
+    if (!(TRIGGERS as readonly unknown[]).includes(line.trigger)) throw new Error(`${where}: unknown trigger "${String(line.trigger)}"`);
+    const text = localized(line.text, `${where}.text`);
+    const allowed = LINE_VARS[line.trigger as TriggerId];
+    for (const l of LANGS) {
+      for (const name of placeholders(text[l])) {
+        if (!allowed.includes(name)) throw new Error(`${where}: trigger "${String(line.trigger)}" has no {${name}}`);
+      }
+    }
+  });
+  return raw as unknown as AdvisorDef;
+}
+
+export function buildUiContent(helpFiles: Record<string, unknown>, rawAdvisor: unknown, content: Content): UiContent {
+  const docs = Object.entries(helpFiles).map(([file, raw]) => validateHelp(raw, file));
+  const help = {} as Record<Lang, HelpDoc>;
+  for (const d of docs) {
+    if (help[d.lang]) throw new Error(`help: two files for "${d.lang}"`);
+    help[d.lang] = d;
+  }
+  for (const l of LANGS) if (!help[l]) throw new Error(`help: missing content/help/${l}.json`);
+  // Translations must cover the same sections, so switching language never hides one.
+  const order = help.en.sections.map((s) => s.id).join(",");
+  for (const l of LANGS) {
+    if (help[l].sections.map((s) => s.id).join(",") !== order) throw new Error(`help: ${l}.json must have the same sections as en.json, in order`);
+  }
+  return { help, advisor: validateAdvisor(rawAdvisor, content.buildings.map((b) => b.id)) };
+}
+
+export function loadUiContent(content: Content): UiContent {
+  const help = import.meta.glob("../../content/help/*.json", { eager: true, import: "default" });
+  const advisor = import.meta.glob("../../content/advisor.json", { eager: true, import: "default" });
+  return buildUiContent(help, Object.values(advisor)[0], content);
+}

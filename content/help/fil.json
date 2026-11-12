@@ -1,0 +1,67 @@
+{
+  "_comment": "Help screen text, Filipino. Same section ids as en.json. Translation by the project; native speakers are welcome to improve the wording in a pull request.",
+  "lang": "fil",
+  "label": "Filipino",
+  "ui": {
+    "title": "Paano maglaro",
+    "close": "Isara",
+    "language": "Wika"
+  },
+  "sections": [
+    {
+      "id": "goal",
+      "icon": "🏵️",
+      "art": ["🛖", "🌾", "👥", "🛶"],
+      "title": "Ang iyong layunin",
+      "body": [
+        "Ikaw ang bagong datu. Palaguin ang maliit na barangay sa tabi ng ilog hanggang maging masaganang pamayanan.",
+        "Mangalap, magtayo, at alagaan ang iyong mga tao. Pagkatapos, kunin ang loob ng mga karatig na barangay, sa pakikipagkaibigan man o sa lakas."
+      ]
+    },
+    {
+      "id": "resources",
+      "icon": "🌾",
+      "art": ["🌾", "➕", "🪵"],
+      "title": "Palay at kahoy",
+      "body": [
+        "Pindutin ang Gather Rice o Gather Wood para sa +{gatherPerClick} bawat pindot.",
+        "Bawat taga-barangay ay kumakain ng {riceEaten} palay bawat segundo. Kapag naubos ang palay, walang magtatrabaho, at maya-maya ay aalis ang mga pamilya.",
+        "Pindutin ang isang yaman sa itaas para makita kung saan ito nanggagaling at saan napupunta."
+      ]
+    },
+    {
+      "id": "buildings",
+      "icon": "🛖",
+      "art": ["🛖", "👥", "🌾", "🪓"],
+      "title": "Mga gusali at manggagawa",
+      "body": [
+        "Pumili ng gusali sa ibaba, saka pindutin ang isang may-ilaw na tile. Mas mahal nang kaunti ang bawat bagong kopya.",
+        "Ang Bahay Kubo ay tirahan ng mas maraming tao. Darating ang mga bagong pamilya habang may lugar at may palay.",
+        "Kusang nagtatrabaho ang malulusog na taga-barangay sa mga palayan at kampo. Pindutin ang isang gusali para makita kung sino ang nagtatrabaho roon, o para ilipat o gibain ito.",
+        "Pindutin ang gubat sa tabi ng iyong lupa para hawanin ito at magkaroon ng lugar para lumago."
+      ]
+    },
+    {
+      "id": "seasons",
+      "icon": "🌦️",
+      "art": ["🌧️", "☀️", "🌀", "🔥", "🤒"],
+      "title": "Mga panahon at pangyayari",
+      "body": [
+        "Nagpapalit ang taon sa pagitan ng Tag-ulan at Tag-araw, kung kailan mas kaunti ang ani. Mag-ipon ng palay bago ang tag-araw.",
+        "May babala bago dumating ang bagyo: magtabi ng kahoy para sa pagkukumpuni. Pindutin ang nasusunog na bahay para patayin ang apoy bago ito kumalat. Hindi makapagtrabaho ang maysakit; tumutulong ang kubo ng Babaylan para gumaling sila."
+      ]
+    },
+    {
+      "id": "rehiyon",
+      "icon": "🗺️",
+      "art": ["🛖", "🛶", "💍", "🩸", "⚔️", "🏵️"],
+      "title": "Ang Rehiyon",
+      "body": [
+        "Buksan ang mapa ng Rehiyon para makilala ang mga barangay sa tabi ng ilog. May sariling datu at ugali ang bawat isa.",
+        "Kalakalan: makipagpalitan ng palay at kahoy. Nagpapalago ito ng tiwala at impluwensiya. Pag-iisang-dibdib: kapag mataas na ang tiwala, pinagbubuklod ng kasal ang inyong mga angkan. Sandugo: ang sanduguan ay gumagawa ng kakampi na tutulong sa iyong depensa.",
+        "Mangayaw: magsanay ng mga Mandirigma at lusubin ang karibal para sa buwis. Nagbibigay ito ng impluwensiya pero nababawasan ang tiwala ng lahat. Magtayo ng Kuta laban sa mga lusob sa iyo.",
+        "Kapag puno na ang impluwensiya sa isang karatig, magiging sakop mo sila at magpapadala sila ng bahagi ng ani. Panatilihin ang kanilang katapatan, o maghihimagsik sila. Kunin ang lahat ng barangay para maging Pinakamataas na Datu."
+      ]
+    }
+  ]
+}
