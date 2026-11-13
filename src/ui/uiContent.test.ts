@@ -23,9 +23,9 @@ describe("help and adviser content", () => {
     expect(ui.advisor.tutorial.length).toBeGreaterThan(0);
   });
 
-  it("covers the five help topics", () => {
+  it("covers the help topics, renown included", () => {
     const ui = loadUiContent(content);
-    expect(ui.help.en.sections.map((s) => s.id)).toEqual(["goal", "resources", "buildings", "seasons", "rehiyon"]);
+    expect(ui.help.en.sections.map((s) => s.id)).toEqual(["goal", "resources", "buildings", "seasons", "rehiyon", "renown"]);
   });
 
   it("fills help numbers from the rules", () => {

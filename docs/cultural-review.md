@@ -55,6 +55,13 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
     respectful, and are the colors and motifs reasonable? Would a Maranao artist or educator be
     willing to review or redraw it?
 
+11. **Renown, levels and titles**: the barangay level is called Kabantugan (renown), and level
+    titles for the datu are "Datu of Renown", "Datu of Many Songs", "Datu Remembered by the
+    Islands" and, at the top, "Lakan of Legend" (`content/levels.json`). Is "Lakan" (a paramount
+    ruler's title, after Scott) fitting as an earned game title? Are the Filipino words used for
+    the new features natural: Kabantugan, Ranggo ng Kapuluan, Pinakatanyag, Tagapagtanggol,
+    Kolektor ng Alamat, Bisitahin, Bumalik?
+
 ### Entries
 
 | File | Kind | Tradition | Sources given |
@@ -88,6 +95,7 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 | content/lore/longon.json | Aklat entry (longon coffins) | Visayan | Scott; Boxer Codex |
 | content/lore/datu-houses.json | Lore note (datu houses, torogan) | Visayan, Tagalog; Maranao | Scott 1994; Perez, Encarnacion and Dacanay 1989; Wikipedia: Torogan, Okir |
 | content/traditions/*.json "houseStyle" and src/ui/datuHouseArt.ts | How the Bahay ng Datu is drawn | Lowland (Tagalog, Visayan); torogan-inspired (Maranao) | see question 10 |
+| content/levels.json | Level titles (Datu of Renown … Lakan of Legend) | Tagalog title (lakan) | see question 11 |
 | content/traditions/*.json "burialLook" | How each tradition's Libingan looks | Tagalog: jars, Visayan: longon, Maranao: jars | see questions 7–8 |
 
 ## Reviewed

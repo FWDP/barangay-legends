@@ -11,7 +11,12 @@
     {
       "id": "goal",
       "icon": "🏵️",
-      "art": ["🛖", "🌾", "👥", "🛶"],
+      "art": [
+        "🛖",
+        "🌾",
+        "👥",
+        "🛶"
+      ],
       "title": "Ang iyong layunin",
       "body": [
         "Ikaw ang bagong datu. Palaguin ang maliit na barangay sa tabi ng ilog hanggang maging masaganang pamayanan.",
@@ -21,7 +26,11 @@
     {
       "id": "resources",
       "icon": "🌾",
-      "art": ["🌾", "➕", "🪵"],
+      "art": [
+        "🌾",
+        "➕",
+        "🪵"
+      ],
       "title": "Palay at kahoy",
       "body": [
         "Pindutin ang Gather Rice o Gather Wood para sa +{gatherPerClick} bawat pindot.",
@@ -32,7 +41,12 @@
     {
       "id": "buildings",
       "icon": "🛖",
-      "art": ["🛖", "👥", "🌾", "🪓"],
+      "art": [
+        "🛖",
+        "👥",
+        "🌾",
+        "🪓"
+      ],
       "title": "Mga gusali at manggagawa",
       "body": [
         "Pumili ng gusali sa ibaba, saka pindutin ang isang may-ilaw na tile. Mas mahal nang kaunti ang bawat bagong kopya.",
@@ -44,7 +58,13 @@
     {
       "id": "seasons",
       "icon": "🌦️",
-      "art": ["🌧️", "☀️", "🌀", "🔥", "🤒"],
+      "art": [
+        "🌧️",
+        "☀️",
+        "🌀",
+        "🔥",
+        "🤒"
+      ],
       "title": "Mga panahon at pangyayari",
       "body": [
         "Nagpapalit ang taon sa pagitan ng Tag-ulan at Tag-araw, kung kailan mas kaunti ang ani. Mag-ipon ng palay bago ang tag-araw.",
@@ -54,13 +74,38 @@
     {
       "id": "rehiyon",
       "icon": "🗺️",
-      "art": ["🛖", "🛶", "💍", "🩸", "⚔️", "🏵️"],
+      "art": [
+        "🛖",
+        "🛶",
+        "💍",
+        "🩸",
+        "⚔️",
+        "🏵️"
+      ],
       "title": "Ang Rehiyon",
       "body": [
-        "Buksan ang mapa ng Rehiyon para makilala ang mga barangay sa tabi ng ilog. May sariling datu at ugali ang bawat isa.",
+        "Buksan ang mapa ng Rehiyon para makilala ang ibang barangay ng kapuluan. May sariling datu, tradisyon at ugali ang bawat isa, at marami ang kasapi ng mga alyansa.",
+        "Malalakad lang ang mga barangay sa sarili mong pulo. Para marating ang ibang pulo, magtayo ng Balangay Dock at magsanay ng Balangay: maglalayag doon at pabalik ang iyong kalakal, handog at paglusob, at matagal ang biyahe.",
         "Kalakalan: makipagpalitan ng palay at kahoy. Nagpapalago ito ng tiwala at impluwensiya. Pag-iisang-dibdib: kapag mataas na ang tiwala, pinagbubuklod ng kasal ang inyong mga angkan. Sandugo: ang sanduguan ay gumagawa ng kakampi na tutulong sa iyong depensa.",
         "Mangayaw: magsanay ng mga Mandirigma at lusubin ang karibal para sa buwis. Nagbibigay ito ng impluwensiya pero nababawasan ang tiwala ng lahat, at nagtatanim ng sama ng loob ang barangay na nilusob mo: maaari nitong tanggihan o tawaran ang iyong kalakal, tanggihan ang pakikipag-alyansa, o tuluyang itigil ang kalakalan. Pinalalamig ng Handog (regalong pangkapayapaan) ang sama ng loob. Dumadaong ang mga mandarambong sa pampang at doon sila sinasalubong ng iyong mga mandirigma, kaya magtayo ng Kuta malapit sa ilog: buo lang ang tulong nito kung abot nito ang pinagdaungan.",
-        "Kapag puno na ang impluwensiya sa isang karatig, magiging sakop mo sila at magpapadala sila ng bahagi ng ani. Panatilihin ang kanilang katapatan, o maghihimagsik sila. Kunin ang lahat ng barangay para maging Pinakamataas na Datu."
+        "Kapag puno na ang impluwensiya sa isang karatig, magiging sakop mo sila at magpapadala sila ng bahagi ng ani. Panatilihin ang kanilang katapatan, o maghihimagsik sila. Kapag malaki na ang Bahay ng Datu, makabubuo o makasasali ka sa isang alyansa. Kunin ang lahat ng barangay para maging Pinakamataas na Datu."
+      ]
+    },
+    {
+      "id": "renown",
+      "icon": "⭐",
+      "art": [
+        "⭐",
+        "🏆",
+        "🛖",
+        "👀"
+      ],
+      "title": "Kabantugan, antas at Ranggo",
+      "body": [
+        "Nagkakamit ng Kabantugan ang iyong barangay habang lumalaki ito: sa bawat 10 taganayon, bawat natapos na gawain, mga paglusob na napagtagumpayan o napigilan, kalakalan, bagong sakop o kakampi, mas malaking Bahay ng Datu, at bawat tala sa Aklat. Hindi kailanman nawawala ang kabantugan.",
+        "Itinataas ng kabantugan ang antas ng barangay (ang ⭐ sa itaas). May gantimpala ang bawat bagong antas, minsan ay titulo para sa iyong datu, at kailangan ng sapat na antas para mapalaki ang Bahay ng Datu.",
+        "Pindutin ang ⭐ para buksan ang Ranggo ng Kapuluan: lahat ng barangay sa kapuluan, ayon sa kabantugan, sa mga paglusob na napigilan, at sa mga tala sa Aklat. Kapag magkapantay, mas mataas ang naunang nakarating.",
+        "Pindutin ang Bisitahin sa alinmang barangay sa Rehiyon para dalawin at tingnan ang kanilang nayon. Walang nagbabago sa pagtingin: maaari kang makipagkalakalan, magpadala ng handog, makipag-alyansa, o magplano ng paglusob at makita kung saan ito dadaong bago ito ipadala. Ibinabalik ka ng Bumalik sa iyong barangay."
       ]
     }
   ]

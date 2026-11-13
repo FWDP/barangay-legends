@@ -10,6 +10,43 @@ Build a free, open-source idle builder set in a precolonial Philippine barangay,
 
 **What it isn't (yet):** an RPG, a combat game, a multiplayer game or a paid product. All of those can come later, once people are playing.
 
+## Where the game is now
+
+_Updated November 2026._ The game is live at barangaylegends.fwdp.org and has grown past the
+week-by-week plan below. That plan is kept as the original design. Some of it was built in a
+different form, and some (prestige and Dangal, export codes) isn't built yet.
+
+**Built so far**
+
+- **Barangay:** gathering, forest clearing, 12 buildings (including the Kuta, Tulay, Kamalig,
+  Fishing Dock, Babaylan's hut, Dambana, Libingan and Balangay Dock), Daan footpaths, villagers who work on
+  their own, happiness, named villagers with stories, and gentle deaths with mourning.
+- **Seasons and events:** rainy and dry seasons, typhoons, fires, sickness, hunger and choice
+  events. Offline progress and autosave.
+- **Faith:** a tradition per barangay (Tagalog, Visayan, Maranao), the Dambana with Favor and
+  blessings, the Bakunawa eclipse, the tikbalang's riddle, the Sarimanok, the Forest Balance,
+  and the Aklat ng Alamat.
+- **Bahay ng Datu:** five levels, each needing a minimum barangay level (3, 6, 9, 12). It unlocks
+  envoys, the Balangay and alliances.
+- **The archipelago:** 4–5 islands of AI barangays with trade (accept, counter or refuse),
+  grudges and Handog, marriage alliances, sandugo, raids and defense, tributaries, sea travel by
+  Balangay, alliance blocs and wars, and the Balita news feed.
+- **Renown:** Kabantugan raises the barangay through 20 levels with rewards and titles.
+  AI barangays keep their own renown too.
+- **Bisitahin:** a read-only visit to any barangay's village from a save-format snapshot. AI
+  villages are generated from their seed, so real players' snapshots can be shown later.
+- **Ranggo ng Kapuluan:** an archipelago ranking by renown, raids defended and Aklat entries,
+  built to take online rankings later.
+- **Guidance and sharing:** Mga Gawain tasks, Dalisay the adviser, help in English and Filipino,
+  and a share card.
+
+**Kept ready for later (not built):** every action is a serializable command, the engine is
+deterministic with time passed in, every barangay has an id and a map position, and saves are
+versioned with migrations. Multiplayer (Supabase), cloud saves and online rankings can be added
+without a rewrite.
+
+**Not built yet:** prestige and Dangal, save export codes, accounts, the historian review.
+
 ## Guiding principles
 
 Five rules decide every scope question. If a feature breaks one, it waits.

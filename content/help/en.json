@@ -11,7 +11,12 @@
     {
       "id": "goal",
       "icon": "🏵️",
-      "art": ["🛖", "🌾", "👥", "🛶"],
+      "art": [
+        "🛖",
+        "🌾",
+        "👥",
+        "🛶"
+      ],
       "title": "Your goal",
       "body": [
         "You are a new datu. Grow a small barangay by the river into a thriving settlement.",
@@ -21,7 +26,11 @@
     {
       "id": "resources",
       "icon": "🌾",
-      "art": ["🌾", "➕", "🪵"],
+      "art": [
+        "🌾",
+        "➕",
+        "🪵"
+      ],
       "title": "Rice and wood",
       "body": [
         "Tap Gather Rice or Gather Wood for +{gatherPerClick} each time.",
@@ -32,7 +41,12 @@
     {
       "id": "buildings",
       "icon": "🛖",
-      "art": ["🛖", "👥", "🌾", "🪓"],
+      "art": [
+        "🛖",
+        "👥",
+        "🌾",
+        "🪓"
+      ],
       "title": "Buildings and workers",
       "body": [
         "Pick a building from the bar at the bottom, then tap a highlighted tile. Each copy costs a bit more than the last.",
@@ -44,7 +58,13 @@
     {
       "id": "seasons",
       "icon": "🌦️",
-      "art": ["🌧️", "☀️", "🌀", "🔥", "🤒"],
+      "art": [
+        "🌧️",
+        "☀️",
+        "🌀",
+        "🔥",
+        "🤒"
+      ],
       "title": "Seasons and events",
       "body": [
         "The year turns between Tag-ulan, the rainy season, and Tag-araw, the dry season, when the fields yield less. Save rice before the dry months.",
@@ -54,13 +74,38 @@
     {
       "id": "rehiyon",
       "icon": "🗺️",
-      "art": ["🛖", "🛶", "💍", "🩸", "⚔️", "🏵️"],
+      "art": [
+        "🛖",
+        "🛶",
+        "💍",
+        "🩸",
+        "⚔️",
+        "🏵️"
+      ],
       "title": "The Rehiyon",
       "body": [
-        "Open the Rehiyon map to meet the barangays along the river. Each has its own datu and temperament.",
+        "Open the Rehiyon map to meet the other barangays of the archipelago. Each has its own datu, tradition and temperament, and many belong to alliances.",
+        "Barangays on your own island are a walk away. To reach another island, build a Balangay Dock and train a Balangay: trades, gifts and raids then sail there and back, which takes time.",
         "Trade: swap rice and wood. It builds trust and influence. Marriage alliance: once trust is high, a marriage ties your families together. Sandugo: a blood compact makes an ally who helps defend you.",
         "Mangayaw (raid): train Mandirigma warriors and raid a rival for tribute. Raids win influence but cost trust with everyone, and the barangay you raid holds a grudge: it may counter or refuse your trades, refuse alliances, or stop trading altogether. A Handog (peace gift) eases a grudge. Raiders land on the river bank and your warriors go out to meet them there, so build a Kuta near the river: it helps fully only within its reach.",
-        "When a neighbor's influence is full, they become your tributary and send part of their harvest. Keep them loyal, or they rebel. Bring every barangay to your side to become Paramount Datu."
+        "When a neighbor's influence is full, they become your tributary and send part of their harvest. Keep them loyal, or they rebel. From a larger Bahay ng Datu you can form or join an alliance. Bring every barangay to your side to become Paramount Datu."
+      ]
+    },
+    {
+      "id": "renown",
+      "icon": "⭐",
+      "art": [
+        "⭐",
+        "🏆",
+        "🛖",
+        "👀"
+      ],
+      "title": "Renown, levels and the Ranggo",
+      "body": [
+        "Your barangay earns Kabantugan (renown) as it grows: every 10 villagers, each finished task, raids won and beaten off, trades, a new tributary or ally, a bigger Bahay ng Datu, and each Aklat entry. Renown is never lost.",
+        "Renown raises the barangay's level (shown by the ⭐ at the top). Each new level brings a gift, sometimes a title for your datu, and a bigger Bahay ng Datu needs a high enough level.",
+        "Tap the ⭐ to open the Ranggo ng Kapuluan: every barangay in the archipelago ranked by renown, by raids beaten off and by Aklat entries. When two are level, the one that got there first ranks higher.",
+        "Tap Bisitahin on any barangay in the Rehiyon to visit and look around their village. Looking changes nothing: you can trade, send a gift, talk alliances, or plan a raid and see where it would land before you send it. Bumalik brings you home."
       ]
     }
   ]
