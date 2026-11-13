@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { newGame } from "../engine/game";
 import { tileAt } from "../engine/map";
 import { at, content, mapFrom, withState } from "../engine/testUtils";
 import { dayPhase, destination, edgeTile, exitPoint, isNight, MAX_SPRITES, newWalker, planVillagers, SPEED, stepWalker, walk } from "./villagers";
@@ -21,13 +22,17 @@ describe("villager sprites", () => {
       sick: [30],
       buildings: [at("bahay-kubo", 5, 3), at("palayan", 6, 3), at("kuta", 2, 2)],
     });
+    // Between raids the warrior is just another worker.
     const roles = planVillagers(s, content).map((p) => p.role);
     expect(roles.filter((r) => r === "work")).toHaveLength(2);
     expect(roles.filter((r) => r === "sick")).toHaveLength(1);
-    expect(roles.filter((r) => r === "warrior")).toHaveLength(1);
-    expect(roles.filter((r) => r === "idle")).toHaveLength(3);
-    const warrior = planVillagers(s, content).find((p) => p.role === "warrior")!;
-    expect(warrior.place).toMatchObject({ x: 2, y: 2 });
+    expect(roles.filter((r) => r === "warrior")).toHaveLength(0);
+    expect(roles.filter((r) => r === "idle")).toHaveLength(4);
+    // Called to arms: the warrior leaves work and goes to the Kuta (or the landing, as rally).
+    const raid = { ...s, region: { ...newGame(content, 3).region!, incomingRaid: { from: "batong-buhay", strikeAt: s.time + 60 } } };
+    const called = planVillagers(raid, content);
+    expect(called.filter((p) => p.role === "warrior")).toHaveLength(1);
+    expect(called.find((p) => p.role === "warrior")!.place).toMatchObject({ x: 2, y: 2 });
   });
 
   it("houses villagers in their Bahay Kubo, the rest by the plaza", () => {

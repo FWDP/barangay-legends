@@ -53,7 +53,9 @@ export function activeBanners(state: GameState, content: Content): Banner[] {
       id: "raid",
       icon: "🔥",
       title: `Raid in ${clock(raid.strikeAt - state.time)}`,
-      text: `${who?.datu ?? "A datu"} of ${who?.name ?? raid.from} will land${where}. Your warriors go to meet them there; a Kuta close by helps most. Buildings will stand.`,
+      text: `${who?.datu ?? "A datu"} of ${who?.name ?? raid.from} will land${where}. ${
+        state.warriors > 0 ? `Your ${state.warriors} Mandirigma leave their work to meet them there` : "Train Mandirigma to meet them there"
+      }; a Kuta close by helps most. Buildings will stand.`,
       tone: "danger",
     });
   }

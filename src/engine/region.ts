@@ -3,7 +3,7 @@
 // the player (tick + commands), steered by a simple AI. All randomness comes from the seeded
 // RNG in the player's state, rolled once per whole game second.
 import { RESOURCES, type Content, type NeighborDef, type Resource, type TraitDef } from "./content";
-import { apply, canAfford, asCost, buildingCost, housing, newGame, owned, placeAuto, rates, tick, type GameState } from "./game";
+import { apply, canAfford, asCost, buildingCost, housing, newGame, owned, placeAuto, rates, tick, warriorCap, type GameState } from "./game";
 import { autoPlaceTile } from "./map";
 import { Rng } from "./rng";
 import { borderDefense, chooseLanding } from "./border";
@@ -242,11 +242,14 @@ function moveGoods(from: GameState, to: GameState, goods: Partial<Record<Resourc
   return [{ ...from, resources: a }, { ...to, resources: b }];
 }
 
-/** Turns a villager into a Mandirigma, for the warrior cost. Needs a healthy villager who isn't one yet. */
+/**
+ * Trains a villager as a Mandirigma, for the warrior cost. Needs a healthy villager who isn't one
+ * yet, and room under the Kuta cap (warriorsPerKuta each). A Mandirigma keeps working between raids.
+ */
 export function train(state: GameState, content: Content): GameState {
   const cost = asCost(content.rules.military.warrior.cost);
-  const free = state.villagers - state.warriors - state.sick.length;
-  if (free < 1 || !canAfford(state, cost)) return state;
+  const untrained = state.villagers - state.warriors - state.sick.length;
+  if (untrained < 1 || state.warriors >= warriorCap(state, content) || !canAfford(state, cost)) return state;
   const resources = { ...state.resources };
   for (const r of RESOURCES) resources[r] -= cost[r];
   return { ...state, resources, warriors: state.warriors + 1 };

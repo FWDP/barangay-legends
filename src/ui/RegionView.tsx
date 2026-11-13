@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { RESOURCES, type Content, type Resource } from "../engine/content";
-import { asCost, canAfford, type Command, type GameState } from "../engine/game";
+import { asCost, canAfford, warriorCap, type Command, type GameState } from "../engine/game";
 import {
   attackOf,
   defenseOf,
@@ -184,24 +184,35 @@ function OurForces(props: { state: GameState; content: Content; dispatch: (c: Co
   const m = content.rules.military;
   const cost = asCost(m.warrior.cost);
   const free = state.villagers - state.warriors - state.sick.length;
+  const cap = warriorCap(state, content);
   const home = homeWarriors(state);
   const truceLeft = region.truceUntil - state.time;
   return (
     <section className="mb-3 space-y-2 rounded-xl border-2 border-amber-900/30 bg-amber-50/70 p-2.5">
       <h2 className="font-display text-lg text-amber-900">Your barangay</h2>
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
-        <Stat label="Mandirigma" value={`⚔️ ${state.warriors}`} note={home < state.warriors ? `${state.warriors - home} away` : "at home"} />
+        <Stat label="Mandirigma" value={`⚔️ ${state.warriors}/${cap}`} note={home < state.warriors ? `${state.warriors - home} away` : `${m.warriorsPerKuta} per Kuta`} />
         <Stat label="Defense" value={`🛡️ ${Math.round(defenseOf(state, content))}`} note="warriors + kuta" />
         <Stat label="Renown" value={`⭐ ${region.renown}`} note="from battles" />
       </div>
       <ActionButton
         onClick={() => dispatch({ type: "train" })}
-        disabled={free < 1 || !canAfford(state, cost)}
-        why={free < 1 ? "Every healthy villager is already a warrior." : `Needs ${fmt(m.warrior.cost)}.`}
+        disabled={free < 1 || state.warriors >= cap || !canAfford(state, cost)}
+        why={
+          state.warriors >= cap
+            ? cap === 0
+              ? `Build a Kuta first: each one trains up to ${m.warriorsPerKuta} Mandirigma.`
+              : `Each Kuta trains up to ${m.warriorsPerKuta}. Build another Kuta to train more.`
+            : free < 1
+              ? "Every healthy villager is already a warrior."
+              : `Needs ${fmt(m.warrior.cost)}.`
+        }
       >
         ⚔️ Train Mandirigma · {fmt(m.warrior.cost)}
       </ActionButton>
-      <p className="text-[11px] text-stone-500">A warrior is still a villager: they eat and need a house, but don't farm.</p>
+      <p className="text-[11px] text-stone-500">
+        A Mandirigma is a villager with warrior training: they farm and fish like anyone else, and take up arms when raiders come or when sent to guard.
+      </p>
       {truceLeft > 0 && <p className="text-xs text-green-800">🕊️ Truce: no raids for {clock(truceLeft)}.</p>}
       {region.incomingRaid && (
         <p className="rounded bg-red-100 px-2 py-1 text-xs font-semibold text-red-900">

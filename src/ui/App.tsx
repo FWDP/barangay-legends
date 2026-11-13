@@ -211,7 +211,8 @@ function ClearingQueueDialog(props: {
   const rank = (type: string) => (borrow.order.includes(type) ? borrow.order.indexOf(type) : borrow.order.length);
   const suggest = state.buildings
     .map((b, i) => ({ b, i, def: defs.get(b.type) }))
-    .filter(({ b, def }) => def?.workers && !b.paused && !b.damaged && (safe || !borrow.protect.includes(b.type)))
+    // Never suggest pausing a food workplace: that's how a barangay starves.
+    .filter(({ b, def }) => def?.workers && !def.produces?.rice && !b.paused && !b.damaged && (safe || !borrow.protect.includes(b.type)))
     .sort((a, b) => rank(a.b.type) - rank(b.b.type) || force.workers[b.i] + force.borrowed[b.i] - (force.workers[a.i] + force.borrowed[a.i]))
     .slice(0, 3);
   const paused = state.buildings.filter((b) => b.paused);
@@ -252,7 +253,7 @@ function ClearingQueueDialog(props: {
             <h3 className="font-display text-lg text-amber-900">Free workers</h3>
             <p className="text-xs text-stone-600">
               Pause a workplace and its villagers clear land instead. Paused buildings produce nothing until you resume them.
-              {!safe && borrow.protect.length > 0 && " Rice is low, so the fields are left alone."}
+              {" Fields are never on this list: they feed everyone."}
             </p>
             <ul className="mt-2 space-y-1.5">
               {suggest.map(({ b, i, def }) => (

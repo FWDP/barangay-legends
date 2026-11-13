@@ -163,7 +163,8 @@ describe("workers and production", () => {
 
   it("counts buildings with at least one worker as staffed", () => {
     const many = Array.from({ length: 8 }, (_, i) => at("palayan", 1 + i, 2));
-    const s = withState({ villagers: 5, buildings: [...many, at("woodcutter-camp", 3, 2), at("bahay-kubo", 5, 3)] });
+    // Plenty of rice, so no food-first: plain round-robin.
+    const s = withState({ villagers: 5, resources: { rice: 1000, wood: 0 }, buildings: [...many, at("woodcutter-camp", 3, 2), at("bahay-kubo", 5, 3)] });
     // Round-robin: the camp takes 2, the palayan fields take 3 (one full, one half).
     expect(staffedBuildings(s, content)).toEqual({ palayan: 2, "woodcutter-camp": 1 });
     expect(staffedBuildings(withState({ villagers: 0, buildings: many }), content)).toEqual({

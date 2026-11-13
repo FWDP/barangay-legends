@@ -79,7 +79,7 @@ describe("neighbors", () => {
 
 describe("Mandirigma and Kuta", () => {
   it("trains a villager into a warrior for rice and wood", () => {
-    const s = world({ villagers: 5 });
+    const s = world({ villagers: 5, buildings: [at("kuta", 2, 2)] });
     const t = apply(s, calm, { type: "train" });
     expect(t.warriors).toBe(1);
     expect(t.villagers).toBe(5); // still a villager
@@ -87,10 +87,11 @@ describe("Mandirigma and Kuta", () => {
     expect(t.resources.wood).toBe(2000 - (m.warrior.cost.wood ?? 0));
   });
 
-  it("warriors don't farm", () => {
-    const s = world({ villagers: 4, buildings: [at("palayan", 3, 5), at("palayan", 6, 5)] });
+  it("Mandirigma farm between raids, and leave work for a raid or guard duty", () => {
+    const s = world({ villagers: 4, warriors: 3, buildings: [at("palayan", 3, 5), at("palayan", 6, 5)] });
     expect(availableWorkers(s, calm)).toBe(4);
-    expect(availableWorkers({ ...s, warriors: 3 }, calm)).toBe(1);
+    const raid = { ...s, region: { ...s.region!, incomingRaid: { from: "batong-buhay", strikeAt: s.time + 60 } } };
+    expect(availableWorkers(raid, calm)).toBe(1);
   });
 
   it("needs a villager who isn't already a warrior, and the goods", () => {
@@ -255,7 +256,7 @@ describe("tributaries", () => {
   it("lose loyalty over time unless guarded or traded with", () => {
     const s = quiet();
     expect(nb(tick(s, calm, 60), "pulang-lupa").loyalty).toBeCloseTo(80 - d.loyalty.decayPerMinute);
-    const guarded = apply({ ...s, warriors: 0, villagers: 5, resources: { rice: 100, wood: 100 } }, calm, { type: "train" });
+    const guarded = apply({ ...s, warriors: 0, villagers: 5, resources: { rice: 100, wood: 100 }, buildings: [...s.buildings, at("kuta", 2, 2)] }, calm, { type: "train" });
     const g = apply(guarded, calm, { type: "guard", neighbor: "pulang-lupa", warriors: 1 });
     expect(homeWarriors(g)).toBe(0);
     expect(nb(tick(g, calm, 60), "pulang-lupa").loyalty).toBeCloseTo(80 + d.loyalty.guardPerMinute);
@@ -264,7 +265,7 @@ describe("tributaries", () => {
   });
 
   it("guards come home when their watch ends", () => {
-    let s = apply(world({ warriors: 3 }), calm, { type: "train" });
+    let s = apply(world({ warriors: 3, buildings: [at("kuta", 2, 2)] }), calm, { type: "train" });
     s = setNb(s, "malinaw", { status: "tributary", loyalty: 80 });
     s = apply(s, calm, { type: "guard", neighbor: "malinaw", warriors: 2 });
     expect(homeWarriors(s)).toBe(2);

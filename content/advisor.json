@@ -1,5 +1,5 @@
 {
-  "_comment": "The datu's elder adviser. 'portrait' is an emoji, or an image in public/art written as '/art/<file>.png'. The tutorial runs in order; a step is done when its 'done' condition holds: {\"event\": \"gather\" | \"menu\" | \"rehiyon\"} (the player gathered, opened a building's menu, opened the Rehiyon map) or {\"built\": \"<building id>\"} (more of that building than the barangay started with). Tips: each line has an id, a trigger id and text in every language. Triggers: rice-low, unstaffed, event-typhoon, event-fire, event-sickness, trade-offer, raid-warning, idle, unlocked, no-path, old-paths, roads, borrowing. Text may use {building}, {neighbor}, {datu}, {seconds}, {direction} and {percent} where the trigger provides them. A line may set \"max\" (1-3) to be shown fewer times. Add more lines for a trigger and the adviser rotates through them; each line is shown at most 3 times.",
+  "_comment": "The datu's elder adviser. 'portrait' is an emoji, or an image in public/art written as '/art/<file>.png'. The tutorial runs in order; a step is done when its 'done' condition holds: {\"event\": \"gather\" | \"menu\" | \"rehiyon\"} (the player gathered, opened a building's menu, opened the Rehiyon map) or {\"built\": \"<building id>\"} (more of that building than the barangay started with). Tips: each line has an id, a trigger id and text in every language. Triggers: rice-low, food-workers, unstaffed, event-typhoon, event-fire, event-sickness, trade-offer, raid-warning, idle, unlocked, no-path, old-paths, roads, borrowing. Text may use {building}, {neighbor}, {datu}, {seconds}, {direction}, {percent}, {farmers} and {villagers} where the trigger provides them. A line may set \"max\" (1-3) to be shown fewer times. Add more lines for a trigger and the adviser rotates through them; each line is shown at most 3 times.",
   "name": "Dalisay",
   "title": {
     "en": "Elder adviser to the datu",
@@ -74,6 +74,15 @@
     }
   ],
   "lines": [
+    {
+      "id": "food-workers-1",
+      "trigger": "food-workers",
+      "max": 1,
+      "text": {
+        "en": "Datu, the rice is falling and only {farmers} of our {villagers} people work the fields. Build another Palayan, or pause a camp so more hands can farm. Even our Mandirigma farm between raids.",
+        "fil": "Datu, bumababa ang palay at {farmers} lang sa ating {villagers} na tao ang nagtatrabaho sa palayan. Magtayo ng isa pang Palayan, o i-pause ang isang kampo para mas maraming makapagsaka. Nagsasaka rin ang ating mga Mandirigma sa pagitan ng mga lusob."
+      }
+    },
     {
       "id": "rice-low-1",
       "trigger": "rice-low",

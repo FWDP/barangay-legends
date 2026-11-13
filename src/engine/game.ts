@@ -36,10 +36,11 @@ import {
   type RegionState,
 } from "./region";
 import { DEFAULT_SEED } from "./rng";
+import { homeWarriors } from "./region";
 import { choose, updateChoices, type PendingChoice } from "./choices";
 import { advanceClearing, cancelClearing, clearArea, dropUnreachableJobs, workforce, type ClearingJob } from "./clearing";
 
-export const STATE_VERSION = 13;
+export const STATE_VERSION = 14;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -264,7 +265,30 @@ export function roadBonuses(state: GameState, content: Content): number[] {
 /** Villagers able to work: none while hungry (gutom), never the sick (sakit). */
 export function healthyWorkers(state: GameState): number {
   if (isHungry(state)) return 0;
-  return Math.max(0, state.villagers - state.sick.length - state.warriors);
+  return Math.max(0, state.villagers - state.sick.length - warriorsOffWork(state));
+}
+
+/**
+ * Mandirigma are part-time: between raids they work like anyone else. They leave work while
+ * a raid is coming (called to arms, to meet it at the landing) and while away guarding a
+ * tributary. Nothing is stored for this: when the raid is over they are simply back at work.
+ */
+export function warriorsOffWork(state: GameState): number {
+  const home = homeWarriors(state);
+  const away = state.warriors - home;
+  return away + (state.region?.incomingRaid ? home : 0);
+}
+
+/** How many Mandirigma the barangay may train: warriorsPerKuta for each Kuta (standing or damaged). */
+export function warriorCap(state: GameState, content: Content): number {
+  const forts = new Set(content.buildings.filter((b) => b.defense).map((b) => b.id));
+  return state.buildings.filter((b) => forts.has(b.type)).length * content.rules.military.warriorsPerKuta;
+}
+
+/** Rice is short: it would last less than staffing.foodFirstBelowRiceSeconds at the current eating rate. */
+export function riceIsLow(state: GameState, content: Content): boolean {
+  const eaten = state.villagers * content.rules.riceEatenPerVillagerPerSecond;
+  return state.resources.rice < content.rules.staffing.foodFirstBelowRiceSeconds * eaten;
 }
 
 /**
@@ -286,17 +310,23 @@ export function assignWorkers(state: GameState, content: Content): Record<string
   );
   const assigned: Record<string, number> = Object.fromEntries(producers.map((b) => [b.id, 0]));
   let free = availableWorkers(state, content);
-  let progress = true;
-  while (free > 0 && progress) {
-    progress = false;
-    for (const b of producers) {
-      if (free > 0 && assigned[b.id] < slots[b.id]) {
-        assigned[b.id]++;
-        free--;
-        progress = true;
+  // Round-robin over a group of workplaces, one worker at a time.
+  const fill = (group: BuildingDef[]) => {
+    let progress = true;
+    while (free > 0 && progress) {
+      progress = false;
+      for (const b of group) {
+        if (free > 0 && assigned[b.id] < slots[b.id]) {
+          assigned[b.id]++;
+          free--;
+          progress = true;
+        }
       }
     }
-  }
+  };
+  // Short of rice: food workplaces are filled first.
+  if (riceIsLow(state, content)) fill(producers.filter((b) => (b.produces?.rice ?? 0) > 0));
+  fill(producers);
   return assigned;
 }
 

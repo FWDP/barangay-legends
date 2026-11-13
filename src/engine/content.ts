@@ -66,6 +66,7 @@ export interface Rules {
   choices: ChoiceRules;
   offline: OfflineRules;
   roads: RoadRules;
+  staffing: StaffingRules;
 }
 
 /** Daan: footpaths laid tile by tile on cleared land. */
@@ -179,6 +180,16 @@ export interface MilitaryRules {
   kutaOutsidePercent: number;
   /** How fast warriors walk to a landing (tiles per second on cleared land; forest is slower). */
   warriorTilesPerSecond: number;
+  /** Each Kuta (standing or damaged) allows this many trained Mandirigma. */
+  warriorsPerKuta: number;
+}
+
+/** Who works where when it matters. */
+export interface StaffingRules {
+  /** While rice would last less than this, food workplaces (Palayan) are filled first. */
+  foodFirstBelowRiceSeconds: number;
+  /** The adviser warns once if rice is falling and fewer than this percent of villagers grow food. */
+  foodWorkersWarnPercent: number;
 }
 
 export interface TraitDef {
@@ -519,6 +530,9 @@ export function validateRules(raw: unknown): Rules {
   checkNumbers(military.warrior, ["attack", "defense"], "rules: military.warrior");
   checkNumbers(military, ["baseDefense", "winnerLossPercent", "loserLossPercent", "lootPercent", "kutaRadius", "kutaOutsidePercent"], "rules: military");
   checkNumbers(military, ["warriorTilesPerSecond"], "rules: military", true);
+  checkNumbers(military, ["warriorsPerKuta"], "rules: military");
+  if (!isObject(raw.staffing)) throw new Error('rules: missing "staffing"');
+  checkNumbers(raw.staffing, ["foodFirstBelowRiceSeconds", "foodWorkersWarnPercent"], "rules: staffing");
   const d = raw.diplomacy;
   if (!isObject(d)) throw new Error('rules: missing "diplomacy"');
   checkNumbers(d, ["truceSeconds", "startInfluence"], "rules: diplomacy");

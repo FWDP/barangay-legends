@@ -72,7 +72,9 @@ export function planVillagers(state: GameState, content: Content, cap = MAX_SPRI
   const healer = state.buildings.find((b) => defs.get(b.type)?.heals && !b.damaged) ?? null;
   for (let k = 0; k < state.sick.length; k++) roles.push({ role: "sick", place: healer });
   const forts = state.buildings.filter((b) => (defs.get(b.type)?.defense ?? 0) > 0 && !b.damaged);
-  const guards = homeWarriors(state);
+  // Part-time warriors: between raids they're among the workers above. Called to arms (a raid
+  // is coming) they leave work and go to meet it.
+  const guards = state.region?.incomingRaid ? homeWarriors(state) : 0;
   // During a raid warriors leave their Kuta to meet the raiders at the landing.
   for (let k = 0; k < guards; k++) roles.push({ role: "warrior", place: rally ?? (forts.length ? forts[k % forts.length] : null) });
 

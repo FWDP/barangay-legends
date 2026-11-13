@@ -128,6 +128,10 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
   // v12 → v13: raids land somewhere. A raid already on its way in an older save has no landing
   // stored; it gets the same seeded one when it strikes (see border.ts raidLanding).
   12: (raw) => ({ ...raw, version: 13 }),
+  // v13 → v14: Mandirigma became part-time warriors who work between raids, so a barangay of
+  // all warriors goes back to work by itself. The hunger clock restarts, so nobody leaves just
+  // because this save was loaded before the change (the player gathers rice to get going).
+  13: (raw) => ({ ...raw, version: 14, hunger: 0, migration: typeof raw.migration === "number" ? Math.max(0, raw.migration) : 0 }),
 };
 
 // ---------- Frozen v2 map rules (for the v1 → v2 migration only) ----------

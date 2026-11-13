@@ -1,5 +1,5 @@
 {
-  "_comment": "Core balance numbers. Values marked in docs/game-design.md are copied here; the rest are playtest guesses. map: size and features of the generated map. placement: undo window after building, moving cost (percent of the current price) and demolish refund (percent of what the last copy cost). secondsPerVillagerLeavingOvercrowded: when demolished houses leave more villagers than shelter, one leaves this often. clearing: the cost of turning forest into buildable land; seconds and the rice cost (cost, paid upfront per tile) grow by secondsGrowth for every tile cleared or queued; each job needs `workers` free villagers (not working in a building); when none are free, clearing borrows from workplaces in `borrow.order` first, then the busiest, never from `borrow.protect` while rice would last less than protectBelowRiceSeconds. military/diplomacy: warriors, battles and the four paths to absorb a neighbor (trade, marriage alliance, sandugo, mangayaw); all placeholders for playtesting. choices: choice events (content/events/choices); minGapSeconds is the 4-minute limit, the start time and chance are playtest guesses. offline: time away credited on return (maxSeconds is the 8-hour cap from docs/game-design.md); the rest only set how coarse, and so how fast, the offline steps are. roads: Daan footpaths (cost per tile, the Connected output bonus for buildings joined to the plaza by an unbroken Daan, and how much faster villagers walk on them, which is visual only); playtest guesses. Raids at the border: raiders land on a river bank, picked among the aiRaid.landingChoices spots nearest the barangay; a Kuta gives its full defense only if the landing is within military.kutaRadius tiles, kutaOutsidePercent of it otherwise; warriors walk military.warriorTilesPerSecond (forest is slower) and only fight if they get there within the raid warning. aiRaid.lootTargets is where winning raiders go for loot, first one that exists ('kamalig' is listed for when it's built). Playtest guesses.",
+  "_comment": "Core balance numbers. Values marked in docs/game-design.md are copied here; the rest are playtest guesses. map: size and features of the generated map. placement: undo window after building, moving cost (percent of the current price) and demolish refund (percent of what the last copy cost). secondsPerVillagerLeavingOvercrowded: when demolished houses leave more villagers than shelter, one leaves this often. clearing: the cost of turning forest into buildable land; seconds and the rice cost (cost, paid upfront per tile) grow by secondsGrowth for every tile cleared or queued; each job needs `workers` free villagers (not working in a building); when none are free, clearing borrows from workplaces in `borrow.order` first, then the busiest, never from `borrow.protect` while rice would last less than protectBelowRiceSeconds. military/diplomacy: warriors, battles and the four paths to absorb a neighbor (trade, marriage alliance, sandugo, mangayaw); all placeholders for playtesting. choices: choice events (content/events/choices); minGapSeconds is the 4-minute limit, the start time and chance are playtest guesses. offline: time away credited on return (maxSeconds is the 8-hour cap from docs/game-design.md); the rest only set how coarse, and so how fast, the offline steps are. roads: Daan footpaths (cost per tile, the Connected output bonus for buildings joined to the plaza by an unbroken Daan, and how much faster villagers walk on them, which is visual only); playtest guesses. Raids at the border: raiders land on a river bank, picked among the aiRaid.landingChoices spots nearest the barangay; a Kuta gives its full defense only if the landing is within military.kutaRadius tiles, kutaOutsidePercent of it otherwise; warriors walk military.warriorTilesPerSecond (forest is slower) and only fight if they get there within the raid warning. aiRaid.lootTargets is where winning raiders go for loot, first one that exists ('kamalig' is listed for when it's built). Playtest guesses. Mandirigma are part-time: they work like any villager except while a raid is coming (they go to meet it) or while away guarding; each Kuta allows military.warriorsPerKuta of them. staffing: below foodFirstBelowRiceSeconds of rice, food workplaces are filled first; the adviser warns once if rice is falling and fewer than foodWorkersWarnPercent of villagers grow food.",
   "start": {
     "resources": {
       "rice": 10,
@@ -62,7 +62,8 @@
     "lootPercent": 25,
     "kutaRadius": 6,
     "kutaOutsidePercent": 25,
-    "warriorTilesPerSecond": 1
+    "warriorTilesPerSecond": 1,
+    "warriorsPerKuta": 6
   },
   "diplomacy": {
     "truceSeconds": 600,
@@ -186,5 +187,9 @@
     },
     "connectedBonusPercent": 5,
     "walkSpeedPercent": 150
+  },
+  "staffing": {
+    "foodFirstBelowRiceSeconds": 30,
+    "foodWorkersWarnPercent": 20
   }
 }

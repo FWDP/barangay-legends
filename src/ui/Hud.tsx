@@ -1,7 +1,9 @@
 import { useState, type ReactNode } from "react";
 import type { Content, Resource } from "../engine/content";
 import { isHungry, seasonAt } from "../engine/events";
-import { buildingWorkers, housing, rates, type GameState, type Rates } from "../engine/game";
+import { freeVillagers } from "../engine/clearing";
+import { homeWarriors } from "../engine/region";
+import { buildingWorkers, housing, rates, warriorCap, type GameState, type Rates } from "../engine/game";
 import { clock } from "./EventBanners";
 import { formatAmount, formatBreakdown, formatRate, RESOURCE_ICON } from "./format";
 
@@ -10,6 +12,9 @@ export function Hud(props: { state: GameState; content: Content; children: React
   const { state, content, children } = props;
   const r = rates(state, content);
   const working = buildingWorkers(state, content).reduce((a, b) => a + b, 0);
+  const free = freeVillagers(state, content);
+  const cap = warriorCap(state, content);
+  const called = state.region?.incomingRaid ? homeWarriors(state) : 0;
 
   return (
     <header className="wood-panel relative z-30 flex items-center gap-1 border-b-2 border-amber-950/60 px-1.5 py-1.5 sm:gap-2 sm:px-3">
@@ -23,16 +28,33 @@ export function Hud(props: { state: GameState; content: Content; children: React
       <ResourceChip resource="wood" amount={state.resources.wood} rates={r} note={notes(state, content).wood} />
       <Chip
         icon="👥"
-        label={`Villagers: ${state.villagers} of ${housing(state, content)}, ${working} working${state.warriors ? `, ${state.warriors} warriors` : ""}${state.sick.length ? `, ${state.sick.length} sick` : ""}`}
+        label={`${state.villagers} villagers (room for ${housing(state, content)}) · ${working} working · ${free} free · ${state.warriors} warriors${called ? ", called to arms" : ""}${state.sick.length ? ` · ${state.sick.length} sick` : ""}`}
       >
         <span className="block font-display text-base leading-none tabular-nums sm:text-lg">
           {state.villagers}/{housing(state, content)}
         </span>
         <span className="block text-[10px] leading-tight whitespace-nowrap text-amber-200/90">
-          {working} working{state.warriors > 0 && <span className="hidden sm:inline"> · ⚔️{state.warriors}</span>}
+          {working} working<span className="hidden sm:inline"> · {free} free</span>
           {state.sick.length > 0 && <span className="text-red-200"> · 🤒{state.sick.length}</span>}
         </span>
       </Chip>
+      {(state.warriors > 0 || cap > 0) && (
+        <div
+          className={`hidden items-center gap-1 rounded-lg px-2 py-1 text-amber-50 shadow-inner sm:flex ${called ? "bg-red-800/70" : "bg-black/25"}`}
+          title={`Mandirigma ${state.warriors}/${cap}: ${content.rules.military.warriorsPerKuta} per Kuta. They work between raids${called ? "; now called to arms" : ""}.`}
+          aria-label={`Mandirigma ${state.warriors} of ${cap}${called ? ", called to arms" : ", at work between raids"}`}
+        >
+          <span className="text-lg" aria-hidden>
+            ⚔️
+          </span>
+          <span className="text-left leading-none">
+            <span className="block font-display text-sm tabular-nums">
+              {state.warriors}/{cap}
+            </span>
+            <span className="block text-[10px] text-amber-200/90">{called ? "to arms!" : "Mandirigma"}</span>
+          </span>
+        </div>
+      )}
       <SeasonChip state={state} content={content} />
       <div className="ml-auto flex items-center gap-1 sm:gap-1.5">{children}</div>
     </header>
