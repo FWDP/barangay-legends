@@ -47,6 +47,8 @@ export function historyLine(h: HistoryEntry, content: Content, game: GameText, l
     }
     case "level":
       return fill(game.level.up[lang], { level: h.level ?? 1 });
+    case "rank":
+      return h.level === 1 ? `${fill(game.rank.up[lang], { rank: 1 })} ${game.rank.top[lang]}` : fill(game.rank.up[lang], { rank: h.level ?? 1 });
     case "aklat":
       return fill(game.aklat.found[lang], { name: content.aklat.find((e) => e.id === h.entry)?.aklat.name[lang] ?? h.entry ?? "" });
     case "event": {
@@ -87,7 +89,7 @@ export function levelNews(level: number, state: GameState, content: Content, gam
   const reward = content.levels.find((l) => l.level === level)?.reward;
   const parts = [fill(game.level.up[lang], { level })];
   const what = [reward?.resources ? costText(reward.resources) : "", reward?.title ? reward.title[lang] : ""].filter(Boolean).join(" · ");
-  if (what) parts.push(fill(game.level.reward[lang], { reward: what }));
+  if (what) parts.push(`${fill(game.level.reward[lang], { reward: what })}.`);
   parts.push(fill(game.level.advisor[lang], { barangay: state.barangay.name || "Barangay" }));
   return parts.join(" ");
 }

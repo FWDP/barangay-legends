@@ -49,6 +49,7 @@ import { checkAklat } from "./aklat";
 import { needsBoat, setSail, trainBalangay, updateVoyages } from "./sea";
 import { datuProductionBonus, upgradeDatu } from "./datu";
 import { applyRenown } from "./kabantugan";
+import { trackRanking, type AchievedAt } from "./ranking";
 import { updateDeaths, type Remembered } from "./death";
 import { advanceReplanting, afterClearing, cancelReplant, isPranked, newForest, replant, updateForest, updatePranks, type ForestState, type Prank, type ReplantJob } from "./forest";
 import {
@@ -68,7 +69,7 @@ import {
   type TikbalangTrick,
 } from "./worship";
 
-export const STATE_VERSION = 21;
+export const STATE_VERSION = 22;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -207,6 +208,10 @@ export interface GameState {
   kabantugan: number;
   /** The highest barangay level whose reward has been given. */
   levelRewarded: number;
+  /** When renown, raids defended and Aklat entries last grew (ties in the Ranggo go to the earlier). */
+  achievedAt: AchievedAt;
+  /** The player's place by renown in the archipelago (0 until first worked out). */
+  renownRank: number;
 }
 
 export type { ClearingJob } from "./clearing";
@@ -273,6 +278,8 @@ export function newGame(
     balangays: 0,
     kabantugan: 0,
     levelRewarded: 1,
+    achievedAt: { renown: 0, defended: 0, aklat: 0 },
+    renownRank: 0,
   };
   if (withRegion && content.neighbors.length > 0) state.region = createRegion(content, 0, seed, state.barangay.id);
   for (const def of content.buildings) {
@@ -801,7 +808,7 @@ export function apply(state: GameState, content: Content, command: Command): Gam
   const done = needsBoat(state, command) ? setSail(state, content, command) : applyCommand(state, content, command);
   // A refused command leaves the state exactly as it was.
   if (done === state) return state;
-  const next = applyRenown(state, reconcilePeople(state, done, content), content);
+  const next = trackRanking(state, applyRenown(state, reconcilePeople(state, done, content), content), content);
   // An old save keeps its old staffing rule until the player changes the map.
   return next.legacyReach && mapChanged(state, next) ? { ...next, legacyReach: false } : next;
 }
@@ -1013,6 +1020,6 @@ function step(state: GameState, content: Content, dt: number): GameState {
   }
   next = reconcilePeople(state, next, content, crowded ? "crowded" : "other");
   next = checkTasks(next, content);
-  return content.ai ? next : applyRenown(state, checkAklat(next, content), content);
+  return content.ai ? next : trackRanking(state, applyRenown(state, checkAklat(next, content), content), content);
 }
 

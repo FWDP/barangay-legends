@@ -35,6 +35,7 @@ import { generateBlocs, type Politics } from "./politics";
 import { MAX_HISTORY, type HistoryEntry, type HistoryKind, type NamedVillager } from "./people";
 import { forestStage } from "./forest";
 import { levelForRenown, renownFromAchievements } from "./kabantugan";
+import { newFame, type Fame } from "./ranking";
 import { MAX_REMEMBERED, type Remembered } from "./death";
 
 export const SAVE_KEY = "barangay-legends/save";
@@ -242,6 +243,10 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
     const st = isObject(raw.stats) ? raw.stats : {};
     return { ...raw, version: 21, kabantugan: null, levelRewarded: null, stats: { ...st, trades: 0, bestTens: null } };
   },
+  // v21 → v22: the Ranggo. AI barangays get renown from their size and strength now (and count
+  // defenses from here on); every stat counts as gained at the save's time, so old ties fall
+  // back to a fixed order (the player, then content order). The rank is worked out silently.
+  21: (raw) => ({ ...raw, version: 22, achievedAt: null, renownRank: 0 }),
 };
 
 // ---------- Frozen v15 bridge rule (for the v14 → v15 migration only) ----------
@@ -536,7 +541,10 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean, withRegi
     const neighbor = typeof ch.neighbor === "string" && state.region?.neighbors.some((n) => n.id === ch.neighbor) ? ch.neighbor : null;
     state.choice = { id: ch.id, neighbor, at: ch.at };
   }
-  if (isPlayer) parseRenown(data, content, state);
+  if (isPlayer) {
+    parseRenown(data, content, state);
+    parseRanking(data, state);
+  }
   return state;
 }
 
@@ -560,7 +568,29 @@ function parseRenown(data: RawSave, content: Content, state: GameState) {
   if (!isObject(data.stats) || !finiteNonNeg((data.stats as RawSave).bestTens)) state.stats.bestTens = tens;
 }
 
-const HISTORY_KINDS: HistoryKind[] = ["named", "left", "fell", "task", "spirits", "aklat", "event", "died", "frail", "datu", "level"];
+/** An AI barangay's ranked stats; missing (a v21 save) or broken: from its size and strength now. */
+function parseFame(raw: unknown, content: Content, state: GameState, time: number): Fame {
+  const fresh = newFame(content, state, time);
+  if (!isObject(raw)) return fresh;
+  const num = (v: unknown, d: number) => (finiteNonNeg(v) ? v : d);
+  return {
+    renown: num(raw.renown, fresh.renown),
+    renownAt: num(raw.renownAt, time),
+    peak: num(raw.peak, fresh.peak),
+    defended: Number.isInteger(raw.defended) && (raw.defended as number) >= 0 ? (raw.defended as number) : 0,
+    defendedAt: num(raw.defendedAt, time),
+  };
+}
+
+/** When the player's ranked stats last grew, and the renown rank (0: work it out). */
+function parseRanking(data: RawSave, state: GameState) {
+  const a = isObject(data.achievedAt) ? data.achievedAt : {};
+  const at = (v: unknown) => (finiteNonNeg(v) ? v : state.time);
+  state.achievedAt = { renown: at(a.renown), defended: at(a.defended), aklat: at(a.aklat) };
+  state.renownRank = Number.isInteger(data.renownRank) && (data.renownRank as number) >= 0 ? (data.renownRank as number) : 0;
+}
+
+const HISTORY_KINDS: HistoryKind[] = ["named", "left", "fell", "task", "spirits", "aklat", "event", "died", "frail", "datu", "level", "rank"];
 const DEATH_CAUSES = ["age", "sickness", "hunger", "raid"];
 const EVENTS = ["eclipseWon", "eclipseLost", "sarimanok", "riddleRight"];
 const isPoint = (v: unknown): v is { x: number; y: number } => isObject(v) && Number.isFinite(v.x) && Number.isFinite(v.y);
@@ -708,7 +738,7 @@ function parsePeople(data: RawSave, content: Content, state: GameState, isPlayer
             ? !!e.entry
             : e.kind === "event"
               ? !!e.event
-              : e.kind === "datu" || e.kind === "level"
+              : e.kind === "datu" || e.kind === "level" || e.kind === "rank"
                 ? e.level !== undefined
                 : e.kind === "died"
                   ? DEATH_CAUSES.includes(e.cause ?? "")
@@ -786,6 +816,7 @@ function parseRegion(raw: unknown, content: Content, player: GameState): RegionS
           ? { reason: n.lastRefusal.reason as RefusalReason, at: n.lastRefusal.at }
           : null,
       tradition: typeof n.tradition === "string" && content.traditions.some((t) => t.id === n.tradition) ? n.tradition : base.tradition,
+      fame: parseFame(n.fame, content, state, player.time),
     };
   });
   const ids = new Set(neighbors.map((n) => n.id));

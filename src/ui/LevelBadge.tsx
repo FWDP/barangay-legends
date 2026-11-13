@@ -1,7 +1,7 @@
-// Barangay level badges: the player's level (from Kabantugan) and AI barangays' (from size and strength).
+// Barangay level badges: the player's level (from Kabantugan) and AI barangays' (from their renown).
 import type { Content } from "../engine/content";
 import type { GameState } from "../engine/game";
-import { aiLevel, barangayLevel, maxLevel, renownForLevel } from "../engine/kabantugan";
+import { barangayLevel, levelForRenown, maxLevel, renownForLevel } from "../engine/kabantugan";
 import type { Lang } from "./settings";
 import { fill, type GameText } from "./uiContent";
 
@@ -9,7 +9,7 @@ import { fill, type GameText } from "./uiContent";
 export function levelOf(state: GameState, content: Content, id: string): number | null {
   if (id === state.barangay.id) return barangayLevel(state, content);
   const n = state.region?.neighbors.find((x) => x.id === id);
-  return n ? aiLevel(content, n.state) : null;
+  return n ? levelForRenown(content, n.fame.renown) : null;
 }
 
 /** A small "Lv 3" pill. */
@@ -39,19 +39,25 @@ export function levelProgress(state: GameState, content: Content, game: GameText
 }
 
 /** The HUD chip: the level, with renown and progress to the next level in its tooltip. */
-export function LevelChip(props: { state: GameState; content: Content; game: GameText; lang: Lang }) {
-  const { state, content, game, lang } = props;
+export function LevelChip(props: { state: GameState; content: Content; game: GameText; lang: Lang; onClick?: () => void }) {
+  const { state, content, game, lang, onClick } = props;
   const level = barangayLevel(state, content);
   const next = renownForLevel(content, level + 1);
   const prev = renownForLevel(content, level) ?? 0;
   const pct = next === null ? 100 : Math.round(((state.kabantugan - prev) / Math.max(1, next - prev)) * 100);
   const text = levelProgress(state, content, game, lang);
   return (
-    <span title={text} aria-label={text} className="flex h-8 shrink-0 flex-col items-center justify-center rounded-lg bg-black/25 px-1.5 text-amber-50 shadow-inner sm:h-9">
+    <button
+      type="button"
+      onClick={onClick}
+      title={`${text} · ${game.rank.open[lang]}`}
+      aria-label={`${text}. ${game.rank.title[lang]}`}
+      className="flex h-8 shrink-0 flex-col items-center justify-center rounded-lg bg-black/25 px-1.5 text-amber-50 shadow-inner sm:h-9"
+    >
       <span className="font-display text-sm leading-none whitespace-nowrap">⭐{level}</span>
       <span aria-hidden className="mt-0.5 block h-1 w-6 overflow-hidden rounded-full bg-black/40">
         <span className="block h-full bg-amber-300" style={{ width: `${pct}%` }} />
       </span>
-    </span>
+    </button>
   );
 }

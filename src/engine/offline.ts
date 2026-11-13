@@ -19,6 +19,7 @@ import { checkAklat } from "./aklat";
 import { advanceReplanting, afterClearing, updateForest } from "./forest";
 import { passMourning } from "./death";
 import { applyRenown } from "./kabantugan";
+import { trackRanking } from "./ranking";
 
 /** Neighbors on other islands are stepped once every this many offline steps. */
 const FAR_EVERY = 4;
@@ -110,7 +111,7 @@ export function gentleStep(state: GameState, content: Content, dt: number): Step
   // Mourning passes while away; nobody dies offline.
   s = passMourning(s, content, dt);
   // Renown for what was achieved (newcomers, tasks, Aklat entries), and any level reached.
-  if (!content.ai) s = applyRenown(state, s, content);
+  if (!content.ai) s = trackRanking(state, applyRenown(state, s, content), content);
   s = checkTasks(reconcilePeople(state, s, content), content);
   return { state: s, produced, eaten, hungry: dt * (1 - fed), arrived, recovered, cleared };
 }

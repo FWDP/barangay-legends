@@ -2,6 +2,7 @@
 // Pure and deterministic. Each neighbor is a full GameState run by the same engine rules as
 // the player (tick + commands), steered by a simple AI. All randomness comes from the seeded
 // RNG in the player's state, rolled once per whole game second.
+import { newFame, type Fame } from "./ranking";
 import { datuInfluenceMultiplier } from "./datu";
 import { RESOURCES, type Content, type NeighborDef, type RefusalReason, type Resource, type TraitDef } from "./content";
 import { apply, canAfford, asCost, buildingCost, housing, newGame, owned, placeAuto, rates, tick, warriorCap, type GameState } from "./game";
@@ -55,6 +56,8 @@ export interface NeighborState {
   lastRefusal: { reason: RefusalReason; at: number } | null;
   /** Their tradition (content/traditions). */
   tradition: string;
+  /** Their renown and raids beaten off, for the Ranggo (ranking.ts). */
+  fame: Fame;
 }
 
 /** A line of political news (the Balita feed): a scripted event or something a barangay did. */
@@ -220,9 +223,10 @@ export function strengthFn(state: GameState, content: Content): (id: string) => 
 /** A new neighbor as it starts (also used to add neighbors to an older save). */
 export function newNeighbor(content: Content, def: NeighborDef, i: number, time: number, seed: number): NeighborState {
   const d = content.rules.diplomacy;
+  const state = newNeighborState(content, def, seed);
   return {
     id: def.id,
-    state: newNeighborState(content, def, seed),
+    state,
     trust: def.trust,
     influence: d.startInfluence,
     status: "independent",
@@ -235,6 +239,7 @@ export function newNeighbor(content: Content, def: NeighborDef, i: number, time:
     // Stagger AI decisions so the neighbors don't all act on the same second.
     nextDecisionAt: Math.floor(time) + d.aiDecisionSeconds + i * 3,
     tradition: traditionFor(content, def, seed, i),
+    fame: newFame(content, state, Math.floor(time)),
   };
 }
 

@@ -41,6 +41,8 @@ import { villageKey, villageSnapshot } from "../engine/village";
 import { neighborDef } from "../engine/region";
 import { VisitView } from "./VisitView";
 import { LevelChip } from "./LevelBadge";
+import { localRanking, RankingDialog } from "./Ranking";
+import { Celebration } from "./Celebration";
 
 const ui = loadUiContent(content);
 
@@ -377,6 +379,7 @@ export function App() {
   // The Dambana, the Aklat ng Alamat, the babaylan's ritual animation and a tile to replant.
   const [dambanaOpen, setDambanaOpen] = useState(false);
   const [aklatOpen, setAklatOpen] = useState(false);
+  const [rankOpen, setRankOpen] = useState(false);
   const [ritual, setRitual] = useState<{ x: number; y: number; icon: string } | null>(null);
   const [replantAsk, setReplantAsk] = useState<{ x: number; y: number } | null>(null);
   // The Bahay ng Datu, and the Libingan's list of the remembered.
@@ -501,6 +504,7 @@ export function App() {
       historyOpen ||
       dambanaOpen ||
       aklatOpen ||
+      rankOpen ||
       datuOpen ||
       rememberedOpen ||
       // The eclipse and the tikbalang's riddle need the player's taps: no talking over them.
@@ -725,7 +729,18 @@ export function App() {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-green-800 pt-[env(safe-area-inset-top)] text-stone-800">
-      <Hud state={state} content={content} level={<LevelChip state={state} content={content} game={ui.game} lang={lang} />} extraChips={<ForestChip state={state} content={content} game={ui.game} lang={lang} />}>
+      <Hud state={state} content={content} level={
+          <LevelChip
+            state={state}
+            content={content}
+            game={ui.game}
+            lang={lang}
+            onClick={() => {
+              sfx.click();
+              setRankOpen(true);
+            }}
+          />
+        } extraChips={<ForestChip state={state} content={content} game={ui.game} lang={lang} />}>
         <span className="hidden sm:block">
           <AklatButton state={state} content={content} game={ui.game} lang={lang} onOpen={() => setAklatOpen(true)} />
         </span>
@@ -817,6 +832,10 @@ export function App() {
             onVisit={(id) => {
               sfx.click();
               setVisiting(id);
+            }}
+            onRanking={() => {
+              sfx.click();
+              setRankOpen(true);
             }}
           />
         ) : (
@@ -1113,6 +1132,8 @@ export function App() {
         onRitual={playRitual}
         onClose={() => setDambanaOpen(false)}
       />
+      <RankingDialog open={rankOpen} entries={rankOpen ? localRanking(state, content, ui.game, lang) : []} game={ui.game} lang={lang} onClose={() => setRankOpen(false)} />
+      <Celebration state={state} game={ui.game} lang={lang} />
       <AklatDialog open={aklatOpen} state={state} content={content} game={ui.game} lang={lang} onClose={() => setAklatOpen(false)} />
       <ClearingQueueDialog
         state={state}

@@ -622,6 +622,18 @@
     "levelYou": {
       "en": "Your barangay grows in renown.",
       "fil": "Lumalaki ang bantog ng iyong barangay."
+    },
+    "rank-up": {
+      "en": "{barangay} rose in the archipelago's ranking.",
+      "fil": "Umakyat sa ranggo ng kapuluan ang {barangay}."
+    },
+    "rank-upYou": {
+      "en": "Your barangay rose in the archipelago's ranking.",
+      "fil": "Umakyat sa ranggo ng kapuluan ang iyong barangay."
+    },
+    "overtook": {
+      "en": "{barangay} passed {other} in renown.",
+      "fil": "Nalampasan ng {barangay} ang {other} sa kabantugan."
     }
   },
   "alliance": {
@@ -852,6 +864,68 @@
     "ai": {
       "en": "Seen from the shore: a sketch of their village.",
       "fil": "Tanaw mula sa pampang: isang larawan ng kanilang nayon."
+    }
+  },
+  "rank": {
+    "title": {
+      "en": "Ranggo ng Kapuluan",
+      "fil": "Ranggo ng Kapuluan"
+    },
+    "open": {
+      "en": "Ranggo",
+      "fil": "Ranggo"
+    },
+    "renown": {
+      "en": "Pinakatanyag",
+      "fil": "Pinakatanyag"
+    },
+    "defended": {
+      "en": "Tagapagtanggol",
+      "fil": "Tagapagtanggol"
+    },
+    "aklat": {
+      "en": "Kolektor ng Alamat",
+      "fil": "Kolektor ng Alamat"
+    },
+    "renownHint": {
+      "en": "Ranked by Kabantugan (renown)",
+      "fil": "Ayon sa Kabantugan"
+    },
+    "defendedHint": {
+      "en": "Ranked by raids beaten off",
+      "fil": "Ayon sa mga paglusob na napigilan"
+    },
+    "aklatHint": {
+      "en": "Ranked by Aklat ng Alamat entries. Other barangays don't keep an Aklat yet.",
+      "fil": "Ayon sa mga tala sa Aklat ng Alamat. Wala pang Aklat ang ibang barangay."
+    },
+    "you": {
+      "en": "You",
+      "fil": "Ikaw"
+    },
+    "toPass": {
+      "en": "+{n} to pass {datu}",
+      "fil": "+{n} para malampasan si {datu}"
+    },
+    "top": {
+      "en": "First in the archipelago!",
+      "fil": "Una sa buong kapuluan!"
+    },
+    "up": {
+      "en": "Your barangay rose to rank {rank} in the archipelago!",
+      "fil": "Umakyat sa ranggo {rank} ng kapuluan ang iyong barangay!"
+    },
+    "unknown": {
+      "en": "—",
+      "fil": "—"
+    },
+    "close": {
+      "en": "Close",
+      "fil": "Isara"
+    },
+    "rank": {
+      "en": "Rank {rank}",
+      "fil": "Ranggo {rank}"
     }
   }
 }

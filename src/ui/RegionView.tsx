@@ -45,8 +45,10 @@ export function RegionView(props: {
   lang: Lang;
   /** Visit a barangay (Bisitahin). */
   onVisit: (id: string) => void;
+  /** Open the Ranggo ng Kapuluan. */
+  onRanking: () => void;
 }) {
-  const { state, content, dispatch, onLore, game, lang, onVisit } = props;
+  const { state, content, dispatch, onLore, game, lang, onVisit, onRanking } = props;
   const region = state.region;
   const [selected, setSelected] = useState<string>(content.neighbors[0]?.id ?? "");
   if (!region) {
@@ -68,7 +70,7 @@ export function RegionView(props: {
       </div>
       <aside className="mat-card flex-1 border-t-4 border-amber-900/60 p-3 text-stone-800 sm:min-h-0 sm:overflow-y-auto lg:w-[26rem] lg:flex-none lg:border-t-0 lg:border-l-4">
         <OurForces state={state} content={content} dispatch={dispatch} />
-        <AlliancePanel state={state} content={content} game={game} lang={lang} dispatch={dispatch} onVisit={onVisit} />
+        <AlliancePanel state={state} content={content} game={game} lang={lang} dispatch={dispatch} onVisit={onVisit} onRanking={onRanking} />
         <BlocList state={state} content={content} game={game} lang={lang} selected={chosen?.id} onSelect={pick} />
         <Balita state={state} content={content} game={game} lang={lang} />
         <div id="neighbor-panel" className="scroll-mt-2">
@@ -262,8 +264,8 @@ function BlocList(props: { state: GameState; content: Content; game: GameText; l
 }
 
 /** The player's alliance: form, leave, the members (expel), and the Paramount Datu goal. */
-function AlliancePanel(props: { state: GameState; content: Content; game: GameText; lang: Lang; dispatch: (c: Command) => void; onVisit: (id: string) => void }) {
-  const { state, content, game, lang, dispatch, onVisit } = props;
+function AlliancePanel(props: { state: GameState; content: Content; game: GameText; lang: Lang; dispatch: (c: Command) => void; onVisit: (id: string) => void; onRanking: () => void }) {
+  const { state, content, game, lang, dispatch, onVisit, onRanking } = props;
   const region = state.region!;
   const t = game.alliance;
   const me = state.barangay.id;
@@ -274,6 +276,9 @@ function AlliancePanel(props: { state: GameState; content: Content; game: GameTe
     <section className="mb-3 space-y-2 rounded-xl border-2 border-amber-900/30 bg-amber-50/70 p-2.5">
       <h2 className="flex items-center gap-1.5 font-display text-lg text-amber-900">
         🤝 {t.title[lang]} <LevelBadge level={levelOf(state, content, me)} game={game} lang={lang} />
+        <button type="button" onClick={onRanking} className="ml-auto rounded-full border border-amber-900/40 bg-amber-200 px-2 py-0.5 font-sans text-xs font-semibold text-amber-950">
+          🏆 {game.rank.open[lang]}
+        </button>
       </h2>
       {!unlocked ? (
         <p className="text-xs text-stone-600">{t.level[lang]}</p>

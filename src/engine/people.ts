@@ -22,7 +22,7 @@ export interface NamedVillager {
   frail?: boolean;
 }
 
-export type HistoryKind = "named" | "left" | "fell" | "task" | "spirits" | "aklat" | "event" | "died" | "frail" | "datu" | "level";
+export type HistoryKind = "named" | "left" | "fell" | "task" | "spirits" | "aklat" | "event" | "died" | "frail" | "datu" | "level" | "rank";
 
 /** One line of the barangay's history. Text is made by the UI, so it follows the language setting. */
 export interface HistoryEntry {
@@ -35,7 +35,7 @@ export interface HistoryEntry {
   cause?: "hunger" | "crowded" | "other" | "age" | "sickness" | "raid";
   /** How many died together (died, unnamed). */
   count?: number;
-  /** The level the Bahay ng Datu reached (datu), or the barangay level reached (level). */
+  /** The level the Bahay ng Datu reached (datu), the barangay level reached (level), or the renown rank reached (rank). */
   level?: number;
   /** The task (task). */
   task?: string;
