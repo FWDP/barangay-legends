@@ -52,6 +52,7 @@ import { nightFactor } from "./daynight";
 import { hasEntrance, updateDoors } from "./doors";
 import { devCommand, type DevAction } from "./dev";
 import { trackRanking, type AchievedAt } from "./ranking";
+import { markFallen, noteExpedition, type Expedition } from "./expeditions";
 import { updateDeaths, type Remembered } from "./death";
 import { advanceReplanting, afterClearing, cancelReplant, isPranked, newForest, replant, updateForest, updatePranks, type ForestState, type Prank, type ReplantJob } from "./forest";
 import {
@@ -71,7 +72,7 @@ import {
   type TikbalangTrick,
 } from "./worship";
 
-export const STATE_VERSION = 23;
+export const STATE_VERSION = 24;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -222,6 +223,9 @@ export interface GameState {
   achievedAt: AchievedAt;
   /** The player's place by renown in the archipelago (0 until first worked out). */
   renownRank: number;
+  /** The most recent trades and raids, kept to be replayed (expeditions.ts), oldest first. */
+  expeditions: Expedition[];
+  nextExpeditionId: number;
 }
 
 export type { ClearingJob } from "./clearing";
@@ -292,6 +296,8 @@ export function newGame(
     devSave: false,
     achievedAt: { renown: 0, defended: 0, aklat: 0 },
     renownRank: 0,
+    expeditions: [],
+    nextExpeditionId: 1,
   };
   if (withRegion && content.neighbors.length > 0) state.region = createRegion(content, 0, seed, state.barangay.id);
   for (const def of content.buildings) {
@@ -824,10 +830,13 @@ export type Command =
 
 export function apply(state: GameState, content: Content, command: Command): GameState {
   // An action aimed at another island sets sail instead; it happens when the boat arrives.
-  const done = needsBoat(state, command) ? setSail(state, content, command) : applyCommand(state, content, command);
+  const sailing = needsBoat(state, command);
+  const done = sailing ? setSail(state, content, command) : applyCommand(state, content, command);
   // A refused command leaves the state exactly as it was.
   if (done === state) return state;
-  const next = trackRanking(state, applyRenown(state, reconcilePeople(state, updateDoors(state, done, content), content), content), content);
+  // A trade or raid done here is written down for its replay (one sent by sea, when it arrives).
+  const noted = sailing ? done : noteExpedition(state, done, content, command);
+  const next = markFallen(state, trackRanking(state, applyRenown(state, reconcilePeople(state, updateDoors(state, noted, content), content), content), content));
   // An old save keeps its old staffing rule until the player changes the map.
   return next.legacyReach && mapChanged(state, next) ? { ...next, legacyReach: false } : next;
 }
@@ -1030,7 +1039,9 @@ function step(state: GameState, content: Content, dt: number): GameState {
   if (next.region) next = updateRegion(next, content, state.time, dt);
   next = updateChoices(next, content, state.time, dt);
   // Balangay at sea arrive (an action on arrival runs as if on the same island).
-  if (next.region?.voyages.length) next = updateVoyages(next, content, next.time, (s, c) => applyCommand(s, content, c));
+  if (next.region?.voyages.length) {
+    next = updateVoyages(next, content, next.time, (s, c, v) => noteExpedition(s, applyCommand(s, content, c), content, c, { departAt: v.departAt, arriveAt: v.arriveAt }));
+  }
   if (!content.ai) {
     // The spirits and visitors: only the player's barangay, only while playing.
     next = updateVisitors(next, content, state.time, next.time);
@@ -1040,6 +1051,7 @@ function step(state: GameState, content: Content, dt: number): GameState {
     next = updateDeaths(state, next, content, dt);
   }
   next = reconcilePeople(state, next, content, crowded ? "crowded" : "other");
+  next = markFallen(state, next);
   next = checkTasks(next, content);
   const doors = updateDoors(state, next, content);
   return content.ai ? doors : trackRanking(state, applyRenown(state, checkAklat(doors, content), content), content);

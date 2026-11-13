@@ -20,6 +20,7 @@ import { barangayLevel } from "../engine/kabantugan";
 import { blocOf, blocStrength } from "../engine/politics";
 import { blocBlocker, strengthFn } from "../engine/region";
 import { boatCap, boatCost, boatsFree, sailBlocker, voyageSeconds } from "../engine/sea";
+import { expeditionTitle } from "./ReplayView";
 import { barangayName, blocColor, blocName, newsLine, warLine } from "./politicsText";
 import type { Lang } from "./settings";
 import { fill, type GameText } from "./uiContent";
@@ -49,8 +50,10 @@ export function RegionView(props: {
   onVisit: (id: string) => void;
   /** Open the Ranggo ng Kapuluan. */
   onRanking: () => void;
+  /** Panoorin: watch an expedition by its record id. */
+  onWatch?: (id: number) => void;
 }) {
-  const { state, content, dispatch, onLore, game, lang, onVisit, onRanking } = props;
+  const { state, content, dispatch, onLore, game, lang, onVisit, onRanking, onWatch } = props;
   const region = state.region;
   const [selected, setSelected] = useState<string>(content.neighbors[0]?.id ?? "");
   if (!region) {
@@ -74,7 +77,7 @@ export function RegionView(props: {
         <OurForces state={state} content={content} dispatch={dispatch} />
         <AlliancePanel state={state} content={content} game={game} lang={lang} dispatch={dispatch} onVisit={onVisit} onRanking={onRanking} />
         <BlocList state={state} content={content} game={game} lang={lang} selected={chosen?.id} onSelect={pick} />
-        <Balita state={state} content={content} game={game} lang={lang} />
+        <Balita state={state} content={content} game={game} lang={lang} onWatch={onWatch} />
         <div id="neighbor-panel" className="scroll-mt-2">
           {chosen && <NeighborPanel key={chosen.id} n={chosen} state={state} content={content} dispatch={dispatch} onLore={onLore} game={game} lang={lang} onVisit={() => onVisit(chosen.id)} />}
         </div>
@@ -324,8 +327,8 @@ function AlliancePanel(props: { state: GameState; content: Content; game: GameTe
 }
 
 /** The Balita: political news, newest first. */
-function Balita(props: { state: GameState; content: Content; game: GameText; lang: Lang }) {
-  const { state, content, game, lang } = props;
+function Balita(props: { state: GameState; content: Content; game: GameText; lang: Lang; onWatch?: (id: number) => void }) {
+  const { state, content, game, lang, onWatch } = props;
   const news = [...(state.region?.news ?? [])].reverse().slice(0, 8);
   return (
     <section className="mb-3 space-y-1 rounded-xl border-2 border-amber-900/30 bg-amber-50/70 p-2.5">
@@ -339,6 +342,24 @@ function Balita(props: { state: GameState; content: Content; game: GameText; lan
           </li>
         ))}
       </ul>
+      {onWatch && (
+        <>
+          <h3 className="mt-2 font-display text-sm text-amber-900">🎬 {game.expedition.recent[lang]}</h3>
+          {state.expeditions.length === 0 && <p className="text-xs text-stone-500">{game.expedition.none[lang]}</p>}
+          <ul className="space-y-0.5 text-xs">
+            {[...state.expeditions].reverse().map((e) => (
+              <li key={e.id} className="flex items-center justify-between gap-2 border-b border-amber-900/10 pb-0.5">
+                <span className="min-w-0">
+                  <span className="text-stone-400 tabular-nums">{arawText(state, content, game, lang, e.arriveAt)}</span> {expeditionTitle(e, state, content, game, lang)}
+                </span>
+                <button type="button" onClick={() => onWatch(e.id)} className="game-btn shrink-0 border-2 border-amber-950/60 bg-stone-200 px-2 py-0.5 text-[11px] font-semibold text-stone-900">
+                  {game.expedition.watch[lang]}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </section>
   );
 }

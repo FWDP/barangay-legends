@@ -40,6 +40,8 @@ import { isPlaza } from "../engine/map";
 import { villageKey, villageSnapshot } from "../engine/village";
 import { neighborDef } from "../engine/region";
 import { VisitView } from "./VisitView";
+import { ExpeditionBar, expeditionTitle, ReplayView } from "./ReplayView";
+import { expeditionForReport, expeditionsBetween, type Expedition } from "../engine/expeditions";
 import { LevelChip } from "./LevelBadge";
 import { localRanking, RankingDialog } from "./Ranking";
 import { Celebration } from "./Celebration";
@@ -366,12 +368,24 @@ export function App() {
   const [view, setViewRaw] = useState<"barangay" | "rehiyon">("barangay");
   // Bisitahin: the barangay being visited, over whichever view it was opened from.
   const [visiting, setVisiting] = useState<string | null>(null);
+  // Panoorin: the expedition being watched (by record id), over everything else.
+  const [watching, setWatching] = useState<number | null>(null);
   const setView = (v: "barangay" | "rehiyon") => {
     setVisiting(null);
+    setWatching(null);
     setViewRaw(v);
   };
   // Reports already in the save when it loads count as seen.
   const [seenReport, setSeenReport] = useState(() => latestReportId(state));
+  // Expeditions already in the save when it loads count as offered.
+  const [seenExpedition, setSeenExpedition] = useState(() => state.nextExpeditionId - 1);
+  // Expeditions that ended while the player was away, to watch from the story.
+  const [awayWatch, setAwayWatch] = useState<number[]>([]);
+  const watch = (id: number) => {
+    sfx.click();
+    setSeenExpedition((n) => Math.max(n, id));
+    setWatching(id);
+  };
   const [menu, setMenu] = useState<MenuTarget | null>(null);
   const [moving, setMoving] = useState<{ x: number; y: number } | null>(null);
   const [demolishing, setDemolishing] = useState<{ x: number; y: number } | null>(null);
@@ -478,9 +492,12 @@ export function App() {
       if (!before) return;
       const after = latestState.current;
       const lines = awayStory(before, after, content, awayPeopleLines(before, after, content, ui.game, langRef.current));
+      const from = before.time;
       before = null;
       if (lines.length === 0) return;
       setAway(lines);
+      setAwayWatch(expeditionsBetween(after, from, after.time).map((e) => e.id));
+      setSeenExpedition(after.nextExpeditionId - 1);
       // The story already told of any battles: don't show their reports one by one too.
       setSeenReport(latestReportId(after));
     };
@@ -490,6 +507,7 @@ export function App() {
   // The adviser never talks over a battle report or a lore note.
   // The visited barangay's village: generated from its seed, size and strength, and only made
   // again when those change noticeably (the key).
+  const watchingExp = watching !== null ? (state.expeditions.find((e) => e.id === watching) ?? null) : null;
   const visited = visiting ? state.region?.neighbors.find((n) => n.id === visiting) : undefined;
   const visitKey = visited ? villageKey(content, visited) : "";
   const visitSnapshot = useMemo(() => {
@@ -720,7 +738,10 @@ export function App() {
             const away = continueGame();
             if (away) {
               const lines = offlineStory(away.report, away.before, away.after, content, awayPeopleLines(away.before, away.after, content, ui.game, lang));
-              if (lines.length) setAway(lines);
+              if (lines.length) {
+                setAway(lines);
+                setAwayWatch(expeditionsBetween(away.after, away.before.time, away.after.time).map((e) => e.id));
+              }
             }
             setScreen("game");
           }}
@@ -819,7 +840,9 @@ export function App() {
       </Hud>
 
       <main className="relative flex min-h-0 flex-1 flex-col">
-        {visiting && visitSnapshot ? (
+        {watchingExp ? (
+          <ReplayView key={watchingExp.id} expedition={watchingExp} state={state} content={content} game={ui.game} lang={lang} onClose={() => setWatching(null)} />
+        ) : visiting && visitSnapshot ? (
           <VisitView
             snapshot={visitSnapshot}
             id={visiting}
@@ -846,6 +869,7 @@ export function App() {
               sfx.click();
               setVisiting(id);
             }}
+            onWatch={watch}
             onRanking={() => {
               sfx.click();
               setRankOpen(true);
@@ -1001,6 +1025,7 @@ export function App() {
               }}
             />
           )}
+          <ExpeditionBar state={state} content={content} game={ui.game} lang={lang} seen={seenExpedition} onWatch={watch} onDismiss={(id) => setSeenExpedition(id)} />
           <OfferBar
             state={state}
             content={content}
@@ -1207,11 +1232,32 @@ export function App() {
         onSeen={setSeenReport}
         hold={clash !== null || away !== null}
         names={(r) => battleNames(r, state, ui.game, lang)}
+        watchLabel={ui.game.expedition.watch[lang]}
+        onWatch={(r) => {
+          const e = expeditionForReport(state, r.id);
+          if (!e) return null;
+          return () => {
+            setSeenReport(r.id);
+            watch(e.id);
+          };
+        }}
       />
       <VillagerDialog villager={villager} content={content} game={ui.game} lang={lang} onClose={() => setVillager(null)} />
       <HistoryDialog open={historyOpen} state={state} content={content} game={ui.game} lang={lang} onClose={() => setHistoryOpen(false)} />
       <ChoiceDialog state={state} content={content} open={choiceOpen && !raidComing} onClose={() => setChoiceOpen(false)} dispatch={dispatch} />
-      <AwayDialog lines={away} onClose={() => setAway(null)} />
+      <AwayDialog
+        lines={away}
+        onClose={() => setAway(null)}
+        watch={awayWatch
+          .map((id) => state.expeditions.find((e) => e.id === id))
+          .filter((e): e is Expedition => !!e)
+          .map((e) => ({ id: e.id, label: expeditionTitle(e, state, content, ui.game, lang) }))}
+        watchLabel={ui.game.expedition.watch[lang]}
+        onWatch={(id) => {
+          setAway(null);
+          watch(id);
+        }}
+      />
       <NoticeDialog notice={away ? null : (state.notices[0] ?? null)} onDismiss={() => dispatch({ type: "dismissNotice" })} />
       <VictoryDialog state={state} content={content} waiting={unseenReport(state, seenReport) !== undefined} />
       <FloatLayer />

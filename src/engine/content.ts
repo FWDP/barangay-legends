@@ -100,6 +100,8 @@ export interface Rules {
   allyDefense: { landSeconds: number; landSecondsPerUnit: number; balangayMinVillagers: number };
   kabantugan: KabantuganRules;
   limits: LimitRules;
+  /** Expedition records kept for replays (expeditions.ts), envoys sent on a trade, and the most sprites a replay draws. */
+  expeditions: { keep: number; envoys: number; maxSprites: number };
   villages: { bands: VillageBand[] };
   mourning: { seconds: number; maxSeconds: number; happiness: number };
   /** Rice the barangay holds with no Kamalig. */
@@ -1109,6 +1111,9 @@ export function validateRules(raw: unknown): Rules {
     if ((b.datuLevel as number) < 1 || (b.datuLevel as number) > 5) throw new Error(`rules: villages.bands[${i}].datuLevel must be 1..5`);
     if (i === 0 ? b.minLevel !== 1 : (b.minLevel as number) <= ((vb[i - 1] as Record<string, number>).minLevel)) throw new Error("rules: villages.bands must start at level 1 and rise");
   });
+  const ex = raw.expeditions;
+  if (!isObject(ex)) throw new Error('rules: missing "expeditions"');
+  checkNumbers(ex, ["keep", "envoys", "maxSprites"], "rules: expeditions", true);
   const l = raw.limits;
   if (!isObject(l)) throw new Error('rules: missing "limits"');
   checkNumbers(l, ["tradeValueFull", "tradeValueMax"], "rules: limits", true);

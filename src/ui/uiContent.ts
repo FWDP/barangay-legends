@@ -148,6 +148,12 @@ export const GAME_TEXT = {
   },
   report: { button: [], title: [], what: [], expected: [], note: [], share: [], copy: [], copied: [], github: [], githubNote: [], pasteSave: [], close: [] },
   version: { label: ["version"] },
+  expedition: {
+    watch: [], skip: [], back: [], next: [], trade: ["barangay"], raid: ["barangay"], raidIn: ["barangay"], arrive: [], walk: [], datu: [], return: [], march: [], clash: [],
+    loot: [], retreat: [], leave: [], report: [], won: [], lost: [], youWon: [], youLost: [], sides: ["attackers", "defenders"], chance: ["percent"],
+    losses: ["attackers", "defenders"], kuta: ["bonus", "cover"], covered: [], late: ["n"], allies: ["names"], loot2: ["goods"], gave: ["gave", "got"], named: ["names"],
+    fell: ["name"], capped: ["shown", "total"], arrived: ["barangay"], sailing: ["barangay", "time"], recent: [], none: [], close: [],
+  },
   doors: { blocked: ["building"], plaza: [] },
   events: { eclipse: [], gong: [], gongs: ["taps", "needed"], eclipseWon: ["favor", "gold"], eclipseLost: ["rice"], tikbalang: ["n"], right: [], wrong: ["time"], sarimanok: ["gift"] },
 } as const satisfies Record<string, Record<string, readonly string[]>>;

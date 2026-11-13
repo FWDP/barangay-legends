@@ -123,7 +123,7 @@ export function useReducedMotion(): boolean {
   return reduced;
 }
 
-type Look = Role | "leaving" | "raider" | "looter" | "datu" | "envoy";
+export type Look = Role | "leaving" | "raider" | "looter" | "datu" | "envoy" | "defender" | "ally";
 
 /** How long a mourning marker stays where someone died. */
 const MARKER_MS = 12000;
@@ -188,7 +188,7 @@ function drawTorch(g: CanvasRenderingContext2D, x: number, y: number, tile: numb
   g.fill();
 }
 
-function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, tile: number, id: number, role: Look, sprite: Sprite, t: number, alpha = 1) {
+export function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, tile: number, id: number, role: Look, sprite: Sprite, t: number, alpha = 1) {
   const s = Math.max(7, tile * 0.32);
   const swing = sprite.moving ? Math.sin(sprite.stride) * s * 0.12 : 0;
   // Workers busy at their post bob a little.
@@ -242,9 +242,9 @@ function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, tile: num
     // An envoy carries a gift bundle.
     g.fillStyle = "#a16207";
     g.fillRect(x + s * 0.14, top + s * 0.08, s * 0.14, s * 0.14);
-  } else if (role === "warrior") {
-    // A red putong (head cloth) and a spear.
-    g.fillStyle = "#b91c1c";
+  } else if (role === "warrior" || role === "defender" || role === "ally") {
+    // A putong (head cloth: red for the barangay's own, blue for another's, gold for allies) and a spear.
+    g.fillStyle = role === "defender" ? "#1d4ed8" : role === "ally" ? "#ca8a04" : "#b91c1c";
     g.fillRect(x - s * 0.14, top - s * 0.2, s * 0.28, s * 0.06);
     g.strokeStyle = "#6b4a1c";
     g.lineWidth = Math.max(1, s * 0.05);
@@ -289,9 +289,9 @@ function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, tile: num
 }
 
 /** A boat seen from above, pointing along `heading`: a bangka with outriggers, or a karakoa. */
-function drawBoat(g: CanvasRenderingContext2D, x: number, y: number, tile: number, heading: number, kind: "bangka" | "karakoa", t: number) {
-  const L = tile * (kind === "karakoa" ? 1.7 : 0.95);
-  const W = tile * (kind === "karakoa" ? 0.34 : 0.22);
+export function drawBoat(g: CanvasRenderingContext2D, x: number, y: number, tile: number, heading: number, kind: "bangka" | "karakoa" | "balangay", t: number) {
+  const L = tile * (kind === "karakoa" ? 1.7 : kind === "balangay" ? 1.4 : 0.95);
+  const W = tile * (kind === "karakoa" ? 0.34 : kind === "balangay" ? 0.3 : 0.22);
   g.save();
   g.translate(x, y);
   g.rotate(heading);
@@ -376,7 +376,7 @@ function drawDeck(g: CanvasRenderingContext2D, x: number, y: number, tile: numbe
 }
 
 /** Flashes of blades where the two sides meet. */
-function drawSparks(g: CanvasRenderingContext2D, x: number, y: number, tile: number, t: number) {
+export function drawSparks(g: CanvasRenderingContext2D, x: number, y: number, tile: number, t: number) {
   const beat = Math.floor(t * 6);
   g.strokeStyle = "#fde047";
   g.lineWidth = Math.max(1, tile * 0.04);

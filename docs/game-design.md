@@ -35,6 +35,9 @@ different form, and some (prestige and Dangal, export codes) isn't built yet.
   AI barangays keep their own renown too.
 - **Bisitahin:** a read-only visit to any barangay's village from a save-format snapshot. AI
   villages are generated from their seed, so real players' snapshots can be shown later.
+- **Panoorin (expedition replays):** each trade and raid (the player's, and AI raids on the
+  player) is written down by the engine as a plain record; the newest few can be watched in the
+  target's village, or skipped straight to the report. The replay only shows what was decided.
 - **Ranggo ng Kapuluan:** an archipelago ranking by renown, raids defended and Aklat entries,
   built to take online rankings later.
 - **Guidance and sharing:** Mga Gawain tasks, Dalisay the adviser, help in English and Filipino,

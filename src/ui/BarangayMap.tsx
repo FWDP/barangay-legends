@@ -149,12 +149,14 @@ export function BarangayMap(props: {
   visit?: { landing: Point | null } | null;
   /** Changed (e.g. a counter) to zoom out to the whole map: the camera only (dev panel). */
   wholeMap?: number;
+  /** Drawn over the villagers and under the night's tint (an expedition replay). */
+  overlay?: (cam: Camera, view: View) => ReactNode;
   /** The warning shown when a tile would shut the way into a building, e.g. "Would block the way into the Palayan". */
   blockedLabel?: (building: string) => string;
   /** The warning for a tile that would close the plaza in. */
   plazaLabel?: string;
 }) {
-  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onVillager, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null, selection = [], onSelectArea, focus = null, tradeHeld = false, onSarimanok, ritual = null, visit = null, blockedLabel, plazaLabel, wholeMap = 0 } = props;
+  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onVillager, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null, selection = [], onSelectArea, focus = null, tradeHeld = false, onSarimanok, ritual = null, visit = null, blockedLabel, plazaLabel, wholeMap = 0, overlay } = props;
   // The rectangle being dragged over the forest (desktop), from its first tile to the current one.
   const [dragArea, setDragArea] = useState<{ from: Point; to: Point } | null>(null);
   // Tiles being painted with a mouse drag in road mode (laid on release).
@@ -818,6 +820,7 @@ export function BarangayMap(props: {
           <SpiritOverlays state={state} content={content} cam={cam} o={o} ritual={ritual} onSarimanok={onSarimanok} reducedMotion={reducedMotion} />
         )}
         {cam && view.w > 0 && <VillagerLayer state={state} content={content} cam={cam} view={view} reducedMotion={reducedMotion} clash={clash} hitRef={scenic ? undefined : namedHit} torches={scenic ? undefined : torches} />}
+        {cam && view.w > 0 && overlay?.(cam, view)}
         {cam && landing && <LandingMarker cam={cam} view={view} landing={landing} avoid={avoid} />}
         {waitingAt && (
           <span

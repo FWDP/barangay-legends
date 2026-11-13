@@ -12,6 +12,7 @@ import { autoPlaceTile } from "./map";
 import { Rng } from "./rng";
 import { proposeTrade, type CounterOffer, type Proposal } from "./trading";
 import { borderDefense, chooseLanding } from "./border";
+import { addExpedition, defenseExpedition } from "./expeditions";
 import type { Point } from "./map";
 import { generateArchipelago, islandDistance, sameIsland, travelSeconds, type Island, type Place } from "./archipelago";
 import {
@@ -903,7 +904,17 @@ function aiRaidStrikes(state: GameState, content: Content, second: number, rng: 
     ...(helpers.length ? { allies: helpers.map((a) => a.id) } : {}),
   });
   if (!battle.attackerWins) player = { ...player, stats: { ...player.stats, raidsDefended: player.stats.raidsDefended + 1 } };
-  return { ...player, region: next };
+  // Written down for its replay: the same numbers the battle was decided by.
+  const record = defenseExpedition(
+    state,
+    content,
+    { from: attacker.id, departAt: raid.strikeAt - d.aiRaid.warningSeconds, arriveAt: second, landing, attackers: attacker.state.warriors },
+    border?.muster ?? null,
+    alliedDefenders(state, content).filter((a) => a.id !== attacker.id),
+    { attack, defense, chance: battle.chance, attackerWins: battle.attackerWins, ourLosses, theirLosses, lost, defenders },
+    next.nextReportId - 1,
+  );
+  return addExpedition({ ...player, region: next }, content, record);
 }
 
 // ---------- Allies at the border ----------

@@ -39,6 +39,7 @@ import { newFame, type Fame } from "./ranking";
 import { MAX_REMEMBERED, type Remembered } from "./death";
 import { updateDoors } from "./doors";
 import type { Today } from "./limits";
+import { parseExpeditions } from "./expeditions";
 
 export const SAVE_KEY = "barangay-legends/save";
 
@@ -259,6 +260,8 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
     };
     return { ...raw, version: 23, foundedAt: 0, devSave: false, grandfatherDoors: true, region: neighbors(raw.region) };
   },
+  // v23 → v24: expedition records for replays. Older trades and raids weren't written down.
+  23: (raw) => ({ ...raw, version: 24, expeditions: [], nextExpeditionId: 1 }),
 };
 
 // ---------- Frozen v15 bridge rule (for the v14 → v15 migration only) ----------
@@ -561,6 +564,11 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean, withRegi
   }
   if (finiteNonNeg(data.foundedAt) && data.foundedAt <= state.time) state.foundedAt = data.foundedAt;
   state.devSave = data.devSave === true;
+  if (isPlayer) {
+    state.expeditions = parseExpeditions(data.expeditions, content);
+    const next = Number.isInteger(data.nextExpeditionId) ? (data.nextExpeditionId as number) : 1;
+    state.nextExpeditionId = Math.max(next, ...state.expeditions.map((e) => e.id + 1), 1);
+  }
   // Entrances: worked out again; a save from before solid buildings keeps boxed-in ones working.
   return updateDoors(null, state, content, data.grandfatherDoors === true);
 }

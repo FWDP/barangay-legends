@@ -1101,5 +1101,159 @@
       "en": "Would close off the plaza",
       "fil": "Isasara nito ang plaza"
     }
+  },
+  "expedition": {
+    "watch": {
+      "en": "Panoorin",
+      "fil": "Panoorin"
+    },
+    "skip": {
+      "en": "Laktawan",
+      "fil": "Laktawan"
+    },
+    "back": {
+      "en": "Back to the barangay",
+      "fil": "Bumalik sa barangay"
+    },
+    "next": {
+      "en": "Next",
+      "fil": "Susunod"
+    },
+    "trade": {
+      "en": "Trade with {barangay}",
+      "fil": "Kalakalan sa {barangay}"
+    },
+    "raid": {
+      "en": "Raid on {barangay}",
+      "fil": "Pagsalakay sa {barangay}"
+    },
+    "raidIn": {
+      "en": "Raiders from {barangay}",
+      "fil": "Mga mananalakay mula sa {barangay}"
+    },
+    "arrive": {
+      "en": "The boat sails in.",
+      "fil": "Dumarating ang bangka."
+    },
+    "walk": {
+      "en": "The envoys walk to the Bahay ng Datu.",
+      "fil": "Naglalakad ang mga sugo patungo sa Bahay ng Datu."
+    },
+    "datu": {
+      "en": "The datu receives the envoys.",
+      "fil": "Tinatanggap ng datu ang mga sugo."
+    },
+    "return": {
+      "en": "Back to the boat with the goods.",
+      "fil": "Bumabalik sa bangka dala ang mga kalakal."
+    },
+    "march": {
+      "en": "The warriors go ashore and the defenders come out.",
+      "fil": "Dumadaong ang mga mandirigma at lumalabas ang mga tagapagtanggol."
+    },
+    "clash": {
+      "en": "The two sides meet at the landing.",
+      "fil": "Nagsasagupaan sa daungan."
+    },
+    "loot": {
+      "en": "The raiders take what they can carry.",
+      "fil": "Kinukuha ng mga mananalakay ang kaya nilang dalhin."
+    },
+    "retreat": {
+      "en": "Beaten, the raiders run for the boat.",
+      "fil": "Talo, tumatakbo ang mga mananalakay pabalik sa bangka."
+    },
+    "leave": {
+      "en": "The boat sails away.",
+      "fil": "Umaalis ang bangka."
+    },
+    "report": {
+      "en": "Expedition report",
+      "fil": "Ulat ng lakbay"
+    },
+    "won": {
+      "en": "The raiders won.",
+      "fil": "Nanalo ang mga mananalakay."
+    },
+    "lost": {
+      "en": "The defenders held.",
+      "fil": "Nanindigan ang mga tagapagtanggol."
+    },
+    "youWon": {
+      "en": "Victory",
+      "fil": "Tagumpay"
+    },
+    "youLost": {
+      "en": "Defeat",
+      "fil": "Talo"
+    },
+    "sides": {
+      "en": "{attackers} raiders against {defenders} defenders.",
+      "fil": "{attackers} mananalakay laban sa {defenders} tagapagtanggol."
+    },
+    "chance": {
+      "en": "The raiders' chance: {percent}%.",
+      "fil": "Tsansa ng mga mananalakay: {percent}%."
+    },
+    "losses": {
+      "en": "Fallen: {attackers} raiders, {defenders} defenders.",
+      "fil": "Nasawi: {attackers} mananalakay, {defenders} tagapagtanggol."
+    },
+    "kuta": {
+      "en": "Kuta defense: +{bonus}{cover}",
+      "fil": "Depensa ng Kuta: +{bonus}{cover}"
+    },
+    "covered": {
+      "en": " (the landing was within its reach)",
+      "fil": " (abot nito ang daungan)"
+    },
+    "late": {
+      "en": "{n} defenders came too late.",
+      "fil": "{n} tagapagtanggol ang nahuli."
+    },
+    "allies": {
+      "en": "Allies who came in time: {names}.",
+      "fil": "Mga kakamping dumating sa oras: {names}."
+    },
+    "loot2": {
+      "en": "Taken: {goods}.",
+      "fil": "Nakuha: {goods}."
+    },
+    "gave": {
+      "en": "Gave {gave}, received {got}.",
+      "fil": "Nagbigay ng {gave}, tumanggap ng {got}."
+    },
+    "named": {
+      "en": "Named: {names}.",
+      "fil": "May pangalan: {names}."
+    },
+    "fell": {
+      "en": "{name} (fell)",
+      "fil": "{name} (nasawi)"
+    },
+    "capped": {
+      "en": "Showing {shown} of {total} people.",
+      "fil": "Ipinapakita ang {shown} sa {total} katao."
+    },
+    "arrived": {
+      "en": "Your expedition reached {barangay}.",
+      "fil": "Nakarating ang iyong lakbay sa {barangay}."
+    },
+    "sailing": {
+      "en": "Balangay to {barangay} arrives in {time}.",
+      "fil": "Darating ang Balangay sa {barangay} sa loob ng {time}."
+    },
+    "recent": {
+      "en": "Expeditions",
+      "fil": "Mga Lakbay"
+    },
+    "none": {
+      "en": "No expeditions yet.",
+      "fil": "Wala pang lakbay."
+    },
+    "close": {
+      "en": "Close",
+      "fil": "Isara"
+    }
   }
 }

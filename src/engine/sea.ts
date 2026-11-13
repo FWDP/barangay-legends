@@ -86,7 +86,7 @@ export function setSail(state: GameState, content: Content, command: Command): G
  * command as if on the same island) and turns for home with its surviving warriors; a boat
  * home is done. Trade boats wait offshore while trade is paused for a raid.
  */
-export function updateVoyages(state: GameState, content: Content, time: number, arrive: (s: GameState, c: Command) => GameState): GameState {
+export function updateVoyages(state: GameState, content: Content, time: number, arrive: (s: GameState, c: Command, v: Voyage) => GameState): GameState {
   let s = state;
   for (const v of state.region?.voyages ?? []) {
     if (v.arriveAt > time) continue;
@@ -103,7 +103,7 @@ export function updateVoyages(state: GameState, content: Content, time: number, 
     // Arrived: take the boat off the water (its warriors are free to fight), do the action, then sail home.
     const before: GameState = { ...s, region: { ...region, voyages: region.voyages.filter((x) => x.id !== v.id) } };
     const warriorsBefore = before.warriors;
-    let after = v.command ? arrive(before, v.command as Command) : before;
+    let after = v.command ? arrive(before, v.command as Command, v) : before;
     const lost = Math.max(0, warriorsBefore - after.warriors);
     const back = Math.max(0, v.warriors - lost);
     const seconds = voyageSeconds(after, content, v.target);

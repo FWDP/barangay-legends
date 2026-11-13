@@ -67,8 +67,18 @@ export const latestReportId = (state: GameState) => (state.region?.reports ?? []
 export const unseenReport = (state: GameState, seen: number) => (state.region?.reports ?? []).find((r) => r.id > seen);
 
 /** Shows each new report once, as a short dialog. */
-export function ReportDialog(props: { state: GameState; content: Content; seen: number; onSeen: (id: number) => void; hold?: boolean; names?: (r: Report) => string[] }) {
-  const { state, content, seen, onSeen: setSeen, hold = false, names } = props;
+export function ReportDialog(props: {
+  state: GameState;
+  content: Content;
+  seen: number;
+  onSeen: (id: number) => void;
+  hold?: boolean;
+  names?: (r: Report) => string[];
+  /** Panoorin: what watching this report's battle does, or null if it can't be watched. */
+  onWatch?: (r: Report) => (() => void) | null;
+  watchLabel?: string;
+}) {
+  const { state, content, seen, onSeen: setSeen, hold = false, names, onWatch, watchLabel } = props;
   // Held back while the battle plays out on the map.
   const next = hold ? undefined : unseenReport(state, seen);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -101,7 +111,15 @@ export function ReportDialog(props: { state: GameState; content: Content; seen: 
               <li key={l}>{l}</li>
             ))}
           </ul>
-          <div className="flex justify-end pt-1">
+          <div className="flex justify-end gap-2 pt-1">
+            {(() => {
+              const go = onWatch?.(next);
+              return go ? (
+                <button type="button" onClick={go} className="game-btn border-2 border-amber-950/60 bg-stone-200 px-4 py-2 text-sm font-semibold text-stone-900">
+                  🎬 {watchLabel}
+                </button>
+              ) : null;
+            })()}
             <button type="button" autoFocus onClick={close} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-4 py-2 text-sm font-semibold text-amber-950">
               OK
             </button>

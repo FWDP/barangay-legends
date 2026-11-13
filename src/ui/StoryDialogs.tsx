@@ -131,8 +131,15 @@ export function ChoiceDialog(props: { state: GameState; content: Content; open: 
 }
 
 /** "While you were away": a few sentences about what happened. */
-export function AwayDialog(props: { lines: string[] | null; onClose: () => void }) {
-  const { lines, onClose } = props;
+export function AwayDialog(props: {
+  lines: string[] | null;
+  onClose: () => void;
+  /** Expeditions that ended meanwhile, to watch (Panoorin). */
+  watch?: { id: number; label: string }[];
+  watchLabel?: string;
+  onWatch?: (id: number) => void;
+}) {
+  const { lines, onClose, watch = [], watchLabel, onWatch } = props;
   const dialog = useModal(!!lines && lines.length > 0);
   return (
     <dialog
@@ -153,6 +160,18 @@ export function AwayDialog(props: { lines: string[] | null; onClose: () => void 
               <p key={l}>{l}</p>
             ))}
           </div>
+          {watch.length > 0 && onWatch && (
+            <ul className="space-y-1 text-sm">
+              {watch.map((w) => (
+                <li key={w.id} className="flex items-center justify-between gap-2">
+                  <span className="min-w-0">{w.label}</span>
+                  <button type="button" onClick={() => onWatch(w.id)} className="game-btn shrink-0 border-2 border-amber-950/60 bg-stone-200 px-2 py-1 text-xs font-semibold text-stone-900">
+                    🎬 {watchLabel}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
           <div className="flex justify-end">
             <button type="button" autoFocus onClick={onClose} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-4 py-2 text-sm font-semibold text-amber-950">
               Back to the barangay

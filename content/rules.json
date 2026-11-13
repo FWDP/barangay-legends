@@ -392,6 +392,12 @@
       2090
     ]
   },
+  "expeditions": {
+    "_comment": "Replays of trades and raids (engine/expeditions.ts): the newest `keep` records are saved; a trade sends `envoys` envoys; a replay draws at most maxSprites people (the report still gives the full counts). Display only, they change no outcome.",
+    "keep": 10,
+    "envoys": 2,
+    "maxSprites": 40
+  },
   "limits": {
     "_comment": "Anti-spam (engine/limits.ts). A trade's trust, influence and loyalty are scaled by its value (full at tradeValueFull, at most tradeValueMax times). dailyReturns: what the 1st, 2nd, 3rd, 4th+ trade, Handog or raid with the same barangay on the same day is worth. After fatigueCounterAt trades in a day they want fatigueFairness more; from fatigueRefuseAt they refuse. Marriage needs marriageMinDays since first contact; sandugo needs a marriage or sandugoMinDays. Playtest guesses.",
     "tradeValueFull": 20,
