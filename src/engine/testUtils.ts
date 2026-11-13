@@ -52,8 +52,12 @@ export function withState(patch: Omit<Partial<GameState>, "resources"> & { build
     region: null,
     // Every task already done, so task rewards don't change tests about something else.
     gawainDone: content.quests.map((q) => q.id),
+    // Every level already rewarded, so level rewards don't change other tests either.
+    levelRewarded: content.rules.kabantugan.levelAt.length + 1,
     ...rest,
     resources: resources ? { ...zero(), ...resources } : base.resources,
+    // Villager milestones already counted for the villagers the test starts with.
+    stats: { ...base.stats, ...rest.stats, bestTens: rest.stats?.bestTens ?? Math.floor((rest.villagers ?? base.villagers) / 10) },
   };
 }
 

@@ -6,7 +6,7 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "re
 import { RESOURCES, type BuildingDef, type Content } from "../engine/content";
 import { asCost, buildingCost, canAfford, owned, roadCost, staffedBuildings, unreachableWorkplaces, type GameState } from "../engine/game";
 import { isUnlocked } from "../engine/map";
-import { maxDatuLevel, nextDatuLevel } from "../engine/datu";
+import { datuLevelNeeded, maxDatuLevel, nextDatuLevel } from "../engine/datu";
 import { datuHouseUrl, houseStyleFor } from "./datuHouseArt";
 import { DAAN, DATU, itemsIn, missingFor, tabOfItem, tabsWithNew, unlockedIds, visibleTabs, type BuildTab } from "./buildMenu";
 import { bonusRuleText, costText, groveRuleText, RESOURCE_ICON } from "./format";
@@ -146,7 +146,9 @@ export function BuildToolbar(props: {
       const d = game.datu;
       const next = nextDatuLevel(state, content);
       const cost = asCost(next?.cost ?? {});
-      const ok = !!next && canAfford(state, cost);
+      const needs = datuLevelNeeded(state, content);
+      const needsText = needs !== null ? fill(game.level.needs[lang], { level: needs }) : "";
+      const ok = !!next && canAfford(state, cost) && needs === null;
       const def = content.datuHouse.datuHouse;
       return {
         id,
@@ -159,12 +161,13 @@ export function BuildToolbar(props: {
         // At the top level the card shows the finished house, not a dimmed one.
         affordable: ok || !next,
         costLine: next ? <CostLine cost={cost} have={state.resources} /> : <span>{fill(d.level[lang], { level: state.datuLevel, max: maxDatuLevel(content) })}</span>,
-        missing: next && !ok ? costText(Object.fromEntries(RESOURCES.filter((r) => state.resources[r] < cost[r]).map((r) => [r, Math.ceil(cost[r] - state.resources[r])]))) : "",
+        missing: next && !canAfford(state, cost) ? costText(Object.fromEntries(RESOURCES.filter((r) => state.resources[r] < cost[r]).map((r) => [r, Math.ceil(cost[r] - state.resources[r])]))) : "",
         details: [
           content.datuHouse.description,
           fill(d.level[lang], { level: state.datuLevel, max: maxDatuLevel(content) }),
           fill(d.bonus[lang], { production: (state.datuLevel - 1) * def.productionPercentPerLevel, influence: (state.datuLevel - 1) * def.influencePercentPerLevel }),
           next ? `${fill(d.upgrade[lang], { level: next.level })}${next.unlocks ? ` · ${fill(d.unlocks[lang], { what: d[next.unlocks][lang] })}` : ""}` : d.max[lang],
+          ...(needsText ? [`🔒 ${needsText}`] : []),
         ],
         status: [],
         recommended: recommend.has(id),

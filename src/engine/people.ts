@@ -22,7 +22,7 @@ export interface NamedVillager {
   frail?: boolean;
 }
 
-export type HistoryKind = "named" | "left" | "fell" | "task" | "spirits" | "aklat" | "event" | "died" | "frail" | "datu";
+export type HistoryKind = "named" | "left" | "fell" | "task" | "spirits" | "aklat" | "event" | "died" | "frail" | "datu" | "level";
 
 /** One line of the barangay's history. Text is made by the UI, so it follows the language setting. */
 export interface HistoryEntry {
@@ -35,7 +35,7 @@ export interface HistoryEntry {
   cause?: "hunger" | "crowded" | "other" | "age" | "sickness" | "raid";
   /** How many died together (died, unnamed). */
   count?: number;
-  /** The level the Bahay ng Datu reached (datu). */
+  /** The level the Bahay ng Datu reached (datu), or the barangay level reached (level). */
   level?: number;
   /** The task (task). */
   task?: string;
@@ -65,6 +65,10 @@ export interface Stats {
   deaths: number;
   /** Balangay voyages that reached another island. */
   voyages: number;
+  /** Trades completed (for renown). */
+  trades: number;
+  /** The most tens of villagers ever reached (renown is paid once per ten). */
+  bestTens: number;
 }
 
 export const MAX_HISTORY = 60;

@@ -29,6 +29,7 @@ import {
   isConnected,
   isFootReachable,
   isPlaza,
+  NEIGHBOURS,
   occupancy,
   tileAt,
   validTiles,
@@ -140,8 +141,13 @@ export function BarangayMap(props: {
   onSarimanok?: () => void;
   /** A ritual being led at the Dambana right now (the short animation). */
   ritual?: { x: number; y: number; icon: string } | null;
+  /**
+   * Visiting another barangay: read-only (taps do nothing), every Kuta's defense radius shown,
+   * and while planning a raid, where it would land.
+   */
+  visit?: { landing: Point | null } | null;
 }) {
-  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onVillager, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null, selection = [], onSelectArea, focus = null, tradeHeld = false, onSarimanok, ritual = null } = props;
+  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onVillager, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null, selection = [], onSelectArea, focus = null, tradeHeld = false, onSarimanok, ritual = null, visit = null } = props;
   // The rectangle being dragged over the forest (desktop), from its first tile to the current one.
   const [dragArea, setDragArea] = useState<{ from: Point; to: Point } | null>(null);
   // Tiles being painted with a mouse drag in road mode (laid on release).
@@ -153,6 +159,12 @@ export function BarangayMap(props: {
   const [cam, setCamRaw] = useState<Camera | null>(null);
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
   const setCam = useCallback((c: Camera) => setCamRaw(clampCamera(c, map)), [map]);
+  // Remember where the camera was for each barangay, so coming back (from the Rehiyon or a
+  // visit) finds it where it was left.
+  const camKey = `${map.seed}:${map.plaza.x},${map.plaza.y}:${map.width}`;
+  useEffect(() => {
+    if (cam && !scenic) savedCameras.set(camKey, cam);
+  }, [cam, camKey, scenic]);
 
   // Where the controls drawn over the map are (Gather buttons, zoom buttons, banners, the
   // adviser), so floating labels keep clear of them. Measured after each render; only a real
@@ -199,7 +211,10 @@ export function BarangayMap(props: {
       };
       const keepIn = (v: number, half: number, size: number) => Math.min(size - half - SCENIC_DRIFT - 1, Math.max(half + SCENIC_DRIFT + 1, v));
       setCamRaw({ tile, x: keepIn(want.x, view.w / 2 / tile, map.width), y: keepIn(want.y, view.h / 2 / tile, map.height) });
-    } else if (view.w > 0) setCamRaw((c) => cameraOn(map.plaza, view, c?.tile));
+    } else if (view.w > 0) {
+      const saved = savedCameras.get(camKey);
+      setCamRaw((c) => (saved && !c ? clampCamera(saved, map) : cameraOn(map.plaza, view, c?.tile)));
+    }
   }, [plazaKey, view.w > 0, scenic && view.w >= 1024]);
 
   const centre = () => cam && setCam(cameraOn(map.plaza, view, cam.tile));
@@ -298,7 +313,7 @@ export function BarangayMap(props: {
 
   // A Kuta's defense radius: around the tile being placed on, the Kuta whose menu is open, or
   // every Kuta while a raid is coming (where they'll land is marked too).
-  const landing = scenic ? null : raidLanding(state, content);
+  const landing = scenic ? null : visit ? visit.landing : raidLanding(state, content);
   const radius = content.rules.military.kutaRadius;
   const kutaIds = useMemo(() => new Set(content.buildings.filter((b) => b.defense).map((b) => b.id)), [content]);
   const guardCenters: Point[] = [];
@@ -306,7 +321,7 @@ export function BarangayMap(props: {
     if (placing?.defense && hover) guardCenters.push(hover);
     const focused = focus ? state.buildings.find((b) => b.x === focus.x && b.y === focus.y) : undefined;
     if (focused && kutaIds.has(focused.type)) guardCenters.push(focused);
-    if (landing || placing?.defense) for (const b of state.buildings) if (kutaIds.has(b.type) && !b.damaged) guardCenters.push(b);
+    if (landing || placing?.defense || visit) for (const b of state.buildings) if (kutaIds.has(b.type) && !b.damaged) guardCenters.push(b);
   }
   const guardKey = guardCenters.map((p) => `${p.x},${p.y}`).join(";");
   const guard = useMemo(() => {
@@ -373,7 +388,7 @@ export function BarangayMap(props: {
 
   const namedHit = useRef<NamedHit | null>(null);
   const tapAt = (px: number, py: number, clientX: number, clientY: number) => {
-    if (!cam) return;
+    if (!cam || visit) return;
     const t = screenToTile(cam, view, px, py);
     if (tileAt(map, t.x, t.y) === null) return;
     if (road) {
@@ -611,7 +626,7 @@ export function BarangayMap(props: {
     activate.current(x, y, r.left + r.width / 2, r.top);
   }, []);
 
-  useIncomeFloats(area, state, content, cam, view, !scenic);
+  useIncomeFloats(area, state, content, cam, view, !scenic && !visit);
   const reducedMotion = useReducedMotion();
 
   // Title screen: drift slowly over the barangay. The drift is only a couple of pixels a
@@ -657,7 +672,7 @@ export function BarangayMap(props: {
         const key = `${x},${y}`;
         const building = buildings.get(key) ?? null;
         const hovered = hover?.x === x && hover?.y === y;
-        const clearable = !placing && !road && isClearable(map, x, y);
+        const clearable = !placing && !road && !visit && isClearable(map, x, y);
         const painted = paint.some((t) => t.x === x && t.y === y);
         const roadTarget = road ? (tile === "daan" || canPlaceRoad(state, x, y) ? 0 : "blocked") : null;
         cells.push(
@@ -667,6 +682,7 @@ export function BarangayMap(props: {
             y={y}
             tile={tile}
             plaza={isPlaza(map, x, y)}
+            beach={tile !== "sea" && tile !== "river" && tile !== "bridge" && NEIGHBOURS.some(([dx, dy]) => tileAt(map, x + dx, y + dy) === "sea")}
             datuLevel={isPlaza(map, x, y) ? state.datuLevel : undefined}
             houseStyle={isPlaza(map, x, y) ? houseStyleFor(state, content) : undefined}
             building={building}
@@ -961,6 +977,9 @@ function useIncomeFloats(
   }, [area, content, enabled]);
 }
 
+/** Each barangay's last camera (see BarangayMap). Only for this session. */
+const savedCameras = new Map<string, Camera>();
+
 const GROUND: Record<Tile, string> = {
   cleared: "bg-green-600/60",
   daan: "daan-tile",
@@ -1009,8 +1028,10 @@ const Cell = memo(function Cell(props: {
   deckPreview?: BridgeTile | null;
   /** Placing a Tulay over this river tile can't work. */
   cantCross?: boolean;
+  /** Land by the sea: drawn as sandy beach. */
+  beach?: boolean;
 }) {
-  const { x, y, tile, plaza, datuLevel, houseStyle, building, fresh, lifted, target, ghost, glow, spirit, onSpiritKey, clearable, hint, progress, onActivate, pathPreview, waiting, picked, guard, deck, deckPreview, cantCross } = props;
+  const { x, y, tile, plaza, datuLevel, houseStyle, building, fresh, lifted, target, ghost, glow, spirit, onSpiritKey, clearable, hint, progress, onActivate, pathPreview, waiting, picked, guard, deck, deckPreview, cantCross, beach } = props;
   const h = hash(x, y);
   const valid = typeof target === "number";
   const paddy = building?.def.produces?.rice;
@@ -1022,13 +1043,14 @@ const Cell = memo(function Cell(props: {
       className={`absolute flex items-center justify-center ${GROUND[tile]} ${target === "blocked" ? "brightness-75" : ""} ${plaza ? "z-[1]" : ""}`}
       style={{ left: `calc(${x} * var(--tile))`, top: `calc(${y} * var(--tile))`, width: "var(--tile)", height: "var(--tile)" }}
     >
+      {beach && tile !== "daan" && <div aria-hidden className="beach-tile pointer-events-none absolute inset-0" />}
       {deck && <Deck deck={deck} />}
       {deckPreview && <Deck deck={deckPreview} preview />}
       {cantCross && <Label text="Can't cross here" warn />}
       {pathPreview && <div aria-hidden className="daan-tile pointer-events-none absolute inset-0 opacity-70" />}
       {tile === "forest" && progress === null && (
         <span aria-hidden className="pointer-events-none text-[0.95em] leading-none">
-          {h < 70 ? "🌳" : "🌴"}
+          {h < 70 && !beach ? "🌳" : "🌴"}
         </span>
       )}
       {guard && <div aria-hidden className="pointer-events-none absolute inset-0 bg-sky-200/15 shadow-[inset_0_0_10px_rgb(186_230_253_/_0.45)]" />}

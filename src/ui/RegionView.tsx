@@ -15,6 +15,7 @@ import {
 import { clock } from "./EventBanners";
 import { sameIsland } from "../engine/archipelago";
 import { hasDatuUnlock } from "../engine/datu";
+import { barangayLevel } from "../engine/kabantugan";
 import { blocOf, blocStrength } from "../engine/politics";
 import { blocBlocker, strengthFn } from "../engine/region";
 import { boatCap, boatCost, boatsFree, sailBlocker, voyageSeconds } from "../engine/sea";
@@ -22,8 +23,9 @@ import { barangayName, blocColor, blocName, newsLine, warLine } from "./politics
 import type { Lang } from "./settings";
 import { fill, type GameText } from "./uiContent";
 import { RESOURCE_ICON } from "./format";
+import { LevelBadge, levelOf } from "./LevelBadge";
 
-const STATUS = {
+export const STATUS = {
   independent: { label: "Independent", ring: "#a8a29e", chip: "bg-stone-200 text-stone-700" },
   tributary: { label: "Tributary", ring: "#f59e0b", chip: "bg-amber-200 text-amber-900" },
   ally: { label: "Sandugo ally", ring: "#16a34a", chip: "bg-green-200 text-green-900" },
@@ -41,8 +43,10 @@ export function RegionView(props: {
   onLore: (id: string) => void;
   game: GameText;
   lang: Lang;
+  /** Visit a barangay (Bisitahin). */
+  onVisit: (id: string) => void;
 }) {
-  const { state, content, dispatch, onLore, game, lang } = props;
+  const { state, content, dispatch, onLore, game, lang, onVisit } = props;
   const region = state.region;
   const [selected, setSelected] = useState<string>(content.neighbors[0]?.id ?? "");
   if (!region) {
@@ -64,11 +68,11 @@ export function RegionView(props: {
       </div>
       <aside className="mat-card flex-1 border-t-4 border-amber-900/60 p-3 text-stone-800 sm:min-h-0 sm:overflow-y-auto lg:w-[26rem] lg:flex-none lg:border-t-0 lg:border-l-4">
         <OurForces state={state} content={content} dispatch={dispatch} />
-        <AlliancePanel state={state} content={content} game={game} lang={lang} dispatch={dispatch} />
+        <AlliancePanel state={state} content={content} game={game} lang={lang} dispatch={dispatch} onVisit={onVisit} />
         <BlocList state={state} content={content} game={game} lang={lang} selected={chosen?.id} onSelect={pick} />
         <Balita state={state} content={content} game={game} lang={lang} />
         <div id="neighbor-panel" className="scroll-mt-2">
-          {chosen && <NeighborPanel key={chosen.id} n={chosen} state={state} content={content} dispatch={dispatch} onLore={onLore} game={game} lang={lang} />}
+          {chosen && <NeighborPanel key={chosen.id} n={chosen} state={state} content={content} dispatch={dispatch} onLore={onLore} game={game} lang={lang} onVisit={() => onVisit(chosen.id)} />}
         </div>
       </aside>
     </div>
@@ -175,6 +179,12 @@ function ArchipelagoMap(props: { state: GameState; content: Content; game: GameT
             <text textAnchor="middle" y="4.9" fontSize="1.9" fill="#fffbeb" fontWeight="bold" stroke="#0c4a6e" strokeWidth="0.35" paintOrder="stroke">
               {def.name.replace("Barangay ", "")}
             </text>
+            <g transform="translate(2.4, -2.2)" aria-hidden>
+              <circle r="1.25" fill="#fcd34d" stroke="#78350f" strokeWidth="0.25" />
+              <text textAnchor="middle" dy="0.55" fontSize="1.5" fontWeight="bold" fill="#451a03">
+                {levelOf(state, content, n.id)}
+              </text>
+            </g>
           </g>
         );
       })}
@@ -219,7 +229,7 @@ function BlocList(props: { state: GameState; content: Content; game: GameText; l
               if (id === state.barangay.id) {
                 return (
                   <li key={id} className="px-2 py-1 text-sm font-semibold">
-                    🔥 {state.barangay.name || game.balita.you[lang]} {g.leader === id && "👑"}
+                    🔥 {state.barangay.name || game.balita.you[lang]} {g.leader === id && "👑"} <LevelBadge level={levelOf(state, content, id)} game={game} lang={lang} />
                   </li>
                 );
               }
@@ -236,7 +246,8 @@ function BlocList(props: { state: GameState; content: Content; game: GameText; l
                   >
                     <span>
                       {g.leader === id && "👑 "}
-                      {def.name.replace("Barangay ", "")} <span className="text-[11px] text-stone-500">· {islandOf(id)}</span>
+                      {def.name.replace("Barangay ", "")} <LevelBadge level={levelOf(state, content, id)} game={game} lang={lang} />{" "}
+                      <span className="text-[11px] text-stone-500">· {islandOf(id)}</span>
                     </span>
                     <span className={`rounded-full px-1.5 text-[10px] font-semibold ${STATUS[n.status].chip}`}>{STATUS[n.status].label}</span>
                   </button>
@@ -251,8 +262,8 @@ function BlocList(props: { state: GameState; content: Content; game: GameText; l
 }
 
 /** The player's alliance: form, leave, the members (expel), and the Paramount Datu goal. */
-function AlliancePanel(props: { state: GameState; content: Content; game: GameText; lang: Lang; dispatch: (c: Command) => void }) {
-  const { state, content, game, lang, dispatch } = props;
+function AlliancePanel(props: { state: GameState; content: Content; game: GameText; lang: Lang; dispatch: (c: Command) => void; onVisit: (id: string) => void }) {
+  const { state, content, game, lang, dispatch, onVisit } = props;
   const region = state.region!;
   const t = game.alliance;
   const me = state.barangay.id;
@@ -261,7 +272,9 @@ function AlliancePanel(props: { state: GameState; content: Content; game: GameTe
   const strength = strengthFn(state, content);
   return (
     <section className="mb-3 space-y-2 rounded-xl border-2 border-amber-900/30 bg-amber-50/70 p-2.5">
-      <h2 className="font-display text-lg text-amber-900">🤝 {t.title[lang]}</h2>
+      <h2 className="flex items-center gap-1.5 font-display text-lg text-amber-900">
+        🤝 {t.title[lang]} <LevelBadge level={levelOf(state, content, me)} game={game} lang={lang} />
+      </h2>
       {!unlocked ? (
         <p className="text-xs text-stone-600">{t.level[lang]}</p>
       ) : mine ? (
@@ -275,8 +288,11 @@ function AlliancePanel(props: { state: GameState; content: Content; game: GameTe
                 <li key={m} className="flex items-center justify-between gap-2 rounded bg-white/60 px-2 py-1 text-sm">
                   <span>
                     {mine.leader === m && "👑 "}
-                    {barangayName(state, content, m, game, lang)}
+                    {barangayName(state, content, m, game, lang)} <LevelBadge level={levelOf(state, content, m)} game={game} lang={lang} />
                   </span>
+                  <button type="button" onClick={() => onVisit(m)} className="ml-auto text-xs font-semibold text-amber-800 underline">
+                    🛖 {game.visit.button[lang]}
+                  </button>
                   {mine.leader === me && (
                     <button type="button" onClick={() => dispatch({ type: "bloc", action: "expel", target: m })} className="text-xs font-semibold text-red-800 underline">
                       {t.expel[lang]}
@@ -311,7 +327,8 @@ function Balita(props: { state: GameState; content: Content; game: GameText; lan
       <ul className="space-y-0.5 text-xs">
         {news.map((n) => (
           <li key={n.id} className="border-b border-amber-900/10 pb-0.5">
-            <span className="text-stone-400 tabular-nums">{clock(n.time)}</span> {newsLine(n, state, content, game, lang)}
+            <span className="text-stone-400 tabular-nums">{clock(n.time)}</span> {newsLine(n, state, content, game, lang)}{" "}
+            <LevelBadge level={n.barangay ? levelOf(state, content, n.barangay) : null} game={game} lang={lang} />
           </li>
         ))}
       </ul>
@@ -367,7 +384,7 @@ function OurForces(props: { state: GameState; content: Content; dispatch: (c: Co
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
         <Stat label="Mandirigma" value={`⚔️ ${state.warriors}/${cap}`} note={home < state.warriors ? `${state.warriors - home} away` : `${m.warriorsPerKuta} per Kuta`} />
         <Stat label="Defense" value={`🛡️ ${Math.round(defenseOf(state, content))}`} note="warriors + kuta" />
-        <Stat label="Renown" value={`⭐ ${region.renown}`} note="from battles" />
+        <Stat label="Kabantugan" value={`⭐ ${state.kabantugan}`} note={`level ${barangayLevel(state, content)}`} />
       </div>
       <ActionButton
         onClick={() => dispatch({ type: "train" })}
@@ -423,7 +440,7 @@ function Stat({ label, value, note }: { label: string; value: string; note: stri
   );
 }
 
-function NeighborPanel(props: {
+export function NeighborPanel(props: {
   n: NeighborState;
   state: GameState;
   content: Content;
@@ -431,8 +448,17 @@ function NeighborPanel(props: {
   onLore: (id: string) => void;
   game: GameText;
   lang: Lang;
+  /** Offer Bisitahin (visit their village). */
+  onVisit?: () => void;
+  /** Leave out the header (the visit screen shows its own). */
+  bare?: boolean;
+  /**
+   * Visiting: a raid is planned first (the map shows where it would land and which Kuta cover
+   * it), then confirmed.
+   */
+  raidPlan?: { text: string; planning: boolean; setPlanning: (on: boolean) => void };
 }) {
-  const { n, state, content, dispatch, onLore, game, lang } = props;
+  const { n, state, content, dispatch, onLore, game, lang, onVisit, bare = false, raidPlan } = props;
   const region = state.region!;
   const t = game.alliance;
   const me = state.barangay.id;
@@ -465,9 +491,12 @@ function NeighborPanel(props: {
 
   return (
     <section className="space-y-3">
+      {!bare && (
       <header>
         <div className="flex flex-wrap items-baseline justify-between gap-1">
-          <h2 className="font-display text-xl text-amber-900">{def.name}</h2>
+          <h2 className="flex items-center gap-1.5 font-display text-xl text-amber-900">
+            {def.name} <LevelBadge level={levelOf(state, content, n.id)} game={game} lang={lang} />
+          </h2>
           <span className="flex gap-1">
             {embargo && <span className="rounded-full bg-red-700 px-2 py-0.5 text-xs font-semibold text-white">⛔ Embargo</span>}
             <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS[n.status].chip}`}>{STATUS[n.status].label}</span>
@@ -497,7 +526,17 @@ function NeighborPanel(props: {
             {seaWhy && <span className="block font-semibold">{seaWhy}</span>}
           </p>
         )}
+        {onVisit && (
+          <button
+            type="button"
+            onClick={onVisit}
+            className="game-btn mt-2 w-full border-2 border-amber-950/60 bg-amber-300 px-3 py-1.5 font-display text-amber-950"
+          >
+            🛖 {game.visit.button[lang]}
+          </button>
+        )}
       </header>
+      )}
       {(canInvite || canJoin || (mine?.leader === me && mine.members.includes(n.id))) && (
         <div className="space-y-1">
           {canInvite && (
@@ -600,14 +639,25 @@ function NeighborPanel(props: {
             Attack {attack} vs their defense {Math.round(theirDefense)} · <strong>{Math.round(chance * 100)}% chance</strong> to win. A win brings goods and renown
             but every neighbor will trust you less.
           </p>
+          {raidPlan?.planning && <p className="rounded bg-red-50 px-2 py-1 text-xs text-red-900">⚔️ {raidPlan.text}</p>}
           <ActionButton
             tone="war"
-            onClick={() => dispatch({ type: "raid", neighbor: n.id, warriors: send })}
+            onClick={() => {
+              // When visiting, the first press shows the plan on their map; the second sends the raid.
+              if (raidPlan && !raidPlan.planning) return raidPlan.setPlanning(true);
+              raidPlan?.setPlanning(false);
+              dispatch({ type: "raid", neighbor: n.id, warriors: send });
+            }}
             disabled={home < 1 || raidCooldown > 0 || !!seaWhy || (far && sailBlocker(state, content, { type: "raid", neighbor: n.id, warriors: send }) !== null)}
             why={seaWhy ? seaWhy : home < 1 ? "Train Mandirigma first." : `Your warriors are resting: ${clock(raidCooldown)}.`}
           >
-            🔥 Raid with {send} warrior{send === 1 ? "" : "s"}
+            {raidPlan && !raidPlan.planning ? `🗺️ ${game.visit.preview[lang]}` : raidPlan ? `🔥 ${game.visit.confirm[lang]} · ${send}` : `🔥 Raid with ${send} warrior${send === 1 ? "" : "s"}`}
           </ActionButton>
+          {raidPlan?.planning && (
+            <button type="button" onClick={() => raidPlan.setPlanning(false)} className="text-xs font-semibold text-stone-700 underline">
+              {game.visit.cancel[lang]}
+            </button>
+          )}
           <button type="button" className="text-xs text-amber-800 underline" onClick={() => onLore("mangayaw")}>
             What is mangayaw?
           </button>

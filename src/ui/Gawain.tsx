@@ -4,7 +4,7 @@ import type { Content } from "../engine/content";
 import type { GameState } from "../engine/game";
 import { currentTask, earnedTitles, taskProgress } from "../engine/gawain";
 import type { NamedVillager } from "../engine/people";
-import { maxDatuLevel, nextDatuLevel } from "../engine/datu";
+import { datuLevelNeeded, maxDatuLevel, nextDatuLevel } from "../engine/datu";
 import { datuHouseUrl, houseStyleFor } from "./datuHouseArt";
 import { asCost, canAfford } from "../engine/game";
 import { costText } from "./format";
@@ -188,6 +188,7 @@ export function DatuDialog(props: { open: boolean; state: GameState; content: Co
   const d = game.datu;
   const next = nextDatuLevel(state, content);
   const cost = asCost(next?.cost ?? {});
+  const needs = datuLevelNeeded(state, content);
   const def = house?.datuHouse;
   return (
     <dialog
@@ -217,11 +218,14 @@ export function DatuDialog(props: { open: boolean; state: GameState; content: Co
               ))}
           </ul>
           <div className="flex items-center justify-between gap-2 pt-1">
-            <span className="text-xs font-semibold">{next ? costText(cost) : d.max[lang]}</span>
+            <span className="text-xs font-semibold">
+              {next ? costText(cost) : d.max[lang]}
+              {needs !== null && <span className="block font-normal text-red-800">🔒 {fill(game.level.needs[lang], { level: needs })}</span>}
+            </span>
             {next && (
               <button
                 type="button"
-                disabled={!canAfford(state, cost)}
+                disabled={!canAfford(state, cost) || needs !== null}
                 onClick={onUpgrade}
                 className="game-btn border-2 border-green-950 bg-green-700 px-3 py-1.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
               >

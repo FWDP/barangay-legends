@@ -294,7 +294,7 @@ describe("v16 → v17: gold, happiness, tasks and named villagers", () => {
         { at: 30, kind: "task", task: "first-palayan" },
         { at: 35, kind: "left", name: "Ulan", story: "singer", cause: "hunger" },
       ],
-      stats: { raidsDefended: 2, rolls: 17, named: 3, replanted: 1, permittedClears: 2, deaths: 0, voyages: 0 },
+      stats: { raidsDefended: 2, rolls: 17, named: 3, replanted: 1, permittedClears: 2, deaths: 0, voyages: 0, trades: 0, bestTens: 0 },
     });
     saveGame(s, storage);
     expect({ ...loadGame(content, storage), region: null }).toEqual(s);

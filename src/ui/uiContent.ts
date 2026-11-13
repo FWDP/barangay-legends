@@ -125,12 +125,17 @@ export const GAME_TEXT = {
   balita: {
     title: [], none: [], formed: ["barangay"], joined: ["barangay", "bloc"], left: ["barangay", "bloc"], expelled: ["barangay", "bloc"], absorbed: ["barangay"],
     defeated: ["barangay", "bloc"], "war-joined": ["barangay", "other"], "ally-defended": ["barangay", "other"], "ally-lost": ["barangay", "other"], you: [], yourBloc: [],
-    blocName: ["leader"], independent: [], atWar: ["other"], formedYou: [], joinedYou: ["bloc"], leftYou: ["bloc"],
+    blocName: ["leader"], independent: [], atWar: ["other"], formedYou: [], joinedYou: ["bloc"], leftYou: ["bloc"], level: ["barangay"], levelYou: [],
   },
   alliance: {
     title: [], level: [], form: [], leave: [], join: [], invite: [], expel: [], leader: [], members: ["n", "strength"], yours: ["bloc"], member: ["bloc"], none: [],
     trust: ["trust"], grudge: [], tributary: [], taken: [], island: ["island"], tradition: ["tradition"], bloc: ["bloc"], noBloc: [], byBoat: ["time"], noBoat: [], atSea: ["n"],
     waiting: [], boats: ["free", "total"], train: [], dockFull: [], paramount: [], list: [],
+  },
+  level: { badge: ["level"], title: ["level"], renown: ["renown"], next: ["left", "level"], max: [], up: ["level"], reward: ["reward"], needs: ["level"], advisor: ["barangay"], news: ["barangay", "level"] },
+  visit: {
+    button: [], back: [], title: ["barangay"], relation: ["trust", "grudge", "influence"], actions: [], raidPreview: ["direction", "cover"], covered: [], uncovered: [],
+    confirm: [], preview: [], cancel: [], readOnly: [], north: [], south: [], east: [], west: [], ai: [],
   },
   events: { eclipse: [], gong: [], gongs: ["taps", "needed"], eclipseWon: ["favor", "gold"], eclipseLost: ["rice"], tikbalang: ["n"], right: [], wrong: ["time"], sarimanok: ["gift"] },
 } as const satisfies Record<string, Record<string, readonly string[]>>;

@@ -96,6 +96,7 @@ export interface Rules {
   sea: { secondsPerUnit: number; minSeconds: number; raidWarriorsPerBoat: number };
   politics: PoliticsRules;
   allyDefense: { landSeconds: number; landSecondsPerUnit: number; balangayMinVillagers: number };
+  kabantugan: KabantuganRules;
   mourning: { seconds: number; maxSeconds: number; happiness: number };
   /** Rice the barangay holds with no Kamalig. */
   storage: { baseRice: number };
@@ -125,7 +126,30 @@ export interface DatuHouseDef {
   /** Influence gained with neighbors +percent for each level above 1. */
   influencePercentPerLevel: number;
   /** Level 1 first (it stands from the start); each later level has the cost of raising it. */
-  levels: { level: number; cost?: ResourceAmounts; unlocks?: DatuUnlock }[];
+  levels: { level: number; cost?: ResourceAmounts; unlocks?: DatuUnlock; minBarangayLevel?: number }[];
+}
+
+/** Kabantugan (renown): what each achievement gives, and the renown each barangay level needs. */
+export interface KabantuganRules {
+  perTenVillagers: number;
+  perTask: number;
+  perRaidWon: number;
+  perDefenseWon: number;
+  perTrade: number;
+  perTributary: number;
+  perAlly: number;
+  perDatuLevel: number;
+  perAklat: number;
+  aiPerVillager: number;
+  aiPerStrength: number;
+  /** Renown for levels 2, 3, … (rising). */
+  levelAt: number[];
+}
+
+/** The reward for reaching a barangay level (content/levels.json). */
+export interface LevelDef {
+  level: number;
+  reward: { resources?: ResourceAmounts; title?: Text };
 }
 
 export interface PoliticsRules {
@@ -765,6 +789,8 @@ export interface Content {
   /** Island names for the archipelago (content/islands.json), the home island first. */
   islands: string[];
   politics: PoliticsEventDef[];
+  /** Barangay level rewards (content/levels.json), by level. */
+  levels: LevelDef[];
   /** The Bahay ng Datu (from content/buildings, kept out of `buildings`: it is never placed). */
   datuHouse: (BuildingDef & { datuHouse: DatuHouseDef }) | null;
   /** Set for AI barangays' content: no Forest Balance, Aklat or visitors for them. */
@@ -1031,6 +1057,12 @@ export function validateRules(raw: unknown): Rules {
     const g = raw[key];
     if (!isObject(g)) throw new Error(`rules: missing "${key}"`);
     checkNumbers(g, [...fields], `rules: ${key}`);
+  }
+  const k = raw.kabantugan;
+  if (!isObject(k)) throw new Error('rules: missing "kabantugan"');
+  checkNumbers(k, ["perTenVillagers", "perTask", "perRaidWon", "perDefenseWon", "perTrade", "perTributary", "perAlly", "perDatuLevel", "perAklat", "aiPerVillager", "aiPerStrength"], "rules: kabantugan");
+  if (!Array.isArray(k.levelAt) || k.levelAt.length === 0 || !k.levelAt.every((v, i, arr) => isNonNegNumber(v) && (i === 0 || v > (arr[i - 1] as number)))) {
+    throw new Error('rules: "kabantugan.levelAt" must list rising renown thresholds');
   }
   if (!isObject(f.replant)) throw new Error('rules: missing "forest.replant"');
   checkAmounts(f.replant.cost, "rules: forest.replant.cost");
@@ -1306,6 +1338,22 @@ export function validateVillagers(raw: unknown, rawNames: unknown, buildingIds: 
   return { chance: raw.chance, names: names as string[], stories: raw.stories as unknown as VillagerStory[], roleBuildings: rb as VillagerContent["roleBuildings"] };
 }
 
+/** Checks content/levels.json: one reward per level from 2 up, resources or a title. */
+export function validateLevels(raw: unknown, rules: Rules): LevelDef[] {
+  if (raw === undefined) return [];
+  if (!isObject(raw) || !Array.isArray(raw.levels)) throw new Error('levels.json: needs "levels"');
+  const max = rules.kabantugan.levelAt.length + 1;
+  return raw.levels.map((l, i) => {
+    const where = `levels.json: levels[${i}]`;
+    if (!isObject(l) || !Number.isInteger(l.level) || (l.level as number) < 2 || (l.level as number) > max) throw new Error(`${where}: "level" must be 2..${max}`);
+    const r = l.reward;
+    if (!isObject(r) || (r.resources === undefined && r.title === undefined)) throw new Error(`${where}: "reward" needs "resources" or "title"`);
+    if (r.resources !== undefined) checkAmounts(r.resources, `${where}: reward.resources`);
+    if (r.title !== undefined) checkText(r.title, `${where}: reward.title`);
+    return l as unknown as LevelDef;
+  });
+}
+
 /** Checks one scripted political event (content/events/politics). */
 export function validatePolitics(raw: unknown, file = "politics"): PoliticsEventDef {
   if (!isObject(raw)) throw new Error(`${file}: must be a JSON object`);
@@ -1448,7 +1496,15 @@ export function buildContent(
   blessingFiles: Record<string, unknown> = {},
   neighborFiles: Record<string, unknown> = {},
   choiceFiles: Record<string, unknown> = {},
-  extra: { quests?: Record<string, unknown>; villagers?: unknown; names?: unknown; traditions?: Record<string, unknown>; islands?: unknown; politics?: Record<string, unknown> } = {},
+  extra: {
+    quests?: Record<string, unknown>;
+    villagers?: unknown;
+    names?: unknown;
+    traditions?: Record<string, unknown>;
+    islands?: unknown;
+    politics?: Record<string, unknown>;
+    levels?: unknown;
+  } = {},
 ): Content {
   const all = Object.entries(buildingFiles)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -1571,7 +1627,8 @@ export function buildContent(
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([file, raw]) => validatePolitics(raw, file));
   for (const n of neighbors) if (n.tradition && !traditions.some((t) => t.id === n.tradition)) throw new Error(`${n.id}: unknown tradition "${n.tradition}"`);
-  return { buildings, rules, events, lore, groves, neighbors, choices, quests, villagers, traditions, rituals, visitor, eclipse, trickery, aklat, datuHouse, islands, politics };
+  const levels = validateLevels(extra.levels, rules);
+  return { buildings, rules, events, lore, groves, neighbors, choices, quests, villagers, traditions, rituals, visitor, eclipse, trickery, aklat, datuHouse, islands, politics, levels };
 }
 
 /** Loads every JSON file in content/ at build time (Vite bundles them). */
@@ -1596,5 +1653,6 @@ export function loadContent(): Content {
     traditions: import.meta.glob("../../content/traditions/*.json", { eager: true, import: "default" }),
     islands: Object.values(import.meta.glob("../../content/islands.json", { eager: true, import: "default" }))[0],
     politics: import.meta.glob("../../content/events/politics/*.json", { eager: true, import: "default" }),
+    levels: Object.values(import.meta.glob("../../content/levels.json", { eager: true, import: "default" }))[0],
   });
 }

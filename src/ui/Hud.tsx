@@ -10,8 +10,8 @@ import { clock } from "./EventBanners";
 import { formatAmount, formatBreakdown, formatRate, RESOURCE_ICON } from "./format";
 
 /** Slim top bar: title, resources, and whatever controls are passed as children. */
-export function Hud(props: { state: GameState; content: Content; children: ReactNode; extraChips?: ReactNode }) {
-  const { state, content, children, extraChips } = props;
+export function Hud(props: { state: GameState; content: Content; children: ReactNode; extraChips?: ReactNode; level?: ReactNode }) {
+  const { state, content, children, extraChips, level } = props;
   const r = rates(state, content);
   const working = buildingWorkers(state, content).reduce((a, b) => a + b, 0);
   const free = freeVillagers(state, content);
@@ -26,6 +26,7 @@ export function Hud(props: { state: GameState; content: Content; children: React
       >
         {state.barangay.name || "Barangay Legends"}
       </h1>
+      {level}
       <ResourceChip resource="rice" amount={state.resources.rice} rates={r} note={notes(state, content).rice} cap={riceCap(state, content)} />
       <ResourceChip resource="wood" amount={state.resources.wood} rates={r} note={notes(state, content).wood} />
       {(state.resources.gold > 0 || r.net.gold !== 0) && <ResourceChip resource="gold" amount={state.resources.gold} rates={r} note={notes(state, content).gold} />}

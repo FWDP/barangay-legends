@@ -48,6 +48,7 @@ import { capGrowth, riceCap, storageCap } from "./storage";
 import { checkAklat } from "./aklat";
 import { needsBoat, setSail, trainBalangay, updateVoyages } from "./sea";
 import { datuProductionBonus, upgradeDatu } from "./datu";
+import { applyRenown } from "./kabantugan";
 import { updateDeaths, type Remembered } from "./death";
 import { advanceReplanting, afterClearing, cancelReplant, isPranked, newForest, replant, updateForest, updatePranks, type ForestState, type Prank, type ReplantJob } from "./forest";
 import {
@@ -67,7 +68,7 @@ import {
   type TikbalangTrick,
 } from "./worship";
 
-export const STATE_VERSION = 20;
+export const STATE_VERSION = 21;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -202,6 +203,10 @@ export interface GameState {
   remembered: Remembered[];
   /** Balangay boats the barangay owns (at the dock or at sea). */
   balangays: number;
+  /** Kabantugan: renown, earned and never lost. The barangay level comes from it (kabantugan.ts). */
+  kabantugan: number;
+  /** The highest barangay level whose reward has been given. */
+  levelRewarded: number;
 }
 
 export type { ClearingJob } from "./clearing";
@@ -248,7 +253,7 @@ export function newGame(
     gawainDone: [],
     named: [],
     history: [],
-    stats: { raidsDefended: 0, rolls: 0, named: 0, replanted: 0, permittedClears: 0, deaths: 0, voyages: 0 },
+    stats: { raidsDefended: 0, rolls: 0, named: 0, replanted: 0, permittedClears: 0, deaths: 0, voyages: 0, trades: 0, bestTens: 0 },
     favor: 0,
     tradition: null,
     lastRitualAt: null,
@@ -266,6 +271,8 @@ export function newGame(
     sickFor: 0,
     remembered: [],
     balangays: 0,
+    kabantugan: 0,
+    levelRewarded: 1,
   };
   if (withRegion && content.neighbors.length > 0) state.region = createRegion(content, 0, seed, state.barangay.id);
   for (const def of content.buildings) {
@@ -792,7 +799,9 @@ export type Command =
 export function apply(state: GameState, content: Content, command: Command): GameState {
   // An action aimed at another island sets sail instead; it happens when the boat arrives.
   const done = needsBoat(state, command) ? setSail(state, content, command) : applyCommand(state, content, command);
-  const next = reconcilePeople(state, done, content);
+  // A refused command leaves the state exactly as it was.
+  if (done === state) return state;
+  const next = applyRenown(state, reconcilePeople(state, done, content), content);
   // An old save keeps its old staffing rule until the player changes the map.
   return next.legacyReach && mapChanged(state, next) ? { ...next, legacyReach: false } : next;
 }
@@ -1004,6 +1013,6 @@ function step(state: GameState, content: Content, dt: number): GameState {
   }
   next = reconcilePeople(state, next, content, crowded ? "crowded" : "other");
   next = checkTasks(next, content);
-  return content.ai ? next : checkAklat(next, content);
+  return content.ai ? next : applyRenown(state, checkAklat(next, content), content);
 }
 

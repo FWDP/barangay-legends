@@ -3,6 +3,7 @@
 import type { Content, QuestDef } from "../engine/content";
 import type { GameState } from "../engine/game";
 import { currentTask, datuTitle } from "../engine/gawain";
+import { levelTitle } from "../engine/kabantugan";
 import { storyText, type HistoryEntry, type NamedVillager } from "../engine/people";
 import type { Report } from "../engine/region";
 import { costText } from "./format";
@@ -44,6 +45,8 @@ export function historyLine(h: HistoryEntry, content: Content, game: GameText, l
       const what = lv?.unlocks ? fill(game.datu.unlocks[lang], { what: game.datu[lv.unlocks][lang] }) : "";
       return fill(game.datu.news[lang], { level: h.level ?? 1, what }).trim();
     }
+    case "level":
+      return fill(game.level.up[lang], { level: h.level ?? 1 });
     case "aklat":
       return fill(game.aklat.found[lang], { name: content.aklat.find((e) => e.id === h.entry)?.aklat.name[lang] ?? h.entry ?? "" });
     case "event": {
@@ -79,10 +82,20 @@ export function taskNews(done: string, state: GameState, content: Content, game:
   return parts.join(" ");
 }
 
+/** The adviser on a new barangay level: the celebration, the reward, and what it means. */
+export function levelNews(level: number, state: GameState, content: Content, game: GameText, lang: Lang): string {
+  const reward = content.levels.find((l) => l.level === level)?.reward;
+  const parts = [fill(game.level.up[lang], { level })];
+  const what = [reward?.resources ? costText(reward.resources) : "", reward?.title ? reward.title[lang] : ""].filter(Boolean).join(" · ");
+  if (what) parts.push(fill(game.level.reward[lang], { reward: what }));
+  parts.push(fill(game.level.advisor[lang], { barangay: state.barangay.name || "Barangay" }));
+  return parts.join(" ");
+}
+
 /** The datu's name with their title, e.g. "Datu Lakas, Datu ng Ilog". */
 export function datuWithTitle(state: GameState, content: Content, lang: Lang): string {
   const name = state.barangay.datu ? `Datu ${state.barangay.datu}` : "Datu";
-  const title = datuTitle(state, content);
+  const title = levelTitle(state, content) ?? datuTitle(state, content);
   return title ? `${name}, ${title[lang]}` : name;
 }
 

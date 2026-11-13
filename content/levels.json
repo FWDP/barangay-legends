@@ -1,0 +1,188 @@
+{
+  "_comment": "Barangay levels (1-20, from Kabantugan: see rules.json kabantugan.levelAt): the reward for reaching each level (resources, or a cosmetic title for the datu). Playtest guesses; the titles need a native speaker's review.",
+  "levels": [
+    {
+      "level": 2,
+      "reward": {
+        "resources": {
+          "rice": 20,
+          "wood": 20
+        }
+      }
+    },
+    {
+      "level": 3,
+      "reward": {
+        "resources": {
+          "rice": 30,
+          "wood": 30
+        }
+      }
+    },
+    {
+      "level": 4,
+      "reward": {
+        "resources": {
+          "rice": 40,
+          "wood": 40
+        }
+      }
+    },
+    {
+      "level": 5,
+      "reward": {
+        "title": {
+          "en": "Datu of Renown",
+          "fil": "Kilalang Datu"
+        }
+      }
+    },
+    {
+      "level": 6,
+      "reward": {
+        "resources": {
+          "rice": 60,
+          "wood": 60,
+          "gold": 12
+        }
+      }
+    },
+    {
+      "level": 7,
+      "reward": {
+        "resources": {
+          "rice": 70,
+          "wood": 70,
+          "gold": 14
+        }
+      }
+    },
+    {
+      "level": 8,
+      "reward": {
+        "resources": {
+          "rice": 80,
+          "wood": 80,
+          "gold": 16
+        }
+      }
+    },
+    {
+      "level": 9,
+      "reward": {
+        "resources": {
+          "rice": 90,
+          "wood": 90,
+          "gold": 18
+        }
+      }
+    },
+    {
+      "level": 10,
+      "reward": {
+        "title": {
+          "en": "Datu of Many Songs",
+          "fil": "Datu ng Maraming Awit"
+        }
+      }
+    },
+    {
+      "level": 11,
+      "reward": {
+        "resources": {
+          "rice": 110,
+          "wood": 110,
+          "gold": 22
+        }
+      }
+    },
+    {
+      "level": 12,
+      "reward": {
+        "resources": {
+          "rice": 120,
+          "wood": 120,
+          "gold": 24
+        }
+      }
+    },
+    {
+      "level": 13,
+      "reward": {
+        "resources": {
+          "rice": 130,
+          "wood": 130,
+          "gold": 26
+        }
+      }
+    },
+    {
+      "level": 14,
+      "reward": {
+        "resources": {
+          "rice": 140,
+          "wood": 140,
+          "gold": 28
+        }
+      }
+    },
+    {
+      "level": 15,
+      "reward": {
+        "title": {
+          "en": "Datu Remembered by the Islands",
+          "fil": "Datung Inaalala ng mga Pulo"
+        }
+      }
+    },
+    {
+      "level": 16,
+      "reward": {
+        "resources": {
+          "rice": 160,
+          "wood": 160,
+          "gold": 32
+        }
+      }
+    },
+    {
+      "level": 17,
+      "reward": {
+        "resources": {
+          "rice": 170,
+          "wood": 170,
+          "gold": 34
+        }
+      }
+    },
+    {
+      "level": 18,
+      "reward": {
+        "resources": {
+          "rice": 180,
+          "wood": 180,
+          "gold": 36
+        }
+      }
+    },
+    {
+      "level": 19,
+      "reward": {
+        "resources": {
+          "rice": 190,
+          "wood": 190,
+          "gold": 38
+        }
+      }
+    },
+    {
+      "level": 20,
+      "reward": {
+        "title": {
+          "en": "Lakan of Legend",
+          "fil": "Maalamat na Lakan"
+        }
+      }
+    }
+  ]
+}

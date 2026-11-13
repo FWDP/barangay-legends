@@ -11,7 +11,7 @@ import { barangayCenter, isUnlocked, TILE_CODE } from "../engine/map";
 import { neighborDef } from "../engine/region";
 import { storyText, type HistoryEntry } from "../engine/people";
 import type { Lang } from "./settings";
-import { historyLine, taskNews } from "./stories";
+import { historyLine, levelNews, taskNews } from "./stories";
 import { fill, TRIGGERS, TUTORIAL_EVENTS, type AdvisorDef, type GameText, type TriggerId, type TutorialEvent, type TutorialStep } from "./uiContent";
 
 /** Game seconds between two tips. */
@@ -145,6 +145,7 @@ function isNews(h: HistoryEntry, content: Content): boolean {
 /** The adviser's words for a piece of news. */
 export function newsText(h: HistoryEntry, state: GameState, content: Content, game: GameText, lang: Lang): string {
   if (h.kind === "task") return taskNews(h.task ?? "", state, content, game, lang);
+  if (h.kind === "level") return levelNews(h.level ?? 1, state, content, game, lang);
   if (h.kind === "named") return fill(game.news.firstNamed[lang], { story: storyText(content, { name: h.name ?? "", story: h.story ?? "" }, lang) });
   return historyLine(h, content, game, lang);
 }

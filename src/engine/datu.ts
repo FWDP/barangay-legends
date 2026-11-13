@@ -6,6 +6,7 @@
 import { asCost, canAfford, type GameState } from "./game";
 import type { Content, DatuUnlock, ResourceAmounts } from "./content";
 import { addHistory } from "./people";
+import { barangayLevel } from "./kabantugan";
 
 export const datuDef = (content: Content) => content.datuHouse?.datuHouse ?? null;
 
@@ -13,15 +14,22 @@ export const datuDef = (content: Content) => content.datuHouse?.datuHouse ?? nul
 export const maxDatuLevel = (content: Content) => datuDef(content)?.levels.length ?? 1;
 
 /** The next level and what it costs, or null at the top. */
-export function nextDatuLevel(state: GameState, content: Content): { level: number; cost: ResourceAmounts; unlocks?: DatuUnlock } | null {
+export function nextDatuLevel(state: GameState, content: Content): { level: number; cost: ResourceAmounts; unlocks?: DatuUnlock; minBarangayLevel: number } | null {
   const next = datuDef(content)?.levels.find((l) => l.level === state.datuLevel + 1);
-  return next ? { level: next.level, cost: next.cost ?? {}, unlocks: next.unlocks } : null;
+  return next ? { level: next.level, cost: next.cost ?? {}, unlocks: next.unlocks, minBarangayLevel: next.minBarangayLevel ?? 1 } : null;
+}
+
+/** Is the barangay's level too low for the next upgrade? Then the level it needs. */
+export function datuLevelNeeded(state: GameState, content: Content): number | null {
+  const next = nextDatuLevel(state, content);
+  return next && barangayLevel(state, content) < next.minBarangayLevel ? next.minBarangayLevel : null;
 }
 
 /** Raises the Bahay ng Datu one level, if the barangay can pay. Noted in the history (the adviser tells of unlocks). */
 export function upgradeDatu(state: GameState, content: Content): GameState {
   const next = nextDatuLevel(state, content);
-  if (!next) return state;
+  // Each upgrade also needs a minimum barangay level (levels already built stay).
+  if (!next || datuLevelNeeded(state, content) !== null) return state;
   const cost = asCost(next.cost);
   if (!canAfford(state, cost)) return state;
   const resources = { ...state.resources };

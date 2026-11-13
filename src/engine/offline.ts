@@ -18,6 +18,7 @@ import { capGrowth, riceCap } from "./storage";
 import { checkAklat } from "./aklat";
 import { advanceReplanting, afterClearing, updateForest } from "./forest";
 import { passMourning } from "./death";
+import { applyRenown } from "./kabantugan";
 
 /** Neighbors on other islands are stepped once every this many offline steps. */
 const FAR_EVERY = 4;
@@ -108,6 +109,8 @@ export function gentleStep(state: GameState, content: Content, dt: number): Step
   if (!content.ai) s = checkAklat(updateForest(fed > 0 ? advanceReplanting(s, content, dt * fed) : s, content, dt, false), content);
   // Mourning passes while away; nobody dies offline.
   s = passMourning(s, content, dt);
+  // Renown for what was achieved (newcomers, tasks, Aklat entries), and any level reached.
+  if (!content.ai) s = applyRenown(state, s, content);
   s = checkTasks(reconcilePeople(state, s, content), content);
   return { state: s, produced, eaten, hungry: dt * (1 - fed), arrived, recovered, cleared };
 }

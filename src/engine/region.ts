@@ -468,6 +468,7 @@ export function executeTrade(state: GameState, content: Content, id: string, p: 
     [them, player] = moveGoods(them, player, { [p.want.resource]: p.want.amount });
     let next: NeighborState = { ...n, state: them, trust: addTrust(n, t.trust, traitOf(content, id)) };
     if (next.status === "tributary") next = { ...next, loyalty: clamp100(next.loyalty + t.loyalty) };
+    player = { ...player, stats: { ...player.stats, trades: player.stats.trades + 1 } };
     let r = addPath(region, "trade");
     [r, next] = addInfluence(r, next, t.influence * datuInfluenceMultiplier(state, content), content, state.time);
     return [{ ...player, region: r }, next];

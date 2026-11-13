@@ -32,7 +32,8 @@ describe("Bahay ng Datu", () => {
 
   it("is raised level by level for rice, wood and gold, up to 5", () => {
     expect(maxDatuLevel(content)).toBe(5);
-    let s = withState({ resources: rich });
+    // Renown enough for every level the upgrades need.
+    let s = withState({ resources: rich, kabantugan: 100000 });
     for (let level = 2; level <= 5; level++) {
       const next = nextDatuLevel(s, content)!;
       expect(next.level).toBe(level);

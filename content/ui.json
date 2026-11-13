@@ -614,6 +614,14 @@
     "leftYou": {
       "en": "You leave {bloc}.",
       "fil": "Umalis ka sa {bloc}."
+    },
+    "level": {
+      "en": "{barangay} grows in renown.",
+      "fil": "Lumalaki ang bantog ng {barangay}."
+    },
+    "levelYou": {
+      "en": "Your barangay grows in renown.",
+      "fil": "Lumalaki ang bantog ng iyong barangay."
     }
   },
   "alliance": {
@@ -732,6 +740,118 @@
     "list": {
       "en": "Barangays by alliance",
       "fil": "Mga barangay ayon sa alyansa"
+    }
+  },
+  "level": {
+    "badge": {
+      "en": "Lv {level}",
+      "fil": "Antas {level}"
+    },
+    "title": {
+      "en": "Barangay level {level}",
+      "fil": "Antas ng barangay {level}"
+    },
+    "renown": {
+      "en": "Kabantugan {renown}",
+      "fil": "Kabantugan {renown}"
+    },
+    "next": {
+      "en": "{left} more renown to level {level}",
+      "fil": "{left} pang kabantugan para sa antas {level}"
+    },
+    "max": {
+      "en": "The highest level",
+      "fil": "Pinakamataas na antas"
+    },
+    "up": {
+      "en": "Level {level}! The barangay's fame spreads.",
+      "fil": "Antas {level}! Kumakalat ang bantog ng barangay."
+    },
+    "reward": {
+      "en": "Reward: {reward}",
+      "fil": "Gantimpala: {reward}"
+    },
+    "needs": {
+      "en": "Needs barangay level {level}",
+      "fil": "Kailangan ang antas {level} ng barangay"
+    },
+    "advisor": {
+      "en": "Word of {barangay} travels. Other datus will remember this name.",
+      "fil": "Kumakalat ang balita tungkol sa {barangay}. Tatandaan ng ibang datu ang pangalang ito."
+    },
+    "news": {
+      "en": "{barangay} reached level {level}.",
+      "fil": "Umabot sa antas {level} ang {barangay}."
+    }
+  },
+  "visit": {
+    "button": {
+      "en": "Bisitahin",
+      "fil": "Bisitahin"
+    },
+    "back": {
+      "en": "Bumalik",
+      "fil": "Bumalik"
+    },
+    "title": {
+      "en": "Visiting {barangay}",
+      "fil": "Bumibisita sa {barangay}"
+    },
+    "relation": {
+      "en": "Trust {trust} · Grudge {grudge} · Influence {influence}",
+      "fil": "Tiwala {trust} · Sama ng loob {grudge} · Impluwensiya {influence}"
+    },
+    "actions": {
+      "en": "Actions",
+      "fil": "Mga gawain"
+    },
+    "raidPreview": {
+      "en": "Likely landing: the {direction} shore. {cover}",
+      "fil": "Malamang na dadaungan: baybaying {direction}. {cover}"
+    },
+    "covered": {
+      "en": "Their Kuta covers it in full.",
+      "fil": "Buong sakop ito ng kanilang Kuta."
+    },
+    "uncovered": {
+      "en": "No Kuta covers it fully.",
+      "fil": "Walang Kutang buong sumasakop dito."
+    },
+    "confirm": {
+      "en": "Confirm the raid",
+      "fil": "Ituloy ang paglusob"
+    },
+    "preview": {
+      "en": "Plan a raid",
+      "fil": "Magplano ng paglusob"
+    },
+    "cancel": {
+      "en": "Cancel",
+      "fil": "Huwag"
+    },
+    "readOnly": {
+      "en": "You are visiting: nothing here changes unless you act.",
+      "fil": "Bumibisita ka: walang nagbabago rito maliban kung kikilos ka."
+    },
+    "north": {
+      "en": "north",
+      "fil": "hilagang"
+    },
+    "south": {
+      "en": "south",
+      "fil": "timog na"
+    },
+    "east": {
+      "en": "east",
+      "fil": "silangang"
+    },
+    "west": {
+      "en": "west",
+      "fil": "kanlurang"
+    },
+    "ai": {
+      "en": "Seen from the shore: a sketch of their village.",
+      "fil": "Tanaw mula sa pampang: isang larawan ng kanilang nayon."
     }
   }
 }

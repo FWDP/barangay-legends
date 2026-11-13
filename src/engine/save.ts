@@ -34,6 +34,7 @@ import { generateArchipelago, type Island, type Place } from "./archipelago";
 import { generateBlocs, type Politics } from "./politics";
 import { MAX_HISTORY, type HistoryEntry, type HistoryKind, type NamedVillager } from "./people";
 import { forestStage } from "./forest";
+import { levelForRenown, renownFromAchievements } from "./kabantugan";
 import { MAX_REMEMBERED, type Remembered } from "./death";
 
 export const SAVE_KEY = "barangay-legends/save";
@@ -234,6 +235,13 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
     }
     return { ...raw, version: 20, map, balangays: 0, stats: { ...st, voyages: 0 } };
   },
+  // v20 → v21: Kabantugan (renown) and the barangay level. Renown is worked out from what the
+  // save has already achieved (see parseRenown, after the state is read); the levels it already
+  // has count as rewarded, so loading doesn't pay out a pile of past rewards.
+  20: (raw) => {
+    const st = isObject(raw.stats) ? raw.stats : {};
+    return { ...raw, version: 21, kabantugan: null, levelRewarded: null, stats: { ...st, trades: 0, bestTens: null } };
+  },
 };
 
 // ---------- Frozen v15 bridge rule (for the v14 → v15 migration only) ----------
@@ -386,6 +394,22 @@ function parseMap(raw: unknown): MapState | null {
 }
 
 /** Turns saved JSON back into a state. Unknown or broken fields fall back to new-game values. */
+/**
+ * A barangay snapshot (the same serialized format as a save) for the visit screen: read as a
+ * player's barangay, with its tradition and Bahay ng Datu, but without a region of its own.
+ */
+export function parseSnapshot(json: string, content: Content): GameState | null {
+  let raw: unknown;
+  try {
+    raw = JSON.parse(json);
+  } catch {
+    return null;
+  }
+  if (!isObject(raw)) return null;
+  const data = migrate(raw, content);
+  return data ? parseState(data, content, true, false) : null;
+}
+
 export function parseSave(json: string, content: Content): GameState | null {
   let raw: unknown;
   try {
@@ -403,7 +427,7 @@ export function parseSave(json: string, content: Content): GameState | null {
  * Reads one barangay's state from current-version data: the player's (with its region) or
  * an AI neighbor's (without). Returns null if the map is broken.
  */
-function parseState(data: RawSave, content: Content, isPlayer: boolean): GameState | null {
+function parseState(data: RawSave, content: Content, isPlayer: boolean, withRegion = true): GameState | null {
   const map = parseMap(data.map);
   if (!map) return null;
 
@@ -505,17 +529,38 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean): GameSta
   if (isPlayer) parseWorship(data, content, state);
   if (isPlayer) parseDatuAndDeaths(data, content, state);
   if (isPlayer && finiteNonNeg(data.balangays)) state.balangays = Math.floor(data.balangays);
-  if (isPlayer && content.neighbors.length > 0) state.region = parseRegion(data.region, content, state);
+  if (isPlayer && withRegion && content.neighbors.length > 0) state.region = parseRegion(data.region, content, state);
   // A waiting choice event: a known event, and a neighbor that still exists (or none).
   const ch = data.choice;
   if (isPlayer && isObject(ch) && typeof ch.id === "string" && content.choices.some((c) => c.id === ch.id) && finiteNonNeg(ch.at)) {
     const neighbor = typeof ch.neighbor === "string" && state.region?.neighbors.some((n) => n.id === ch.neighbor) ? ch.neighbor : null;
     state.choice = { id: ch.id, neighbor, at: ch.at };
   }
+  if (isPlayer) parseRenown(data, content, state);
   return state;
 }
 
-const HISTORY_KINDS: HistoryKind[] = ["named", "left", "fell", "task", "spirits", "aklat", "event", "died", "frail", "datu"];
+/**
+ * Kabantugan and the levels already rewarded. A save from before renown (null, set by the v21
+ * migration) gets the renown of what it had already achieved, its battle renown included.
+ */
+function parseRenown(data: RawSave, content: Content, state: GameState) {
+  const tens = Math.floor(state.villagers / 10);
+  if (data.kabantugan === null || data.kabantugan === undefined) {
+    const region = isObject(data.region) ? data.region : {};
+    const battle = finiteNonNeg(region.renown) ? region.renown : 0;
+    state.kabantugan = renownFromAchievements(state, content, battle);
+    state.levelRewarded = levelForRenown(content, state.kabantugan);
+    state.stats.bestTens = tens;
+    return;
+  }
+  if (finiteNonNeg(data.kabantugan)) state.kabantugan = data.kabantugan;
+  const level = levelForRenown(content, state.kabantugan);
+  state.levelRewarded = Number.isInteger(data.levelRewarded) ? Math.min(content.rules.kabantugan.levelAt.length + 1, Math.max(1, data.levelRewarded as number)) : level;
+  if (!isObject(data.stats) || !finiteNonNeg((data.stats as RawSave).bestTens)) state.stats.bestTens = tens;
+}
+
+const HISTORY_KINDS: HistoryKind[] = ["named", "left", "fell", "task", "spirits", "aklat", "event", "died", "frail", "datu", "level"];
 const DEATH_CAUSES = ["age", "sickness", "hunger", "raid"];
 const EVENTS = ["eclipseWon", "eclipseLost", "sarimanok", "riddleRight"];
 const isPoint = (v: unknown): v is { x: number; y: number } => isObject(v) && Number.isFinite(v.x) && Number.isFinite(v.y);
@@ -604,6 +649,8 @@ function parsePeople(data: RawSave, content: Content, state: GameState, isPlayer
     permittedClears: count(st.permittedClears),
     deaths: count(st.deaths),
     voyages: count(st.voyages),
+    trades: count(st.trades),
+    bestTens: count(st.bestTens),
   };
   if (!isPlayer) return;
   const quests = new Set(content.quests.map((q) => q.id));
@@ -661,7 +708,7 @@ function parsePeople(data: RawSave, content: Content, state: GameState, isPlayer
             ? !!e.entry
             : e.kind === "event"
               ? !!e.event
-              : e.kind === "datu"
+              : e.kind === "datu" || e.kind === "level"
                 ? e.level !== undefined
                 : e.kind === "died"
                   ? DEATH_CAUSES.includes(e.cause ?? "")

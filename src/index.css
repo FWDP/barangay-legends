@@ -218,6 +218,14 @@
     linear-gradient(180deg, #0284c7, #075985);
 }
 
+/* Sandy beach on land along the sea, with a wet edge. */
+@utility beach-tile {
+  background-color: rgb(233 213 161 / 0.85);
+  background-image:
+    radial-gradient(circle at 30% 40%, rgb(161 128 74 / 0.35) 0 4%, transparent 5%),
+    radial-gradient(circle at 72% 68%, rgb(255 255 255 / 0.35) 0 4%, transparent 5%);
+}
+
 /* Deep forest beyond the edge of the map. */
 @utility forest-ground {
   background-color: #14532d;

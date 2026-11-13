@@ -37,6 +37,10 @@ import { AklatButton, AklatDialog, DambanaDialog, EclipseBar, ForestChip, PrankB
 import { shrines, standingShrine } from "../engine/worship";
 import { canReplant } from "../engine/forest";
 import { isPlaza } from "../engine/map";
+import { villageKey, villageSnapshot } from "../engine/village";
+import { neighborDef } from "../engine/region";
+import { VisitView } from "./VisitView";
+import { LevelChip } from "./LevelBadge";
 
 const ui = loadUiContent(content);
 
@@ -352,7 +356,13 @@ export function App() {
   const [cancelJob, setCancelJob] = useState<{ x: number; y: number } | null>(null);
   const [queueOpen, setQueueOpen] = useState(false);
   const [loreNote, setLoreNote] = useState<string | null>(null);
-  const [view, setView] = useState<"barangay" | "rehiyon">("barangay");
+  const [view, setViewRaw] = useState<"barangay" | "rehiyon">("barangay");
+  // Bisitahin: the barangay being visited, over whichever view it was opened from.
+  const [visiting, setVisiting] = useState<string | null>(null);
+  const setView = (v: "barangay" | "rehiyon") => {
+    setVisiting(null);
+    setViewRaw(v);
+  };
   // Reports already in the save when it loads count as seen.
   const [seenReport, setSeenReport] = useState(() => latestReportId(state));
   const [menu, setMenu] = useState<MenuTarget | null>(null);
@@ -465,6 +475,16 @@ export function App() {
     return () => document.removeEventListener("visibilitychange", onVisibility);
   }, []);
   // The adviser never talks over a battle report or a lore note.
+  // The visited barangay's village: generated from its seed, size and strength, and only made
+  // again when those change noticeably (the key).
+  const visited = visiting ? state.region?.neighbors.find((n) => n.id === visiting) : undefined;
+  const visitKey = visited ? villageKey(content, visited) : "";
+  const visitSnapshot = useMemo(() => {
+    const def = visited && neighborDef(content, visited.id);
+    return visited && def ? villageSnapshot(content, visited, def, state.time) : null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visitKey, content]);
+
   const advisor = useAdvisor(state, content, ui.advisor, {
     lang,
     game: ui.game,
@@ -705,7 +725,7 @@ export function App() {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-green-800 pt-[env(safe-area-inset-top)] text-stone-800">
-      <Hud state={state} content={content} extraChips={<ForestChip state={state} content={content} game={ui.game} lang={lang} />}>
+      <Hud state={state} content={content} level={<LevelChip state={state} content={content} game={ui.game} lang={lang} />} extraChips={<ForestChip state={state} content={content} game={ui.game} lang={lang} />}>
         <span className="hidden sm:block">
           <AklatButton state={state} content={content} game={ui.game} lang={lang} onOpen={() => setAklatOpen(true)} />
         </span>
@@ -771,8 +791,34 @@ export function App() {
       </Hud>
 
       <main className="relative flex min-h-0 flex-1 flex-col">
-        {view === "rehiyon" ? (
-          <RegionView state={state} content={content} dispatch={dispatch} onLore={setLoreNote} game={ui.game} lang={lang} />
+        {visiting && visitSnapshot ? (
+          <VisitView
+            snapshot={visitSnapshot}
+            id={visiting}
+            state={state}
+            content={content}
+            dispatch={dispatch}
+            onLore={setLoreNote}
+            onBack={() => {
+              sfx.click();
+              setView("barangay");
+            }}
+            game={ui.game}
+            lang={lang}
+          />
+        ) : view === "rehiyon" ? (
+          <RegionView
+            state={state}
+            content={content}
+            dispatch={dispatch}
+            onLore={setLoreNote}
+            game={ui.game}
+            lang={lang}
+            onVisit={(id) => {
+              sfx.click();
+              setVisiting(id);
+            }}
+          />
         ) : (
         <BarangayMap
           state={state}
