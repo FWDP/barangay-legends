@@ -1,6 +1,7 @@
 // The barangay map: a seeded, generated world of forest with a winding river, a few old
 // balete trees and a small cleared start around the plaza. The player grows it by clearing
 // forest and bridging the river. Pure and deterministic, like the rest of the engine.
+import { closesPlaza, entrancesBlockedBy, wouldHaveEntrance } from "./doors";
 import type { BuildingDef, Content, GroveBlessing, Resource } from "./content";
 import type { GameState, PlacedBuilding } from "./game";
 import { rollAt, Rng } from "./rng";
@@ -434,7 +435,9 @@ export function canPlace(state: GameState, _content: Content, def: BuildingDef, 
     const { building, radius } = def.requiresNear;
     if (!state.buildings.some((b) => b.type === building && !b.damaged && (b.x - x) ** 2 + (b.y - y) ** 2 <= radius * radius)) return false;
   }
-  return tileAt(state.map, x, y) === "cleared" && !isPlaza(state.map, x, y) && isReachable(state.map, x, y);
+  if (tileAt(state.map, x, y) !== "cleared" || isPlaza(state.map, x, y) || !isReachable(state.map, x, y)) return false;
+  // Never shut every way into a building already there, nor the plaza in.
+  return !closesPlaza(state, _content, x, y) && entrancesBlockedBy(state, _content, x, y).length === 0;
 }
 
 /** Does (x, y) touch one of these terrains on a side (not a corner)? */
@@ -569,6 +572,8 @@ function bestTile(state: GameState, content: Content, def: BuildingDef, area?: {
   const taken = occupancy(state);
   let best: { t: Point; bonus: number; dist: number } | null = null;
   for (const t of validTiles(state, content, def, area)) {
+    // Buildings are solid: only where people can get in (a bridge is walked over).
+    if (!def.bridge && !wouldHaveEntrance(state, content, t.x, t.y)) continue;
     const bonus = adjacencyBonusAt(state.map, taken, def, t.x, t.y);
     const dist = (t.x - plaza.x) ** 2 + (t.y - plaza.y) ** 2;
     if (!best || bonus > best.bonus || (bonus === best.bonus && dist < best.dist)) best = { t, bonus, dist };

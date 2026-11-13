@@ -171,9 +171,9 @@ describe("generated villages for AI barangays", () => {
     const t = pick("trader");
     const a = pick("aggressive");
     const p = pick("peaceful");
-    const tp = villagePlan(content, t.n, t.def, 5);
-    const ap = villagePlan(content, a.n, a.def, 5);
-    const pp = villagePlan(content, p.n, p.def, 5);
+    const tp = villagePlan(content, t.n, t.def, 8);
+    const ap = villagePlan(content, a.n, a.def, 8);
+    const pp = villagePlan(content, p.n, p.def, 8);
     expect(tp["fishing-dock"]).toBeGreaterThan(pp["fishing-dock"]);
     expect(tp["balangay-dock"]).toBe(1);
     expect(ap.kuta).toBeGreaterThan(pp.kuta);

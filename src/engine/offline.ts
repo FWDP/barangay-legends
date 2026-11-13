@@ -20,6 +20,7 @@ import { advanceReplanting, afterClearing, updateForest } from "./forest";
 import { passMourning } from "./death";
 import { applyRenown } from "./kabantugan";
 import { trackRanking } from "./ranking";
+import { updateDoors } from "./doors";
 
 /** Neighbors on other islands are stepped once every this many offline steps. */
 const FAR_EVERY = 4;
@@ -64,7 +65,7 @@ interface StepResult {
  */
 export function gentleStep(state: GameState, content: Content, dt: number): StepResult {
   // No forest reactions offline: the diwata don't withhold rice while the player is away.
-  const r = rates(state, content, { offline: true });
+  const r = rates(state, content, { offline: true, span: dt });
   const resources = { ...state.resources };
   const produced = zero();
   // The share of the step the barangay is fed (workers stop at 0 rice).
@@ -111,6 +112,7 @@ export function gentleStep(state: GameState, content: Content, dt: number): Step
   // Mourning passes while away; nobody dies offline.
   s = passMourning(s, content, dt);
   // Renown for what was achieved (newcomers, tasks, Aklat entries), and any level reached.
+  s = updateDoors(state, s, content);
   if (!content.ai) s = trackRanking(state, applyRenown(state, s, content), content);
   s = checkTasks(reconcilePeople(state, s, content), content);
   return { state: s, produced, eaten, hungry: dt * (1 - fed), arrived, recovered, cleared };

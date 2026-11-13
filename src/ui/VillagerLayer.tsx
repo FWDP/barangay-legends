@@ -10,7 +10,8 @@ import type { NamedVillager } from "../engine/people";
 import { isNightAt } from "../engine/daynight";
 import { origin, type Camera, type View } from "./camera";
 import {
-  destination,
+  carriesTorch,
+  goal,
   edgeTile,
   exitPoint,
   MAX_SPRITES,
@@ -48,6 +49,7 @@ import {
 import { hasDatuUnlock } from "../engine/datu";
 import { alliedDefenders } from "../engine/region";
 import { raidLanding } from "../engine/border";
+import { solidTiles } from "../engine/doors";
 
 /** A battle at the Kuta being shown right now (see App): who won, and when it ends (ms). */
 export interface Clash {
@@ -91,6 +93,8 @@ interface Sprite {
 /** A villager on screen: where they are and the route they're walking (display only). */
 interface Villager extends Sprite {
   walker: Walker;
+  /** 1 when outside; fades to 0 going in a doorway, back to 1 coming out. */
+  alpha?: number;
 }
 
 interface Leaver extends Villager {
@@ -162,13 +166,35 @@ function drawStar(g: CanvasRenderingContext2D, x: number, y: number, tile: numbe
   g.stroke();
 }
 
-function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, tile: number, id: number, role: Look, sprite: Sprite, t: number) {
+/** A small torch held up beside a villager, flickering gently (still with reduced motion). */
+function drawTorch(g: CanvasRenderingContext2D, x: number, y: number, tile: number, t: number, still: boolean) {
+  const s = Math.max(7, tile * 0.32);
+  const hx = x + s * 0.28;
+  const top = y - s * 1.05;
+  g.strokeStyle = "#5b3a1e";
+  g.lineWidth = Math.max(1, s * 0.08);
+  g.beginPath();
+  g.moveTo(hx, y - s * 0.45);
+  g.lineTo(hx, top);
+  g.stroke();
+  const f = still ? 1 : 1 + 0.15 * Math.sin(t * 11 + x);
+  g.fillStyle = "#fbbf24";
+  g.beginPath();
+  g.ellipse(hx, top - s * 0.1 * f, s * 0.09, s * 0.16 * f, 0, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = "#fde68a";
+  g.beginPath();
+  g.ellipse(hx, top - s * 0.05, s * 0.045, s * 0.08, 0, 0, Math.PI * 2);
+  g.fill();
+}
+
+function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, tile: number, id: number, role: Look, sprite: Sprite, t: number, alpha = 1) {
   const s = Math.max(7, tile * 0.32);
   const swing = sprite.moving ? Math.sin(sprite.stride) * s * 0.12 : 0;
   // Workers busy at their post bob a little.
   const bob = !sprite.moving && role === "work" ? Math.abs(Math.sin(t * 5 + id)) * s * 0.05 : 0;
   const sick = role === "sick";
-  g.globalAlpha = sick ? 0.85 : 1;
+  g.globalAlpha = (sick ? 0.85 : 1) * alpha;
 
   g.fillStyle = "rgb(0 0 0 / 0.25)";
   g.beginPath();
@@ -384,8 +410,10 @@ export function VillagerLayer(props: {
   clash?: Clash | null;
   /** Set to a hit test for the named villagers as they're drawn. */
   hitRef?: { current: NamedHit | null };
+  /** Filled with the villagers carrying torches at night (tile coordinates), for the night's lights. */
+  torches?: { current: Point[] };
 }) {
-  const { state, content, cam, view, reducedMotion, clash = null, hitRef } = props;
+  const { state, content, cam, view, reducedMotion, clash = null, hitRef, torches } = props;
   const canvas = useRef<HTMLCanvasElement>(null);
   const latest = useRef({ state, cam, view, clash });
   latest.current = { state, cam, view, clash };
@@ -468,9 +496,13 @@ export function VillagerLayer(props: {
       }
       const { plans, named } = planned.current;
       const spots: { x: number; y: number; v: NamedVillager }[] = [];
-      // The tint only cycles with motion on, so with reduced motion it is always day.
-      // The game's own night (rules.dayNight), the same clock as the map's tint.
-      const night = !reducedMotion && isNightAt(content, s.time);
+      // The game's own night (rules.dayNight), the same clock as the map's tint. Each villager
+      // keeps their own moment (a few seconds apart), so they don't all head home at once.
+      const nightFor = (id: number) => isNightAt(content, s.time + ((id * 7919) % 17) - 8);
+      const night = isNightAt(content, s.time);
+      // Buildings are solid: routes go around them to the doorways.
+      const blocked = solidTiles(s, content);
+      const lit: Point[] = [];
       const hungry = isHungry(s);
       const roadSpeed = content.rules.roads.walkSpeedPercent / 100;
       const visible = (p: Point) => {
@@ -662,7 +694,8 @@ export function VillagerLayer(props: {
       const seen = new Set<number>();
       for (const plan of plans) {
         seen.add(plan.id);
-        const to = destination(plan, t, night, s.map.plaza, hungry);
+        const target = goal(plan, t, nightFor(plan.id), s.map.plaza, hungry);
+        const to = target.p;
         let sp = sprites.current.get(plan.id);
         if (!sp) {
           // On first draw everyone is already in place; later arrivals walk in from the map's edge.
@@ -676,16 +709,24 @@ export function VillagerLayer(props: {
           sp.moving = false;
         } else {
           // Along the A* route: on land and bridges only, faster on Daan.
-          sp.walker = stepWalker({ ...sp.walker, p: sp.p }, to, s.map, SPEED[plan.role], dt, roadSpeed);
+          sp.walker = stepWalker({ ...sp.walker, p: sp.p }, to, s.map, SPEED[plan.role], dt, roadSpeed, blocked);
           sp.p = sp.walker.p;
           sp.moving = sp.walker.moving;
           if (sp.moving) sp.stride += dt * 9 * (SPEED[plan.role] / SPEED.work);
         }
-        // At night, villagers who reached home are indoors.
-        if (night && !sp.moving && plan.role !== "warrior") continue;
+        // Going in: they fade into the doorway once there; coming out, they fade back in.
+        const goingIn = target.inside && !sp.moving;
+        const fade = reducedMotion ? 1 : dt / 0.45;
+        sp.alpha = Math.min(1, Math.max(0, (sp.alpha ?? (goingIn ? 0 : 1)) + (goingIn ? -fade : fade)));
+        if (sp.alpha <= 0) continue;
+        if (sp.alpha < 1) animating = true;
+        // A few carry torches when out in the dark.
+        if (night && carriesTorch(plan) && !goingIn) lit.push({ x: sp.p.x, y: sp.p.y - 0.25 });
         const at = visible(sp.p);
         if (!at) continue;
         const sprite = sp;
+        const alpha = sp.alpha;
+        const torch = night && carriesTorch(plan) && !goingIn;
         // Walking legs, or a worker bobbing at their post.
         if (!reducedMotion && (sp.moving || plan.role === "work")) animating = true;
         const who = named.get(plan.id);
@@ -693,13 +734,15 @@ export function VillagerLayer(props: {
           x: at.x,
           y: at.y,
           f: () => {
-            drawPerson(g, at.x, at.y, T, plan.id, plan.role, sprite, t);
+            drawPerson(g, at.x, at.y, T, plan.id, plan.role, sprite, t, alpha);
+            if (torch) drawTorch(g, at.x, at.y, T, t, reducedMotion);
             if (who) drawStar(g, at.x, at.y, T);
           },
         });
         if (who) spots.push({ x: at.x, y: at.y, v: who });
       }
       for (const id of sprites.current.keys()) if (!seen.has(id)) sprites.current.delete(id);
+      if (torches) torches.current = lit;
       if (hitRef) {
         const r = Math.max(10, T * 0.4);
         hitRef.current = (x, y) => {
@@ -717,7 +760,7 @@ export function VillagerLayer(props: {
         // Walk to the edge tile over land, then step off the map.
         const edge = edgeTile(s.map, l.to);
         const atEdge = Math.floor(l.p.x) === edge.x && Math.floor(l.p.y) === edge.y;
-        l.walker = stepWalker({ ...l.walker, p: l.p }, atEdge ? l.to : { x: edge.x + 0.5, y: edge.y + 0.5 }, s.map, SPEED.leaving, dt, roadSpeed);
+        l.walker = stepWalker({ ...l.walker, p: l.p }, atEdge ? l.to : { x: edge.x + 0.5, y: edge.y + 0.5 }, s.map, SPEED.leaving, dt, roadSpeed, blocked);
         if (atEdge && !l.walker.route.length && Math.hypot(l.p.x - l.to.x, l.p.y - l.to.y) > 0.01) {
           // Off the map: plain steps (the route planner only knows tiles on the map).
           const d = Math.hypot(l.to.x - l.p.x, l.to.y - l.p.y);
@@ -746,7 +789,7 @@ export function VillagerLayer(props: {
           d0.p = to;
           d0.moving = false;
         } else {
-          d0.walker = stepWalker({ ...d0.walker, p: d0.p }, to, s.map, SPEED.idle, dt, roadSpeed);
+          d0.walker = stepWalker({ ...d0.walker, p: d0.p }, to, s.map, SPEED.idle, dt, roadSpeed, blocked);
           d0.p = d0.walker.p;
           d0.moving = d0.walker.moving;
           if (d0.moving) {
@@ -769,7 +812,7 @@ export function VillagerLayer(props: {
           const to = { x: plaza.x + 0.25 + i * 0.5, y: plaza.y + 1.1 };
           if (reducedMotion) w.p = to;
           else {
-            w.walker = stepWalker({ ...w.walker, p: w.p }, to, s.map, SPEED.work, dt, roadSpeed);
+            w.walker = stepWalker({ ...w.walker, p: w.p }, to, s.map, SPEED.work, dt, roadSpeed, blocked);
             w.p = w.walker.p;
             w.moving = w.walker.moving;
             if (w.moving) {

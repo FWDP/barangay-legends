@@ -65,7 +65,7 @@ const DIRS = [
  * included), or null if there is none (the river is in the way and there's no bridge).
  * The start and goal may be any tile on the map; only the tiles in between must be walkable.
  */
-export function findPath(map: MapState, from: Point, to: Point): Point[] | null {
+export function findPath(map: MapState, from: Point, to: Point, blocked?: Uint8Array): Point[] | null {
   if (!inBounds(map, from.x, from.y) || !inBounds(map, to.x, to.y)) return null;
   const W = map.width;
   const start = from.y * W + from.x;
@@ -89,7 +89,8 @@ export function findPath(map: MapState, from: Point, to: Point): Point[] | null 
       if (!inBounds(map, nx, ny)) continue;
       const j = ny * W + nx;
       const step = j === goal ? (STEP_COST[map.tiles[j]] ?? 1) : STEP_COST[map.tiles[j]];
-      if (step === undefined) continue;
+      // Buildings are solid (doors.ts): walked around, except the goal itself.
+      if (step === undefined || (blocked && blocked[j] && j !== goal)) continue;
       const c = cost[i] + step;
       if (c < cost[j]) {
         cost[j] = c;
@@ -105,15 +106,24 @@ export function findPath(map: MapState, from: Point, to: Point): Point[] | null 
 }
 
 const caches = new WeakMap<MapState, Map<number, Point[] | null>>();
+const blockedCaches = new WeakMap<Uint8Array, WeakMap<MapState, Map<number, Point[] | null>>>();
 
 /**
  * findPath with a cache per map. Maps are never changed in place: a new map (land cleared,
  * a bridge or Daan built or removed) gets a fresh cache, so cached paths are always current.
  */
-export function cachedPath(map: MapState, from: Point, to: Point): Point[] | null {
-  let cache = caches.get(map);
-  if (!cache) caches.set(map, (cache = new Map()));
+export function cachedPath(map: MapState, from: Point, to: Point, blocked?: Uint8Array): Point[] | null {
+  let cache: Map<number, Point[] | null> | undefined;
+  if (blocked) {
+    let byMap = blockedCaches.get(blocked);
+    if (!byMap) blockedCaches.set(blocked, (byMap = new WeakMap()));
+    cache = byMap.get(map);
+    if (!cache) byMap.set(map, (cache = new Map()));
+  } else {
+    cache = caches.get(map);
+    if (!cache) caches.set(map, (cache = new Map()));
+  }
   const key = (from.y * map.width + from.x) * map.width * map.height + (to.y * map.width + to.x);
-  if (!cache.has(key)) cache.set(key, findPath(map, from, to));
+  if (!cache.has(key)) cache.set(key, findPath(map, from, to, blocked));
   return cache.get(key)!;
 }

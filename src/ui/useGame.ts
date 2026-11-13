@@ -95,6 +95,12 @@ export function useGame(running = true) {
     clearSave();
     setState(newGame(content, newSeed()));
   }, []);
+  /** An imported game replaces the current one, and is saved at once. */
+  const replaceGame = useCallback((next: GameState) => {
+    latest.current = next;
+    setState(next);
+    save(next);
+  }, []);
   /** A fresh barangay with the names the player chose, replacing any save. */
   const startNew = useCallback((names: { name?: string; datu?: string }) => {
     clearSave();
@@ -117,5 +123,5 @@ export function useGame(running = true) {
     return { before, after, report };
   }, [savedAt]);
 
-  return { state, dispatch, onReset, startNew, hasSave, continueGame };
+  return { state, dispatch, onReset, startNew, hasSave, continueGame, replaceGame };
 }

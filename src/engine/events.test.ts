@@ -164,7 +164,7 @@ describe("Sunog (fire)", () => {
     const always = withEvents({ fire: { chancePerSecond: 1 } }, calm);
     const s = withState({ resources: fed, buildings: [at("bahay-kubo", 5, 3), at("palayan", 2, 6)] });
     expect(burning(run(s, 299, always))).toHaveLength(0);
-    expect(burning(run(s, 300.5, always))).toEqual([{ ...at("bahay-kubo", 5, 3), burningSince: 300 }]);
+    expect(burning(run(s, 300.5, always))).toMatchObject([{ ...at("bahay-kubo", 5, 3), burningSince: 300 }]);
   });
 
   it("spreads to adjacent bahay kubo after a while, and only to them", () => {

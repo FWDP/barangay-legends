@@ -3,7 +3,7 @@ import { apply, tick, type GameState } from "./game";
 import { offlineProgress } from "./offline";
 import { createRegion, marriageBlocker, type NeighborState } from "./region";
 import { parseSave } from "./save";
-import { calm, content, withState } from "./testUtils";
+import { acquainted, calm, content, withState } from "./testUtils";
 import { decideTrade, fairnessNeeded, giftValue, isEmbargo, refusalText, type Proposal } from "./trading";
 
 const d = content.rules.diplomacy;
@@ -12,7 +12,7 @@ const td = d.tradeDecision;
 
 function world(patch: Partial<GameState> = {}): GameState {
   const s = withState({ resources: { rice: 2000, wood: 2000, gold: 0 }, villagers: 20, buildings: [], ...patch });
-  return { ...s, region: patch.region ?? createRegion(calm, s.time, 7) };
+  return { ...s, region: patch.region ?? acquainted(createRegion(calm, s.time, 7)) };
 }
 const nb = (s: GameState, id: string) => s.region!.neighbors.find((n) => n.id === id)!;
 const setNb = (s: GameState, id: string, patch: Partial<NeighborState>): GameState => ({
@@ -155,7 +155,7 @@ describe("embargo", () => {
   });
 
   it("sends no offers during an embargo, and fewer with a grudge", () => {
-    const offers = { ...calm, rules: { ...calm.rules, diplomacy: { ...d, offers: { ...d.offers, chancePerSecond: 1 } } } };
+    const offers = { ...calm, rules: { ...calm.rules, diplomacy: { ...d, offers: { ...d.offers, chancePerSecond: 1, startsAfterSeconds: 0 } } } };
     let s = world();
     for (const n of s.region!.neighbors) s = setNb(s, n.id, { grudge: g.embargoAt + 30, trust: 80 });
     expect(tick(s, offers, 10).region!.offer).toBeNull();

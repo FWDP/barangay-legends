@@ -43,6 +43,11 @@ import { VisitView } from "./VisitView";
 import { LevelChip } from "./LevelBadge";
 import { localRanking, RankingDialog } from "./Ranking";
 import { Celebration } from "./Celebration";
+import { ReportDialog as ProblemReportDialog, SaveDialog } from "./SaveTools";
+import { fill } from "./uiContent";
+import { VERSION_TEXT } from "./version";
+import { arawText, DayChip } from "./Days";
+import { DevPanel, devMode } from "./DevPanel";
 
 const ui = loadUiContent(content);
 
@@ -349,7 +354,7 @@ export function App() {
   const [screen, setScreen] = useState<"title" | "game">("title");
   // The "While you were away" story pauses the game, so its warnings don't run while the player reads.
   const [away, setAway] = useState<string[] | null>(null);
-  const { state, dispatch, onReset, startNew, hasSave, continueGame } = useGame(screen === "game" && away === null);
+  const { state, dispatch, onReset, startNew, hasSave, continueGame, replaceGame } = useGame(screen === "game" && away === null);
   const [muted, setMutedState] = useState(isMuted);
   const [selected, setSelected] = useState<string | null>(null);
   // Forest tiles picked for clearing (in working order), and the dialogs that go with it.
@@ -380,6 +385,11 @@ export function App() {
   const [dambanaOpen, setDambanaOpen] = useState(false);
   const [aklatOpen, setAklatOpen] = useState(false);
   const [rankOpen, setRankOpen] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
+  // The dev panel (?dev=1 only) and its "whole map" camera.
+  const [dev] = useState(devMode);
+  const [wholeMap, setWholeMap] = useState(0);
+  const [reportOpen, setReportOpen] = useState(false);
   const [ritual, setRitual] = useState<{ x: number; y: number; icon: string } | null>(null);
   const [replantAsk, setReplantAsk] = useState<{ x: number; y: number } | null>(null);
   // The Bahay ng Datu, and the Libingan's list of the remembered.
@@ -740,7 +750,8 @@ export function App() {
               setRankOpen(true);
             }}
           />
-        } extraChips={<ForestChip state={state} content={content} game={ui.game} lang={lang} />}>
+        }
+        day={<DayChip state={state} content={content} game={ui.game} lang={lang} className="hidden sm:flex" />} extraChips={<ForestChip state={state} content={content} game={ui.game} lang={lang} />}>
         <span className="hidden sm:block">
           <AklatButton state={state} content={content} game={ui.game} lang={lang} onOpen={() => setAklatOpen(true)} />
         </span>
@@ -794,6 +805,8 @@ export function App() {
             label: ui.help[lang].ui.title,
             onHelp: () => setHelpOpen(true),
           }}
+          tools={{ saveLabel: ui.game.save.button[lang], onSave: () => setSaveOpen(true), reportLabel: ui.game.report.button[lang], onReport: () => setReportOpen(true) }}
+          version={fill(ui.game.version.label[lang], { version: VERSION_TEXT })}
           share={{
             label: ui.game.share.button[lang],
             onShare: () => {
@@ -876,6 +889,9 @@ export function App() {
                 }
               : null
           }
+          blockedLabel={(building) => fill(ui.game.doors.blocked[lang], { building })}
+          wholeMap={wholeMap}
+          plazaLabel={ui.game.doors.plaza[lang]}
           tradeHeld={tradeHeld}
           ritual={ritual}
           onSarimanok={() => {
@@ -890,6 +906,7 @@ export function App() {
         )}
         <LoreToast loreId={loreNote} onClose={closeLore} />
         {view === "barangay" && <MapSeasonBadge state={state} content={content}>
+          <DayChip state={state} content={content} game={ui.game} lang={lang} compact className="flex bg-stone-900/50" />
           <span className="rounded-lg bg-stone-900/50">
             <ForestChip state={state} content={content} game={ui.game} lang={lang} />
           </span>
@@ -1132,7 +1149,33 @@ export function App() {
         onRitual={playRitual}
         onClose={() => setDambanaOpen(false)}
       />
-      <RankingDialog open={rankOpen} entries={rankOpen ? localRanking(state, content, ui.game, lang) : []} game={ui.game} lang={lang} onClose={() => setRankOpen(false)} />
+      <SaveDialog
+        open={saveOpen}
+        state={state}
+        content={content}
+        game={ui.game}
+        lang={lang}
+        onReplace={(s) => {
+          replaceGame(s);
+          setVisiting(null);
+          setViewRaw("barangay");
+          spawnFloat(window.innerWidth / 2, 80, ui.game.save.loaded[lang], "info");
+        }}
+        onClose={() => setSaveOpen(false)}
+      />
+      {dev && (
+        <DevPanel
+          state={state}
+          content={content}
+          dispatch={dispatch}
+          onWholeMap={() => {
+            setView("barangay");
+            setWholeMap((n) => n + 1);
+          }}
+        />
+      )}
+      <ProblemReportDialog open={reportOpen} state={state} content={content} game={ui.game} lang={lang} onClose={() => setReportOpen(false)} />
+      <RankingDialog open={rankOpen} entries={rankOpen ? localRanking(state, content, ui.game, lang) : []} asOf={arawText(state, content, ui.game, lang)} game={ui.game} lang={lang} onClose={() => setRankOpen(false)} />
       <Celebration state={state} game={ui.game} lang={lang} />
       <AklatDialog open={aklatOpen} state={state} content={content} game={ui.game} lang={lang} onClose={() => setAklatOpen(false)} />
       <ClearingQueueDialog

@@ -39,7 +39,7 @@ describe("Fishing Dock", () => {
     expect(canPlace(s, content, dock, 1, 2)).toBe(true);
     expect(canPlace(s, content, dock, 2, 2)).toBe(false);
     const built = apply({ ...s, resources: { rice: 100, wood: 100, gold: 0 } }, calm, { type: "build", building: "fishing-dock", x: 1, y: 2 });
-    expect(built.buildings.at(-1)).toEqual(at("fishing-dock", 1, 2));
+    expect(built.buildings.at(-1)).toMatchObject(at("fishing-dock", 1, 2));
     const refused = { ...s, resources: { rice: 100, wood: 100, gold: 0 } };
     expect(apply(refused, calm, { type: "build", building: "fishing-dock", x: 3, y: 2 })).toBe(refused);
   });

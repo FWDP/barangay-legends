@@ -129,7 +129,8 @@
       "chancePerSecond": 0.004,
       "expireSeconds": 60,
       "give": 20,
-      "receivePercent": 110
+      "receivePercent": 110,
+      "startsAfterSeconds": 240
     },
     "aiDecisionSeconds": 20,
     "traits": {
@@ -211,7 +212,8 @@
       "raids": "{datu} remembers your raids.",
       "unfair": "This trade is unfair to us.",
       "short": "We don't have that much {resource} to give.",
-      "alliance": "{datu} will not bind our people to raiders. Make peace first."
+      "alliance": "{datu} will not bind our people to raiders. Make peace first.",
+      "tired": "We traded with you only this morning. Come back another day."
     }
   },
   "choices": {
@@ -258,7 +260,8 @@
   "dayNight": {
     "daySeconds": 240,
     "nightFrom": 0.55,
-    "nightTo": 0.88
+    "nightTo": 0.88,
+    "nightProductionFactor": 0.6
   },
   "worship": {
     "offeringValues": {
@@ -387,6 +390,102 @@
       1700,
       1890,
       2090
+    ]
+  },
+  "limits": {
+    "_comment": "Anti-spam (engine/limits.ts). A trade's trust, influence and loyalty are scaled by its value (full at tradeValueFull, at most tradeValueMax times). dailyReturns: what the 1st, 2nd, 3rd, 4th+ trade, Handog or raid with the same barangay on the same day is worth. After fatigueCounterAt trades in a day they want fatigueFairness more; from fatigueRefuseAt they refuse. Marriage needs marriageMinDays since first contact; sandugo needs a marriage or sandugoMinDays. Playtest guesses.",
+    "tradeValueFull": 20,
+    "tradeValueMax": 2,
+    "dailyReturns": [
+      1,
+      0.5,
+      0.2,
+      0.05
+    ],
+    "fatigueCounterAt": 3,
+    "fatigueRefuseAt": 5,
+    "fatigueFairness": 0.25,
+    "marriageMinDays": 3,
+    "sandugoMinDays": 8
+  },
+  "villages": {
+    "_comment": "Generated villages of AI barangays (engine/village.ts), by barangay level: each band applies from minLevel. datuLevel: the Bahay ng Datu drawn; clearRadius: cleared land around the plaza; maxBuildings: at most this many buildings; the counts are the least of each kind (size and trait can add more: traders get an extra field and dock, aggressive barangays an extra Kuta). roads: Daan from the plaza to the workplaces; plazaRing: a paved Daan ring around the plaza; housePaths: houses that get their own Daan. Playtest guesses.",
+    "bands": [
+      {
+        "minLevel": 1,
+        "datuLevel": 1,
+        "clearRadius": 3,
+        "maxBuildings": 8,
+        "kuta": 0,
+        "kamalig": 0,
+        "fishingDocks": 0,
+        "shrine": false,
+        "libingan": false,
+        "balangayDock": false,
+        "roads": false,
+        "plazaRing": false,
+        "housePaths": 0
+      },
+      {
+        "minLevel": 4,
+        "datuLevel": 2,
+        "clearRadius": 5,
+        "maxBuildings": 15,
+        "kuta": 1,
+        "kamalig": 1,
+        "fishingDocks": 0,
+        "shrine": true,
+        "libingan": false,
+        "balangayDock": false,
+        "roads": true,
+        "plazaRing": false,
+        "housePaths": 1
+      },
+      {
+        "minLevel": 8,
+        "datuLevel": 3,
+        "clearRadius": 7,
+        "maxBuildings": 22,
+        "kuta": 2,
+        "kamalig": 1,
+        "fishingDocks": 1,
+        "shrine": true,
+        "libingan": true,
+        "balangayDock": false,
+        "roads": true,
+        "plazaRing": true,
+        "housePaths": 3
+      },
+      {
+        "minLevel": 12,
+        "datuLevel": 4,
+        "clearRadius": 8,
+        "maxBuildings": 30,
+        "kuta": 3,
+        "kamalig": 2,
+        "fishingDocks": 1,
+        "shrine": true,
+        "libingan": true,
+        "balangayDock": true,
+        "roads": true,
+        "plazaRing": true,
+        "housePaths": 5
+      },
+      {
+        "minLevel": 16,
+        "datuLevel": 5,
+        "clearRadius": 10,
+        "maxBuildings": 40,
+        "kuta": 4,
+        "kamalig": 2,
+        "fishingDocks": 2,
+        "shrine": true,
+        "libingan": true,
+        "balangayDock": true,
+        "roads": true,
+        "plazaRing": true,
+        "housePaths": 8
+      }
     ]
   }
 }

@@ -108,7 +108,7 @@ describe("commands", () => {
       { type: "build", building: "palayan", x: 1, y: 6 },
     ];
     const s = commands.reduce((st, c) => apply(st, content, c), withState({}));
-    expect(s.buildings).toContainEqual(at("palayan", 1, 6));
+    expect(s.buildings).toContainEqual(expect.objectContaining(at("palayan", 1, 6)));
     expect(s.resources.wood).toBe(0);
   });
 

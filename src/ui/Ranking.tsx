@@ -61,8 +61,8 @@ export function localRanking(state: GameState, content: Content, game: GameText,
 const TAB_ICON: Record<RankTab, string> = { renown: "⭐", defended: "🛡️", aklat: "📖" };
 
 /** The ranking, from any list of entries. */
-export function RankingPanel(props: { entries: RankEntry[]; game: GameText; lang: Lang; tab?: RankTab }) {
-  const { entries, game, lang } = props;
+export function RankingPanel(props: { entries: RankEntry[]; game: GameText; lang: Lang; tab?: RankTab; /** When the ranking stands, e.g. "Araw 12". */ asOf?: string }) {
+  const { entries, game, lang, asOf } = props;
   const t = game.rank;
   const [tab, setTab] = useState<RankTab>(props.tab ?? "renown");
   const ranked = rankEntries(entries, tab);
@@ -89,7 +89,10 @@ export function RankingPanel(props: { entries: RankEntry[]; game: GameText; lang
           </button>
         ))}
       </div>
-      <p className="text-[11px] text-stone-600">{hint[lang]}</p>
+      <p className="text-[11px] text-stone-600">
+        {asOf && <span className="font-semibold text-amber-900">{asOf} · </span>}
+        {hint[lang]}
+      </p>
       {pass && (
         <p className="rounded-lg bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-900">
           ⬆️ {fill(t.toPass[lang], { n: pass.need, datu: pass.above.datu })}
@@ -133,8 +136,8 @@ export function RankingPanel(props: { entries: RankEntry[]; game: GameText; lang
 }
 
 /** The Ranggo as a dialog. */
-export function RankingDialog(props: { open: boolean; entries: RankEntry[]; game: GameText; lang: Lang; onClose: () => void }) {
-  const { open, entries, game, lang, onClose } = props;
+export function RankingDialog(props: { open: boolean; entries: RankEntry[]; game: GameText; lang: Lang; onClose: () => void; asOf?: string }) {
+  const { open, entries, game, lang, onClose, asOf } = props;
   const dialog = useModal(open);
   return (
     <dialog
@@ -154,7 +157,7 @@ export function RankingDialog(props: { open: boolean; entries: RankEntry[]; game
               {game.rank.close[lang]}
             </button>
           </div>
-          <RankingPanel entries={entries} game={game} lang={lang} />
+          <RankingPanel entries={entries} game={game} lang={lang} asOf={asOf} />
         </div>
       )}
     </dialog>

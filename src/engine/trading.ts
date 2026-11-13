@@ -1,6 +1,7 @@
 // Trading with AI barangays: whether they take a proposed trade, counter it or refuse it, and
 // peace gifts (Handog). Plain, deterministic functions, so later code (and a server) can reuse
 // them. Close calls use the seeded RNG in GameState; nothing else here is random.
+import { counted, dailyFactor, metNow, tradeFatigue } from "./limits";
 import { RESOURCES, type Content, type RefusalReason, type Resource } from "./content";
 import type { GameState } from "./game";
 import { executeTrade, traitOf, tradingPaused, type NeighborState } from "./region";
@@ -60,12 +61,14 @@ export function validProposal(p: Proposal, content: Content): boolean {
  * gets a counter-offer (they give less); one far short, or anything during an embargo, is
  * refused, with the reason.
  */
-export function decideTrade(n: NeighborState, content: Content, p: Proposal, roll: number): TradeDecision {
+export function decideTrade(n: NeighborState, content: Content, p: Proposal, roll: number, fatigue: "counter" | "refuse" | null = null): TradeDecision {
   const td = content.rules.diplomacy.tradeDecision;
   const g = content.rules.diplomacy.grudge;
   if (isEmbargo(n, content)) return { outcome: "refuse", reason: "embargo" };
+  // Offered trades too often today: they've had enough.
+  if (fatigue === "refuse") return { outcome: "refuse", reason: "tired" };
   if (n.state.resources[p.want.resource] < p.want.amount) return { outcome: "refuse", reason: "short" };
-  const need = fairnessNeeded(n, content);
+  const need = fairnessNeeded(n, content) + (fatigue === "counter" ? content.rules.limits.fatigueFairness : 0);
   const margin = fairness(p, content) - need;
   if (margin >= td.closeBand) return { outcome: "accept" };
   if (margin > -td.closeBand && roll < (margin + td.closeBand) / (2 * td.closeBand)) return { outcome: "accept" };
@@ -78,8 +81,8 @@ export function decideTrade(n: NeighborState, content: Content, p: Proposal, rol
 }
 
 /** Is a margin close enough that the seeded roll decides? */
-function isClose(n: NeighborState, content: Content, p: Proposal): boolean {
-  const margin = fairness(p, content) - fairnessNeeded(n, content);
+function isClose(n: NeighborState, content: Content, p: Proposal, fatigue: "counter" | "refuse" | null = null): boolean {
+  const margin = fairness(p, content) - fairnessNeeded(n, content) - (fatigue === "counter" ? content.rules.limits.fatigueFairness : 0);
   return Math.abs(margin) < content.rules.diplomacy.tradeDecision.closeBand;
 }
 
@@ -100,12 +103,13 @@ export function proposeTrade(state: GameState, content: Content, id: string, p: 
   // Only a close call draws on the seeded RNG, so ordinary trades don't shift other rolls.
   let s = state;
   let roll = 0;
-  if (!isEmbargo(n, content) && isClose(n, content, p)) {
+  const fatigue = tradeFatigue(state, content, n);
+  if (!isEmbargo(n, content) && isClose(n, content, p, fatigue)) {
     const rng = new Rng(state.rng);
     roll = rng.next();
     s = { ...s, rng: rng.seed };
   }
-  const decision = decideTrade(n, content, p, roll);
+  const decision = decideTrade(n, content, p, roll, fatigue);
   if (decision.outcome === "accept") {
     const done = executeTrade(s, content, id, p);
     return setNeighbor(done, id, (x) => ({ ...x, lastRefusal: null }));
@@ -114,7 +118,8 @@ export function proposeTrade(state: GameState, content: Content, id: string, p: 
     const counter: CounterOffer = { neighbor: id, give: p.give, want: { ...p.want, amount: decision.want }, expiresAt: state.time + content.rules.diplomacy.tradeDecision.counterSeconds };
     return { ...s, region: { ...s.region!, counter } };
   }
-  return setNeighbor(s, id, (x) => ({ ...x, lastRefusal: { reason: decision.reason, at: state.time } }));
+  // Even a refusal is contact.
+  return setNeighbor(s, id, (x) => ({ ...metNow(state, x), lastRefusal: { reason: decision.reason, at: state.time } }));
 }
 
 /** The player takes the counter-offer (while it lasts and both sides still have the goods). */
@@ -154,11 +159,13 @@ export function handog(state: GameState, content: Content, id: string, gift: Par
     theirs[r] += clean[r];
   }
   const s = { ...state, resources };
+  // Another gift the same day counts for less.
+  const f = dailyFactor(state, content, n, "gifts");
   return setNeighbor(s, id, (x) => ({
-    ...x,
+    ...counted(state, content, x, "gifts"),
     state: { ...x.state, resources: theirs },
-    grudge: clamp100(x.grudge - v * h.grudgePerValue),
-    trust: clamp100(x.trust + v * h.trustPerValue),
+    grudge: clamp100(x.grudge - v * h.grudgePerValue * f),
+    trust: clamp100(x.trust + v * h.trustPerValue * f),
   }));
 }
 

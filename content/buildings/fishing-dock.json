@@ -16,6 +16,7 @@
     "gold": 0.2
   },
   "workers": 3,
+  "nightWork": true,
   "placeNextTo": [
     "river"
   ],

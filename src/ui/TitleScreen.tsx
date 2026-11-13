@@ -1,5 +1,6 @@
 // The title screen: the player's barangay (or a sample one) drifting behind the logo, then
 // Continue or Start in one tap. Naming is optional and never adds a step.
+import { VERSION_TEXT } from "./version";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import credits from "../../docs/credits.md?raw";
 import type { Content } from "../engine/content";
@@ -224,6 +225,7 @@ export function TitleScreen(props: {
           )}
         </nav>
         <p className="text-outline text-center text-xs text-amber-100/90">{t("free")}</p>
+        <p className="text-outline text-center text-[10px] text-amber-100/70 tabular-nums">{VERSION_TEXT}</p>
       </main>
 
       <TitleDialog open={dialog === "settings"} onClose={close} title={t("settings")} closeLabel={t("close")}>

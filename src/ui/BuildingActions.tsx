@@ -79,7 +79,7 @@ export function BuildingMenu(props: {
   const slots = def.workers ?? 0;
   const index = state.buildings.indexOf(building);
   const working = slots ? buildingWorkers(state, content)[index] : 0;
-  const noPath = slots > 0 && !building.damaged && !canStaff(state, building);
+  const noPath = slots > 0 && !building.damaged && !canStaff(state, content, building);
   const connected = roadBonuses(state, content)[index] > 0;
   const lent = workforce(state, content).borrowed[index] ?? 0;
 

@@ -13,7 +13,6 @@ import {
   generateMap,
   canPlaceRoad,
   isConnected,
-  isFootReachable,
   isUnlocked,
   reachableLand,
   setTiles,
@@ -49,6 +48,9 @@ import { checkAklat } from "./aklat";
 import { needsBoat, setSail, trainBalangay, updateVoyages } from "./sea";
 import { datuProductionBonus, upgradeDatu } from "./datu";
 import { applyRenown } from "./kabantugan";
+import { nightFactor } from "./daynight";
+import { hasEntrance, updateDoors } from "./doors";
+import { devCommand, type DevAction } from "./dev";
 import { trackRanking, type AchievedAt } from "./ranking";
 import { updateDeaths, type Remembered } from "./death";
 import { advanceReplanting, afterClearing, cancelReplant, isPranked, newForest, replant, updateForest, updatePranks, type ForestState, type Prank, type ReplantJob } from "./forest";
@@ -69,7 +71,7 @@ import {
   type TikbalangTrick,
 } from "./worship";
 
-export const STATE_VERSION = 22;
+export const STATE_VERSION = 23;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -84,6 +86,10 @@ export interface PlacedBuilding {
   span?: Point[];
   /** Paused by the player: no workers, no output, until resumed. */
   paused?: boolean;
+  /** Its entrance (doors.ts): a walkable tile beside it. Missing if every side is cut off. */
+  door?: Point;
+  /** Boxed in when an old save was loaded: still counts as reachable until something next to it changes. */
+  legacyDoor?: true;
 }
 
 /** The most recent build, so it can be undone for a few seconds (rules.placement.undoSeconds). */
@@ -208,6 +214,10 @@ export interface GameState {
   kabantugan: number;
   /** The highest barangay level whose reward has been given. */
   levelRewarded: number;
+  /** Game time the barangay was founded: day 1 (Araw 1) starts here. */
+  foundedAt: number;
+  /** A dev command (?dev=1) was used on this save: kept apart from real play (e.g. for rankings). */
+  devSave: boolean;
   /** When renown, raids defended and Aklat entries last grew (ties in the Ranggo go to the earlier). */
   achievedAt: AchievedAt;
   /** The player's place by renown in the archipelago (0 until first worked out). */
@@ -278,6 +288,8 @@ export function newGame(
     balangays: 0,
     kabantugan: 0,
     levelRewarded: 1,
+    foundedAt: 0,
+    devSave: false,
     achievedAt: { renown: 0, defended: 0, aklat: 0 },
     renownRank: 0,
   };
@@ -285,7 +297,7 @@ export function newGame(
   for (const def of content.buildings) {
     for (let i = 0; i < (start.buildings[def.id] ?? 0); i++) state = placeAuto(state, content, def.id);
   }
-  return state;
+  return updateDoors(null, state, content);
 }
 
 /** Adds a building for free on the best free tile. Used for starting buildings and old saves. */
@@ -350,16 +362,16 @@ export function overcrowded(state: GameState, content: Content): number {
  * Can workers get to this building? Not if it's damaged, and not if no path leads there on foot
  * from the barangay's center (a far bank cut off by a lost bridge), except in old saves (legacyReach).
  */
-export function canStaff(state: GameState, b: PlacedBuilding): boolean {
+export function canStaff(state: GameState, content: Content, b: PlacedBuilding): boolean {
   if (b.damaged || b.paused || isPranked(state, b.x, b.y)) return false;
-  return state.legacyReach || isFootReachable(state.map, b.x, b.y);
+  return state.legacyReach || hasEntrance(state, content, b);
 }
 
 /** Workplaces nobody can walk to (shown as "No path"). Empty while an old save keeps its old rule. */
 export function unreachableWorkplaces(state: GameState, content: Content): PlacedBuilding[] {
   if (state.legacyReach) return [];
   const defs = new Map(content.buildings.map((d) => [d.id, d]));
-  return state.buildings.filter((b) => (defs.get(b.type)?.workers ?? 0) > 0 && !b.damaged && !isFootReachable(state.map, b.x, b.y));
+  return state.buildings.filter((b) => (defs.get(b.type)?.workers ?? 0) > 0 && !b.damaged && !hasEntrance(state, content, b));
 }
 
 /** The Connected bonus (a fraction, e.g. 0.05) for each building, in state.buildings order. */
@@ -416,7 +428,7 @@ export function assignWorkers(state: GameState, content: Content): Record<string
   const slots = Object.fromEntries(
     producers.map((def) => [
       def.id,
-      state.buildings.filter((b) => b.type === def.id && canStaff(state, b)).length * (def.workers ?? 0),
+      state.buildings.filter((b) => b.type === def.id && canStaff(state, content, b)).length * (def.workers ?? 0),
     ]),
   );
   const assigned: Record<string, number> = Object.fromEntries(producers.map((b) => [b.id, 0]));
@@ -467,7 +479,7 @@ export function baseBuildingWorkers(state: GameState, content: Content): number[
   const workers = state.buildings.map(() => 0);
   for (const i of order) {
     const b = state.buildings[i];
-    if (!canStaff(state, b)) continue;
+    if (!canStaff(state, content, b)) continue;
     const n = Math.min(left[b.type] ?? 0, defs.get(b.type)?.workers ?? 0);
     workers[i] = n;
     if (n) left[b.type] -= n;
@@ -499,7 +511,9 @@ export interface Rates {
  * Production and eating per second. `offline` leaves out the forest spirits' reactions (the
  * diwata withholding rice), which never happen during offline catch-up.
  */
-export function rates(state: GameState, content: Content, opts: { offline?: boolean } = {}): Rates {
+export function rates(state: GameState, content: Content, opts: { offline?: boolean; span?: number } = {}): Rates {
+  // Work slows at night (over a long offline step, by the share of it that is night).
+  const night = nightFactor(content, state.time, opts.span ?? 0);
   const workers = buildingWorkers(state, content);
   const bonuses = buildingBonuses(state, content);
   const groves = buildingGroveBonuses(state, content);
@@ -511,7 +525,7 @@ export function rates(state: GameState, content: Content, opts: { offline?: bool
     for (const r of RESOURCES) {
       // Adjacency and grove bonuses add up: a camp by the forest in a kapre's grove gets +10% +25%.
       // Connected by Daan adds on top: +10% by the river and +5% connected is +15%.
-      produced[r] += workers[i] * (def?.produces?.[r] ?? 0) * (1 + bonuses[i] + roads[i] + (groves[i][r] ?? 0));
+      produced[r] += workers[i] * (def?.produces?.[r] ?? 0) * (1 + bonuses[i] + roads[i] + (groves[i][r] ?? 0)) * (def?.nightWork ? 1 : night);
     }
   });
   const mood = happinessMultiplier(state, content) * (1 + ritualProductionBonus(state, content) + datuProductionBonus(state, content));
@@ -635,6 +649,9 @@ export function move(state: GameState, content: Content, x: number, y: number, t
   const span = def.bridge ? (bridgeSpan(lifted.map, def, toX, toY) ?? []) : [];
   const moved: PlacedBuilding = { ...target, x: toX, y: toY };
   delete moved.span;
+  // A moved building gets a new entrance (and loses any grandfathering).
+  delete moved.door;
+  delete moved.legacyDoor;
   if (span.length > 0) moved.span = span;
   const map = setTiles(lifted.map, span.map((t) => ({ ...t, tile: "bridge" as const })));
   return dropUnreachableJobs({
@@ -801,14 +818,16 @@ export type Command =
   | { type: "cancelReplant"; x: number; y: number }
   | { type: "upgradeDatu" }
   | { type: "trainBalangay" }
-  | { type: "bloc"; action: "form" | "invite" | "join" | "leave" | "expel"; target?: string };
+  | { type: "bloc"; action: "form" | "invite" | "join" | "leave" | "expel"; target?: string }
+  /** Dev tools (?dev=1 only): marks the save as a dev save. */
+  | ({ type: "dev" } & DevAction);
 
 export function apply(state: GameState, content: Content, command: Command): GameState {
   // An action aimed at another island sets sail instead; it happens when the boat arrives.
   const done = needsBoat(state, command) ? setSail(state, content, command) : applyCommand(state, content, command);
   // A refused command leaves the state exactly as it was.
   if (done === state) return state;
-  const next = trackRanking(state, applyRenown(state, reconcilePeople(state, done, content), content), content);
+  const next = trackRanking(state, applyRenown(state, reconcilePeople(state, updateDoors(state, done, content), content), content), content);
   // An old save keeps its old staffing rule until the player changes the map.
   return next.legacyReach && mapChanged(state, next) ? { ...next, legacyReach: false } : next;
 }
@@ -817,6 +836,8 @@ function applyCommand(state: GameState, content: Content, command: Command): Gam
   switch (command.type) {
     case "gather":
       return gather(state, content, command.resource);
+    case "dev":
+      return devCommand(state, content, command, (s, seconds) => tick(s, content, seconds));
     case "build":
       return build(state, content, command.building, command.x, command.y);
     case "undo":
@@ -1020,6 +1041,7 @@ function step(state: GameState, content: Content, dt: number): GameState {
   }
   next = reconcilePeople(state, next, content, crowded ? "crowded" : "other");
   next = checkTasks(next, content);
-  return content.ai ? next : trackRanking(state, applyRenown(state, checkAklat(next, content), content), content);
+  const doors = updateDoors(state, next, content);
+  return content.ai ? doors : trackRanking(state, applyRenown(state, checkAklat(doors, content), content), content);
 }
 

@@ -37,6 +37,8 @@ import { forestStage } from "./forest";
 import { levelForRenown, renownFromAchievements } from "./kabantugan";
 import { newFame, type Fame } from "./ranking";
 import { MAX_REMEMBERED, type Remembered } from "./death";
+import { updateDoors } from "./doors";
+import type { Today } from "./limits";
 
 export const SAVE_KEY = "barangay-legends/save";
 
@@ -247,6 +249,16 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
   // defenses from here on); every stat counts as gained at the save's time, so old ties fall
   // back to a fixed order (the player, then content order). The rank is worked out silently.
   21: (raw) => ({ ...raw, version: 22, achievedAt: null, renownRank: 0 }),
+  // v22 → v23: days (Araw), solid buildings, relationship age and daily limits, dev saves.
+  // The barangay counts as founded at game time 0 (its days run from its existing time);
+  // buildings boxed in by others are grandfathered; neighbors count as met at the start.
+  22: (raw) => {
+    const neighbors = (rawRegion: unknown) => {
+      if (!isObject(rawRegion) || !Array.isArray(rawRegion.neighbors)) return rawRegion;
+      return { ...rawRegion, neighbors: rawRegion.neighbors.map((n) => (isObject(n) ? { ...n, metAt: 0, today: null, state: isObject(n.state) ? { ...n.state, grandfatherDoors: true } : n.state } : n)) };
+    };
+    return { ...raw, version: 23, foundedAt: 0, devSave: false, grandfatherDoors: true, region: neighbors(raw.region) };
+  },
 };
 
 // ---------- Frozen v15 bridge rule (for the v14 → v15 migration only) ----------
@@ -492,6 +504,8 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean, withRegi
       building.span = span ?? standingBridgeTiles(map, def, x, y);
     }
     if (item.paused === true && def.workers) building.paused = true;
+    if (item.legacyDoor === true) building.legacyDoor = true;
+    if (isObject(item.door) && Number.isInteger(item.door.x) && Number.isInteger(item.door.y)) building.door = { x: item.door.x as number, y: item.door.y as number };
     if (item.damaged === true) building.damaged = true;
     else if (finiteNonNeg(item.burningSince) && item.burningSince <= state.time && content.events.fire) {
       building.burningSince = item.burningSince;
@@ -545,7 +559,10 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean, withRegi
     parseRenown(data, content, state);
     parseRanking(data, state);
   }
-  return state;
+  if (finiteNonNeg(data.foundedAt) && data.foundedAt <= state.time) state.foundedAt = data.foundedAt;
+  state.devSave = data.devSave === true;
+  // Entrances: worked out again; a save from before solid buildings keeps boxed-in ones working.
+  return updateDoors(null, state, content, data.grandfatherDoors === true);
 }
 
 /**
@@ -580,6 +597,14 @@ function parseFame(raw: unknown, content: Content, state: GameState, time: numbe
     defended: Number.isInteger(raw.defended) && (raw.defended as number) >= 0 ? (raw.defended as number) : 0,
     defendedAt: num(raw.defendedAt, time),
   };
+}
+
+/** Today's trades, gifts and raids with a barangay (limits.ts), or null. */
+function parseToday(raw: unknown): Today | null {
+  if (!isObject(raw)) return null;
+  const n = (v: unknown) => (Number.isInteger(v) && (v as number) >= 0 ? (v as number) : 0);
+  if (!Number.isInteger(raw.day) || (raw.day as number) < 1) return null;
+  return { day: raw.day as number, trades: n(raw.trades), gifts: n(raw.gifts), raids: n(raw.raids) };
 }
 
 /** When the player's ranked stats last grew, and the renown rank (0: work it out). */
@@ -817,6 +842,8 @@ function parseRegion(raw: unknown, content: Content, player: GameState): RegionS
           : null,
       tradition: typeof n.tradition === "string" && content.traditions.some((t) => t.id === n.tradition) ? n.tradition : base.tradition,
       fame: parseFame(n.fame, content, state, player.time),
+      metAt: finiteNonNeg(n.metAt) && n.metAt <= player.time ? n.metAt : null,
+      today: parseToday(n.today),
     };
   });
   const ids = new Set(neighbors.map((n) => n.id));
@@ -983,4 +1010,41 @@ export function clearSave(storage: KeyValueStore = localStorage): void {
   } catch {
     // ignore
   }
+}
+
+// ---------- Export and import ----------
+
+/** Save codes start with this, so a pasted code is easy to recognise. */
+export const SAVE_CODE_PREFIX = "BLSAVE1:";
+
+/**
+ * The game as a save code: the save (with its version) as UTF-8 JSON in base64, behind a
+ * prefix. Pasting it into Import brings the game back, migrated if it is from an older version.
+ */
+export function exportCode(state: GameState): string {
+  const bytes = new TextEncoder().encode(JSON.stringify(state));
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return SAVE_CODE_PREFIX + btoa(bin);
+}
+
+/** The game as a save file's text (plain JSON, as stored in the browser). */
+export const exportFile = (state: GameState): string => JSON.stringify(state);
+
+/**
+ * Reads a save code or a save file's text, checks it and migrates it to the current version.
+ * Null if it isn't a save this game can read (broken, or from a newer version).
+ */
+export function importSave(text: string, content: Content): GameState | null {
+  const trimmed = text.trim();
+  let json = trimmed;
+  if (trimmed.startsWith(SAVE_CODE_PREFIX)) {
+    try {
+      const bin = atob(trimmed.slice(SAVE_CODE_PREFIX.length).replace(/\s+/g, ""));
+      json = new TextDecoder().decode(Uint8Array.from(bin, (c) => c.charCodeAt(0)));
+    } catch {
+      return null;
+    }
+  }
+  return parseSave(json, content);
 }

@@ -101,7 +101,7 @@ describe("reachability from the barangay's center", () => {
     const workers = buildingWorkers(s, calm);
     expect(workers[1]).toBeGreaterThan(0);
     expect(workers[2]).toBe(0);
-    expect(canStaff(s, s.buildings[2])).toBe(false);
+    expect(canStaff(s, content, s.buildings[2])).toBe(false);
     expect(unreachableWorkplaces(s, calm).map((b) => b.type)).toEqual(["woodcutter-camp"]);
     expect(rates(s, calm).produced.wood).toBe(0);
     // With a bridge the camp gets its workers.

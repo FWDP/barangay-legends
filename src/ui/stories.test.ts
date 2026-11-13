@@ -196,7 +196,7 @@ describe("share card", () => {
 
   it("says who and where, and only that", () => {
     const s = fresh({ villagers: 12, barangay: { ...fresh().barangay, name: "Sapang Bato", datu: "Lakas" }, gawainDone: ["first-dock"] });
-    expect(shareLines(s, content, game, "en")).toEqual({ name: "Sapang Bato", datu: "Datu Lakas, Datu ng Ilog", villagers: "12 villagers", level: "Barangay level 1", url: SHARE_URL });
+    expect(shareLines(s, content, game, "en")).toEqual({ name: "Sapang Bato", datu: "Datu Lakas, Datu ng Ilog", villagers: "12 villagers", level: "Barangay level 1", day: "Araw 1", url: SHARE_URL });
     expect(SHARE_URL).toBe("barangaylegends.fwdp.org");
     expect(shareFileName(s)).toBe("sapang-bato.png");
     expect(shareFileName(fresh({ barangay: { ...fresh().barangay, name: "" } }))).toBe("barangay.png");

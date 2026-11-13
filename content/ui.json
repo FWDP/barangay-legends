@@ -752,6 +752,22 @@
     "list": {
       "en": "Barangays by alliance",
       "fil": "Mga barangay ayon sa alyansa"
+    },
+    "young": {
+      "en": "Needs {days} days since you first met (now {now}).",
+      "fil": "Kailangan ng {days} araw mula nang una kayong magkakilala (ngayon {now})."
+    },
+    "sandugoYoung": {
+      "en": "Needs a marriage alliance, or {days} days since you first met (now {now}).",
+      "fil": "Kailangan ng kasal, o {days} araw mula nang una kayong magkakilala (ngayon {now})."
+    },
+    "met": {
+      "en": "Known for {days} days",
+      "fil": "Magkakilala nang {days} araw"
+    },
+    "notMet": {
+      "en": "Not met yet: trade, a gift or an offer is a first contact.",
+      "fil": "Hindi pa nagkakakilala: ang kalakal, handog o alok ang unang ugnayan."
     }
   },
   "level": {
@@ -926,6 +942,164 @@
     "rank": {
       "en": "Rank {rank}",
       "fil": "Ranggo {rank}"
+    }
+  },
+  "day": {
+    "araw": {
+      "en": "Araw {n}",
+      "fil": "Araw {n}"
+    },
+    "on": {
+      "en": "on Araw {n}",
+      "fil": "noong Araw {n}"
+    },
+    "day": {
+      "en": "Day",
+      "fil": "Araw"
+    },
+    "night": {
+      "en": "Night",
+      "fil": "Gabi"
+    },
+    "tip": {
+      "en": "{phase} · Araw {n} since the barangay was founded",
+      "fil": "{phase} · Araw {n} mula nang itatag ang barangay"
+    }
+  },
+  "save": {
+    "button": {
+      "en": "Save and load",
+      "fil": "I-save at i-load"
+    },
+    "title": {
+      "en": "Your save",
+      "fil": "Ang iyong save"
+    },
+    "exportHint": {
+      "en": "Keep a copy of your barangay, or move it to another device.",
+      "fil": "Magtabi ng kopya ng iyong barangay, o ilipat ito sa ibang device."
+    },
+    "copy": {
+      "en": "Copy save code",
+      "fil": "Kopyahin ang save code"
+    },
+    "copied": {
+      "en": "Copied!",
+      "fil": "Nakopya na!"
+    },
+    "download": {
+      "en": "Download save file",
+      "fil": "I-download ang save file"
+    },
+    "importTitle": {
+      "en": "Load a save",
+      "fil": "Mag-load ng save"
+    },
+    "importHint": {
+      "en": "Paste a save code, or choose a save file.",
+      "fil": "Mag-paste ng save code, o pumili ng save file."
+    },
+    "file": {
+      "en": "Choose a save file",
+      "fil": "Pumili ng save file"
+    },
+    "load": {
+      "en": "Load",
+      "fil": "I-load"
+    },
+    "bad": {
+      "en": "That isn't a save this version of the game can read.",
+      "fil": "Hindi ito save na mababasa ng bersiyong ito ng laro."
+    },
+    "confirmTitle": {
+      "en": "Replace your current game?",
+      "fil": "Papalitan ang kasalukuyang laro?"
+    },
+    "confirmText": {
+      "en": "This replaces {current} (Araw {currentDay}) with {imported} (Araw {importedDay}). Export your current game first if you want to keep it.",
+      "fil": "Papalitan nito ang {current} (Araw {currentDay}) ng {imported} (Araw {importedDay}). I-export muna ang kasalukuyang laro kung gusto mo itong itabi."
+    },
+    "replace": {
+      "en": "Replace",
+      "fil": "Palitan"
+    },
+    "cancel": {
+      "en": "Cancel",
+      "fil": "Huwag"
+    },
+    "loaded": {
+      "en": "Save loaded.",
+      "fil": "Na-load ang save."
+    },
+    "close": {
+      "en": "Close",
+      "fil": "Isara"
+    }
+  },
+  "report": {
+    "button": {
+      "en": "Report a problem",
+      "fil": "Mag-ulat ng problema"
+    },
+    "title": {
+      "en": "Report a problem",
+      "fil": "Mag-ulat ng problema"
+    },
+    "what": {
+      "en": "What happened?",
+      "fil": "Ano ang nangyari?"
+    },
+    "expected": {
+      "en": "What did you expect?",
+      "fil": "Ano ang inasahan mo?"
+    },
+    "note": {
+      "en": "The report has what you write, the game version, your device and browser, and your save code. Nothing else about you.",
+      "fil": "Laman ng ulat ang isinulat mo, ang bersiyon ng laro, ang iyong device at browser, at ang iyong save code. Wala nang iba tungkol sa iyo."
+    },
+    "share": {
+      "en": "Share report",
+      "fil": "Ibahagi ang ulat"
+    },
+    "copy": {
+      "en": "Copy report",
+      "fil": "Kopyahin ang ulat"
+    },
+    "copied": {
+      "en": "Report copied: paste it in a message to the team.",
+      "fil": "Nakopya ang ulat: i-paste ito sa mensahe sa team."
+    },
+    "github": {
+      "en": "Open a GitHub issue",
+      "fil": "Magbukas ng GitHub issue"
+    },
+    "githubNote": {
+      "en": "For people with a GitHub account. The save code is too long for the link: it's copied, so paste it into the issue.",
+      "fil": "Para sa may GitHub account. Masyadong mahaba ang save code para sa link: nakopya na ito, kaya i-paste ito sa issue."
+    },
+    "pasteSave": {
+      "en": "(Paste the save code here: it was copied when you opened this issue.)",
+      "fil": "(I-paste rito ang save code: nakopya ito nang buksan mo ang issue na ito.)"
+    },
+    "close": {
+      "en": "Close",
+      "fil": "Isara"
+    }
+  },
+  "version": {
+    "label": {
+      "en": "Version {version}",
+      "fil": "Bersiyon {version}"
+    }
+  },
+  "doors": {
+    "blocked": {
+      "en": "Would block the way into the {building}",
+      "fil": "Haharangan nito ang daan papasok sa {building}"
+    },
+    "plaza": {
+      "en": "Would close off the plaza",
+      "fil": "Isasara nito ang plaza"
     }
   }
 }

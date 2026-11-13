@@ -8,6 +8,7 @@ import type { Lang } from "./settings";
 import { datuWithTitle } from "./stories";
 import { datuHouseUrl, houseStyleFor } from "./datuHouseArt";
 import { barangayLevel } from "../engine/kabantugan";
+import { arawText } from "./Days";
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((ok, fail) => {
@@ -50,12 +51,13 @@ export function shareBounds(state: GameState, margin = 2): { x0: number; y0: num
 }
 
 /** The words on the card. */
-export function shareLines(state: GameState, content: Content, game: GameText, lang: Lang): { name: string; datu: string; villagers: string; level: string; url: string } {
+export function shareLines(state: GameState, content: Content, game: GameText, lang: Lang): { name: string; datu: string; villagers: string; level: string; day: string; url: string } {
   return {
     name: state.barangay.name || "Barangay Legends",
     datu: datuWithTitle(state, content, lang),
     villagers: fill(game.share.villagers[lang], { n: state.villagers }),
     level: fill(game.level.title[lang], { level: barangayLevel(state, content) }),
+    day: arawText(state, content, game, lang),
     url: SHARE_URL,
   };
 }
@@ -145,7 +147,7 @@ export function drawShareCard(state: GameState, content: Content, game: GameText
   g.fillStyle = "#fde68a";
   g.fillText(lines.datu, pad, pad + size * 0.112, size - 2 * pad);
   g.fillStyle = "#fef3c7";
-  g.fillText(`👥 ${lines.villagers} · ⭐ ${lines.level}`, pad, pad + size * 0.158, size - 2 * pad);
+  g.fillText(`👥 ${lines.villagers} · ⭐ ${lines.level} · ${lines.day}`, pad, pad + size * 0.158, size - 2 * pad);
 
   // Footer: the game's name and address.
   g.textAlign = "center";

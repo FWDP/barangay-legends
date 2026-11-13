@@ -148,7 +148,7 @@ describe("pause and resume", () => {
     expect(parseSave(JSON.stringify(paused), content)!.buildings[1].paused).toBe(true);
     const damaged = { ...paused, resources: { rice: 500, wood: 500, gold: 0 }, buildings: paused.buildings.map((b, i) => (i === 1 ? { ...b, damaged: true } : b)) };
     const repaired = apply(damaged, calm, { type: "repair", x: 5, y: 1 });
-    expect(repaired.buildings[1]).toEqual({ type: "woodcutter-camp", x: 5, y: 1, paused: true });
+    expect(repaired.buildings[1]).toMatchObject({ type: "woodcutter-camp", x: 5, y: 1, paused: true });
   });
 
   it("v11 saves load with nothing paused", () => {

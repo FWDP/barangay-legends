@@ -1,3 +1,4 @@
+import { closesPlaza, entrancesBlockedBy, wouldHaveEntrance } from "../engine/doors";
 import {
   memo,
   useCallback,
@@ -27,7 +28,6 @@ import {
   type BridgeTile,
   isClearable,
   isConnected,
-  isFootReachable,
   isPlaza,
   NEIGHBOURS,
   occupancy,
@@ -49,6 +49,8 @@ import {
   type View,
 } from "./camera";
 import { spawnFloat } from "./floats";
+import { NightLayer } from "./NightLayer";
+import { tintAt } from "./nightLight";
 import { bonusPreviewText, RESOURCE_ICON } from "./format";
 import { activeJobs, jobCost, workforce } from "../engine/clearing";
 import { landingCandidates, raidLanding } from "../engine/border";
@@ -56,7 +58,6 @@ import { useReducedMotion, VillagerLayer, type Clash, type NamedHit } from "./Vi
 import type { NamedVillager } from "../engine/people";
 import { dockPoint, riverPath, SAIL_SECONDS, waitIndex } from "./visitors";
 import { isClear, labelSize, placeLabel, type Rect } from "./labels";
-import { dayPhaseAt } from "../engine/daynight";
 import { isPranked } from "../engine/forest";
 import { sarimanokAt } from "../engine/worship";
 import { datuHouseUrl, houseStyleFor, type HouseStyle } from "./datuHouseArt";
@@ -146,8 +147,14 @@ export function BarangayMap(props: {
    * and while planning a raid, where it would land.
    */
   visit?: { landing: Point | null } | null;
+  /** Changed (e.g. a counter) to zoom out to the whole map: the camera only (dev panel). */
+  wholeMap?: number;
+  /** The warning shown when a tile would shut the way into a building, e.g. "Would block the way into the Palayan". */
+  blockedLabel?: (building: string) => string;
+  /** The warning for a tile that would close the plaza in. */
+  plazaLabel?: string;
 }) {
-  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onVillager, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null, selection = [], onSelectArea, focus = null, tradeHeld = false, onSarimanok, ritual = null, visit = null } = props;
+  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onVillager, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null, selection = [], onSelectArea, focus = null, tradeHeld = false, onSarimanok, ritual = null, visit = null, blockedLabel, plazaLabel, wholeMap = 0 } = props;
   // The rectangle being dragged over the forest (desktop), from its first tile to the current one.
   const [dragArea, setDragArea] = useState<{ from: Point; to: Point } | null>(null);
   // Tiles being painted with a mouse drag in road mode (laid on release).
@@ -217,6 +224,12 @@ export function BarangayMap(props: {
     }
   }, [plazaKey, view.w > 0, scenic && view.w >= 1024]);
 
+  // The whole map at once (smaller tiles than zooming allows; the next pan or zoom returns to normal).
+  useEffect(() => {
+    if (!wholeMap || view.w <= 0) return;
+    setCamRaw({ x: map.width / 2, y: map.height / 2, tile: Math.max(4, Math.min(view.w / map.width, view.h / map.height)) });
+  }, [wholeMap]);
+
   const centre = () => cam && setCam(cameraOn(map.plaza, view, cam.tile));
   const zoomBy = (factor: number) => cam && setCam(zoomAt(cam, view, factor, view.w / 2, view.h / 2));
 
@@ -282,7 +295,7 @@ export function BarangayMap(props: {
           const adjacency = adjacencyBonusAt(plan.map, taken, placing, t.x, t.y);
           const g = grove ? groveBonusAt(plan.map, content, placing, t.x, t.y, grove.resource) : 0;
           const road = placing.produces && isConnected(plan.map, t.x, t.y) ? content.rules.roads.connectedBonusPercent / 100 : 0;
-          const noPath = (placing.workers ?? 0) > 0 && !isFootReachable(plan.map, t.x, t.y);
+          const noPath = (placing.workers ?? 0) > 0 && !wouldHaveEntrance(plan, content, t.x, t.y);
           const bank = placing.defense ? banks.filter((p) => Math.hypot(p.x - t.x, p.y - t.y) <= content.rules.military.kutaRadius).length : 0;
           return [`${t.x},${t.y}`, { adjacency, grove: g, road, noPath, bank }];
         }),
@@ -294,6 +307,15 @@ export function BarangayMap(props: {
   const crossing = placing?.bridge && hover ? crossingAt(plan.map, placing, hover.x, hover.y) : null;
   const crossingDecks = useMemo(() => (crossing ? layOutSpan(plan.map, crossing.span) : new Map<string, BridgeTile>()), [crossing?.span.map((p) => `${p.x},${p.y}`).join(";"), plan.map]);
   const cantCross = !!placing?.bridge && !!hover && !crossing && (tileAt(plan.map, hover.x, hover.y) === "river" || tileAt(plan.map, hover.x, hover.y) === "bridge");
+  // Placing on a tile that would shut the last way into a building: say which one.
+  const blockedHere = useMemo(() => {
+    if (!placing || placing.bridge || !hover || placement?.has(`${hover.x},${hover.y}`)) return null;
+    if (closesPlaza(plan, content, hover.x, hover.y)) return plazaLabel ?? "Would close off the plaza";
+    const hit = entrancesBlockedBy(plan, content, hover.x, hover.y)[0];
+    if (!hit) return null;
+    const name = content.buildings.find((d) => d.id === hit.type)?.name ?? hit.type;
+    return blockedLabel ? blockedLabel(name) : `Would block the way into the ${name}`;
+  }, [placing, hover?.x, hover?.y, placement, plan.buildings, plan.map, content, blockedLabel]);
 
   // The grove's reach, drawn as a soft glow while placing a building it boosts.
   const glow = useMemo(() => {
@@ -398,7 +420,13 @@ export function BarangayMap(props: {
     }
     if (placing) {
       if (placement?.has(`${t.x},${t.y}`)) onPlace(t.x, t.y);
-      else if (placing.bridge) {
+      else if (!placing.bridge && closesPlaza(plan, content, t.x, t.y)) spawnFloat(clientX, clientY, plazaLabel ?? "Would close off the plaza", "info");
+      else if (!placing.bridge && entrancesBlockedBy(plan, content, t.x, t.y).length) {
+        // Phones have no hover: say why the tile can't take it.
+        const hit = entrancesBlockedBy(plan, content, t.x, t.y)[0];
+        const name = content.buildings.find((d) => d.id === hit.type)?.name ?? hit.type;
+        spawnFloat(clientX, clientY, blockedLabel ? blockedLabel(name) : `Would block the way into the ${name}`, "info");
+      } else if (placing.bridge) {
         const tt = tileAt(map, t.x, t.y);
         if (tt === "river" || tt === "bridge") spawnFloat(clientX, clientY, "Can't cross here", "info");
       }
@@ -648,9 +676,8 @@ export function BarangayMap(props: {
     };
   }, [scenic, reducedMotion, driftPx]);
 
-  // The tint follows the game's own day (rules.dayNight), so the eclipse comes when it looks like night.
-  const daySeconds = content.rules.dayNight.daySeconds;
-  const dayOffset = -(dayPhaseAt(content, state.time) * daySeconds);
+  // Villagers carrying torches at night (the villager layer writes them, the night layer lights them).
+  const torches = useRef<Point[]>([]);
   const typhoonComing = state.typhoon !== null;
   const dry = (seasonAt(content, state.time)?.season.productionPercent.rice ?? 100) < 100;
 
@@ -700,6 +727,7 @@ export function BarangayMap(props: {
             deck={decks.get(key) ?? (tile === "bridge" ? FALLBACK_DECK : null)}
             deckPreview={crossingDecks.get(key) ?? null}
             cantCross={cantCross && hovered}
+            warn={hovered ? blockedHere : null}
             spirit={
               tile === "balete" && sighting
                 ? hash(x * 31 + sightingWindow, y * 17 + sightingWindow) < sighting.sighting!.chancePercent
@@ -789,7 +817,7 @@ export function BarangayMap(props: {
         {cam && !scenic && (
           <SpiritOverlays state={state} content={content} cam={cam} o={o} ritual={ritual} onSarimanok={onSarimanok} reducedMotion={reducedMotion} />
         )}
-        {cam && view.w > 0 && <VillagerLayer state={state} content={content} cam={cam} view={view} reducedMotion={reducedMotion} clash={clash} hitRef={scenic ? undefined : namedHit} />}
+        {cam && view.w > 0 && <VillagerLayer state={state} content={content} cam={cam} view={view} reducedMotion={reducedMotion} clash={clash} hitRef={scenic ? undefined : namedHit} torches={scenic ? undefined : torches} />}
         {cam && landing && <LandingMarker cam={cam} view={view} landing={landing} avoid={avoid} />}
         {waitingAt && (
           <span
@@ -827,11 +855,9 @@ export function BarangayMap(props: {
             them, and a blended tint over the drifting map is costly to composite. */}
         {!scenic && (
           <>
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 mix-blend-multiply motion-safe:animate-day-night"
-          style={{ animationDelay: `${dayOffset}s`, animationDuration: `${daySeconds}s` }}
-        />
+        {/* Dusk, night and dawn from the game's clock (not the device's), never too dark to read. */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 mix-blend-multiply" style={{ backgroundColor: tintAt(content, state.time) }} />
+        {cam && view.w > 0 && <NightLayer state={state} content={content} cam={cam} view={view} reducedMotion={reducedMotion} torches={torches} />}
         {/* The Bakunawa swallowing the moon: the night goes darker and redder. */}
         <div
           aria-hidden
@@ -1028,10 +1054,12 @@ const Cell = memo(function Cell(props: {
   deckPreview?: BridgeTile | null;
   /** Placing a Tulay over this river tile can't work. */
   cantCross?: boolean;
+  /** A warning over the tile (placing here would block a doorway). */
+  warn?: string | null;
   /** Land by the sea: drawn as sandy beach. */
   beach?: boolean;
 }) {
-  const { x, y, tile, plaza, datuLevel, houseStyle, building, fresh, lifted, target, ghost, glow, spirit, onSpiritKey, clearable, hint, progress, onActivate, pathPreview, waiting, picked, guard, deck, deckPreview, cantCross, beach } = props;
+  const { x, y, tile, plaza, datuLevel, houseStyle, building, fresh, lifted, target, ghost, glow, spirit, onSpiritKey, clearable, hint, progress, onActivate, pathPreview, waiting, picked, guard, deck, deckPreview, cantCross, beach, warn } = props;
   const h = hash(x, y);
   const valid = typeof target === "number";
   const paddy = building?.def.produces?.rice;
@@ -1047,6 +1075,7 @@ const Cell = memo(function Cell(props: {
       {deck && <Deck deck={deck} />}
       {deckPreview && <Deck deck={deckPreview} preview />}
       {cantCross && <Label text="Can't cross here" warn />}
+      {warn && <Label text={warn} warn />}
       {pathPreview && <div aria-hidden className="daan-tile pointer-events-none absolute inset-0 opacity-70" />}
       {tile === "forest" && progress === null && (
         <span aria-hidden className="pointer-events-none text-[0.95em] leading-none">

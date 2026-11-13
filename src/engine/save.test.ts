@@ -62,7 +62,7 @@ describe("save", () => {
       ],
     };
     const loaded = roundTrip(saved)!;
-    expect(loaded.buildings).toEqual([at("palayan", 1, 4), at("bahay-kubo", 4, 5)]);
+    expect(loaded.buildings).toMatchObject([at("palayan", 1, 4), at("bahay-kubo", 4, 5)]);
     expect(loaded.resources).toEqual({ rice: newGame(content).resources.rice, wood: 7, gold: 0 });
   });
 

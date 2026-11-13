@@ -14,7 +14,7 @@ import {
 } from "./region";
 import { offlineProgress } from "./offline";
 import { nextRandom } from "./rng";
-import { at, calm, content, withState } from "./testUtils";
+import { acquainted, at, calm, content, withState } from "./testUtils";
 
 const m = content.rules.military;
 const d = content.rules.diplomacy;
@@ -37,7 +37,7 @@ function withDiplomacy(patch: Partial<typeof d> & Record<string, unknown>, base:
 /** A player with a region, plenty of goods and 20 villagers. */
 function world(patch: Partial<GameState> = {}): GameState {
   const s = withState({ resources: { rice: 2000, wood: 2000, gold: 0 }, villagers: 20, buildings: [], ...patch });
-  return { ...s, region: patch.region ?? createRegion(calm, s.time, 7) };
+  return { ...s, region: patch.region ?? acquainted(createRegion(calm, s.time, 7)) };
 }
 
 const nb = (s: GameState, id: string) => s.region!.neighbors.find((n) => n.id === id)!;
@@ -220,9 +220,13 @@ describe("influence: trade, marriage alliance, sandugo", () => {
     expect(marriageBlocker(setNb(world({ resources: { rice: 0, wood: 0, gold: 0 } }), "malinaw", { trust: 80 }), calm, "malinaw")).toBe("cost");
   });
 
-  it("sandugo needs a marriage alliance, and makes them an ally", () => {
-    const s = setNb(world(), "malinaw", { trust: 80 });
+  it("sandugo needs a marriage alliance (or a long relationship), and makes them an ally", () => {
+    const day = calm.rules.dayNight.daySeconds;
+    // Known a few days: enough to marry, not enough for sandugo without marrying.
+    const s = setNb(world(), "malinaw", { trust: 80, metAt: -(calm.rules.limits.marriageMinDays + 1) * day });
     expect(apply(s, calm, { type: "sandugo", neighbor: "malinaw" })).toBe(s);
+    const longKnown = setNb(s, "malinaw", { metAt: -calm.rules.limits.sandugoMinDays * day });
+    expect(nb(apply(longKnown, calm, { type: "sandugo", neighbor: "malinaw" }), "malinaw").status).toBe("ally");
     const pact = apply(apply(s, calm, { type: "marry", neighbor: "malinaw" }), calm, { type: "sandugo", neighbor: "malinaw" });
     expect(nb(pact, "malinaw").status).toBe("ally");
     expect(pact.region!.reports.at(-1)).toMatchObject({ kind: "alliance", neighbor: "malinaw" });
@@ -352,7 +356,7 @@ describe("raids on the player", () => {
 });
 
 describe("trade offers", () => {
-  const offers = withDiplomacy({ offers: { ...d.offers, chancePerSecond: 1 } });
+  const offers = withDiplomacy({ offers: { ...d.offers, chancePerSecond: 1, startsAfterSeconds: 0 } });
 
   it("arrive now and then, can be accepted, and expire", () => {
     let s = tick(world(), offers, 1.5);
@@ -376,7 +380,7 @@ describe("trade offers", () => {
 });
 
 describe("no trading during a raid", () => {
-  const offers = withDiplomacy({ offers: { ...d.offers, chancePerSecond: 1 }, aiRaid: { ...d.aiRaid, chancePerSecond: 0 } });
+  const offers = withDiplomacy({ offers: { ...d.offers, chancePerSecond: 1, startsAfterSeconds: 0 }, aiRaid: { ...d.aiRaid, chancePerSecond: 0 } });
   /** A raid on its way, striking in `inSeconds`. */
   const raiding = (s: GameState, inSeconds = 30): GameState => ({
     ...s,

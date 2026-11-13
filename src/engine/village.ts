@@ -7,35 +7,62 @@
 // player's snapshot the same way later. Pure: nothing it is given is changed.
 import type { Content, NeighborDef } from "./content";
 import { newGame, unreachableWorkplaces, warriorCap, type GameState, type PlacedBuilding } from "./game";
-import { aiLevel } from "./kabantugan";
+import { levelForRenown } from "./kabantugan";
+import type { VillageBand } from "./content";
+import { entranceOf, solidTiles, updateDoors } from "./doors";
 import { autoPlaceTile, isPlaza, setTiles, tileAt } from "./map";
 import { findPath } from "./paths";
 import { closestLandings, kutaCovers } from "./border";
 import { strengthOfState, type NeighborState } from "./region";
 
-/** How many of each building the village has, from its size, strength, trait and level. */
+/** The village band for a barangay level (rules.villages). */
+export function villageBand(content: Content, level: number): VillageBand {
+  const bands = content.rules.villages.bands;
+  let band = bands[0];
+  for (const b of bands) if (level >= b.minLevel) band = b;
+  return band;
+}
+
+/** The barangay level a generated village is drawn at: from the barangay's renown. */
+export const villageLevel = (content: Content, n: NeighborState) => levelForRenown(content, n.fame.renown);
+
+/**
+ * How many of each building the village has: the level's band sets the least of each kind and
+ * the most in all; size adds houses, fields and camps; the trait adds its own (traders a field
+ * and a dock, aggressive barangays a Kuta).
+ */
 export function villagePlan(content: Content, n: NeighborState, def: NeighborDef, level: number): Record<string, number> {
+  const band = villageBand(content, level);
   const v = n.state.villagers;
-  const w = n.state.warriors;
   const trait = def.trait;
-  const perKuta = content.rules.military.warriorsPerKuta;
-  const kuta = Math.max(w > 0 ? Math.ceil(w / perKuta) : 0, trait === "aggressive" ? 2 : trait === "proud" ? 1 : 0);
-  return {
+  const shrine = band.shrine && !!n.tradition;
+  const plan: Record<string, number> = {
     "bahay-kubo": Math.max(1, Math.ceil((v - content.rules.baseHousing) / 2)),
     palayan: Math.max(1, Math.round(v / 4)) + (trait === "trader" ? 1 : 0),
     "woodcutter-camp": Math.max(1, Math.round(v / 6)),
-    kuta,
-    kamalig: v >= 10 ? 1 : 0,
-    "fishing-dock": trait === "trader" ? 2 : v >= 15 ? 1 : 0,
-    "balangay-dock": trait === "trader" || level >= 8 ? 1 : 0,
-    "babaylan-hut": 1,
-    dambana: n.tradition ? 1 : 0,
-    libingan: v >= 12 ? 1 : 0,
+    kuta: band.kuta + (trait === "aggressive" && band.kuta > 0 ? 1 : 0),
+    kamalig: band.kamalig,
+    "fishing-dock": band.fishingDocks + (trait === "trader" ? 1 : 0),
+    "balangay-dock": band.balangayDock || (trait === "trader" && band.fishingDocks > 0) ? 1 : 0,
+    "babaylan-hut": shrine ? 1 : 0,
+    dambana: shrine ? 1 : 0,
+    libingan: band.libingan ? 1 : 0,
   };
+  // Within the band's size: the essentials stay; houses, fields and camps give way evenly
+  // (always the most numerous of them), so a town keeps its mix.
+  let over = Object.values(plan).reduce((a, b) => a + b, 0) - band.maxBuildings;
+  const flexible = ["bahay-kubo", "palayan", "woodcutter-camp"];
+  while (over > 0) {
+    const most = flexible.reduce((m, id) => (plan[id] > plan[m] ? id : m), flexible[0]);
+    if (plan[most] <= 1) break;
+    plan[most]--;
+    over--;
+  }
+  return plan;
 }
 
-/** The Bahay ng Datu level a village of this barangay level would have. */
-export const villageDatuLevel = (level: number) => Math.min(5, 1 + Math.floor(level / 4));
+/** The Bahay ng Datu level a village of this barangay level has. */
+export const villageDatuLevel = (content: Content, level: number) => villageBand(content, level).datuLevel;
 
 /** Clears forest in a square around the plaza (never river, sea or balete). */
 function clearAround(state: GameState, radius: number): GameState {
@@ -48,34 +75,43 @@ function clearAround(state: GameState, radius: number): GameState {
 }
 
 /** Daan from the plaza toward each workplace, over cleared land only. */
-function layPaths(state: GameState, content: Content): GameState {
+function layPaths(state: GameState, content: Content, band: VillageBand): GameState {
   const defs = new Map(content.buildings.map((d) => [d.id, d]));
   const taken = new Set(state.buildings.map((b) => `${b.x},${b.y}`));
+  const solid = solidTiles(state, content);
   const changes: { x: number; y: number; tile: "daan" }[] = [];
-  for (const b of state.buildings) {
-    if (!defs.get(b.type)?.workers) continue;
-    const path = findPath(state.map, state.map.plaza, b) ?? [];
-    for (const p of path) {
-      if (tileAt(state.map, p.x, p.y) === "cleared" && !taken.has(`${p.x},${p.y}`) && !isPlaza(state.map, p.x, p.y)) changes.push({ x: p.x, y: p.y, tile: "daan" });
-    }
+  const pave = (x: number, y: number) => {
+    if (tileAt(state.map, x, y) === "cleared" && !taken.has(`${x},${y}`) && !isPlaza(state.map, x, y)) changes.push({ x, y, tile: "daan" });
+  };
+  // Daan from the plaza around the buildings to each doorway: workplaces (with roads), then some houses.
+  const houses = state.buildings.filter((b) => (defs.get(b.type)?.housing ?? 0) > 0).slice(0, band.housePaths);
+  const targets = [...(band.roads ? state.buildings.filter((b) => defs.get(b.type)?.workers) : []), ...houses];
+  for (const b of targets) {
+    const door = entranceOf(state, content, b);
+    if (door) for (const p of findPath(state.map, state.map.plaza, door, solid) ?? []) pave(p.x, p.y);
+  }
+  // A paved ring around the plaza.
+  if (band.plazaRing) {
+    const { x: px, y: py } = state.map.plaza;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if (Math.max(Math.abs(dx), Math.abs(dy)) === 2) pave(px + dx, py + dy);
   }
   return { ...state, map: setTiles(state.map, changes) };
 }
 
 /** The village of a neighbor, at game time `time` (so its day and night match the player's). */
 export function generateVillage(content: Content, n: NeighborState, def: NeighborDef, time: number): GameState {
-  const level = aiLevel(content, n.state);
+  const level = villageLevel(content, n);
+  const band = villageBand(content, level);
   const plan = villagePlan(content, n, def, level);
-  const total = Object.values(plan).reduce((a, b) => a + b, 0);
   let s: GameState = {
     ...newGame(content, n.state.map.seed, false),
     buildings: [],
     tradition: n.tradition || null,
-    datuLevel: villageDatuLevel(level),
+    datuLevel: band.datuLevel,
     barangay: { id: def.id, region: { x: 0, y: 0 }, name: def.name.replace(/^Barangay /, ""), datu: def.datu.replace(/^(Datu|Dayang) /, "") },
     time,
   };
-  s = clearAround(s, Math.min(9, 3 + Math.ceil(Math.sqrt(total))));
+  s = clearAround(s, band.clearRadius);
   // Order matters: the babaylan's hut before the Dambana that must stand near it; docks last.
   const order = ["bahay-kubo", "babaylan-hut", "dambana", "palayan", "woodcutter-camp", "kamalig", "kuta", "libingan", "fishing-dock", "balangay-dock"];
   for (const id of order) {
@@ -91,7 +127,8 @@ export function generateVillage(content: Content, n: NeighborState, def: Neighbo
   // Like the player's, every workplace can be walked to: drop any cut off (across the river).
   const stranded = new Set(unreachableWorkplaces(s, content));
   if (stranded.size) s = { ...s, buildings: s.buildings.filter((b) => !stranded.has(b)) };
-  s = layPaths(s, content);
+  s = layPaths(updateDoors(null, s, content), content, band);
+  s = updateDoors(null, s, content);
   // Same rules as anyone: no more Mandirigma than the Kuta allow, no more than the villagers.
   const villagers = n.state.villagers;
   const warriors = Math.min(n.state.warriors, warriorCap(s, content), villagers);
@@ -100,7 +137,7 @@ export function generateVillage(content: Content, n: NeighborState, def: Neighbo
 
 /** When a cached village is out of date: its size or strength changed noticeably. */
 export function villageKey(content: Content, n: NeighborState): string {
-  return `${n.id}:${n.tradition}:${Math.round(n.state.villagers / 3)}:${Math.round(strengthOfState(n.state, content) / 10)}`;
+  return `${n.id}:${n.tradition}:${villageLevel(content, n)}:${Math.round(n.state.villagers / 3)}:${Math.round(strengthOfState(n.state, content) / 10)}`;
 }
 
 const cache = new Map<string, GameState>();

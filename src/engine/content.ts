@@ -46,6 +46,8 @@ export interface BuildingDef {
   bridge?: { maxSpan: number };
   /** It must stand next to (side by side, not diagonally) one of these terrains, e.g. a Fishing Dock by the river. */
   placeNextTo?: string[];
+  /** Works at the normal rate at night (night fishing); other buildings slow down at night. */
+  nightWork?: boolean;
   /** Storage added per copy (a Kamalig: +100 rice). */
   storage?: ResourceAmounts;
   /** A shrine (the Dambana): where offerings and rituals happen. */
@@ -87,7 +89,7 @@ export interface Rules {
   staffing: StaffingRules;
   /** Resources the Gather buttons can give. */
   gatherable: Resource[];
-  dayNight: { daySeconds: number; nightFrom: number; nightTo: number };
+  dayNight: { daySeconds: number; nightFrom: number; nightTo: number; nightProductionFactor: number };
   worship: WorshipRules;
   forest: ForestRules;
   death: DeathRules;
@@ -97,6 +99,8 @@ export interface Rules {
   politics: PoliticsRules;
   allyDefense: { landSeconds: number; landSecondsPerUnit: number; balangayMinVillagers: number };
   kabantugan: KabantuganRules;
+  limits: LimitRules;
+  villages: { bands: VillageBand[] };
   mourning: { seconds: number; maxSeconds: number; happiness: number };
   /** Rice the barangay holds with no Kamalig. */
   storage: { baseRice: number };
@@ -147,6 +151,35 @@ export interface KabantuganRules {
 }
 
 /** The reward for reaching a barangay level (content/levels.json). */
+/** How a generated AI village looks from a barangay level on (engine/village.ts). */
+export interface VillageBand {
+  minLevel: number;
+  datuLevel: number;
+  clearRadius: number;
+  maxBuildings: number;
+  kuta: number;
+  kamalig: number;
+  fishingDocks: number;
+  shrine: boolean;
+  libingan: boolean;
+  balangayDock: boolean;
+  roads: boolean;
+  plazaRing: boolean;
+  housePaths: number;
+}
+
+/** Anti-spam limits (engine/limits.ts). */
+export interface LimitRules {
+  tradeValueFull: number;
+  tradeValueMax: number;
+  dailyReturns: number[];
+  fatigueCounterAt: number;
+  fatigueRefuseAt: number;
+  fatigueFairness: number;
+  marriageMinDays: number;
+  sandugoMinDays: number;
+}
+
 export interface LevelDef {
   level: number;
   reward: { resources?: ResourceAmounts; title?: Text };
@@ -579,7 +612,8 @@ export interface DiplomacyRules {
     /** Where winning raiders go for loot (visual): the first of these building types the barangay has. Unknown ids are skipped. */
     lootTargets: string[];
   };
-  offers: { chancePerSecond: number; expireSeconds: number; give: number; receivePercent: number };
+  /** Neighbors' trade offers; none before startsAfterSeconds of game time (a new datu has enough to learn). */
+  offers: { chancePerSecond: number; expireSeconds: number; give: number; receivePercent: number; startsAfterSeconds: number };
   aiDecisionSeconds: number;
   traits: Record<string, TraitDef>;
   /** Resentment of the player's raids (0..100). */
@@ -601,7 +635,7 @@ export interface DiplomacyRules {
   refusals: Record<RefusalReason, string>;
 }
 
-export const REFUSAL_REASONS = ["embargo", "raids", "unfair", "short", "alliance"] as const;
+export const REFUSAL_REASONS = ["embargo", "raids", "unfair", "short", "alliance", "tired"] as const;
 export type RefusalReason = (typeof REFUSAL_REASONS)[number];
 
 /** An AI neighbor barangay along the regional river. */
@@ -865,6 +899,7 @@ export function validateBuilding(raw: unknown, file = "building"): BuildingDef {
     throw new Error(`${file}: "placeNextTo" must list terrains (${TERRAINS.join(", ")})`);
   }
   if (raw.storage !== undefined) checkAmounts(raw.storage, `${file}: storage`);
+  if (raw.nightWork !== undefined && typeof raw.nightWork !== "boolean") throw new Error(`${file}: "nightWork" must be true or false`);
   if (raw.burial !== undefined && (!isObject(raw.burial) || !isNonNegNumber(raw.burial.mourningPercentFaster))) throw new Error(`${file}: "burial.mourningPercentFaster" must be a number >= 0`);
   if (raw.datuHouse !== undefined) {
     const d = raw.datuHouse;
@@ -959,7 +994,7 @@ export function validateRules(raw: unknown): Rules {
     tribute: ["percent", "everySeconds"],
     loyalty: ["start", "decayPerMinute", "rebelBelow", "rebelInfluence", "guardSeconds", "guardPerMinute"],
     aiRaid: ["chancePerSecond", "cooldownSeconds", "warningSeconds", "lootPercent", "defendRenown", "landingChoices"],
-    offers: ["chancePerSecond", "expireSeconds", "give", "receivePercent"],
+    offers: ["chancePerSecond", "expireSeconds", "give", "receivePercent", "startsAfterSeconds"],
   };
   for (const [section, keys] of Object.entries(sections)) {
     if (!isObject(d[section])) throw new Error(`rules: missing "diplomacy.${section}"`);
@@ -1022,7 +1057,8 @@ export function validateRules(raw: unknown): Rules {
   const dn = raw.dayNight;
   if (!isObject(dn)) throw new Error('rules: missing "dayNight"');
   checkNumbers(dn, ["daySeconds"], "rules: dayNight", true);
-  checkNumbers(dn, ["nightFrom", "nightTo"], "rules: dayNight");
+  checkNumbers(dn, ["nightFrom", "nightTo", "nightProductionFactor"], "rules: dayNight");
+  if ((dn.nightProductionFactor as number) > 1) throw new Error("rules: dayNight.nightProductionFactor must be at most 1");
   if ((dn.nightFrom as number) >= (dn.nightTo as number) || (dn.nightTo as number) > 1) throw new Error("rules: dayNight needs 0 <= nightFrom < nightTo <= 1");
   const w = raw.worship;
   if (!isObject(w)) throw new Error('rules: missing "worship"');
@@ -1063,6 +1099,22 @@ export function validateRules(raw: unknown): Rules {
   checkNumbers(k, ["perTenVillagers", "perTask", "perRaidWon", "perDefenseWon", "perTrade", "perTributary", "perAlly", "perDatuLevel", "perAklat", "aiPerVillager", "aiPerStrength"], "rules: kabantugan");
   if (!Array.isArray(k.levelAt) || k.levelAt.length === 0 || !k.levelAt.every((v, i, arr) => isNonNegNumber(v) && (i === 0 || v > (arr[i - 1] as number)))) {
     throw new Error('rules: "kabantugan.levelAt" must list rising renown thresholds');
+  }
+  const vb = isObject(raw.villages) ? raw.villages.bands : undefined;
+  if (!Array.isArray(vb) || vb.length === 0) throw new Error('rules: "villages.bands" must list village bands');
+  vb.forEach((b, i) => {
+    if (!isObject(b)) throw new Error(`rules: villages.bands[${i}] must be an object`);
+    checkNumbers(b, ["minLevel", "datuLevel", "clearRadius", "maxBuildings", "kuta", "kamalig", "fishingDocks", "housePaths"], `rules: villages.bands[${i}]`);
+    for (const k of ["shrine", "libingan", "balangayDock", "roads", "plazaRing"]) if (typeof b[k] !== "boolean") throw new Error(`rules: villages.bands[${i}].${k} must be true or false`);
+    if ((b.datuLevel as number) < 1 || (b.datuLevel as number) > 5) throw new Error(`rules: villages.bands[${i}].datuLevel must be 1..5`);
+    if (i === 0 ? b.minLevel !== 1 : (b.minLevel as number) <= ((vb[i - 1] as Record<string, number>).minLevel)) throw new Error("rules: villages.bands must start at level 1 and rise");
+  });
+  const l = raw.limits;
+  if (!isObject(l)) throw new Error('rules: missing "limits"');
+  checkNumbers(l, ["tradeValueFull", "tradeValueMax"], "rules: limits", true);
+  checkNumbers(l, ["fatigueCounterAt", "fatigueRefuseAt", "fatigueFairness", "marriageMinDays", "sandugoMinDays"], "rules: limits");
+  if (!Array.isArray(l.dailyReturns) || l.dailyReturns.length === 0 || !l.dailyReturns.every((v) => isNonNegNumber(v) && v <= 1)) {
+    throw new Error('rules: "limits.dailyReturns" must list factors from 0 to 1');
   }
   if (!isObject(f.replant)) throw new Error('rules: missing "forest.replant"');
   checkAmounts(f.replant.cost, "rules: forest.replant.cost");

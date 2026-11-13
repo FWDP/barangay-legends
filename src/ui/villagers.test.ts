@@ -3,7 +3,7 @@ import { isNightAt } from "../engine/daynight";
 import { newGame } from "../engine/game";
 import { tileAt } from "../engine/map";
 import { at, content, mapFrom, withState } from "../engine/testUtils";
-import { destination, edgeTile, exitPoint, MAX_SPRITES, newWalker, planVillagers, SPEED, stepWalker, walk } from "./villagers";
+import { destination, goal, edgeTile, exitPoint, MAX_SPRITES, newWalker, planVillagers, SPEED, stepWalker, walk } from "./villagers";
 
 const fed = { resources: { rice: 100, wood: 0, gold: 0 } };
 
@@ -43,14 +43,20 @@ describe("villager sprites", () => {
     expect(plans[3].home).toEqual(s.map.plaza);
   });
 
-  it("goes home at night, except warriors on watch", () => {
+  it("works at the doorway by day, goes home and inside at night, except warriors on watch", () => {
     const s = withState({ ...fed, villagers: 3, buildings: [at("bahay-kubo", 5, 3), at("palayan", 7, 7)] });
-    const worker = planVillagers(s, content)[0];
-    const day = destination(worker, 0, false, s.map.plaza, false);
-    const night = destination(worker, 0, true, s.map.plaza, false);
-    expect(Math.floor(day.x)).toBe(7);
-    expect(Math.floor(night.x)).toBe(5);
-    const guard = { ...worker, role: "warrior" as const, place: { x: 1, y: 1 } };
+    // Sprite 1 (sprite 0 is one of the few who sit by the plaza fire at night).
+    const worker = planVillagers(s, content)[1];
+    expect(worker.role).toBe("work");
+    const day = goal(worker, 0, false, s.map.plaza, false);
+    const night = goal(worker, 0, true, s.map.plaza, false);
+    // Beside the field, at its doorway, not on it.
+    expect(Math.abs(Math.floor(day.p.x) - 7) + Math.abs(Math.floor(day.p.y) - 7)).toBe(1);
+    expect(day.inside).toBe(false);
+    // Home by its door, and indoors.
+    expect(Math.abs(Math.floor(night.p.x) - 5) + Math.abs(Math.floor(night.p.y) - 3)).toBeLessThanOrEqual(1);
+    expect(night.inside).toBe(true);
+    const guard = { ...worker, role: "warrior" as const, place: { x: 1, y: 1 }, placeDoor: null };
     expect(Math.floor(destination(guard, 0, true, s.map.plaza, false).x)).toBe(1);
   });
 

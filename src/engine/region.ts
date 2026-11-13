@@ -2,6 +2,8 @@
 // Pure and deterministic. Each neighbor is a full GameState run by the same engine rules as
 // the player (tick + commands), steered by a simple AI. All randomness comes from the seeded
 // RNG in the player's state, rolled once per whole game second.
+import { counted, dailyFactor, relationshipDays, tradeValueFactor, type Today } from "./limits";
+import { updateDoors } from "./doors";
 import { newFame, type Fame } from "./ranking";
 import { datuInfluenceMultiplier } from "./datu";
 import { RESOURCES, type Content, type NeighborDef, type RefusalReason, type Resource, type TraitDef } from "./content";
@@ -58,6 +60,10 @@ export interface NeighborState {
   tradition: string;
   /** Their renown and raids beaten off, for the Ranggo (ranking.ts). */
   fame: Fame;
+  /** Game time of first contact (the first trade, gift, offer taken or raid), or null. */
+  metAt: number | null;
+  /** Trades, gifts and raids with them today (limits.ts). */
+  today: Today | null;
 }
 
 /** A line of political news (the Balita feed): a scripted event or something a barangay did. */
@@ -122,6 +128,8 @@ export interface Report {
   loot?: Partial<Record<Resource, number>>;
   lost?: Partial<Record<Resource, number>>;
   renown?: number;
+  /** The player's raids: the share of renown it brings (less for raiding the same barangay again that day). */
+  renownFactor?: number;
   /** Raids on the player: where it was fought, warriors too far away to arrive in time, and whether a Kuta covered the landing. */
   landing?: Point;
   late?: number;
@@ -193,12 +201,12 @@ export function newNeighborState(content: Content, def: NeighborDef, seed: numbe
   for (const b of ai.buildings) {
     for (let i = 0; i < (def.start.buildings[b.id] ?? 0); i++) s = placeAuto(s, ai, b.id);
   }
-  return {
+  return updateDoors(null, {
     ...s,
     villagers: def.start.villagers,
     warriors: def.start.warriors,
     resources: { ...s.resources, ...asCost(def.start.resources) },
-  };
+  }, ai);
 }
 
 /** A neighbor's tradition: from its file, or picked from the seed. */
@@ -240,6 +248,8 @@ export function newNeighbor(content: Content, def: NeighborDef, i: number, time:
     nextDecisionAt: Math.floor(time) + d.aiDecisionSeconds + i * 3,
     tradition: traditionFor(content, def, seed, i),
     fame: newFame(content, state, Math.floor(time)),
+    metAt: null,
+    today: null,
   };
 }
 
@@ -471,11 +481,13 @@ export function executeTrade(state: GameState, content: Content, id: string, p: 
     if (state.resources[p.give.resource] < p.give.amount || n.state.resources[p.want.resource] < p.want.amount) return null;
     let [player, them] = moveGoods(state, n.state, { [p.give.resource]: p.give.amount });
     [them, player] = moveGoods(them, player, { [p.want.resource]: p.want.amount });
-    let next: NeighborState = { ...n, state: them, trust: addTrust(n, t.trust, traitOf(content, id)) };
-    if (next.status === "tributary") next = { ...next, loyalty: clamp100(next.loyalty + t.loyalty) };
+    // Worth its value, and much less when they've already traded with the player today.
+    const weight = tradeValueFactor(content, p.give.amount * (content.rules.diplomacy.tradeDecision.values[p.give.resource] ?? 1)) * dailyFactor(state, content, n, "trades");
+    let next: NeighborState = { ...counted(state, content, n, "trades"), state: them, trust: addTrust(n, t.trust * weight, traitOf(content, id)) };
+    if (next.status === "tributary") next = { ...next, loyalty: clamp100(next.loyalty + t.loyalty * weight) };
     player = { ...player, stats: { ...player.stats, trades: player.stats.trades + 1 } };
     let r = addPath(region, "trade");
-    [r, next] = addInfluence(r, next, t.influence * datuInfluenceMultiplier(state, content), content, state.time);
+    [r, next] = addInfluence(r, next, t.influence * weight * datuInfluenceMultiplier(state, content), content, state.time);
     return [{ ...player, region: r }, next];
   });
 }
@@ -489,7 +501,19 @@ export function marriageBlocker(state: GameState, content: Content, id: string):
   if (n.status === "ally") return "already-allied";
   if (n.grudge > content.rules.diplomacy.grudge.noAlliancesAbove) return "grudge";
   if (n.trust <= m.trustNeeded) return "trust";
+  if (relationshipDays(state, content, n) < content.rules.limits.marriageMinDays) return "young";
   if (!canAfford(state, asCost(m.cost))) return "cost";
+  return null;
+}
+
+/** Why a sandugo can't happen yet, or null: it needs a marriage, or a long relationship. */
+export function sandugoBlocker(state: GameState, content: Content, id: string): string | null {
+  const n = state.region?.neighbors.find((x) => x.id === id);
+  if (!n) return "unknown";
+  if (n.status === "ally") return "already-allied";
+  if (n.grudge > content.rules.diplomacy.grudge.noAlliancesAbove) return "grudge";
+  if (!n.marriage && relationshipDays(state, content, n) < content.rules.limits.sandugoMinDays) return "young";
+  if (!canAfford(state, asCost(content.rules.diplomacy.sandugo.cost))) return "cost";
   return null;
 }
 
@@ -510,7 +534,7 @@ export function marry(state: GameState, content: Content, id: string): GameState
 export function sandugo(state: GameState, content: Content, id: string): GameState {
   const sd = content.rules.diplomacy.sandugo;
   return withNeighbor(state, id, (n, region) => {
-    if (!n.marriage || n.status === "ally" || n.grudge > content.rules.diplomacy.grudge.noAlliancesAbove || !canAfford(state, asCost(sd.cost))) return null;
+    if (sandugoBlocker(state, content, id) !== null) return null;
     const [player, them] = moveGoods(state, n.state, asCost(sd.cost));
     const next: NeighborState = { ...n, state: them, status: "ally", guard: null, trust: addTrust(n, sd.trust, traitOf(content, id)) };
     const r = addReport(addPath(region, "sandugo"), { time: state.time, kind: "alliance", neighbor: id });
@@ -546,11 +570,15 @@ export function raid(state: GameState, content: Content, id: string, warriors: n
   }
 
   let region = player.region!;
+  // Raiding the same barangay again today brings less renown.
+  const renownFactor = dailyFactor(state, content, target, "raids");
   let next: NeighborState = {
     ...target,
     state: them,
     trust: clamp100(target.trust - d.raid.trustLossTarget),
     marriage: false,
+    metAt: counted(state, content, target, "raids").metAt,
+    today: counted(state, content, target, "raids").today,
     raidCooldownUntil: state.time + d.raid.cooldownSeconds,
     // They won't forget it soon, less so if it worked.
     grudge: clamp100(target.grudge + (battle.attackerWins ? d.grudge.raidWon : d.grudge.raidLost)),
@@ -587,6 +615,7 @@ export function raid(state: GameState, content: Content, id: string, warriors: n
     theirLosses,
     loot,
     renown: battle.attackerWins ? d.raid.renown : 0,
+    renownFactor,
   });
   const i = region.neighbors.findIndex((n) => n.id === id);
   const neighbors = [...region.neighbors];
@@ -615,10 +644,12 @@ export function acceptOffer(state: GameState, content: Content): GameState {
     if (state.resources[offer.want.resource] < offer.want.amount || n.state.resources[offer.give.resource] < offer.give.amount) return null;
     let [player, them] = moveGoods(cleared, n.state, { [offer.want.resource]: offer.want.amount });
     [them, player] = moveGoods(them, player, { [offer.give.resource]: offer.give.amount });
-    let next: NeighborState = { ...n, state: them, trust: addTrust(n, t.trust, traitOf(content, n.id)) };
-    if (next.status === "tributary") next = { ...next, loyalty: clamp100(next.loyalty + t.loyalty) };
+    // Their offer counts as a trade with them today, like the player's own.
+    const weight = dailyFactor(state, content, n, "trades");
+    let next: NeighborState = { ...counted(state, content, n, "trades"), state: them, trust: addTrust(n, t.trust * weight, traitOf(content, n.id)) };
+    if (next.status === "tributary") next = { ...next, loyalty: clamp100(next.loyalty + t.loyalty * weight) };
     let r = addPath(region, "trade");
-    [r, next] = addInfluence(r, next, t.influence * datuInfluenceMultiplier(state, content), content, state.time);
+    [r, next] = addInfluence(r, next, t.influence * weight * datuInfluenceMultiplier(state, content), content, state.time);
     return [{ ...player, region: r }, next];
   });
 }
@@ -797,6 +828,8 @@ function onRegionSecond(state: GameState, content: Content, second: number, rng:
       // A grudge makes offers rarer; at the embargo line there are none. (The roll is made either way, so the sequence stays the same.)
       const willing = Math.max(0, 1 - n.grudge / d.grudge.embargoAt);
       if (rng.next() >= d.offers.chancePerSecond * traitOf(content, n.id).offerChanceMultiplier * willing) continue;
+      // None in a new barangay's first day (the roll is still made above, to keep the sequence).
+      if (second < d.offers.startsAfterSeconds) continue;
       // They offer what they have more of, for the other resource.
       const give = n.state.resources.rice >= n.state.resources.wood ? "rice" : "wood";
       const want = RESOURCES.find((r) => r !== give)!;

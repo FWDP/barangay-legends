@@ -130,7 +130,7 @@ export const GAME_TEXT = {
   alliance: {
     title: [], level: [], form: [], leave: [], join: [], invite: [], expel: [], leader: [], members: ["n", "strength"], yours: ["bloc"], member: ["bloc"], none: [],
     trust: ["trust"], grudge: [], tributary: [], taken: [], island: ["island"], tradition: ["tradition"], bloc: ["bloc"], noBloc: [], byBoat: ["time"], noBoat: [], atSea: ["n"],
-    waiting: [], boats: ["free", "total"], train: [], dockFull: [], paramount: [], list: [],
+    waiting: [], boats: ["free", "total"], train: [], dockFull: [], paramount: [], list: [], young: ["days", "now"], sandugoYoung: ["days", "now"], met: ["days"], notMet: [],
   },
   level: { badge: ["level"], title: ["level"], renown: ["renown"], next: ["left", "level"], max: [], up: ["level"], reward: ["reward"], needs: ["level"], advisor: ["barangay"], news: ["barangay", "level"] },
   visit: {
@@ -141,6 +141,14 @@ export const GAME_TEXT = {
     title: [], open: [], renown: [], defended: [], aklat: [], renownHint: [], defendedHint: [], aklatHint: [], you: [], toPass: ["n", "datu"], top: [], up: ["rank"],
     unknown: [], close: [], rank: ["rank"],
   },
+  day: { araw: ["n"], on: ["n"], day: [], night: [], tip: ["phase", "n"] },
+  save: {
+    button: [], title: [], exportHint: [], copy: [], copied: [], download: [], importTitle: [], importHint: [], file: [], load: [], bad: [], confirmTitle: [],
+    confirmText: ["current", "currentDay", "imported", "importedDay"], replace: [], cancel: [], loaded: [], close: [],
+  },
+  report: { button: [], title: [], what: [], expected: [], note: [], share: [], copy: [], copied: [], github: [], githubNote: [], pasteSave: [], close: [] },
+  version: { label: ["version"] },
+  doors: { blocked: ["building"], plaza: [] },
   events: { eclipse: [], gong: [], gongs: ["taps", "needed"], eclipseWon: ["favor", "gold"], eclipseLost: ["rice"], tikbalang: ["n"], right: [], wrong: ["time"], sarimanok: ["gift"] },
 } as const satisfies Record<string, Record<string, readonly string[]>>;
 

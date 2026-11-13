@@ -50,7 +50,7 @@ export function renownBetween(prev: GameState, next: GameState, content: Content
     const seen = Math.max(0, ...pr.reports.map((r) => r.id));
     for (const r of nr.reports) {
       if (r.id <= seen || !r.win) continue;
-      if (r.kind === "raid") gained += k.perRaidWon;
+      if (r.kind === "raid") gained += Math.round(k.perRaidWon * (r.renownFactor ?? 1));
       if (r.kind === "defense") gained += k.perDefenseWon;
     }
     for (const n of nr.neighbors) {

@@ -69,8 +69,12 @@ export function SettingsMenu(props: {
   share?: { label: string; onShare: () => void };
   /** How to play: in the menu on phones, where the top bar has no room for its button. */
   help?: { label: string; onHelp: () => void };
+  /** Export and import the save, and report a problem. */
+  tools?: { saveLabel: string; onSave: () => void; reportLabel: string; onReport: () => void };
+  /** The game version line. */
+  version?: string;
 }) {
-  const { onReset, muted, onToggleSound, share, help } = props;
+  const { onReset, muted, onToggleSound, share, help, tools, version } = props;
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -134,6 +138,30 @@ export function SettingsMenu(props: {
               📸 {share.label}
             </button>
           )}
+          {tools && (
+            <>
+              <button
+                type="button"
+                className="game-btn w-full border-2 border-amber-950/60 bg-amber-100 px-3 py-2 text-left text-sm font-semibold text-amber-950"
+                onClick={() => {
+                  setOpen(false);
+                  tools.onSave();
+                }}
+              >
+                💾 {tools.saveLabel}
+              </button>
+              <button
+                type="button"
+                className="game-btn w-full border-2 border-amber-950/60 bg-amber-100 px-3 py-2 text-left text-sm font-semibold text-amber-950"
+                onClick={() => {
+                  setOpen(false);
+                  tools.onReport();
+                }}
+              >
+                🐞 {tools.reportLabel}
+              </button>
+            </>
+          )}
           <button
             type="button"
             className="game-btn w-full border-2 border-red-950 bg-red-700 px-3 py-2 text-left text-sm font-semibold text-white"
@@ -153,6 +181,7 @@ export function SettingsMenu(props: {
             Source on GitHub ↗
           </a>
           <p className="text-xs text-amber-200/90">Free and open source. Nothing is for sale.</p>
+          {version && <p className="text-[11px] text-amber-200/70 tabular-nums">{version}</p>}
         </div>
       )}
 

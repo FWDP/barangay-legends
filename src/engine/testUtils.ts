@@ -1,7 +1,9 @@
 // Helpers shared by engine tests.
 import { loadContent, RESOURCES, type Content, type Events, type ResourceAmounts, type Resources } from "./content";
 import { newGame, type GameState, type PlacedBuilding } from "./game";
+import { updateDoors } from "./doors";
 import { TILE_CODE, type MapState, type Point } from "./map";
+import type { RegionState } from "./region";
 
 export const content = loadContent();
 
@@ -42,7 +44,8 @@ export const TEST_MAP = mapFrom([
 export function withState(patch: Omit<Partial<GameState>, "resources"> & { buildings?: PlacedBuilding[]; resources?: ResourceAmounts }): GameState {
   const { resources, ...rest } = patch;
   const base = newGame(content);
-  return {
+  // Entrances worked out as the game does, so states compare equal after a save round trip.
+  return withDoors({
     ...base,
     map: TEST_MAP,
     buildings: [at("bahay-kubo", 5, 3)],
@@ -58,8 +61,11 @@ export function withState(patch: Omit<Partial<GameState>, "resources"> & { build
     resources: resources ? { ...zero(), ...resources } : base.resources,
     // Villager milestones already counted for the villagers the test starts with.
     stats: { ...base.stats, ...rest.stats, bestTens: rest.stats?.bestTens ?? Math.floor((rest.villagers ?? base.villagers) / 10) },
-  };
+  });
 }
+
+/** The state with every building's entrance worked out (doors.ts). */
+export const withDoors = (s: GameState): GameState => updateDoors(null, s, content);
 
 export const at = (type: string, x: number, y: number): PlacedBuilding => ({ type, x, y });
 
@@ -81,3 +87,6 @@ export const calm = withEvents({
 
 /** Every resource at 0. */
 export const zero = (): Resources => Object.fromEntries(RESOURCES.map((r) => [r, 0])) as Resources;
+
+/** A region whose barangays the player has known for a long time (alliances aren't held back by relationship age). */
+export const acquainted = (region: RegionState): RegionState => ({ ...region, neighbors: region.neighbors.map((n) => ({ ...n, metAt: -1e6 })) });

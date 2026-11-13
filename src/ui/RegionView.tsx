@@ -11,7 +11,8 @@ import {
   neighborDef,
   traitOf,
   type NeighborState,
- tradingPaused } from "../engine/region";
+ tradingPaused, sandugoBlocker } from "../engine/region";
+import { relationshipDays } from "../engine/limits";
 import { clock } from "./EventBanners";
 import { sameIsland } from "../engine/archipelago";
 import { hasDatuUnlock } from "../engine/datu";
@@ -24,6 +25,7 @@ import type { Lang } from "./settings";
 import { fill, type GameText } from "./uiContent";
 import { RESOURCE_ICON } from "./format";
 import { LevelBadge, levelOf } from "./LevelBadge";
+import { arawText } from "./Days";
 
 export const STATUS = {
   independent: { label: "Independent", ring: "#a8a29e", chip: "bg-stone-200 text-stone-700" },
@@ -332,7 +334,7 @@ function Balita(props: { state: GameState; content: Content; game: GameText; lan
       <ul className="space-y-0.5 text-xs">
         {news.map((n) => (
           <li key={n.id} className="border-b border-amber-900/10 pb-0.5">
-            <span className="text-stone-400 tabular-nums">{clock(n.time)}</span> {newsLine(n, state, content, game, lang)}{" "}
+            <span className="text-stone-400 tabular-nums">{arawText(state, content, game, lang, n.time)}</span> {newsLine(n, state, content, game, lang)}{" "}
             <LevelBadge level={n.barangay ? levelOf(state, content, n.barangay) : null} game={game} lang={lang} />
           </li>
         ))}
@@ -492,6 +494,7 @@ export function NeighborPanel(props: {
   const chance = attack / (attack + theirDefense);
   const embargo = isEmbargo(n, content);
   const marry = marriageBlocker(state, content, n.id);
+  const sandugoWhy = sandugoBlocker(state, content, n.id);
   const raidCooldown = n.raidCooldownUntil - state.time;
 
   return (
@@ -514,6 +517,7 @@ export function NeighborPanel(props: {
         <p className="mt-1 text-xs text-stone-600">
           🏝️ {fill(t.island[lang], { island })} · {fill(t.tradition[lang], { tradition })}
         </p>
+        <p className="text-xs text-stone-600">🤝 {n.metAt === null ? t.notMet[lang] : fill(t.met[lang], { days: relationshipDays(state, content, n) })}</p>
         <p className="text-xs text-stone-600">
           {theirBloc ? (
             <>
@@ -615,6 +619,8 @@ export function NeighborPanel(props: {
                   ? refusalText("alliance", content, def.datu)
                   : marry === "trust"
                   ? `Needs trust above ${d.marriage.trustNeeded} (now ${Math.round(n.trust)}).`
+                  : marry === "young"
+                  ? fill(t.young[lang], { days: content.rules.limits.marriageMinDays, now: relationshipDays(state, content, n) })
                   : marry === "cost"
                     ? `Gift: ${fmt(d.marriage.cost)}.`
                     : null
@@ -625,8 +631,16 @@ export function NeighborPanel(props: {
           )}
           <ActionButton
             onClick={() => dispatch({ type: "sandugo", neighbor: n.id })}
-            disabled={!n.marriage || n.grudge > d.grudge.noAlliancesAbove || !canAfford(state, asCost(d.sandugo.cost)) || !!seaWhy}
-            why={seaWhy ? seaWhy : !n.marriage ? "Needs a marriage alliance first." : n.grudge > d.grudge.noAlliancesAbove ? refusalText("alliance", content, def.datu) : `Needs ${fmt(d.sandugo.cost)}.`}
+            disabled={sandugoWhy !== null || !!seaWhy}
+            why={
+              seaWhy
+                ? seaWhy
+                : sandugoWhy === "young"
+                  ? fill(t.sandugoYoung[lang], { days: content.rules.limits.sandugoMinDays, now: relationshipDays(state, content, n) })
+                  : sandugoWhy === "grudge"
+                    ? refusalText("alliance", content, def.datu)
+                    : `Needs ${fmt(d.sandugo.cost)}.`
+            }
           >
             🩸 Sandugo (blood compact) · {fmt(d.sandugo.cost)}
           </ActionButton>

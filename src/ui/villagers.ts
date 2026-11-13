@@ -7,6 +7,7 @@ import { isHungry } from "../engine/events";
 import { tileAt, type MapState, type Point } from "../engine/map";
 import { cachedPath, isWalkable } from "../engine/paths";
 import { homeWarriors } from "../engine/region";
+import { doorOf, isSolid } from "../engine/doors";
 import type { NamedVillager } from "../engine/people";
 
 /** Never draw more sprites than this, however big the barangay grows. Night comes from engine/daynight.ts. */
@@ -22,12 +23,22 @@ export interface VillagerPlan {
   home: Point;
   /** Workplace, Kuta or healer, if the role has one. */
   place: Point | null;
+  /** The doorway tiles of home and place (buildings are solid: people go in by the door). */
+  homeDoor?: Point | null;
+  placeDoor?: Point | null;
+  /** A part-time warrior on night watch at a Kuta (its doorway). */
+  watch?: Point | null;
+}
+
+/** Where a villager is going, and whether they go inside when they get there. */
+export interface Goal {
+  p: Point;
+  inside: boolean;
 }
 
 /** Walking speed in tiles per second. Sick villagers shuffle. */
 export const SPEED: Record<Role | "leaving", number> = { work: 1.2, clearing: 1.2, idle: 1, warrior: 1.4, sick: 0.45, leaving: 1.6 };
 
-const centre = (p: Point): Point => ({ x: p.x + 0.5, y: p.y + 0.5 });
 
 /** A small fixed offset per villager so a crowd doesn't stand on one pixel. */
 export function jitter(id: number): Point {
@@ -74,46 +85,89 @@ export function planVillagers(state: GameState, content: Content, cap = MAX_SPRI
 
   const n = Math.min(total, cap);
   const plans: VillagerPlan[] = [];
+  // Doorways, looked up once per building.
+  const doors = new Map<string, Point | null>();
+  const door = (p: Point | null): Point | null => {
+    if (!p) return null;
+    const key = `${p.x},${p.y}`;
+    if (!doors.has(key)) {
+      const b = state.buildings.find((x) => x.x === p.x && x.y === p.y);
+      doors.set(key, b && isSolid(content, b) ? doorOf(state, content, b) : null);
+    }
+    return doors.get(key)!;
+  };
+  // Part-time warriors keep watch at the Kuta at night: up to two a Kuta (the rest sleep).
+  const watchers = Math.min(guards > 0 ? 0 : homeWarriors(state), forts.length * 2);
+  let watching = 0;
   for (let j = 0; j < n; j++) {
     const i = total > cap ? Math.floor((j * total) / cap) : j;
     const r = roles[i] ?? { role: "idle" as const, place: null };
-    plans.push({ id: j, role: r.role, home: homes[i] ?? plaza, place: r.place });
+    const home = homes[i] ?? plaza;
+    const onWatch = r.role === "work" && watching < watchers ? forts[watching++ % forts.length] : null;
+    plans.push({ id: j, role: r.role, home, place: r.place, homeDoor: door(home === plaza ? null : home), placeDoor: r.role === "clearing" ? null : door(r.place), watch: onWatch ? door(onWatch) ?? onWatch : null });
   }
   return plans;
 }
 
+/** A spot just in front of a doorway, leaning toward the building (people go in here). */
+function doorSpot(door: Point, building: Point, o: Point): Point {
+  const dx = building.x - door.x;
+  const dy = building.y - door.y;
+  return { x: door.x + 0.5 + dx * 0.32 + o.x * 0.25, y: door.y + 0.5 + dy * 0.32 + o.y * 0.2 };
+}
+
 /**
- * Where a villager is heading at time t (seconds): home at night, otherwise their routine.
- * Workers spend most of the day at work with a break at the plaza; idle villagers drift
- * between home and plaza; the sick go to the healer (or rest at home); warriors man the Kuta.
+ * Where a villager is heading at time t, and whether they go indoors there. By day: workers at
+ * their workplace's doorway (never on top of the building), idle villagers between home and the
+ * plaza. At night most go home and inside; a few sit by the plaza fire; warriors on watch stay at
+ * the Kuta; raids and the sick keep their own places. Buildings without a doorway (old saves,
+ * plaza homes) fall back to the building's own tile.
  */
-export function destination(plan: VillagerPlan, t: number, night: boolean, plaza: Point, hungry: boolean): Point {
+export function goal(plan: VillagerPlan, t: number, night: boolean, plaza: Point, hungry: boolean): Goal {
   const o = jitter(plan.id);
-  // Stay inside the tile, so a house by the river never sends anyone onto the water.
-  const inTile = (v: number, base: number) => Math.min(base + 0.92, Math.max(base + 0.08, v));
-  const at = (p: Point, dy = 0.2): Point => ({ x: inTile(centre(p).x + o.x, p.x), y: inTile(centre(p).y + dy + o.y, p.y) });
-  const home = at(plan.home, 0.3);
-  // A crowd around the fire, within the plaza's own 3 × 3 (always cleared land).
-  const square = {
-    x: Math.min(plaza.x + 1.9, Math.max(plaza.x - 0.9, centre(plaza).x + o.x * 2.2)),
-    y: Math.min(plaza.y + 1.9, Math.max(plaza.y - 0.9, centre(plaza).y + o.y * 2.2)),
-  };
-  // Each villager keeps their own rhythm, so they don't all move at once.
+  const at = (b: Point, d: Point | null | undefined, dy = 0.2): Point => (d ? doorSpot(d, b, o) : destinationAt(b, o, dy));
+  const fireside = plan.id % 6 === 0;
+  if (night && plan.role !== "warrior" && plan.role !== "sick") {
+    if (plan.watch) return { p: { x: plan.watch.x + 0.5 + o.x * 0.4, y: plan.watch.y + 0.5 + o.y * 0.3 }, inside: false };
+    if (fireside) return { p: square(plaza, o), inside: false };
+    return { p: at(plan.home, plan.homeDoor, 0.3), inside: !!plan.homeDoor };
+  }
   const cycle = (t / 80 + ((plan.id * 0.618) % 1)) % 1;
-  if (night && plan.role !== "warrior") return home;
   switch (plan.role) {
     case "warrior":
-      return plan.place ? at(plan.place, 0.35) : square;
+      return { p: plan.place ? at(plan.place, plan.placeDoor, 0.35) : square(plaza, o), inside: false };
     case "sick":
-      return plan.place ? at(plan.place, 0.4) : home;
+      return plan.place ? { p: at(plan.place, plan.placeDoor, 0.4), inside: false } : { p: at(plan.home, plan.homeDoor, 0.3), inside: night && !!plan.homeDoor };
     case "clearing":
-      return at(plan.place!, 0.3);
+      return { p: destinationAt(plan.place!, o, 0.3), inside: false };
     case "work":
-      if (hungry) return square;
-      return cycle < 0.8 ? at(plan.place!) : square;
+      if (hungry) return { p: square(plaza, o), inside: false };
+      return { p: cycle < 0.8 ? at(plan.place!, plan.placeDoor) : square(plaza, o), inside: false };
     case "idle":
-      return cycle < 0.45 ? home : square;
+      return { p: cycle < 0.45 ? at(plan.home, plan.homeDoor, 0.3) : square(plaza, o), inside: false };
   }
+}
+
+/** A crowd around the fire, within the plaza's own 3 × 3 (always cleared land). */
+function square(plaza: Point, o: Point): Point {
+  return {
+    x: Math.min(plaza.x + 1.9, Math.max(plaza.x - 0.9, plaza.x + 0.5 + o.x * 2.2)),
+    y: Math.min(plaza.y + 1.9, Math.max(plaza.y - 0.9, plaza.y + 0.5 + o.y * 2.2)),
+  };
+}
+
+/** A spot on a tile (kept inside it, so a house by the river never sends anyone onto the water). */
+function destinationAt(p: Point, o: Point, dy: number): Point {
+  const inTile = (v: number, base: number) => Math.min(base + 0.92, Math.max(base + 0.08, v));
+  return { x: inTile(p.x + 0.5 + o.x, p.x), y: inTile(p.y + 0.5 + dy + o.y, p.y) };
+}
+
+/** Does this villager carry a torch when walking in the dark? About one in four. */
+export const carriesTorch = (plan: VillagerPlan) => plan.id % 4 === 1;
+
+/** Where a villager is heading at time t (see goal). */
+export function destination(plan: VillagerPlan, t: number, night: boolean, plaza: Point, hungry: boolean): Point {
+  return goal(plan, t, night, plaza, hungry).p;
 }
 
 /** The nearest point just off the map's edge, where leaving villagers walk to. */
@@ -158,6 +212,8 @@ export interface Walker {
   /** The tile the route leads to, and the map it was planned on (a new map means re-planning). */
   goal: string | null;
   map: MapState | null;
+  /** The solid-building tiles the route was planned around. */
+  blocked?: Uint8Array;
   moving: boolean;
 }
 
@@ -169,8 +225,8 @@ const tileOf = (map: MapState, p: Point): Point => ({
 });
 
 /** The route from `from` to `to`: through tile centres, never over open water. Null if there is none. */
-export function routeTo(map: MapState, from: Point, to: Point): Point[] | null {
-  const path = cachedPath(map, tileOf(map, from), tileOf(map, to));
+export function routeTo(map: MapState, from: Point, to: Point, blocked?: Uint8Array): Point[] | null {
+  const path = cachedPath(map, tileOf(map, from), tileOf(map, to), blocked);
   if (!path) return null;
   return [...path.slice(1, -1).map((t) => ({ x: t.x + 0.5, y: t.y + 0.5 })), to];
 }
@@ -181,10 +237,11 @@ export function routeTo(map: MapState, from: Point, to: Point): Point[] | null {
  * way and there's no bridge), the walker stays put rather than wade across. On Daan it walks
  * `roadSpeed` times faster.
  */
-export function stepWalker(w: Walker, to: Point, map: MapState, speed: number, dt: number, roadSpeed = 1): Walker {
+export function stepWalker(w: Walker, to: Point, map: MapState, speed: number, dt: number, roadSpeed = 1, blocked?: Uint8Array): Walker {
   const goal = `${Math.floor(to.x)},${Math.floor(to.y)}`;
   let route: Point[];
-  if (w.goal !== goal || w.map !== map) route = routeTo(map, w.p, to) ?? [];
+  // Buildings are solid: routes go around them (and are planned again when buildings change).
+  if (w.goal !== goal || w.map !== map || w.blocked !== blocked) route = routeTo(map, w.p, to, blocked) ?? [];
   else route = w.route.length ? [...w.route.slice(0, -1), to] : [];
   let p = w.p;
   let left = speed * dt;
@@ -204,7 +261,7 @@ export function stepWalker(w: Walker, to: Point, map: MapState, speed: number, d
     }
   }
   const rest = route.slice(i);
-  return { p, route: rest, goal, map, moving: rest.length > 0 };
+  return { p, route: rest, goal, map, blocked, moving: rest.length > 0 };
 }
 
 /** The nearest walkable tile on the map's edge: where newcomers come in and leavers go out. */

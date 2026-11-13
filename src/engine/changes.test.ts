@@ -48,7 +48,7 @@ describe("undo", () => {
     expect(undoSecondsLeft(built, calm)).toBe(undoSeconds);
     const undone = apply(built, calm, { type: "undo" });
     expect(undone.resources).toEqual(before.resources);
-    expect(undone.buildings).toEqual(before.buildings);
+    expect(undone.buildings).toMatchObject(before.buildings);
     expect(undone.lastBuild).toBeNull();
   });
 
@@ -102,7 +102,7 @@ describe("move", () => {
     expect(moveCost(s, content, "palayan").wood).toBe(2);
     const moved = apply(s, calm, { type: "move", x: 3, y: 7, toX: 6, toY: 7 });
     expect(moved.resources.wood).toBe(98);
-    expect(moved.buildings[2]).toEqual(at("palayan", 6, 7));
+    expect(moved.buildings[2]).toMatchObject(at("palayan", 6, 7));
   });
 
   it("keeps the building's place in the list, so its workers stay assigned", () => {
@@ -115,7 +115,7 @@ describe("move", () => {
 
   it("keeps damage when moved", () => {
     const s = { ...farm(), buildings: [at("bahay-kubo", 5, 3), { ...at("palayan", 1, 5), damaged: true }] };
-    expect(apply(s, calm, { type: "move", x: 1, y: 5, toX: 2, toY: 5 }).buildings[1]).toEqual({
+    expect(apply(s, calm, { type: "move", x: 1, y: 5, toX: 2, toY: 5 }).buildings[1]).toMatchObject({
       ...at("palayan", 2, 5),
       damaged: true,
     });

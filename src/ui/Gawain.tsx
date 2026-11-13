@@ -1,4 +1,5 @@
 // Mga Gawain (the task chain), named villagers' cards and the barangay history.
+import { onArawText } from "./Days";
 import { useState } from "react";
 import type { Content } from "../engine/content";
 import type { GameState } from "../engine/game";
@@ -166,6 +167,7 @@ export function HistoryDialog(props: { open: boolean; state: GameState; content:
                   {h.kind === "task" ? "✅" : h.kind === "named" ? "⭐" : h.kind === "fell" ? "⚔️" : "👣"}
                 </span>
                 {historyLine(h, content, game, lang)}
+                <span className="ml-1 text-[11px] whitespace-nowrap text-stone-500">· {onArawText(state, content, game, lang, h.at)}</span>
               </li>
             ))}
           </ul>
