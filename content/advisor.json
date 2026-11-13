@@ -1,5 +1,5 @@
 {
-  "_comment": "The datu's elder adviser. 'portrait' is an emoji, or an image in public/art written as '/art/<file>.png'. The tutorial runs in order; a step is done when its 'done' condition holds: {\"event\": \"gather\" | \"menu\" | \"rehiyon\"} (the player gathered, opened a building's menu, opened the Rehiyon map) or {\"built\": \"<building id>\"} (more of that building than the barangay started with). Tips: each line has an id, a trigger id and text in every language. Triggers: rice-low, unstaffed, event-typhoon, event-fire, event-sickness, trade-offer, raid-warning, idle, unlocked, no-path, old-paths, roads. Text may use {building}, {neighbor}, {datu}, {seconds} and {percent} where the trigger provides them. A line may set \"max\" (1-3) to be shown fewer times. Add more lines for a trigger and the adviser rotates through them; each line is shown at most 3 times.",
+  "_comment": "The datu's elder adviser. 'portrait' is an emoji, or an image in public/art written as '/art/<file>.png'. The tutorial runs in order; a step is done when its 'done' condition holds: {\"event\": \"gather\" | \"menu\" | \"rehiyon\"} (the player gathered, opened a building's menu, opened the Rehiyon map) or {\"built\": \"<building id>\"} (more of that building than the barangay started with). Tips: each line has an id, a trigger id and text in every language. Triggers: rice-low, unstaffed, event-typhoon, event-fire, event-sickness, trade-offer, raid-warning, idle, unlocked, no-path, old-paths, roads, borrowing. Text may use {building}, {neighbor}, {datu}, {seconds}, {direction} and {percent} where the trigger provides them. A line may set \"max\" (1-3) to be shown fewer times. Add more lines for a trigger and the adviser rotates through them; each line is shown at most 3 times.",
   "name": "Dalisay",
   "title": {
     "en": "Elder adviser to the datu",
@@ -139,6 +139,15 @@
       }
     },
     {
+      "id": "raid-shore-1",
+      "trigger": "raid-warning",
+      "max": 1,
+      "text": {
+        "en": "Raiders from {neighbor} will land on the {direction} bank in {seconds} seconds! Our warriors go to meet them at the shore, not at the Kuta. A Kuta built near the river bank helps them most.",
+        "fil": "Dadaong ang mga mandarambong mula sa {neighbor} sa pampang sa {direction} sa loob ng {seconds} segundo! Sasalubungin sila ng ating mga mandirigma sa pampang, hindi sa Kuta. Pinakamalaki ang tulong ng Kutang itinayo malapit sa ilog."
+      }
+    },
+    {
       "id": "raid-warning-1",
       "trigger": "raid-warning",
       "text": {
@@ -193,6 +202,15 @@
       "text": {
         "en": "Datu, our people now walk to work along real paths. The {building} across the water has no path, but it keeps working until you next change the land. After that, join it with a Tulay.",
         "fil": "Datu, naglalakad na ngayon ang ating mga tao sa tunay na mga landas. Walang daan papunta sa {building} sa kabila ng tubig, pero patuloy itong gagana hanggang sa susunod mong pagbabago sa lupa. Pagkatapos noon, idugtong ito ng Tulay."
+      }
+    },
+    {
+      "id": "borrowing-1",
+      "trigger": "borrowing",
+      "max": 1,
+      "text": {
+        "en": "Everyone has work, so I've asked the {building} to lend a hand with the clearing. They'll go back when the land is cleared. To keep them working, pause a workplace instead (tap the 🪓 count at the top).",
+        "fil": "May trabaho na ang lahat, kaya pinahiram ko ang mga manggagawa ng {building} sa paghahawan. Babalik sila kapag nahawan na ang lupa. Para tuloy ang kanilang trabaho, i-pause na lang ang isang gusali (pindutin ang bilang ng 🪓 sa itaas)."
       }
     }
   ]

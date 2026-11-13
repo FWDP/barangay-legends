@@ -67,10 +67,10 @@ describe("offline progress: gentle things happen", () => {
   });
 
   it("a clearing job finishes", () => {
-    const s = farm({ villagers: 5, clearing: { x: 9, y: 4, progress: 0, seconds: 30 } });
+    const s = farm({ villagers: 5, clearing: [{ x: 9, y: 4, progress: 0, seconds: 30, paid: { rice: 3, wood: 0 } }] });
     const { state, report } = offlineProgress(s, content, 600);
     expect(report.cleared).toBe(1);
-    expect(state.clearing).toBeNull();
+    expect(state.clearing).toEqual([]);
     expect(state.tilesCleared).toBe(s.tilesCleared + 1);
   });
 

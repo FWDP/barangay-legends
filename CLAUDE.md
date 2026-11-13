@@ -55,3 +55,7 @@ The long-term plan is war, raids and alliances against neighboring barangays: AI
 - src/engine has no React or browser APIs, so it can run on a server later.
 - Each barangay has an id and a regional map position, even though there is only one for now.
 - Save data is versioned, with a migration for every format change.
+
+## Before building a prompt
+
+Before writing any code, check that everything the prompt references already exists in the codebase or is created by the prompt itself. If something is missing, stop and list it, and ask whether to build it, skip it, or use a placeholder. Never silently build features from other prompts.

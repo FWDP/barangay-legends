@@ -2,6 +2,7 @@
 // demolish confirmation with its warnings, and the short-lived Undo button after building.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Content } from "../engine/content";
+import { workforce } from "../engine/clearing";
 import { buildingWorkers, canAfford, canStaff, demolishPreview, moveCost, roadBonuses, undoSecondsLeft, type GameState } from "../engine/game";
 import { buildingAt } from "../engine/map";
 import { costText } from "./format";
@@ -16,7 +17,7 @@ export interface MenuTarget {
 
 const MENU_W = 200;
 
-/** A small menu next to a placed building: Move and Demolish. */
+/** A small menu next to a placed building: Move, Pause (workplaces) and Demolish. */
 export function BuildingMenu(props: {
   state: GameState;
   content: Content;
@@ -24,8 +25,10 @@ export function BuildingMenu(props: {
   onClose: () => void;
   onMove: (x: number, y: number) => void;
   onDemolish: (x: number, y: number) => void;
+  /** Pause or resume a workplace. */
+  onPause: (x: number, y: number, paused: boolean) => void;
 }) {
-  const { state, content, target, onClose, onMove, onDemolish } = props;
+  const { state, content, target, onClose, onMove, onDemolish, onPause } = props;
   const box = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
   const building = target ? buildingAt(state, target.x, target.y) : undefined;
@@ -71,6 +74,7 @@ export function BuildingMenu(props: {
   const working = slots ? buildingWorkers(state, content)[index] : 0;
   const noPath = slots > 0 && !building.damaged && !canStaff(state, building);
   const connected = roadBonuses(state, content)[index] > 0;
+  const lent = workforce(state, content).borrowed[index] ?? 0;
 
   return (
     <div
@@ -89,7 +93,13 @@ export function BuildingMenu(props: {
       {slots > 0 && (
         <p className="px-1 pb-1.5 text-xs text-stone-600">
           👥 {working} of {slots} workers
-          {noPath ? (
+          {building.paused ? (
+            <span className="mt-0.5 block rounded bg-stone-200 px-1 text-[11px] font-semibold text-stone-700">⏸ Paused: its workers are free for other work.</span>
+          ) : lent > 0 ? (
+            <span className="mt-0.5 block rounded bg-amber-100 px-1 text-[11px] font-semibold text-amber-900">
+              🪓 {lent} lent to clearing forest; {lent === 1 ? "they come" : "they come"} back when the job is done.
+            </span>
+          ) : noPath ? (
             <span className="mt-0.5 block rounded bg-red-100 px-1 text-[11px] font-semibold text-red-900">🚫 No path: workers can't walk here. Join it with a Tulay, or move it.</span>
           ) : (
             working < slots && !building.damaged && <span className="block text-[11px] text-stone-500">Free villagers fill it on their own. More houses bring more.</span>
@@ -117,6 +127,17 @@ export function BuildingMenu(props: {
           <span>↔️ Move</span>
           <span className="text-xs font-normal">{costText(cost)}</span>
         </button>
+        {slots > 0 && (
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => onPause(target.x, target.y, !building.paused)}
+            className="game-btn flex items-center justify-between border-2 border-amber-950/60 bg-amber-100 px-3 py-1.5 text-sm font-semibold text-amber-950"
+          >
+            <span>{building.paused ? "▶️ Resume" : "⏸ Pause"}</span>
+            <span className="text-xs font-normal">{building.paused ? "back to work" : "free its workers"}</span>
+          </button>
+        )}
         <button
           type="button"
           role="menuitem"

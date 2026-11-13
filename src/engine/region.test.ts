@@ -294,7 +294,9 @@ describe("raids on the player", () => {
 
   it("come from aggressive neighbors with a 60-second warning", () => {
     const s = tick(fed(), surely, 600.5);
-    expect(s.region!.incomingRaid).toEqual({ from: "batong-buhay", strikeAt: 600 + d.aiRaid.warningSeconds });
+    expect(s.region!.incomingRaid).toMatchObject({ from: "batong-buhay", strikeAt: 600 + d.aiRaid.warningSeconds });
+    // They land on a river bank, chosen when the raid starts.
+    expect(s.region!.incomingRaid!.landing).toEqual(expect.objectContaining({ x: expect.any(Number), y: expect.any(Number) }));
     expect(s.region!.reports.filter((r) => r.kind === "defense")).toHaveLength(0);
   });
 

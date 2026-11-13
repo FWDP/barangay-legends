@@ -5,18 +5,10 @@ import { RESOURCES, type ChoiceEffects, type ChoiceEventDef, type ChoiceOption, 
 import { seasonAt } from "./events";
 import { housing, type GameState } from "./game";
 import { adjustRelations, type NeighborStatus } from "./region";
+import { rollAt } from "./rng";
 
-/**
- * A roll in [0, 1) for one game second, from the barangay's seed. Choice events use their own
- * rolls instead of the shared RNG in GameState, so adding them doesn't change any other
- * random event: still seeded, still deterministic.
- */
-export function choiceRoll(seed: number, second: number, salt: number): number {
-  let h = Math.imul(seed ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(second + 1, 0xc2b2ae35) ^ Math.imul(salt + 7, 0x27d4eb2f);
-  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d);
-  h = Math.imul(h ^ (h >>> 12), 0x297a2d39);
-  return ((h ^ (h >>> 15)) >>> 0) / 4294967296;
-}
+/** Choice events roll with rollAt (see rng.ts), so they never disturb the shared RNG. */
+export const choiceRoll = rollAt;
 
 /** A choice event waiting for the datu's answer. */
 export interface PendingChoice {

@@ -4,8 +4,10 @@
 // Pure functions, so the rules (one tip per 90 s, at most 3 repeats...) are tested.
 import type { Content } from "../engine/content";
 import { isBurning, isHungry } from "../engine/events";
-import { buildingWorkers, owned, rates, unreachableWorkplaces, type GameState } from "../engine/game";
-import { isUnlocked, TILE_CODE } from "../engine/map";
+import { workforce } from "../engine/clearing";
+import { owned, rates, unreachableWorkplaces, type GameState } from "../engine/game";
+import { directionFrom, raidLanding } from "../engine/border";
+import { barangayCenter, isUnlocked, TILE_CODE } from "../engine/map";
 import { neighborDef } from "../engine/region";
 import type { Lang } from "./settings";
 import { fill, TRIGGERS, TUTORIAL_EVENTS, type AdvisorDef, type TriggerId, type TutorialEvent, type TutorialStep } from "./uiContent";
@@ -124,8 +126,12 @@ export function observe(session: AdvisorSession, state: GameState, content: Cont
 
   // An empty worker building, ignoring hunger (nobody works then, and the hunger banner says so).
   const defs = new Map(content.buildings.map((d) => [d.id, d]));
-  const workers = buildingWorkers(state, content);
-  const empty = isHungry(state) ? -1 : state.buildings.findIndex((b, i) => !b.damaged && (defs.get(b.type)?.workers ?? 0) > 0 && workers[i] === 0);
+  const force = workforce(state, content);
+  const workers = force.workers;
+  // Paused workplaces and ones lending hands to clearing are empty on purpose.
+  const empty = isHungry(state)
+    ? -1
+    : state.buildings.findIndex((b, i) => !b.damaged && !b.paused && force.borrowed[i] === 0 && (defs.get(b.type)?.workers ?? 0) > 0 && workers[i] === 0);
   if (empty < 0) s.unstaffedSince = null;
   else {
     s.unstaffedSince ??= t;
@@ -144,12 +150,22 @@ export function observe(session: AdvisorSession, state: GameState, content: Cont
   const raid = state.region?.incomingRaid;
   if (raid) {
     const who = neighborDef(content, raid.from);
-    active.set("raid-warning", { neighbor: who?.name ?? raid.from, datu: who?.datu ?? "", seconds: Math.max(0, Math.ceil(raid.strikeAt - t)) });
+    const landing = raidLanding(state, content);
+    active.set("raid-warning", {
+      neighbor: who?.name ?? raid.from,
+      datu: who?.datu ?? "",
+      seconds: Math.max(0, Math.ceil(raid.strikeAt - t)),
+      direction: landing ? directionFrom(barangayCenter(state.map), landing) : "near",
+    });
   }
 
   if (state.buildings.length > s.buildingCount) s.lastBuildAt = t;
   s.buildingCount = state.buildings.length;
   if (t - s.lastBuildAt >= IDLE_SECONDS) active.set("idle", {});
+
+  // Clearing borrowing villagers from a workplace.
+  const lender = force.borrowed.findIndex((n) => n > 0);
+  if (lender >= 0) active.set("borrowing", { building: defs.get(state.buildings[lender].type)?.name ?? state.buildings[lender].type });
 
   // Paths: a workplace nobody can walk to; an old save still on the old rule; no roads yet.
   const stranded = unreachableWorkplaces({ ...state, legacyReach: false }, content);

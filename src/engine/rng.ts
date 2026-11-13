@@ -24,3 +24,15 @@ export class Rng {
     return min + Math.floor(this.next() * (max - min + 1));
   }
 }
+
+/**
+ * A roll in [0, 1) for one game second, from a seed (the barangay's map seed). Used where the
+ * engine needs randomness without advancing the shared RNG in GameState, so adding a new kind
+ * of roll never changes the outcome of any other event. Still seeded, still deterministic.
+ */
+export function rollAt(seed: number, second: number, salt: number): number {
+  let h = Math.imul(seed ^ 0x9e3779b9, 0x85ebca6b) ^ Math.imul(second + 1, 0xc2b2ae35) ^ Math.imul(salt + 7, 0x27d4eb2f);
+  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d);
+  h = Math.imul(h ^ (h >>> 12), 0x297a2d39);
+  return ((h ^ (h >>> 15)) >>> 0) / 4294967296;
+}

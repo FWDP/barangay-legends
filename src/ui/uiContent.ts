@@ -31,6 +31,7 @@ export const TRIGGERS = [
   "trade-offer",
   "no-path",
   "old-paths",
+  "borrowing",
   "unlocked",
   "unstaffed",
   "roads",
@@ -138,7 +139,7 @@ export function validateHelp(raw: unknown, file = "help"): HelpDoc {
 }
 
 const LINE_VARS: Record<TriggerId, string[]> = {
-  "raid-warning": ["neighbor", "datu", "seconds"],
+  "raid-warning": ["neighbor", "datu", "seconds", "direction"],
   "event-fire": [],
   "rice-low": ["seconds"],
   "event-typhoon": ["seconds"],
@@ -149,6 +150,7 @@ const LINE_VARS: Record<TriggerId, string[]> = {
   "no-path": ["building"],
   "old-paths": ["building"],
   roads: ["percent"],
+  borrowing: ["building"],
   idle: [],
 };
 

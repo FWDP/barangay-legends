@@ -7,8 +7,8 @@
 // leaves or dies. Warnings that were running (a fire, a typhoon, a raid) wait for the player.
 import { RESOURCES, type Content, type Resource } from "./content";
 import { healRate, isHungry } from "./events";
-import { healthyWorkers, housing, rates, type GameState } from "./game";
-import { setTiles } from "./map";
+import { housing, rates, type GameState } from "./game";
+import { advanceClearing } from "./clearing";
 import { aiContent, aiDecide, traitOf, type NeighborState, type RegionState } from "./region";
 
 export interface OfflineReport {
@@ -72,23 +72,14 @@ export function gentleStep(state: GameState, content: Content, dt: number): Step
   const recovered = s.sick.length - sick.length;
   s = { ...s, sick };
 
-  // A clearing job carries on while the barangay is fed.
+  // Clearing carries on while the barangay is fed: every job that would have finished does.
   let cleared = 0;
-  const job = s.clearing;
-  if (job && fed > 0 && healthyWorkers(state) >= content.rules.clearing.workers) {
-    const progress = job.progress + dt * fed;
-    if (progress >= job.seconds) {
-      cleared = 1;
-      s = {
-        ...s,
-        clearing: null,
-        legacyReach: false,
-        tilesCleared: s.tilesCleared + 1,
-        resources: { ...s.resources, wood: s.resources.wood + content.rules.clearing.wood },
-        map: setTiles(s.map, [{ x: job.x, y: job.y, tile: "cleared" }]),
-      };
-      produced.wood += content.rules.clearing.wood;
-    } else s = { ...s, clearing: { ...job, progress } };
+  if (fed > 0 && s.clearing.length > 0) {
+    const before = s.resources.wood;
+    const done = advanceClearing(s, content, dt * fed, false);
+    s = done.state;
+    cleared = done.cleared;
+    produced.wood += s.resources.wood - before;
   }
   return { state: s, produced, eaten, hungry: dt * (1 - fed), arrived, recovered, cleared };
 }

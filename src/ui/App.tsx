@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import type { Resource } from "../engine/content";
-import { buildingCost, canAfford, canMove, healthyWorkers, moveCost, owned, repairCost, roadCost, withoutBuilding } from "../engine/game";
-import { buildingAt, canPlace, clearBlocker, clearSeconds, isUnlocked, tileAt, type ClearBlocker } from "../engine/map";
+import { buildingCost, canAfford, canMove, moveCost, owned, repairCost, roadCost, withoutBuilding } from "../engine/game";
+import { buildingAt, canPlace, isUnlocked, tileAt } from "../engine/map";
+import { activeJobs, affordableTiles, borrowedWorkers, canSelect, clearingCrews, jobSeconds, orderSelection, riceIsSafe, selectionCost, workforce } from "../engine/clearing";
 import { BarangayMap } from "./BarangayMap";
 import { BuildingMenu, DemolishDialog, UndoBar, type MenuTarget } from "./BuildingActions";
 import { BuildToolbar } from "./BuildToolbar";
@@ -29,17 +30,12 @@ import type { GameState } from "../engine/game";
 
 const ui = loadUiContent(content);
 
-const CLEAR_BLOCKED: Record<Exclude<ClearBlocker, "balete">, string> = {
-  "not-forest": "Nothing to clear",
-  "not-adjacent": "Clear next to your land first",
-  busy: "Already clearing a tile",
-  hungry: "Too hungry to work",
-  workers: `Need ${content.rules.clearing.workers} healthy villagers`,
-};
+/** Why a forest tile can't join the selection. */
+const NOT_SELECTABLE = "Select forest next to your land (or next to a tile you've selected)";
 
 /** The warning before felling an old balete: it can't be undone. */
-function BaleteDialog(props: { target: { x: number; y: number } | null; onCancel: () => void; onConfirm: () => void }) {
-  const { target, onCancel, onConfirm } = props;
+function BaleteDialog(props: { open: boolean; onCancel: () => void; onConfirm: () => void }) {
+  const { open: target, onCancel, onConfirm } = props;
   const dialog = useRef<HTMLDialogElement>(null);
   const lore = content.lore.balete;
   useEffect(() => {
@@ -58,7 +54,7 @@ function BaleteDialog(props: { target: { x: number; y: number } | null; onCancel
     >
       <div className="mat-card space-y-3 p-5">
         <h2 id="balete-title" className="font-display text-2xl text-amber-900">
-          🌳 Cut down the {lore?.name.toLowerCase() ?? "balete"}?
+          🌳 Your selection includes the {lore?.name.toLowerCase() ?? "balete"}. Cut it down?
         </h2>
         {lore && <p className="text-sm text-stone-600">{lore.description}</p>}
         <p className="rounded-lg bg-red-100 p-2 text-sm font-semibold text-red-900">{baleteWarning(content)}</p>
@@ -68,10 +64,230 @@ function BaleteDialog(props: { target: { x: number; y: number } | null; onCancel
             Keep the tree
           </button>
           <button type="button" onClick={onConfirm} className="game-btn border-2 border-red-950 bg-red-700 px-4 py-2 text-sm font-semibold text-white">
-            Cut it down
+            Cut it down too
           </button>
         </div>
       </div>
+    </dialog>
+  );
+}
+
+/** Stop clearing one tile: a full refund before work starts, half once it has. */
+function CancelClearingDialog(props: { state: GameState; target: { x: number; y: number } | null; onClose: () => void; onConfirm: () => void }) {
+  const { state, target, onClose, onConfirm } = props;
+  const dialog = useRef<HTMLDialogElement>(null);
+  const job = target ? state.clearing.find((j) => j.x === target.x && j.y === target.y) : undefined;
+  useEffect(() => {
+    const d = dialog.current;
+    if (!d) return;
+    if (job && !d.open) d.showModal();
+    if (!job && d.open) d.close();
+  }, [!!job]);
+  const started = !!job && job.progress > 0;
+  const refund = job ? Object.fromEntries(Object.entries(job.paid).map(([r, n]) => [r, started ? Math.floor(n / 2) : n])) : {};
+  return (
+    <dialog
+      ref={dialog}
+      aria-labelledby="cancel-clear-title"
+      onClose={onClose}
+      onClick={(e) => e.target === dialog.current && onClose()}
+      className="m-auto w-[calc(100%-2rem)] max-w-sm rounded-2xl border-4 border-amber-950/70 p-0 text-stone-800 shadow-2xl backdrop:bg-stone-900/60"
+    >
+      {job && (
+        <div className="mat-card space-y-3 p-5">
+          <h2 id="cancel-clear-title" className="font-display text-2xl text-amber-900">
+            🪓 Stop clearing this tile?
+          </h2>
+          <p className="text-sm">
+            {started ? (
+              <>Work has started, so you get half back: <b>{costText(refund)}</b>.</>
+            ) : (
+              <>Nobody has started on it yet: you get it all back, <b>{costText(refund)}</b>.</>
+            )}{" "}
+            Tiles that only connected through this one are stopped too.
+          </p>
+          <div className="flex justify-end gap-2 pt-1">
+            <button type="button" autoFocus onClick={onClose} className="game-btn border-2 border-stone-400 bg-white px-4 py-2 text-sm font-semibold">
+              Keep clearing
+            </button>
+            <button type="button" onClick={onConfirm} className="game-btn border-2 border-red-950 bg-red-700 px-4 py-2 text-sm font-semibold text-white">
+              Stop and refund
+            </button>
+          </div>
+        </div>
+      )}
+    </dialog>
+  );
+}
+
+/** The selected tiles: how many, what they cost in total, and how many the barangay can pay for. */
+function ClearSelectionBar(props: { state: GameState; selection: { x: number; y: number }[]; onClear: () => void; onCancel: () => void }) {
+  const { state, selection, onClear, onCancel } = props;
+  const n = selection.length;
+  const total = selectionCost(state, content, n);
+  const can = affordableTiles(state, content, n);
+  const seconds = selection.reduce((t, _, i) => t + jobSeconds(state, content, i), 0);
+  const crews = clearingCrews(state, content);
+  const balete = selection.some((t) => tileAt(state.map, t.x, t.y) === "balete");
+  return (
+    <div role="status" className="wood-panel pointer-events-auto flex max-w-full flex-wrap items-center gap-2 rounded-xl border-2 border-amber-950/70 py-1.5 pr-1.5 pl-3 text-amber-50 shadow-lg">
+      <span className="text-2xl leading-none" aria-hidden>
+        🪓
+      </span>
+      <span className="min-w-0 flex-1 text-sm leading-tight">
+        <span className="text-outline block font-display text-base">
+          Clear {n} {n === 1 ? "tile" : "tiles"} · {costText(total)}
+        </span>
+        <span className="block text-xs text-amber-100/90">
+          {can < n ? <b className="text-amber-300">You can pay for {can} of {n}. </b> : null}
+          About {Math.ceil(seconds / Math.max(1, crews))}s with {crews} free {crews === 1 ? "crew" : "crews"} · +{content.rules.clearing.wood * n} 🪵
+          {balete && " · 🌳 includes a balete"}
+          {crews === 0 && " · waiting for free villagers"}
+        </span>
+      </span>
+      <span className="flex gap-1.5">
+        <button
+          type="button"
+          disabled={can === 0}
+          onClick={onClear}
+          className="game-btn border-2 border-green-950 bg-green-700 px-2.5 py-1 text-sm font-semibold text-white disabled:opacity-50"
+        >
+          {can < n ? `Clear ${can}` : "Clear"}
+        </button>
+        <button type="button" onClick={onCancel} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-2.5 py-1 text-sm font-semibold text-amber-950">
+          Cancel
+        </button>
+      </span>
+    </div>
+  );
+}
+
+/** Jobs at work, borrowed hands and jobs waiting, when nothing is selected. Tap to see the queue. */
+function ClearingQueueChip({ state, onOpen }: { state: GameState; onOpen: () => void }) {
+  if (state.clearing.length === 0) return null;
+  const active = activeJobs(state, content).length;
+  const waiting = state.clearing.length - active;
+  const borrowed = borrowedWorkers(state, content);
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={`Clearing: ${active} at work, ${borrowed} borrowed, ${waiting} waiting. Open the queue`}
+      className="pointer-events-auto rounded-full border border-amber-950/50 bg-stone-900/80 px-2.5 py-0.5 text-xs text-amber-50 shadow hover:bg-stone-900"
+    >
+      🪓 {active} clearing{borrowed > 0 && ` · ${borrowed} borrowed`}
+      {waiting > 0 && ` · ${waiting} waiting`}
+      {active === 0 && " · no free hands"} ›
+    </button>
+  );
+}
+
+/**
+ * The clearing queue: each job with its progress (tap to stop it), and "Free workers": the
+ * workplaces to pause so their villagers can clear instead of being borrowed.
+ */
+function ClearingQueueDialog(props: {
+  state: GameState;
+  open: boolean;
+  onClose: () => void;
+  onCancel: (x: number, y: number) => void;
+  onPause: (x: number, y: number, paused: boolean) => void;
+}) {
+  const { state, open, onClose, onCancel, onPause } = props;
+  const dialog = useRef<HTMLDialogElement>(null);
+  const show = open && state.clearing.length > 0;
+  useEffect(() => {
+    const d = dialog.current;
+    if (!d) return;
+    if (show && !d.open) d.showModal();
+    if (!show && d.open) d.close();
+  }, [show]);
+  const working = new Set(activeJobs(state, content));
+  const force = workforce(state, content);
+  const borrow = content.rules.clearing.borrow;
+  const safe = riceIsSafe(state, content);
+  const defs = new Map(content.buildings.map((d) => [d.id, d]));
+  // Suggestions: the workplaces clearing would borrow from, in the same order.
+  const rank = (type: string) => (borrow.order.includes(type) ? borrow.order.indexOf(type) : borrow.order.length);
+  const suggest = state.buildings
+    .map((b, i) => ({ b, i, def: defs.get(b.type) }))
+    .filter(({ b, def }) => def?.workers && !b.paused && !b.damaged && (safe || !borrow.protect.includes(b.type)))
+    .sort((a, b) => rank(a.b.type) - rank(b.b.type) || force.workers[b.i] + force.borrowed[b.i] - (force.workers[a.i] + force.borrowed[a.i]))
+    .slice(0, 3);
+  const paused = state.buildings.filter((b) => b.paused);
+  const waiting = state.clearing.length - working.size;
+  return (
+    <dialog
+      ref={dialog}
+      aria-labelledby="queue-title"
+      onClose={onClose}
+      onClick={(e) => e.target === dialog.current && onClose()}
+      className="m-auto w-[calc(100%-1.5rem)] max-w-md rounded-2xl border-4 border-amber-950/70 p-0 text-stone-800 shadow-2xl backdrop:bg-stone-900/60"
+    >
+      {show && (
+        <div className="mat-card max-h-[85dvh] space-y-3 overflow-y-auto p-5">
+          <h2 id="queue-title" className="font-display text-2xl text-amber-900">
+            🪓 Clearing the forest
+          </h2>
+          <p className="text-sm text-stone-600">
+            {working.size} at work, {waiting} waiting. {force.free} free {force.free === 1 ? "villager" : "villagers"}
+            {force.borrowed.some((n) => n > 0) && `, ${force.borrowed.reduce((a, b) => a + b, 0)} borrowed from workplaces`}.
+          </p>
+          <ol className="space-y-1.5">
+            {state.clearing.map((j, n) => (
+              <li key={`${j.x},${j.y}`} className="flex items-center gap-2 rounded-lg bg-white/60 px-2 py-1 text-sm">
+                <span className="w-5 text-right text-xs text-stone-500 tabular-nums">{n + 1}</span>
+                <span aria-hidden>{working.has(j) ? "🪓" : "⏳"}</span>
+                <span className="min-w-0 flex-1">
+                  {tileAt(state.map, j.x, j.y) === "balete" ? "Old balete" : "Forest"} at {j.x}, {j.y} ·{" "}
+                  {working.has(j) ? `${Math.round((j.progress / j.seconds) * 100)}%` : j.progress > 0 ? `paused at ${Math.round((j.progress / j.seconds) * 100)}%` : "waiting"}
+                </span>
+                <button type="button" onClick={() => onCancel(j.x, j.y)} className="text-xs font-semibold text-red-800 underline">
+                  Stop
+                </button>
+              </li>
+            ))}
+          </ol>
+          <section className="rounded-xl border-2 border-amber-900/25 bg-white/50 p-3">
+            <h3 className="font-display text-lg text-amber-900">Free workers</h3>
+            <p className="text-xs text-stone-600">
+              Pause a workplace and its villagers clear land instead. Paused buildings produce nothing until you resume them.
+              {!safe && borrow.protect.length > 0 && " Rice is low, so the fields are left alone."}
+            </p>
+            <ul className="mt-2 space-y-1.5">
+              {suggest.map(({ b, i, def }) => (
+                <li key={`${b.x},${b.y}`} className="flex items-center gap-2 text-sm">
+                  <span aria-hidden>{def!.icon}</span>
+                  <span className="min-w-0 flex-1">
+                    {def!.name} · {force.workers[i] + force.borrowed[i]} {force.workers[i] + force.borrowed[i] === 1 ? "worker" : "workers"}
+                  </span>
+                  <button type="button" onClick={() => onPause(b.x, b.y, true)} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-2 py-0.5 text-xs font-semibold text-amber-950">
+                    ⏸ Pause
+                  </button>
+                </li>
+              ))}
+              {suggest.length === 0 && <li className="text-xs text-stone-500">No workplace to pause right now.</li>}
+              {paused.map((b) => {
+                const def = defs.get(b.type)!;
+                return (
+                  <li key={`p${b.x},${b.y}`} className="flex items-center gap-2 text-sm text-stone-600">
+                    <span aria-hidden>{def.icon}</span>
+                    <span className="min-w-0 flex-1">{def.name} · paused</span>
+                    <button type="button" onClick={() => onPause(b.x, b.y, false)} className="game-btn border-2 border-green-950 bg-green-700 px-2 py-0.5 text-xs font-semibold text-white">
+                      ▶️ Resume
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+          <div className="flex justify-end">
+            <button type="button" autoFocus onClick={onClose} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-4 py-2 text-sm font-semibold text-amber-950">
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </dialog>
   );
 }
@@ -119,7 +335,11 @@ export function App() {
   const { state, dispatch, onReset, startNew, hasSave, continueGame } = useGame(screen === "game" && away === null);
   const [muted, setMutedState] = useState(isMuted);
   const [selected, setSelected] = useState<string | null>(null);
-  const [balete, setBalete] = useState<{ x: number; y: number } | null>(null);
+  // Forest tiles picked for clearing (in working order), and the dialogs that go with it.
+  const [selection, setSelection] = useState<{ x: number; y: number }[]>([]);
+  const [baleteAsk, setBaleteAsk] = useState(false);
+  const [cancelJob, setCancelJob] = useState<{ x: number; y: number } | null>(null);
+  const [queueOpen, setQueueOpen] = useState(false);
   const [loreNote, setLoreNote] = useState<string | null>(null);
   const [view, setView] = useState<"barangay" | "rehiyon">("barangay");
   // Reports already in the save when it loads count as seen.
@@ -216,6 +436,18 @@ export function App() {
     setMoving(null);
     setRoadMode(false);
   }, []);
+  // Drop selected tiles that stop being selectable (cleared, queued, cut off); Esc clears it.
+  useEffect(() => {
+    if (selection.length === 0) return;
+    const valid = orderSelection(state, selection);
+    if (valid.length !== selection.length) setSelection(valid);
+  }, [state.map, state.clearing]);
+  useEffect(() => {
+    if (selection.length === 0) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setSelection([]);
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [selection.length > 0]);
   // Drop the selection if it stops being affordable (or the moved building is gone), and let Esc cancel placing.
   useEffect(() => {
     if (placing && !placingAffordable) cancelPlacing();
@@ -302,16 +534,45 @@ export function App() {
     }
     const tile = tileAt(state.map, x, y);
     if (tile !== "forest" && tile !== "balete") return;
-    const blocker = clearBlocker(state, content, x, y, false, healthyWorkers(state));
-    if (blocker === "balete") {
-      setBalete({ x, y });
-    } else if (blocker) {
-      say(CLEAR_BLOCKED[blocker]);
-    } else {
-      dispatch({ type: "clear", x, y });
-      sfx.gather("wood");
-      say(`🪓 Clearing · ${Math.ceil(clearSeconds(state, content))}s`);
+    // A tile already queued or being cleared: offer to cancel it.
+    if (state.clearing.some((j) => j.x === x && j.y === y)) {
+      sfx.click();
+      setCancelJob({ x, y });
+      return;
     }
+    // Otherwise tapping adds the tile to the selection, or takes it out again.
+    if (selection.some((p) => p.x === x && p.y === y)) {
+      setSelection(orderSelection(state, selection.filter((p) => p.x !== x || p.y !== y)));
+      sfx.click();
+    } else if (canSelect(state, selection, x, y)) {
+      setSelection(orderSelection(state, [...selection, { x, y }]));
+      sfx.click();
+    } else {
+      say(NOT_SELECTABLE);
+    }
+  };
+
+  /** A mouse drag over the forest selects an area. Balete trees are never swept up: tap them one by one. */
+  const selectArea = (tiles: { x: number; y: number }[]) => {
+    const forest = tiles.filter((t) => tileAt(state.map, t.x, t.y) === "forest");
+    const next = orderSelection(state, [...selection, ...forest]);
+    if (next.length !== selection.length) sfx.click();
+    setSelection(next);
+  };
+
+  /** Queue the selection (or the part the barangay can afford). A balete asks first. */
+  const confirmClearing = (confirmBalete: boolean) => {
+    const order = orderSelection(state, selection);
+    const n = affordableTiles(state, content, order.length);
+    if (n === 0) return;
+    const tiles = order.slice(0, n);
+    if (!confirmBalete && tiles.some((t) => tileAt(state.map, t.x, t.y) === "balete")) {
+      setBaleteAsk(true);
+      return;
+    }
+    dispatch({ type: "clearArea", tiles, confirmBalete });
+    sfx.gather("wood");
+    setSelection([]);
   };
 
   const toggleSound = () => {
@@ -422,6 +683,9 @@ export function App() {
             setLoreNote(id);
           }}
           clash={clash}
+          selection={selection}
+          onSelectArea={selectArea}
+          focus={menu ? { x: menu.x, y: menu.y } : null}
           road={
             roadMode
               ? {
@@ -446,6 +710,18 @@ export function App() {
         )}
         <LoreToast loreId={loreNote} onClose={closeLore} />
         <div className="pointer-events-none absolute top-2 left-1/2 z-10 flex w-max max-w-[calc(100%-1rem)] -translate-x-1/2 flex-col items-center gap-1.5">
+          {view === "barangay" && selection.length > 0 && !placing && !roadMode && (
+            <ClearSelectionBar state={state} selection={selection} onClear={() => confirmClearing(false)} onCancel={() => setSelection([])} />
+          )}
+          {view === "barangay" && selection.length === 0 && !placing && !roadMode && (
+            <ClearingQueueChip
+              state={state}
+              onOpen={() => {
+                sfx.click();
+                setQueueOpen(true);
+              }}
+            />
+          )}
           {view === "barangay" && roadMode && (
             <div
               role="status"
@@ -570,6 +846,21 @@ export function App() {
           setMenu(null);
           setDemolishing({ x, y });
         }}
+        onPause={(x, y, paused) => {
+          dispatch({ type: "pause", x, y, paused });
+          sfx.click();
+          setMenu(null);
+        }}
+      />
+      <ClearingQueueDialog
+        state={state}
+        open={queueOpen}
+        onClose={() => setQueueOpen(false)}
+        onCancel={(x, y) => setCancelJob({ x, y })}
+        onPause={(x, y, paused) => {
+          dispatch({ type: "pause", x, y, paused });
+          sfx.click();
+        }}
       />
       <DemolishDialog
         state={state}
@@ -590,13 +881,22 @@ export function App() {
       <FloatLayer />
       {helpPanel}
       <BaleteDialog
-        target={balete}
-        onCancel={() => setBalete(null)}
+        open={baleteAsk}
+        onCancel={() => setBaleteAsk(false)}
         onConfirm={() => {
-          if (!balete) return;
-          dispatch({ type: "clear", x: balete.x, y: balete.y, confirmBalete: true });
-          sfx.gather("wood");
-          setBalete(null);
+          setBaleteAsk(false);
+          confirmClearing(true);
+        }}
+      />
+      <CancelClearingDialog
+        state={state}
+        target={cancelJob}
+        onClose={() => setCancelJob(null)}
+        onConfirm={() => {
+          if (!cancelJob) return;
+          dispatch({ type: "cancelClearing", x: cancelJob.x, y: cancelJob.y });
+          sfx.click();
+          setCancelJob(null);
         }}
       />
     </div>

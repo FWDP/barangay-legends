@@ -121,7 +121,7 @@ export function offlineStory(report: OfflineReport, before: GameState, after: Ga
   if (report.hungrySeconds >= 60) lines.push("For a while the granary was empty, so the work stopped, but everyone waited for your return. Gather rice!");
   if (report.arrived > 0) lines.push(`${plural(report.arrived, "newcomer", "newcomers")} settled in the barangay.`);
   if (report.recovered > 0) lines.push(`${plural(report.recovered, "sick villager", "sick villagers")} got well again.`);
-  if (report.cleared > 0) lines.push("The villagers finished clearing the forest they were working on.");
+  if (report.cleared > 0) lines.push(`The villagers cleared ${plural(report.cleared, "tile", "tiles")} of forest.`);
 
   const tribute = [report.tribute.rice > 0 && `${report.tribute.rice} rice`, report.tribute.wood > 0 && `${report.tribute.wood} wood`].filter(Boolean);
   if (tribute.length) lines.push(`Your tributaries sent ${tribute.join(" and ")} as tribute.`);

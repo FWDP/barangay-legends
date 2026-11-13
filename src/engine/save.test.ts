@@ -120,7 +120,7 @@ describe("migration from v3 (before the generated map)", () => {
     expect(s.version).toBe(STATE_VERSION);
     expect(s.map.seed).toBe(777);
     expect(s.map.plaza).toEqual(generateMap(content, 777).plaza);
-    expect(s.clearing).toBeNull();
+    expect(s.clearing).toEqual([]);
     expect(s.tilesCleared).toBe(0);
   });
 

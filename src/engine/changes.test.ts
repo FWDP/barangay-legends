@@ -309,8 +309,11 @@ describe("demolishing a Tulay", () => {
 
   it("stops a clearing job on the far bank", () => {
     const s = apply(bridged(), calm, { type: "clear", x: 7, y: 0 });
-    expect(s.clearing).not.toBeNull();
-    expect(apply(s, calm, { type: "demolish", x: 4, y: 2 }).clearing).toBeNull();
+    expect(s.clearing).toHaveLength(1);
+    const after = apply(s, calm, { type: "demolish", x: 4, y: 2 });
+    expect(after.clearing).toEqual([]);
+    // Refunded in full: the player didn't choose to stop it.
+    expect(after.resources.rice).toBe(apply(bridged(), calm, { type: "demolish", x: 4, y: 2 }).resources.rice);
   });
 
   it("can be undone right after building, which removes the crossing", () => {

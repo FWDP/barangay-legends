@@ -234,3 +234,52 @@ describe("adviser and paths", () => {
     expect(m.message!.text).toContain(`${content.rules.roads.connectedBonusPercent}%`);
   });
 });
+
+describe("adviser and borrowing", () => {
+  const busyMap = mapFrom([
+    "TTTTTTT",
+    "T.....T",
+    "T..P..T",
+    "T.....T",
+    "TTTTTTT",
+  ]);
+  const lending = () =>
+    apply(
+      withState({ map: busyMap, time: 10, villagers: 4, resources: { rice: 1000, wood: 0 }, buildings: [at("palayan", 1, 1), at("woodcutter-camp", 5, 1)] }),
+      content,
+      { type: "clearArea", tiles: [{ x: 0, y: 2 }] },
+    );
+
+  it("explains borrowing the first time, and only once", () => {
+    const s = lending();
+    let m = advise(tipsModel(s), input(s));
+    expect(trigger(m)).toBe("borrowing");
+    expect(m.message!.text).toContain("Woodcutter Camp");
+    for (let i = 1; i <= 3; i++) {
+      m = advise(dismiss(m), input({ ...s, clearing: [] }));
+      m = advise(m, input({ ...s, time: s.time + i * TIP_GAP_SECONDS }));
+      expect(trigger(m)).not.toBe("borrowing");
+    }
+  });
+
+  it("doesn't call a lending workplace unstaffed", () => {
+    const s = lending();
+    const m = advise({ ...tipsModel(s), memory: { ...NEW_MEMORY, tutorial: "done", shown: { "borrowing-1": 1 } } }, input({ ...s, time: s.time + 60 }));
+    expect(trigger(m)).not.toBe("unstaffed");
+  });
+});
+
+describe("adviser and raids at the shore", () => {
+  it("the first raid warning explains the shore and the Kuta, once", () => {
+    const base = withState({ resources: { rice: 1000, wood: 0 }, villagers: 2, time: 10 });
+    const g = newGame(content, 3);
+    const raid = { ...base, map: g.map, region: { ...g.region!, incomingRaid: { from: "batong-buhay", strikeAt: 40, landing: { x: g.map.plaza.x, y: 0 } } } };
+    const m = advise(tipsModel(raid), input(raid));
+    expect(m.message?.kind === "tip" && m.message.lineId).toBe("raid-shore-1");
+    expect(m.message!.text).toMatch(/north bank/);
+    expect(m.message!.text).toMatch(/Kuta built near the river/);
+    // Next raids use the other lines.
+    const again = advise({ ...newModel({ ...NEW_MEMORY, tutorial: "done", shown: { "raid-shore-1": 1 } }, raid, content) }, input(raid));
+    expect(again.message?.kind === "tip" && again.message.lineId).not.toBe("raid-shore-1");
+  });
+});

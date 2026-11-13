@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import type { Content, Resource } from "../engine/content";
 import { isHungry, seasonAt } from "../engine/events";
-import { assignWorkers, housing, rates, type GameState, type Rates } from "../engine/game";
+import { buildingWorkers, housing, rates, type GameState, type Rates } from "../engine/game";
 import { clock } from "./EventBanners";
 import { formatAmount, formatBreakdown, formatRate, RESOURCE_ICON } from "./format";
 
@@ -9,7 +9,7 @@ import { formatAmount, formatBreakdown, formatRate, RESOURCE_ICON } from "./form
 export function Hud(props: { state: GameState; content: Content; children: ReactNode }) {
   const { state, content, children } = props;
   const r = rates(state, content);
-  const working = Object.values(assignWorkers(state, content)).reduce((a, b) => a + b, 0);
+  const working = buildingWorkers(state, content).reduce((a, b) => a + b, 0);
 
   return (
     <header className="wood-panel relative z-30 flex items-center gap-1 border-b-2 border-amber-950/60 px-1.5 py-1.5 sm:gap-2 sm:px-3">

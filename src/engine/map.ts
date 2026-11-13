@@ -481,26 +481,20 @@ export function isClearable(map: MapState, x: number, y: number): boolean {
   });
 }
 
-export type ClearBlocker = "not-forest" | "not-adjacent" | "busy" | "hungry" | "workers" | "balete";
+export type ClearBlocker = "not-forest" | "not-adjacent" | "queued" | "cost" | "balete";
 
 /**
- * Why a clear command at (x, y) would be refused, or null if it can start.
+ * Why clearing just the tile at (x, y) would be refused, or null if it can be queued.
  * A balete needs `confirmBalete`, because felling it is permanent.
  */
-export function clearBlocker(
-  state: GameState,
-  content: Content,
-  x: number,
-  y: number,
-  confirmBalete = false,
-  freeWorkers = Infinity,
-): ClearBlocker | null {
+export function clearBlocker(state: GameState, content: Content, x: number, y: number, confirmBalete = false): ClearBlocker | null {
   const tile = tileAt(state.map, x, y);
   if (tile !== "forest" && tile !== "balete") return "not-forest";
+  if (state.clearing.some((j) => j.x === x && j.y === y)) return "queued";
   if (!isClearable(state.map, x, y)) return "not-adjacent";
-  if (state.clearing) return "busy";
-  if (state.resources.rice <= 0 && state.villagers > 0) return "hungry";
-  if (freeWorkers < content.rules.clearing.workers) return "workers";
+  const f = content.rules.clearing.secondsGrowth ** (state.tilesCleared + state.clearing.length);
+  const cost = content.rules.clearing.cost;
+  if (Object.entries(cost).some(([r, n]) => state.resources[r as keyof typeof state.resources] < Math.ceil((n ?? 0) * f))) return "cost";
   if (tile === "balete" && !confirmBalete) return "balete";
   return null;
 }

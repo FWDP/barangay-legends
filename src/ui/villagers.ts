@@ -1,7 +1,8 @@
 // Where each villager sprite should be, worked out from the game state. Pure and read-only:
 // the animation layer calls these every frame and never writes anything back to GameState.
 import type { Content } from "../engine/content";
-import { buildingWorkers, healthyWorkers, type GameState } from "../engine/game";
+import { activeJobs } from "../engine/clearing";
+import { buildingWorkers, type GameState } from "../engine/game";
 import { isHungry } from "../engine/events";
 import { tileAt, type MapState, type Point } from "../engine/map";
 import { cachedPath, isWalkable } from "../engine/paths";
@@ -50,7 +51,7 @@ export function presentVillagers(state: GameState): number {
  * One plan per sprite. Roles follow the real numbers: workers per building, villagers clearing
  * land, the sick, warriors at home, and the rest idle. Above MAX_SPRITES an even sample is drawn.
  */
-export function planVillagers(state: GameState, content: Content, cap = MAX_SPRITES): VillagerPlan[] {
+export function planVillagers(state: GameState, content: Content, cap = MAX_SPRITES, rally: Point | null = null): VillagerPlan[] {
   const defs = new Map(content.buildings.map((d) => [d.id, d]));
   const plaza = state.map.plaza;
   const total = presentVillagers(state);
@@ -63,14 +64,17 @@ export function planVillagers(state: GameState, content: Content, cap = MAX_SPRI
   state.buildings.forEach((b, i) => {
     for (let k = 0; k < workers[i]; k++) roles.push({ role: "work", place: b });
   });
-  if (state.clearing && !isHungry(state) && healthyWorkers(state) >= content.rules.clearing.workers) {
-    for (let k = 0; k < content.rules.clearing.workers; k++) roles.push({ role: "clearing", place: state.clearing });
+  if (!isHungry(state)) {
+    for (const job of activeJobs(state, content)) {
+      for (let k = 0; k < content.rules.clearing.workers; k++) roles.push({ role: "clearing", place: job });
+    }
   }
   const healer = state.buildings.find((b) => defs.get(b.type)?.heals && !b.damaged) ?? null;
   for (let k = 0; k < state.sick.length; k++) roles.push({ role: "sick", place: healer });
   const forts = state.buildings.filter((b) => (defs.get(b.type)?.defense ?? 0) > 0 && !b.damaged);
   const guards = homeWarriors(state);
-  for (let k = 0; k < guards; k++) roles.push({ role: "warrior", place: forts.length ? forts[k % forts.length] : null });
+  // During a raid warriors leave their Kuta to meet the raiders at the landing.
+  for (let k = 0; k < guards; k++) roles.push({ role: "warrior", place: rally ?? (forts.length ? forts[k % forts.length] : null) });
 
   const n = Math.min(total, cap);
   const plans: VillagerPlan[] = [];

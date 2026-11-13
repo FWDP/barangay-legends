@@ -10,10 +10,8 @@ import {
   buildingGroveBonuses,
   canPlace,
   clearBlocker,
-  clearSeconds,
   generateMap,
   canPlaceRoad,
-  isClearable,
   isConnected,
   isFootReachable,
   isUnlocked,
@@ -39,8 +37,9 @@ import {
 } from "./region";
 import { DEFAULT_SEED } from "./rng";
 import { choose, updateChoices, type PendingChoice } from "./choices";
+import { advanceClearing, cancelClearing, clearArea, dropUnreachableJobs, workforce, type ClearingJob } from "./clearing";
 
-export const STATE_VERSION = 10;
+export const STATE_VERSION = 13;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -53,6 +52,8 @@ export interface PlacedBuilding {
   burningSince?: number;
   /** Bridges only: the river tiles it spans (turned back into river if it is demolished). */
   span?: Point[];
+  /** Paused by the player: no workers, no output, until resumed. */
+  paused?: boolean;
 }
 
 /** The most recent build, so it can be undone for a few seconds (rules.placement.undoSeconds). */
@@ -112,8 +113,8 @@ export interface GameState {
   nextEventAt: Record<string, number>;
   /** The generated map, including every tile the player has cleared or bridged. */
   map: MapState;
-  /** Land being cleared right now (one job at a time), or null. */
-  clearing: ClearingJob | null;
+  /** Forest tiles queued for clearing, in the order they'll be worked (see clearing.ts). */
+  clearing: ClearingJob[];
   /** Tiles the player has cleared. Makes each new clearing take longer. */
   tilesCleared: number;
   /** Mandirigma: villagers trained as warriors. They eat and need housing but don't farm. */
@@ -133,13 +134,7 @@ export interface GameState {
   legacyReach: boolean;
 }
 
-export interface ClearingJob {
-  x: number;
-  y: number;
-  /** Seconds worked so far, and seconds needed (fixed when the job starts). */
-  progress: number;
-  seconds: number;
-}
+export type { ClearingJob } from "./clearing";
 
 /**
  * A new barangay. Pass a seed (e.g. from the clock in the UI) so each game's map and events
@@ -170,7 +165,7 @@ export function newGame(
     typhoon: null,
     nextEventAt: {},
     map: generateMap(content, seed),
-    clearing: null,
+    clearing: [],
     tilesCleared: 0,
     warriors: 0,
     region: null,
@@ -249,7 +244,7 @@ export function overcrowded(state: GameState, content: Content): number {
  * from the barangay's center (a far bank cut off by a lost bridge), except in old saves (legacyReach).
  */
 export function canStaff(state: GameState, b: PlacedBuilding): boolean {
-  if (b.damaged) return false;
+  if (b.damaged || b.paused) return false;
   return state.legacyReach || isFootReachable(state.map, b.x, b.y);
 }
 
@@ -272,10 +267,12 @@ export function healthyWorkers(state: GameState): number {
   return Math.max(0, state.villagers - state.sick.length - state.warriors);
 }
 
-/** Villagers free for buildings: healthy ones, minus any busy clearing land. */
-export function availableWorkers(state: GameState, content?: Content): number {
-  const clearing = state.clearing && content ? content.rules.clearing.workers : 0;
-  return Math.max(0, healthyWorkers(state) - clearing);
+/**
+ * Villagers free for buildings: every healthy one. Buildings come first; clearing forest uses
+ * the villagers left over (see clearing.ts), so a long clearing queue never empties the fields.
+ */
+export function availableWorkers(state: GameState, _content?: Content): number {
+  return healthyWorkers(state);
 }
 
 /** Spreads available workers across worker slots one at a time, round-robin in content order. */
@@ -304,11 +301,19 @@ export function assignWorkers(state: GameState, content: Content): Record<string
 }
 
 /**
- * Workers in each placed building (same order as state.buildings). Each type's workers fill
- * buildings with an adjacency bonus first, then older buildings first, one building at a time.
- * Damaged buildings get nobody.
+ * Workers in each placed building (same order as state.buildings), after any villagers lent to
+ * clearing forest (see workforce in clearing.ts).
  */
 export function buildingWorkers(state: GameState, content: Content): number[] {
+  return workforce(state, content).workers;
+}
+
+/**
+ * Workers in each placed building before any are lent to clearing. Each type's workers fill
+ * buildings with an adjacency bonus first, then older buildings first, one building at a time.
+ * Damaged, paused and unreachable buildings get nobody.
+ */
+export function baseBuildingWorkers(state: GameState, content: Content): number[] {
   const perType = assignWorkers(state, content);
   const groves = buildingGroveBonuses(state, content);
   const roads = roadBonuses(state, content);
@@ -421,13 +426,7 @@ export function bridgeTiles(state: GameState, content: Content, b: PlacedBuildin
 export function withoutBuilding(state: GameState, content: Content, target: PlacedBuilding): GameState {
   const span = bridgeTiles(state, content, target);
   const map = setTiles(state.map, span.map((t) => ({ ...t, tile: "river" as const })));
-  const job = state.clearing;
-  return {
-    ...state,
-    buildings: state.buildings.filter((b) => b !== target),
-    map,
-    clearing: job && !isClearable(map, job.x, job.y) ? null : job,
-  };
+  return dropUnreachableJobs({ ...state, buildings: state.buildings.filter((b) => b !== target), map });
 }
 
 function addResources(state: GameState, amounts: Record<Resource, number>): Record<Resource, number> {
@@ -488,15 +487,13 @@ export function move(state: GameState, content: Content, x: number, y: number, t
   delete moved.span;
   if (span.length > 0) moved.span = span;
   const map = setTiles(lifted.map, span.map((t) => ({ ...t, tile: "bridge" as const })));
-  const job = state.clearing;
-  return {
+  return dropUnreachableJobs({
     ...state,
     resources: pay(state, cost),
     buildings: state.buildings.map((b) => (b === target ? moved : b)),
     map,
-    clearing: job && !isClearable(map, job.x, job.y) ? null : job,
     lastBuild: null,
-  };
+  });
 }
 
 /** Demolishing returns a share (rules.placement.demolishRefundPercent) of what the last copy cost, rounded down. */
@@ -551,8 +548,8 @@ export function demolish(state: GameState, content: Content, x: number, y: numbe
  * Felling a balete needs confirmBalete: it can never grow back.
  */
 export function clearLand(state: GameState, content: Content, x: number, y: number, confirmBalete = false): GameState {
-  if (clearBlocker(state, content, x, y, confirmBalete, healthyWorkers(state)) !== null) return state;
-  return { ...state, clearing: { x, y, progress: 0, seconds: clearSeconds(state, content) } };
+  if (clearBlocker(state, content, x, y, confirmBalete) !== null) return state;
+  return clearArea(state, content, [{ x, y }], confirmBalete);
 }
 
 /** Puts out a burning building (free: the player taps it). */
@@ -583,7 +580,31 @@ export function repair(state: GameState, content: Content, x: number, y: number)
   return {
     ...state,
     resources: pay(state, cost),
-    buildings: state.buildings.map((b) => (b === target ? { type: b.type, x: b.x, y: b.y } : b)),
+    buildings: state.buildings.map((b) => {
+      if (b !== target) return b;
+      // Keeps everything else (a pause, a bridge's span); only the damage goes.
+      const fixed = { ...b };
+      delete fixed.damaged;
+      delete fixed.burningSince;
+      return fixed;
+    }),
+  };
+}
+
+/** Pauses a workplace (its workers go to the free pool) or sets it working again. */
+export function setPaused(state: GameState, content: Content, x: number, y: number, paused: boolean): GameState {
+  const target = buildingAt(state, x, y);
+  const def = target && content.buildings.find((d) => d.id === target.type);
+  if (!target || !def?.workers || (target.paused === true) === paused) return state;
+  return {
+    ...state,
+    buildings: state.buildings.map((b) => {
+      if (b !== target) return b;
+      const next = { ...b };
+      if (paused) next.paused = true;
+      else delete next.paused;
+      return next;
+    }),
   };
 }
 
@@ -600,6 +621,9 @@ export type Command =
   | { type: "extinguish"; x: number; y: number }
   | { type: "repair"; x: number; y: number }
   | { type: "clear"; x: number; y: number; confirmBalete?: boolean }
+  | { type: "clearArea"; tiles: Point[]; confirmBalete?: boolean }
+  | { type: "cancelClearing"; x: number; y: number }
+  | { type: "pause"; x: number; y: number; paused: boolean }
   | { type: "train" }
   | { type: "trade"; neighbor: string; give: Resource }
   | { type: "marry"; neighbor: string }
@@ -636,6 +660,12 @@ function applyCommand(state: GameState, content: Content, command: Command): Gam
       return repair(state, content, command.x, command.y);
     case "clear":
       return clearLand(state, content, command.x, command.y, command.confirmBalete === true);
+    case "clearArea":
+      return clearArea(state, content, command.tiles, command.confirmBalete === true);
+    case "cancelClearing":
+      return cancelClearing(state, command.x, command.y);
+    case "pause":
+      return setPaused(state, content, command.x, command.y, command.paused === true);
     case "train":
       return train(state, content);
     case "trade":
@@ -763,24 +793,9 @@ function step(state: GameState, content: Content, dt: number): GameState {
   // Warriors are villagers: if families leave, warriors go with them.
   const warriors = Math.min(state.warriors, villagers);
   let next: GameState = { ...state, resources, villagers, migration, hunger, warriors };
-  next = advanceClearing(next, content, dt, hungry);
+  next = advanceClearing(next, content, dt, hungry).state;
   next = updateEvents(next, content, dt);
   if (next.region) next = updateRegion(next, content, state.time, dt);
   return updateChoices(next, content, state.time, dt);
 }
 
-/** Clearing progresses while the barangay is fed and enough healthy villagers can work on it. */
-function advanceClearing(state: GameState, content: Content, dt: number, hungry: boolean): GameState {
-  const job = state.clearing;
-  if (!job || hungry || healthyWorkers(state) < content.rules.clearing.workers) return state;
-  const progress = job.progress + dt;
-  if (progress < job.seconds - EPSILON) return { ...state, clearing: { ...job, progress } };
-  return {
-    ...state,
-    clearing: null,
-    legacyReach: false,
-    tilesCleared: state.tilesCleared + 1,
-    resources: { ...state.resources, wood: state.resources.wood + content.rules.clearing.wood },
-    map: setTiles(state.map, [{ x: job.x, y: job.y, tile: "cleared" }]),
-  };
-}

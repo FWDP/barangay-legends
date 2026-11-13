@@ -173,6 +173,12 @@ export interface MilitaryRules {
   loserLossPercent: number;
   /** Share of the loser's rice and wood a winning raid carries off as tribute. */
   lootPercent: number;
+  /** A Kuta defends a landing within this many tiles in full... */
+  kutaRadius: number;
+  /** ...and gives this percent of its defense to one farther away. */
+  kutaOutsidePercent: number;
+  /** How fast warriors walk to a landing (tiles per second on cleared land; forest is slower). */
+  warriorTilesPerSecond: number;
 }
 
 export interface TraitDef {
@@ -204,7 +210,17 @@ export interface DiplomacyRules {
     guardSeconds: number;
     guardPerMinute: number;
   };
-  aiRaid: { chancePerSecond: number; cooldownSeconds: number; warningSeconds: number; lootPercent: number; defendRenown: number };
+  aiRaid: {
+    chancePerSecond: number;
+    cooldownSeconds: number;
+    warningSeconds: number;
+    lootPercent: number;
+    defendRenown: number;
+    /** Raiders land at one of this many river-bank spots nearest the barangay. */
+    landingChoices: number;
+    /** Where winning raiders go for loot (visual): the first of these building types the barangay has. Unknown ids are skipped. */
+    lootTargets: string[];
+  };
   offers: { chancePerSecond: number; expireSeconds: number; give: number; receivePercent: number };
   aiDecisionSeconds: number;
   traits: Record<string, TraitDef>;
@@ -253,9 +269,17 @@ export interface ClearingRules {
   baseSeconds: number;
   /** Each tile cleared so far multiplies the time by this. */
   secondsGrowth: number;
-  /** Villagers taken off other work while clearing. */
+  /** Rice (or other goods) paid upfront for the first tile; later tiles cost more, like the time. */
+  cost: ResourceAmounts;
+  /** Free villagers each clearing job needs (villagers not working in a building). */
   workers: number;
   wood: number;
+  /**
+   * When every villager is busy, clearing borrows from workplaces: the building types in
+   * `order` first, then whichever has the most workers. Types in `protect` are skipped while
+   * rice would last less than protectBelowRiceSeconds.
+   */
+  borrow: { order: string[]; protect: string[]; protectBelowRiceSeconds: number };
 }
 
 /** Gutom: at 0 rice villagers stop working; after a grace period, families leave. */
@@ -483,11 +507,18 @@ export function validateRules(raw: unknown): Rules {
   if (!isObject(clearing)) throw new Error('rules: missing "clearing"');
   checkNumbers(clearing, ["baseSeconds", "secondsGrowth", "wood"], "rules: clearing", false);
   checkNumbers(clearing, ["workers"], "rules: clearing", true);
+  checkAmounts(clearing.cost, "rules: clearing.cost");
+  const borrow = clearing.borrow;
+  if (!isObject(borrow) || !Array.isArray(borrow.order) || !Array.isArray(borrow.protect)) {
+    throw new Error('rules: "clearing.borrow" needs "order" and "protect" lists of building ids');
+  }
+  checkNumbers(borrow, ["protectBelowRiceSeconds"], "rules: clearing.borrow");
   const military = raw.military;
   if (!isObject(military) || !isObject(military.warrior)) throw new Error('rules: missing "military.warrior"');
   checkAmounts(military.warrior.cost, "rules: military.warrior.cost");
   checkNumbers(military.warrior, ["attack", "defense"], "rules: military.warrior");
-  checkNumbers(military, ["baseDefense", "winnerLossPercent", "loserLossPercent", "lootPercent"], "rules: military");
+  checkNumbers(military, ["baseDefense", "winnerLossPercent", "loserLossPercent", "lootPercent", "kutaRadius", "kutaOutsidePercent"], "rules: military");
+  checkNumbers(military, ["warriorTilesPerSecond"], "rules: military", true);
   const d = raw.diplomacy;
   if (!isObject(d)) throw new Error('rules: missing "diplomacy"');
   checkNumbers(d, ["truceSeconds", "startInfluence"], "rules: diplomacy");
@@ -499,7 +530,7 @@ export function validateRules(raw: unknown): Rules {
     raid: ["influence", "renown", "trustLossAll", "trustLossTarget", "cooldownSeconds"],
     tribute: ["percent", "everySeconds"],
     loyalty: ["start", "decayPerMinute", "rebelBelow", "rebelInfluence", "guardSeconds", "guardPerMinute"],
-    aiRaid: ["chancePerSecond", "cooldownSeconds", "warningSeconds", "lootPercent", "defendRenown"],
+    aiRaid: ["chancePerSecond", "cooldownSeconds", "warningSeconds", "lootPercent", "defendRenown", "landingChoices"],
     offers: ["chancePerSecond", "expireSeconds", "give", "receivePercent"],
   };
   for (const [section, keys] of Object.entries(sections)) {
@@ -520,6 +551,10 @@ export function validateRules(raw: unknown): Rules {
   checkNumbers(off, ["maxSeconds", "minSeconds"], "rules: offline");
   checkNumbers(off, ["stepSeconds", "maxSteps", "aiDecisionSeconds"], "rules: offline", true);
   checkAmounts((d.marriage as Record<string, unknown>).cost, "rules: diplomacy.marriage.cost");
+  const loot = (d.aiRaid as Record<string, unknown>).lootTargets;
+  if (!Array.isArray(loot) || !loot.every((t) => typeof t === "string" && t !== "")) {
+    throw new Error('rules: "diplomacy.aiRaid.lootTargets" must be a list of building ids');
+  }
   checkAmounts((d.sandugo as Record<string, unknown>).cost, "rules: diplomacy.sandugo.cost");
   if ((d.tribute as Record<string, number>).everySeconds <= 0) throw new Error("rules: diplomacy.tribute.everySeconds must be > 0");
   if (!isObject(d.traits) || Object.keys(d.traits).length === 0) throw new Error('rules: missing "diplomacy.traits"');
@@ -741,6 +776,9 @@ export function buildContent(
     }
   }
   const rules = validateRules(rawRules);
+  for (const id of [...rules.clearing.borrow.order, ...rules.clearing.borrow.protect]) {
+    if (!ids.has(id)) throw new Error(`rules: clearing.borrow mentions unknown building "${id}"`);
+  }
   for (const id of Object.keys(rules.start.buildings)) {
     if (!ids.has(id)) throw new Error(`rules: start.buildings mentions unknown building "${id}"`);
   }

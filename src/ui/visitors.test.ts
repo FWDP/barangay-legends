@@ -1,10 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { content, TEST_MAP } from "../engine/testUtils";
 import { tileAt } from "../engine/map";
-import { mapFrom } from "../engine/testUtils";
 import { isWalkable } from "../engine/paths";
-import { isWater, raidWalk } from "./visitors";
-import { along, boatArriving, boatLeaving, dockIndex, dockPoint, fromTop, LANDING_SHARE, LEAVE_SECONDS, raidApproach, raiderCount, riverPath, SAIL_SECONDS } from "./visitors";
+import { at, content, mapFrom, TEST_MAP, withState } from "../engine/testUtils";
+import { bandAt, isWater, lootTarget, lootWalk, sailToLanding } from "./visitors";
+import { along, boatArriving, boatLeaving, dockIndex, dockPoint, fromTop, LEAVE_SECONDS, raiderCount, riverPath, SAIL_SECONDS } from "./visitors";
 
 // TEST_MAP: river in column 0, plaza at (5, 4), 9 rows.
 const path = riverPath(TEST_MAP);
@@ -45,18 +44,38 @@ describe("boats on the river", () => {
   });
 });
 
-describe("raiders", () => {
-  const kuta = { x: 7, y: 6 };
-  it("stay on the water until the karakoa lands", () => {
-    const early = raidApproach(path, plaza, kuta, true, LANDING_SHARE / 2, 4);
-    expect(early.raiders).toHaveLength(0);
-    expect(early.karakoa.p.x).toBe(0.5);
+
+describe("raiders at the border", () => {
+  // The river down columns 4–5; the barangay to the west; a field at (1, 3).
+  const m = mapFrom([
+    "....~~....",
+    "....~~....",
+    ".P..~~....",
+    ".T..~~....",
+    "....~~....",
+  ]);
+  const river = riverPath(m);
+
+  it("the karakoa beaches beside the landing, coming from its end of the river", () => {
+    const landing = { x: 3, y: 3 };
+    const sail = sailToLanding(river, landing, true);
+    expect(sail[0].y).toBeLessThan(0);
+    expect(sail.at(-1)).toEqual({ x: 5, y: 3.5 });
+    expect(sailToLanding(river, landing, false)[0].y).toBeGreaterThan(m.height);
   });
 
-  it("reach the Kuta as the warning runs out", () => {
-    const end = raidApproach(path, plaza, kuta, true, 1, 4);
-    expect(end.raiders).toHaveLength(4);
-    for (const r of end.raiders) expect(Math.hypot(r.x - 7.5, r.y - 6.9)).toBeLessThan(1.2);
+  it("raiders stand on the landing tile, never in the water", () => {
+    for (const p of bandAt({ x: 3, y: 3 }, 8)) {
+      expect(Math.floor(p.x)).toBe(3);
+      expect(Math.floor(p.y)).toBe(3);
+    }
+  });
+
+  it("winners go for the first loot target the barangay has (fields while there's no Kamalig)", () => {
+    const s = withState({ map: m, buildings: [at("palayan", 0, 4), at("palayan", 2, 4)] });
+    expect(content.rules.diplomacy.aiRaid.lootTargets[0]).toBe("kamalig");
+    expect(lootTarget(s, content, { x: 3, y: 4 })).toMatchObject({ x: 2, y: 4 });
+    expect(lootTarget(withState({ map: m, buildings: [] }), content, { x: 3, y: 4 })).toEqual(m.plaza);
   });
 
   it("draws a band of 3 to 8", () => {
@@ -71,26 +90,11 @@ describe("raiders", () => {
     expect(along(line, 0.75).p).toEqual({ x: 2, y: 1 });
     expect(along(line, 2).p).toEqual({ x: 2, y: 2 });
   });
-});
 
-describe("raiders on foot", () => {
-  it("walk from their landing to the target over land, crossing on the bridge", () => {
-    // The river down columns 4–5; they land on the plaza's side and must come round by the bridge.
-    const m = mapFrom([
-      "....~~....",
-      "....~~....",
-      "....~~....",
-      "....~~....",
-      "....~~....",
-      "....~~....",
-      ".P..~~....",
-      "....==....",
-    ]);
-    const river = riverPath(m);
-    const walk = raidWalk(m, river, true, m.plaza, { x: 1, y: 7 })!;
-    expect(walk).not.toBeNull();
+  it("their loot walk stays on land", () => {
+    const walk = lootWalk(m, { x: 3, y: 0 }, { x: 0, y: 4 })!;
     expect(walk.every((p) => tileAt(m, Math.floor(p.x), Math.floor(p.y)) !== "river")).toBe(true);
-    expect(walk.at(-1)).toEqual({ x: 1.5, y: 7.5 });
+    expect(walk.at(-1)).toEqual({ x: 0.5, y: 4.5 });
   });
 });
 

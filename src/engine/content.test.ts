@@ -70,7 +70,7 @@ describe("content", () => {
   it("has map, clearing and Tulay values in content", () => {
     const { buildings, rules, lore } = loadContent();
     expect(rules.map).toMatchObject({ width: 60, height: 40, startClearRadius: 3 });
-    expect(rules.clearing).toMatchObject({ baseSeconds: 6, workers: 2, wood: 3 });
+    expect(rules.clearing).toMatchObject({ baseSeconds: 6, workers: 1, wood: 3, cost: { rice: 3 } });
     expect(buildings.find((b) => b.id === "tulay")).toMatchObject({ placeOn: "river", unlock: { villagers: 20 }, bridge: { maxSpan: 3 } });
     expect(lore.balete.sources.length).toBeGreaterThan(0);
   });

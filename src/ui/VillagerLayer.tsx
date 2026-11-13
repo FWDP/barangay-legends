@@ -28,14 +28,16 @@ import {
   boatArriving,
   boatLeaving,
   fromTop,
-  landingIndex,
   LEAVE_SECONDS,
-  raidApproach,
   raiderCount,
-  raidWalk,
-  reach,
+  LANDING_SHARE,
   riverPath,
+  bandAt,
+  lootTarget,
+  lootWalk,
+  sailToLanding,
 } from "./visitors";
+import { raidLanding } from "../engine/border";
 
 /** A battle at the Kuta being shown right now (see App): who won, and when it ends (ms). */
 export interface Clash {
@@ -47,15 +49,27 @@ export interface Clash {
 interface RaidMemory {
   from: string;
   top: boolean;
-  target: Point;
+  /** Where they landed, where the battle is. */
+  landing: Point;
   count: number;
-  /** Their way on foot from the landing to the target (A*), if there is one. */
-  walk: Point[] | null;
+  /** The karakoa's way in along the river. */
+  sail: Point[];
+  /** Winners' walk to their loot (A*), once worked out. */
+  loot: Point[] | null;
   /** performance.now() when it struck, when the clash ended, and whether the barangay won. */
   struckAt?: number;
   retreatAt?: number;
   win?: boolean;
 }
+
+/** Raiders' pace walking to their loot (tiles per second), the time they spend taking it, and how long fleeing takes. */
+const LOOT_WALK_SPEED = 2.5;
+const LOOT_PAUSE = 1.2;
+const FLEE_SECONDS = 2.5;
+
+/** A band of raiders around a point. */
+const spread = (p: Point, count: number): Point[] =>
+  Array.from({ length: count }, (_, i) => ({ x: p.x + ((i % 3) - 1) * 0.3, y: p.y + (Math.floor(i / 3) - 0.5) * 0.3 }));
 
 interface Sprite {
   p: Point;
@@ -295,7 +309,7 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
   const leavers = useRef<Leaver[]>([]);
   const before = useRef<GameState | null>(null);
   const started = useRef(false);
-  const planned = useRef<{ state: GameState | null; plans: VillagerPlan[] }>({ state: null, plans: [] });
+  const planned = useRef<{ state: GameState | null; rally: string; plans: VillagerPlan[] }>({ state: null, rally: "", plans: [] });
 
   // Families leaving (hunger, or a demolished house) walk off the map with their bundles.
   useEffect(() => {
@@ -335,7 +349,10 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
       const o = origin(c, v);
       const T = c.tile;
       // Plans only change when the game does (ten times a second), not every frame.
-      if (planned.current.state !== s) planned.current = { state: s, plans: planVillagers(s, content) };
+      // Warriors go to the landing while a raid is coming and while the battle there plays out.
+      const rally = s.region?.incomingRaid ? raidLanding(s, content) : raid.current && raid.current.retreatAt === undefined ? raid.current.landing : null;
+      const rallyKey = rally ? `${rally.x},${rally.y}` : "";
+      if (planned.current.state !== s || planned.current.rally !== rallyKey) planned.current = { state: s, rally: rallyKey, plans: planVillagers(s, content, undefined, rally) };
       const plans = planned.current.plans;
       // The tint only cycles with motion on, so with reduced motion it is always day.
       const night = !reducedMotion && isNight(dayPhase(Date.now()));
@@ -382,48 +399,66 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
         if (b && bp) drawn.push({ x: bp.x, y: bp.y, r: T * 0.7, layer: 0, f: () => drawBoat(g, bp.x, bp.y, T, b.heading ?? Math.PI / 2, "bangka", t) });
 
         const incoming = s.region?.incomingRaid ?? null;
-        const defs = new Map(content.buildings.map((d) => [d.id, d]));
-        const kuta = s.buildings.find((x) => (defs.get(x.type)?.defense ?? 0) > 0 && !x.damaged);
-        const target = kuta ? { x: kuta.x, y: kuta.y } : plaza;
         const warning = content.rules.diplomacy.aiRaid.warningSeconds;
         let scene: { karakoa: { p: Point; heading: number } | null; raiders: Point[]; look: Look; sparks: Point | null } | null = null;
-        if (incoming) {
+        const landingNow = incoming ? raidLanding(s, content) : null;
+        if (incoming && landingNow) {
+          // The warning: the karakoa sails in and beaches beside the landing, and the raiders
+          // wait there. The warriors walk out to meet them (see planVillagers' rally).
           const top = fromTop(content, incoming.from);
           const warriors = s.region?.neighbors.find((n) => n.id === incoming.from)?.state.warriors ?? 3;
-          raid.current = { from: incoming.from, top, target, count: raiderCount(warriors), walk: raidWalk(s.map, path, top, plaza, target) };
+          raid.current = { from: incoming.from, top, landing: landingNow, count: raiderCount(warriors), sail: sailToLanding(path, landingNow, top), loot: null };
           const progress = reducedMotion ? 1 : Math.min(1, Math.max(0, 1 - (incoming.strikeAt - s.time) / warning));
-          const a = raidApproach(path, plaza, target, top, progress, raid.current.count, raid.current.walk);
-          scene = { karakoa: a.karakoa, raiders: a.raiders, look: "raider", sparks: null };
+          const ashore = progress >= LANDING_SHARE;
+          scene = { karakoa: along(raid.current.sail, progress / LANDING_SHARE), raiders: ashore ? bandAt(landingNow, raid.current.count) : [], look: "raider", sparks: null };
           animating = !reducedMotion;
         } else if (raid.current && !reducedMotion) {
           const r = raid.current;
           r.struckAt ??= now;
-          const land = along(reach(path, landingIndex(path, r.top), r.top), 1);
-          const atKuta = raidApproach(path, plaza, r.target, r.top, 1, r.count, r.walk).raiders;
+          const beached = along(r.sail, 1);
+          const band = bandAt(r.landing, r.count);
           if (fight && now < fight.until) {
-            // The clash: both sides lunge back and forth at the Kuta.
+            // The clash, at the landing: both sides lunge back and forth.
             r.win = fight.win;
             scene = {
-              karakoa: land,
-              raiders: atKuta.map((p, i) => ({ x: p.x + Math.sin(t * 11 + i * 2) * 0.12, y: p.y - 0.25 + Math.cos(t * 9 + i) * 0.06 })),
+              karakoa: beached,
+              raiders: band.map((p, i) => ({ x: p.x + Math.sin(t * 11 + i * 2) * 0.12, y: p.y + Math.cos(t * 9 + i) * 0.06 })),
               look: "raider",
-              sparks: { x: r.target.x + 0.5, y: r.target.y + 0.5 },
+              sparks: { x: r.landing.x + 0.5, y: r.landing.y + 0.3 },
             };
           } else if (!fight && r.retreatAt === undefined && now - r.struckAt < 600) {
             // The report is on its way; hold the line for a moment.
-            scene = { karakoa: land, raiders: atKuta, look: "raider", sparks: null };
+            scene = { karakoa: beached, raiders: band, look: "raider", sparks: null };
           } else {
             r.retreatAt ??= now;
-            // Beaten raiders flee at a run; winners walk back with their loot.
-            const span = r.win === false ? LEAVE_SECONDS : LEAVE_SECONDS * 0.55;
-            const back = (now - r.retreatAt) / 1000 / span;
-            if (back < 1) {
-              const walking = raidApproach(path, plaza, r.target, r.top, 1 - back * (1 - 0.3), r.count, r.walk).raiders;
-              scene = { karakoa: land, raiders: walking, look: r.win === false ? "looter" : "raider", sparks: null };
-            } else if (back < 2) {
-              const line = reach(path, landingIndex(path, r.top), r.top).reverse();
-              scene = { karakoa: along(line, back - 1), raiders: [], look: "raider", sparks: null };
-            } else raid.current = null;
+            const since = (now - r.retreatAt) / 1000;
+            if (r.win === false) {
+              // They won: a short walk in to the fields (or a Kamalig, once there is one), then back to the boat with the loot.
+              r.loot ??= lootWalk(s.map, r.landing, lootTarget(s, content, r.landing)) ?? [];
+              const walkSeconds = Math.max(1, r.loot.length / LOOT_WALK_SPEED);
+              const out = since / walkSeconds;
+              const back = (since - walkSeconds - LOOT_PAUSE) / walkSeconds;
+              if (r.loot.length > 1 && out < 1) {
+                scene = { karakoa: beached, raiders: spread(along(r.loot, out).p, r.count), look: "raider", sparks: null };
+              } else if (r.loot.length > 1 && back < 0) {
+                scene = { karakoa: beached, raiders: spread(r.loot[r.loot.length - 1], r.count), look: "looter", sparks: null };
+              } else if (r.loot.length > 1 && back < 1) {
+                scene = { karakoa: beached, raiders: spread(along([...r.loot].reverse(), back).p, r.count), look: "looter", sparks: null };
+              } else {
+                const leave = (since - (r.loot.length > 1 ? 2 * walkSeconds + LOOT_PAUSE : 0)) / LEAVE_SECONDS;
+                if (leave < 1) scene = { karakoa: along([...r.sail].reverse(), leave), raiders: [], look: "raider", sparks: null };
+                else raid.current = null;
+              }
+            } else {
+              // Beaten: they run for the boat and row away.
+              const run = since / FLEE_SECONDS;
+              if (run < 1) {
+                const to = beached.p;
+                scene = { karakoa: beached, raiders: band.map((p) => ({ x: p.x + (to.x - p.x) * run, y: p.y + (to.y - p.y) * run })), look: "raider", sparks: null };
+              } else if (run < 1 + LEAVE_SECONDS / FLEE_SECONDS) {
+                scene = { karakoa: along([...r.sail].reverse(), (since - FLEE_SECONDS) / LEAVE_SECONDS), raiders: [], look: "raider", sparks: null };
+              } else raid.current = null;
+            }
           }
           animating = true;
         } else raid.current = null;

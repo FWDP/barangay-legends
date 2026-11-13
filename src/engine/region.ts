@@ -6,6 +6,8 @@ import { RESOURCES, type Content, type NeighborDef, type Resource, type TraitDef
 import { apply, canAfford, asCost, buildingCost, housing, newGame, owned, placeAuto, rates, tick, type GameState } from "./game";
 import { autoPlaceTile } from "./map";
 import { Rng } from "./rng";
+import { borderDefense, chooseLanding } from "./border";
+import type { Point } from "./map";
 
 export type NeighborStatus = "independent" | "tributary" | "ally";
 /** The four ways to bring a neighbor in. */
@@ -38,6 +40,14 @@ export interface TradeOffer {
   expiresAt: number;
 }
 
+/** A raid on its way: who, when, and where they'll land (chosen when the raid starts). */
+export interface IncomingRaid {
+  from: string;
+  strikeAt: number;
+  /** The river-bank tile they land on, where the battle is fought. Missing in older saves. */
+  landing?: Point | null;
+}
+
 export type ReportKind = "raid" | "defense" | "rebellion" | "tributary" | "alliance";
 
 /** A short battle or diplomacy report for the player. Captives are never part of it. */
@@ -56,6 +66,10 @@ export interface Report {
   loot?: Partial<Record<Resource, number>>;
   lost?: Partial<Record<Resource, number>>;
   renown?: number;
+  /** Raids on the player: where it was fought, warriors too far away to arrive in time, and whether a Kuta covered the landing. */
+  landing?: Point;
+  late?: number;
+  covered?: boolean;
 }
 
 export interface RegionState {
@@ -64,7 +78,7 @@ export interface RegionState {
   /** No AI raids before this game time. */
   truceUntil: number;
   /** A raid on its way (warning shown), or null. */
-  incomingRaid: { from: string; strikeAt: number } | null;
+  incomingRaid: IncomingRaid | null;
   nextAiRaidAt: number;
   offer: TradeOffer | null;
   reports: Report[];
@@ -569,7 +583,7 @@ function onRegionSecond(state: GameState, content: Content, second: number, rng:
     for (const n of region.neighbors) {
       if (n.status !== "independent" || !traitOf(content, n.id).raids || n.state.warriors < 1) continue;
       if (rng.next() < d.aiRaid.chancePerSecond) {
-        region = { ...region, incomingRaid: { from: n.id, strikeAt: second + d.aiRaid.warningSeconds } };
+        region = { ...region, incomingRaid: { from: n.id, strikeAt: second + d.aiRaid.warningSeconds, landing: chooseLanding(s, content, second) } };
         break;
       }
     }
@@ -619,9 +633,13 @@ function aiRaidStrikes(state: GameState, content: Content, second: number, rng: 
     .filter((n) => n.status === "ally" && n.id !== attacker.id)
     .reduce((sum, n) => sum + (n.state.warriors * m.warrior.defense * d.sandugo.allyDefensePercent) / 100, 0);
   const attack = attackOf(attacker.state.warriors, content);
-  const defense = defenseOf(state, content) + allies;
+  // The battle is at the landing: only warriors who get there in time fight, and each Kuta
+  // counts in full only if the landing is within its radius. Allies come too (by boat).
+  const landing = raid.landing ?? chooseLanding(state, content, raid.strikeAt - d.aiRaid.warningSeconds);
+  const border = landing ? borderDefense(state, content, landing, d.aiRaid.warningSeconds) : null;
+  const defense = (border ? border.defense : defenseOf(state, content)) + allies;
   const battle = resolveBattle(attack, defense, rng.next(), content);
-  const defenders = homeWarriors(state);
+  const defenders = border ? border.muster.joined : homeWarriors(state);
   const ourLosses = casualties(defenders, battle.defenderLossPercent, battle.attackerWins);
   const theirLosses = casualties(attacker.state.warriors, battle.attackerLossPercent, !battle.attackerWins);
 
@@ -647,6 +665,7 @@ function aiRaidStrikes(state: GameState, content: Content, second: number, rng: 
     theirLosses,
     lost,
     renown: battle.attackerWins ? 0 : d.aiRaid.defendRenown,
+    ...(landing && border ? { landing, late: border.muster.late, covered: border.muster.covered } : {}),
   });
   return { ...player, region: next };
 }

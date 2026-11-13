@@ -38,7 +38,7 @@
         "Pick a building from the bar at the bottom, then tap a highlighted tile. Each copy costs a bit more than the last.",
         "A Bahay Kubo houses more villagers. New families arrive while there is room and rice.",
         "Healthy villagers go to work on their own, filling the fields and camps. Tap a building to see who works there, or to move or demolish it.",
-        "Tap the forest next to your land to clear it and make room to grow."
+        "Tap forest next to your land to select it (or drag across it with a mouse), then press Clear. Each tile costs a little rice upfront, and free villagers clear them one by one. Tap a tile being cleared to stop it."
       ]
     },
     {
@@ -59,7 +59,7 @@
       "body": [
         "Open the Rehiyon map to meet the barangays along the river. Each has its own datu and temperament.",
         "Trade: swap rice and wood. It builds trust and influence. Marriage alliance: once trust is high, a marriage ties your families together. Sandugo: a blood compact makes an ally who helps defend you.",
-        "Mangayaw (raid): train Mandirigma warriors and raid a rival for tribute. Raids win influence but cost trust with everyone. Build a Kuta to defend against raids on you.",
+        "Mangayaw (raid): train Mandirigma warriors and raid a rival for tribute. Raids win influence but cost trust with everyone. Raiders land on the river bank and your warriors go out to meet them there, so build a Kuta near the river: it helps fully only within its reach.",
         "When a neighbor's influence is full, they become your tributary and send part of their harvest. Keep them loyal, or they rebel. Bring every barangay to your side to become Paramount Datu."
       ]
     }

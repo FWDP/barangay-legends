@@ -116,6 +116,18 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
   // v9 → v10: footpaths. Workplaces now need a path from the plaza to be staffed. Older saves
   // keep the old rule (every workplace staffed) until the player next changes the map.
   9: (raw) => ({ ...raw, version: 10, legacyReach: true }),
+  // v10 → v11: several tiles can be cleared at once. The one job (or none) becomes a queue;
+  // nothing was paid for it, so nothing is refunded if it's cancelled.
+  10: (raw) => ({
+    ...raw,
+    version: 11,
+    clearing: isObject(raw.clearing) ? [{ ...raw.clearing, paid: { rice: 0, wood: 0 } }] : [],
+  }),
+  // v11 → v12: workplaces can be paused. None are in older saves.
+  11: (raw) => ({ ...raw, version: 12 }),
+  // v12 → v13: raids land somewhere. A raid already on its way in an older save has no landing
+  // stored; it gets the same seeded one when it strikes (see border.ts raidLanding).
+  12: (raw) => ({ ...raw, version: 13 }),
 };
 
 // ---------- Frozen v2 map rules (for the v1 → v2 migration only) ----------
@@ -266,6 +278,7 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean): GameSta
       const span = parseSpan(item.span, map, def.bridge.maxSpan, x, y);
       building.span = span ?? standingBridgeTiles(map, def, x, y);
     }
+    if (item.paused === true && def.workers) building.paused = true;
     if (item.damaged === true) building.damaged = true;
     else if (finiteNonNeg(item.burningSince) && item.burningSince <= state.time && content.events.fire) {
       building.burningSince = item.burningSince;
@@ -274,13 +287,21 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean): GameSta
     state.buildings.push(building);
   }
 
-  const job = data.clearing;
-  if (isObject(job) && finiteNonNeg(job.progress) && finiteNonNeg(job.seconds) && typeof job.x === "number" && typeof job.y === "number") {
-    const tile = tileAt(map, job.x, job.y);
-    if (tile === "forest" || tile === "balete") {
-      state.clearing = { x: job.x, y: job.y, progress: job.progress, seconds: job.seconds } satisfies ClearingJob;
+  // The clearing queue: forest tiles, each at most once, with sane numbers.
+  if (Array.isArray(data.clearing)) {
+    const seen = new Set<string>();
+    for (const job of data.clearing.slice(0, 400)) {
+      if (!isObject(job) || !inBounds(map, job.x as number, job.y as number)) continue;
+      const t = tileAt(map, job.x as number, job.y as number);
+      const k = `${job.x},${job.y}`;
+      if ((t !== "forest" && t !== "balete") || seen.has(k) || !finiteNonNeg(job.progress) || !finiteNonNeg(job.seconds) || job.seconds <= 0) continue;
+      seen.add(k);
+      const paidRaw = isObject(job.paid) ? job.paid : {};
+      const paid = Object.fromEntries(RESOURCES.map((r) => [r, finiteNonNeg(paidRaw[r]) ? paidRaw[r] : 0])) as Record<Resource, number>;
+      state.clearing.push({ x: job.x as number, y: job.y as number, progress: Math.min(job.progress, job.seconds), seconds: job.seconds, paid } satisfies ClearingJob);
     }
   }
+
   const last = data.lastBuild;
   if (
     isObject(last) &&
@@ -320,6 +341,13 @@ const isResource = (v: unknown): v is Resource => (RESOURCES as readonly unknown
 const pct = (v: unknown, fallback: number) => (finiteNonNeg(v) ? Math.min(100, v) : fallback);
 
 /** Reads the region; anything missing or broken is rebuilt from content. */
+/** A saved landing: a land tile on the map, or null. */
+function parseLanding(raw: unknown, map: MapState): { x: number; y: number } | null {
+  if (!isObject(raw) || !Number.isInteger(raw.x) || !Number.isInteger(raw.y)) return null;
+  const t = tileAt(map, raw.x as number, raw.y as number);
+  return t && t !== "river" && t !== "bridge" ? { x: raw.x as number, y: raw.y as number } : null;
+}
+
 function parseRegion(raw: unknown, content: Content, player: GameState): RegionState {
   const fresh = createRegion(content, player.time, player.rng);
   if (!isObject(raw)) return fresh;
@@ -361,7 +389,7 @@ function parseRegion(raw: unknown, content: Content, player: GameState): RegionS
     truceUntil: finiteNonNeg(raw.truceUntil) ? raw.truceUntil : fresh.truceUntil,
     incomingRaid:
       isObject(incoming) && ids.has(incoming.from as string) && finiteNonNeg(incoming.strikeAt)
-        ? { from: incoming.from as string, strikeAt: incoming.strikeAt }
+        ? { from: incoming.from as string, strikeAt: incoming.strikeAt, landing: parseLanding(incoming.landing, player.map) }
         : null,
     nextAiRaidAt: finiteNonNeg(raw.nextAiRaidAt) ? raw.nextAiRaidAt : 0,
     offer:

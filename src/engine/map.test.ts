@@ -115,16 +115,16 @@ describe("clearing land", () => {
 
   it("takes villagers' time, then turns the tile into cleared land and gives wood", () => {
     let s = apply(start(), calm, { type: "clear", x: 0, y: 2 });
-    expect(s.clearing).toEqual({ x: 0, y: 2, progress: 0, seconds: 6 });
-    expect(availableWorkers(s, calm)).toBe(5 - content.rules.clearing.workers);
+    expect(s.clearing).toEqual([{ x: 0, y: 2, progress: 0, seconds: 6, paid: { rice: content.rules.clearing.cost.rice, wood: 0 } }]);
+    // Buildings come first; clearing uses villagers who aren't working anywhere.
+    expect(availableWorkers(s, calm)).toBe(5);
     s = run(s, 5);
     expect(tileAt(s.map, 0, 2)).toBe("forest");
     s = run(s, 1.5);
     expect(tileAt(s.map, 0, 2)).toBe("cleared");
     expect(s.resources.wood).toBe(content.rules.clearing.wood);
     expect(s.tilesCleared).toBe(1);
-    expect(s.clearing).toBeNull();
-    expect(availableWorkers(s, calm)).toBe(5);
+    expect(s.clearing).toEqual([]);
   });
 
   it("gets slower with every tile cleared", () => {
@@ -134,10 +134,11 @@ describe("clearing land", () => {
     expect(clearSeconds({ ...start(), tilesCleared: 10 }, content)).toBeGreaterThan(baseSeconds);
   });
 
-  it("does one tile at a time", () => {
+  it("queues more tiles, but never the same tile twice", () => {
     const s = apply(start(), calm, { type: "clear", x: 0, y: 2 });
-    expect(apply(s, calm, { type: "clear", x: 6, y: 2 })).toBe(s);
-    expect(clearBlocker(s, content, 6, 2)).toBe("busy");
+    expect(apply(s, calm, { type: "clear", x: 6, y: 2 }).clearing).toHaveLength(2);
+    expect(apply(s, calm, { type: "clear", x: 0, y: 2 })).toBe(s);
+    expect(clearBlocker(s, content, 0, 2)).toBe("queued");
   });
 
   it.each([
@@ -150,17 +151,20 @@ describe("clearing land", () => {
     expect(clearBlocker(s, content, x, y)).toBe(reason);
   });
 
-  it("needs fed, healthy villagers", () => {
-    const hungry = { ...start(), resources: { rice: 0, wood: 0 } };
-    expect(clearBlocker(hungry, content, 0, 2)).toBe("hungry");
-    const fewWell = { ...start(), villagers: 2, sick: [60] };
-    expect(apply(fewWell, calm, { type: "clear", x: 0, y: 2 })).toBe(fewWell);
+  it("costs rice upfront, and waits for a free, healthy villager", () => {
+    const broke = { ...start(), resources: { rice: 0, wood: 0 } };
+    expect(clearBlocker(broke, content, 0, 2)).toBe("cost");
+    expect(apply(broke, calm, { type: "clear", x: 0, y: 2 })).toBe(broke);
+    // Everyone sick: the job is queued but nobody works on it.
+    const allSick = { ...start(), villagers: 1, sick: [60] };
+    const s = run(apply(allSick, calm, { type: "clear", x: 0, y: 2 }), 9); // before a newcomer arrives
+    expect(s.clearing[0].progress).toBe(0);
   });
 
   it("pauses while the barangay is hungry", () => {
     let s = apply(start(), calm, { type: "clear", x: 0, y: 2 });
     s = run({ ...s, resources: { rice: 0, wood: 0 } }, 10);
-    expect(s.clearing?.progress).toBe(0);
+    expect(s.clearing[0].progress).toBe(0);
     expect(tileAt(s.map, 0, 2)).toBe("forest");
   });
 

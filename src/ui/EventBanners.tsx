@@ -1,4 +1,6 @@
+import { directionFrom, raidLanding } from "../engine/border";
 import type { Content } from "../engine/content";
+import { barangayCenter } from "../engine/map";
 import { healRate, isBurning, seasonAt, secondsUntilLeaving } from "../engine/events";
 import { overcrowded, type GameState } from "../engine/game";
 
@@ -45,11 +47,13 @@ export function activeBanners(state: GameState, content: Content): Banner[] {
   const raid = state.region?.incomingRaid;
   if (raid) {
     const who = content.neighbors.find((n) => n.id === raid.from);
+    const landing = raidLanding(state, content);
+    const where = landing ? ` on the ${directionFrom(barangayCenter(state.map), landing)} bank (⚔️ on the map)` : "";
     banners.push({
       id: "raid",
       icon: "🔥",
       title: `Raid in ${clock(raid.strikeAt - state.time)}`,
-      text: `${who?.datu ?? "A datu"} of ${who?.name ?? raid.from} is coming. Train Mandirigma, build a Kuta; your buildings will stand.`,
+      text: `${who?.datu ?? "A datu"} of ${who?.name ?? raid.from} will land${where}. Your warriors go to meet them there; a Kuta close by helps most. Buildings will stand.`,
       tone: "danger",
     });
   }

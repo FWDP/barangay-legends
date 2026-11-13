@@ -21,7 +21,6 @@ import {
   buildingBonuses,
   buildingGroveBonuses,
   groveBonusAt,
-  clearSeconds,
   canPlaceRoad,
   isClearable,
   isConnected,
@@ -47,6 +46,8 @@ import {
 } from "./camera";
 import { spawnFloat } from "./floats";
 import { bonusPreviewText, RESOURCE_ICON } from "./format";
+import { activeJobs, jobCost, workforce } from "../engine/clearing";
+import { landingCandidates, raidLanding } from "../engine/border";
 import { useReducedMotion, VillagerLayer, type Clash } from "./VillagerLayer";
 import { dockPoint, riverPath, SAIL_SECONDS } from "./visitors";
 import { DAY_SECONDS } from "./villagers";
@@ -78,6 +79,10 @@ interface BuildingInfo {
   connected: boolean;
   /** A workplace nobody can walk to. */
   noPath: boolean;
+  /** Paused by the player. */
+  paused: boolean;
+  /** Workers lent to clearing forest right now. */
+  lent: number;
   damaged: boolean;
   burning: boolean;
   repairText: string;
@@ -110,8 +115,16 @@ export function BarangayMap(props: {
   onBoat?: () => void;
   /** Laying Daan: tap a tile to lay one, tap a path to take it up; drag with a mouse to lay a line. */
   road?: { onLay: (tiles: Point[]) => void; onRemove: (x: number, y: number) => void; costText: string } | null;
+  /** Forest tiles picked for clearing. */
+  selection?: Point[];
+  /** A mouse drag across the forest: the tiles in the rectangle (the App filters them). */
+  onSelectArea?: (tiles: Point[]) => void;
+  /** A building whose menu is open: a Kuta shows its defense radius. */
+  focus?: Point | null;
 }) {
-  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null } = props;
+  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null, selection = [], onSelectArea, focus = null } = props;
+  // The rectangle being dragged over the forest (desktop), from its first tile to the current one.
+  const [dragArea, setDragArea] = useState<{ from: Point; to: Point } | null>(null);
   // Tiles being painted with a mouse drag in road mode (laid on release).
   const [paint, setPaint] = useState<Point[]>([]);
   const plan = props.planState ?? state;
@@ -160,6 +173,7 @@ export function BarangayMap(props: {
     const groves = buildingGroveBonuses(state, content);
     const roads = roadBonuses(state, content);
     const stranded = new Set(unreachableWorkplaces(state, content));
+    const lentOut = workforce(state, content).borrowed;
     const defs = new Map(content.buildings.map((d) => [d.id, d]));
     const byTile = new Map<string, BuildingInfo>();
     state.buildings.forEach((b, i) => {
@@ -172,13 +186,15 @@ export function BarangayMap(props: {
         bonus: bonuses[i] + roads[i] + Object.values(groves[i]).reduce((sum, g) => sum + (g ?? 0), 0),
         connected: roads[i] > 0,
         noPath: stranded.has(b),
+        paused: b.paused === true,
+        lent: lentOut[i] ?? 0,
         damaged: b.damaged === true,
         burning: b.burningSince !== undefined,
         repairText: repair || "free",
       });
     });
     return byTile;
-  }, [state.buildings, map, content, state.legacyReach]);
+  }, [state.buildings, map, content, state.legacyReach, state.clearing, state.villagers, state.sick.length, state.resources.rice > 0]);
 
   // The scenic drift moves the view up to SCENIC_DRIFT tiles, so draw that much more around it.
   const range = cam && view.w > 0 ? visibleRange(cam, view, map, scenic ? SCENIC_DRIFT + 1 : 1) : null;
@@ -191,7 +207,8 @@ export function BarangayMap(props: {
   const placement = useMemo(() => {
     if (!placing || !range) return null;
     const taken = occupancy(plan);
-    return new Map<string, { adjacency: number; grove: number; road: number; noPath: boolean }>(
+    const banks = placing.defense ? landingCandidates(plan.map) : [];
+    return new Map<string, { adjacency: number; grove: number; road: number; noPath: boolean; bank: number }>(
       validTiles(plan, content, placing, range)
         .filter((t) => !(moveFrom && t.x === moveFrom.x && t.y === moveFrom.y))
         .map((t) => {
@@ -199,7 +216,8 @@ export function BarangayMap(props: {
           const g = grove ? groveBonusAt(plan.map, content, placing, t.x, t.y, grove.resource) : 0;
           const road = placing.produces && isConnected(plan.map, t.x, t.y) ? content.rules.roads.connectedBonusPercent / 100 : 0;
           const noPath = (placing.workers ?? 0) > 0 && !isFootReachable(plan.map, t.x, t.y);
-          return [`${t.x},${t.y}`, { adjacency, grove: g, road, noPath }];
+          const bank = placing.defense ? banks.filter((p) => Math.hypot(p.x - t.x, p.y - t.y) <= content.rules.military.kutaRadius).length : 0;
+          return [`${t.x},${t.y}`, { adjacency, grove: g, road, noPath, bank }];
         }),
     );
   }, [placing, plan.buildings, plan.map, content, rangeKey, moveFrom?.x, moveFrom?.y]);
@@ -219,6 +237,32 @@ export function BarangayMap(props: {
     }
     return tiles;
   }, [grove, map, rangeKey]);
+
+  // A Kuta's defense radius: around the tile being placed on, the Kuta whose menu is open, or
+  // every Kuta while a raid is coming (where they'll land is marked too).
+  const landing = scenic ? null : raidLanding(state, content);
+  const radius = content.rules.military.kutaRadius;
+  const kutaIds = useMemo(() => new Set(content.buildings.filter((b) => b.defense).map((b) => b.id)), [content]);
+  const guardCenters: Point[] = [];
+  if (!scenic) {
+    if (placing?.defense && hover) guardCenters.push(hover);
+    const focused = focus ? state.buildings.find((b) => b.x === focus.x && b.y === focus.y) : undefined;
+    if (focused && kutaIds.has(focused.type)) guardCenters.push(focused);
+    if (landing || placing?.defense) for (const b of state.buildings) if (kutaIds.has(b.type) && !b.damaged) guardCenters.push(b);
+  }
+  const guardKey = guardCenters.map((p) => `${p.x},${p.y}`).join(";");
+  const guard = useMemo(() => {
+    const tiles = new Set<string>();
+    if (!range) return tiles;
+    for (const c of guardCenters) {
+      for (let y = Math.max(range.y0, Math.ceil(c.y - radius)); y <= Math.min(range.y1, Math.floor(c.y + radius)); y++) {
+        for (let x = Math.max(range.x0, Math.ceil(c.x - radius)); x <= Math.min(range.x1, Math.floor(c.x + radius)); x++) {
+          if (Math.hypot(x - c.x, y - c.y) <= radius) tiles.add(`${x},${y}`);
+        }
+      }
+    }
+    return tiles;
+  }, [guardKey, rangeKey, radius]);
 
   // Now and then a kapre rests in a balete. Which trees, and when, comes from a hash of the
   // tree's position and the current time window, so it's stable for a while (UI only).
@@ -254,6 +298,8 @@ export function BarangayMap(props: {
     boat?: boolean;
     /** A mouse drag laying Daan. */
     painting?: boolean;
+    /** A mouse drag selecting forest to clear. */
+    selecting?: boolean;
     pinch?: { dist: number; mid: { x: number; y: number } };
   } | null>(null);
   const local = (e: { clientX: number; clientY: number }) => {
@@ -295,6 +341,15 @@ export function BarangayMap(props: {
       setPaint(tileAt(map, t.x, t.y) === "daan" ? [] : [t]);
       return;
     }
+    // A mouse drag that starts on forest selects an area of it to clear (elsewhere it pans).
+    if (!road && !placing && onSelectArea && e.pointerType === "mouse" && pointers.current.size === 1) {
+      const t = screenToTile(cam, view, p.x, p.y);
+      const tile = tileAt(map, t.x, t.y);
+      if (tile === "forest" || tile === "balete") {
+        gesture.current = { x: p.x, y: p.y, cam, moved: false, selecting: true, spirit, boat };
+        return;
+      }
+    }
     if (pointers.current.size === 1) gesture.current = { x: p.x, y: p.y, cam, moved: false, spirit, boat };
     else if (pointers.current.size === 2) gesture.current = { x: p.x, y: p.y, cam, moved: true, pinch: pinchOf() };
   };
@@ -308,6 +363,11 @@ export function BarangayMap(props: {
     pointers.current.set(e.pointerId, p);
     const g = gesture.current;
     if (!g) return;
+    if (g.selecting && cam) {
+      if (!g.moved && Math.hypot(p.x - g.x, p.y - g.y) > TAP_SLOP_PX) g.moved = true;
+      if (g.moved) setDragArea({ from: screenToTile(cam, view, g.x, g.y), to: screenToTile(cam, view, p.x, p.y) });
+      return;
+    }
     if (g.painting && cam) {
       const t = screenToTile(cam, view, p.x, p.y);
       if (Math.hypot(p.x - g.x, p.y - g.y) > TAP_SLOP_PX) g.moved = true;
@@ -347,6 +407,24 @@ export function BarangayMap(props: {
   const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
     const g = gesture.current;
     if (!pointers.current.delete(e.pointerId)) return;
+    if (pointers.current.size === 0 && g?.selecting) {
+      if (e.type === "pointerup" && g.moved && dragArea && onSelectArea) {
+        const r = dragArea;
+        const tiles: Point[] = [];
+        for (let y = Math.min(r.from.y, r.to.y); y <= Math.max(r.from.y, r.to.y); y++) {
+          for (let x = Math.min(r.from.x, r.to.x); x <= Math.max(r.from.x, r.to.x); x++) tiles.push({ x, y });
+        }
+        onSelectArea(tiles);
+      } else if (e.type === "pointerup" && !g.moved) {
+        const p = local(e);
+        if (g.boat && onBoat) onBoat();
+        else if (g.spirit && sighting?.lore) onSpirit(sighting.lore, e.clientX, e.clientY);
+        else tapAt(p.x, p.y, e.clientX, e.clientY);
+      }
+      setDragArea(null);
+      gesture.current = null;
+      return;
+    }
     if (pointers.current.size === 0 && g?.painting) {
       // A drag lays the whole line; a click is a normal tap (lay or take up one tile).
       if (e.type === "pointerup" && g.moved && road) road.onLay(paint.filter((t) => canPlaceRoad(state, t.x, t.y)));
@@ -492,8 +570,14 @@ export function BarangayMap(props: {
 
   const cells: ReactNode[] = [];
   if (cam && range) {
-    const job = state.clearing;
-    const clearLabel = `🪓 Clear · ${Math.ceil(clearSeconds(state, content))}s · +${content.rules.clearing.wood} ${RESOURCE_ICON.wood}`;
+    const jobs = new Map(state.clearing.map((j) => [`${j.x},${j.y}`, j]));
+    const working = new Set(activeJobs(state, content).map((j) => `${j.x},${j.y}`));
+    const picked = new Map(selection.map((t, i) => [`${t.x},${t.y}`, i]));
+    const r = dragArea;
+    const inArea = (x: number, y: number) =>
+      !!r && x >= Math.min(r.from.x, r.to.x) && x <= Math.max(r.from.x, r.to.x) && y >= Math.min(r.from.y, r.to.y) && y <= Math.max(r.from.y, r.to.y);
+    const price = jobCost(state, content, selection.length);
+    const clearLabel = `🪓 Select to clear · ${RESOURCE_ICON.rice} ${price.rice} · +${content.rules.clearing.wood} ${RESOURCE_ICON.wood}`;
     for (let y = range.y0; y <= range.y1; y++) {
       for (let x = range.x0; x <= range.x1; x++) {
         const tile = tileAt(map, x, y)!;
@@ -521,6 +605,7 @@ export function BarangayMap(props: {
                 : null
             }
             glow={glow.has(key)}
+            guard={guard.has(key)}
             spirit={
               tile === "balete" && sighting
                 ? hash(x * 31 + sightingWindow, y * 17 + sightingWindow) < sighting.sighting!.chancePercent
@@ -529,7 +614,11 @@ export function BarangayMap(props: {
             onSpiritKey={onSpiritKey}
             clearable={clearable}
             hint={
-              road && hovered
+              jobs.has(key) && hovered && !road
+                ? working.has(key)
+                  ? "🪓 Clearing · tap to stop"
+                  : "⏳ Waiting for a free villager · tap to stop"
+                : road && hovered
                 ? tile === "daan"
                   ? "Tap to take up the path (free)"
                   : canPlaceRoad(state, x, y)
@@ -541,7 +630,9 @@ export function BarangayMap(props: {
                     : clearLabel
                   : null
             }
-            progress={job && job.x === x && job.y === y ? Math.min(1, job.progress / job.seconds) : null}
+            progress={jobs.has(key) ? Math.min(1, jobs.get(key)!.progress / jobs.get(key)!.seconds) : null}
+            waiting={jobs.has(key) && !working.has(key)}
+            picked={picked.has(key) || (inArea(x, y) && tile === "forest")}
             onActivate={onActivate}
           />,
         );
@@ -592,6 +683,7 @@ export function BarangayMap(props: {
           </div>
         )}
         {cam && view.w > 0 && <VillagerLayer state={state} content={content} cam={cam} view={view} reducedMotion={reducedMotion} clash={clash} />}
+        {cam && landing && <LandingMarker cam={cam} view={view} landing={landing} />}
         {cam && dock && (
           <span
             data-boat
@@ -649,6 +741,43 @@ export function BarangayMap(props: {
         </CamButton>
       </div>
       )}
+    </div>
+  );
+}
+
+/**
+ * Where raiders will land: a pulsing marker on the tile, or, when it's off screen, an arrow at
+ * the edge of the view pointing to it.
+ */
+function LandingMarker({ cam, view, landing }: { cam: Camera; view: View; landing: Point }) {
+  const p = tileCenter(cam, view, landing.x, landing.y);
+  const inside = p.x >= 0 && p.y >= 0 && p.x <= view.w && p.y <= view.h;
+  if (inside) {
+    return (
+      <div aria-hidden className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2" style={{ left: p.x, top: p.y }}>
+        <span className="absolute inset-0 rounded-full bg-red-500/40 motion-safe:animate-ping" style={{ width: cam.tile, height: cam.tile, marginLeft: -cam.tile / 2 + 0, marginTop: -cam.tile / 2 + 0, left: "50%", top: "50%" }} />
+        <span className="relative flex items-center gap-1 rounded-full border-2 border-red-950 bg-red-700 px-1.5 py-0.5 font-display text-xs whitespace-nowrap text-white shadow-lg">
+          ⚔️ Landing
+        </span>
+      </div>
+    );
+  }
+  // Clamp to the view's edge, pointing the way.
+  const m = 28;
+  const x = Math.min(view.w - m, Math.max(m, p.x));
+  const y = Math.min(view.h - m, Math.max(m, p.y));
+  const angle = Math.atan2(p.y - y, p.x - x);
+  return (
+    <div
+      role="img"
+      aria-label="Raiders will land off screen in this direction"
+      className="pointer-events-none absolute z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full border-2 border-red-950 bg-red-700 px-1.5 py-0.5 font-display text-xs text-white shadow-lg"
+      style={{ left: x, top: y }}
+    >
+      ⚔️
+      <span aria-hidden className="inline-block" style={{ transform: `rotate(${angle}rad)` }}>
+        ➜
+      </span>
     </div>
   );
 }
@@ -746,8 +875,14 @@ const Cell = memo(function Cell(props: {
   onActivate: (x: number, y: number, el: Element) => void;
   /** Part of a Daan being dragged out (not laid yet). */
   pathPreview?: boolean;
+  /** A clearing job here is queued but nobody is on it yet. */
+  waiting?: boolean;
+  /** Picked for clearing (not confirmed yet). */
+  picked?: boolean;
+  /** Inside a Kuta's defense radius (shown while placing or looking at a Kuta, and during a raid warning). */
+  guard?: boolean;
 }) {
-  const { x, y, tile, plaza, building, fresh, lifted, target, ghost, glow, spirit, onSpiritKey, clearable, hint, progress, onActivate, pathPreview } = props;
+  const { x, y, tile, plaza, building, fresh, lifted, target, ghost, glow, spirit, onSpiritKey, clearable, hint, progress, onActivate, pathPreview, waiting, picked, guard } = props;
   const h = hash(x, y);
   const valid = typeof target === "number";
   const paddy = building?.def.produces?.rice;
@@ -765,6 +900,7 @@ const Cell = memo(function Cell(props: {
           {h < 70 ? "🌳" : "🌴"}
         </span>
       )}
+      {guard && <div aria-hidden className="pointer-events-none absolute inset-0 bg-sky-200/15 shadow-[inset_0_0_10px_rgb(186_230_253_/_0.45)]" />}
       {glow && (
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-amber-200/20 shadow-[inset_0_0_14px_rgb(253_230_138_/_0.55)]" />
       )}
@@ -788,7 +924,12 @@ const Cell = memo(function Cell(props: {
       {clearable && progress === null && (
         <div aria-hidden className="pointer-events-none absolute inset-[4%] rounded-md border border-dashed border-lime-200/40" />
       )}
-      {progress !== null && <ClearingProgress progress={progress} />}
+      {progress !== null && <ClearingProgress progress={progress} waiting={!!waiting} />}
+      {picked && progress === null && (
+        <div aria-hidden className="pointer-events-none absolute inset-[4%] flex items-center justify-center rounded-md border-2 border-dashed border-amber-300 bg-amber-300/25">
+          <span className="text-[0.45em] leading-none opacity-90">🪓</span>
+        </div>
+      )}
       {paddy && (
         <div className="absolute inset-[6%] rounded-sm bg-linear-to-br from-lime-300 via-lime-200 to-cyan-200 shadow-inner" />
       )}
@@ -815,16 +956,16 @@ const Cell = memo(function Cell(props: {
   );
 });
 
-function ClearingProgress({ progress }: { progress: number }) {
+function ClearingProgress({ progress, waiting }: { progress: number; waiting: boolean }) {
   return (
     <>
-      <div aria-hidden className="pointer-events-none absolute inset-[4%] rounded-md border-2 border-amber-300 bg-amber-900/20" />
-      <span aria-hidden className="pointer-events-none text-[0.6em] leading-none motion-safe:animate-flicker">
-        🪓
+      <div aria-hidden className={`pointer-events-none absolute inset-[4%] rounded-md border-2 ${waiting ? "border-dashed border-amber-200/70 bg-stone-900/25" : "border-amber-300 bg-amber-900/20"}`} />
+      <span aria-hidden className={`pointer-events-none text-[0.6em] leading-none ${waiting ? "opacity-70" : "motion-safe:animate-flicker"}`}>
+        {waiting ? "⏳" : "🪓"}
       </span>
       <div
         role="progressbar"
-        aria-label="Clearing land"
+        aria-label={waiting ? "Waiting to be cleared" : "Clearing land"}
         aria-valuenow={Math.round(progress * 100)}
         aria-valuemin={0}
         aria-valuemax={100}
@@ -872,12 +1013,24 @@ interface GhostInfo {
   road: number;
   /** Workers couldn't walk here. */
   noPath: boolean;
+  /** For a Kuta: river-bank landing spots within its defense radius. */
+  bank: number;
 }
 
 const totalBonus = (b: { adjacency: number; grove: number; road: number }) => b.adjacency + b.grove + b.road;
 
 function Ghost({ info }: { info: GhostInfo }) {
-  const { def, adjacency, grove, groveName, road, noPath } = info;
+  const { def, adjacency, grove, groveName, road, noPath, bank } = info;
+  if (def.defense) {
+    return (
+      <>
+        <span aria-hidden className="pointer-events-none leading-none opacity-60 select-none">
+          {def.icon}
+        </span>
+        <Label text={bank > 0 ? `🛡️ Guards the river bank (${bank} landing spots in reach)` : "🛡️ No river bank in reach: raiders land at the shore"} good={bank > 0} />
+      </>
+    );
+  }
   if (noPath) {
     return (
       <>
@@ -937,14 +1090,16 @@ function Building(props: {
   onActivate: (x: number, y: number, el: Element) => void;
 }) {
   const { x, y, info, fresh, lifted, onActivate } = props;
-  const { def, bonus, damaged, burning, repairText, connected, noPath } = info;
+  const { def, bonus, damaged, burning, repairText, connected, noPath, paused, lent } = info;
   // Decided once, at mount: only buildings that were just built bounce in.
   const [bounce] = useState(fresh);
   const label = burning
     ? `${def.name}, on fire! Tap to put it out`
     : damaged
       ? `${def.name}, damaged. Tap to repair for ${repairText}`
-      : noPath
+      : paused
+        ? `${def.name}, paused. Tap to resume, move or demolish`
+        : noPath
         ? `${def.name}: no path. Workers can't walk here. Tap to move or demolish`
         : bonus > 0
           ? `${def.name}, +${Math.round(bonus * 100)}% bonus${connected ? ", connected by Daan" : ""}. Tap to move or demolish`
@@ -968,7 +1123,7 @@ function Building(props: {
         title={label}
         data-building={info.key}
         className={`relative leading-none drop-shadow-[0_2px_1px_rgb(0_0_0_/_0.35)] select-none ${bounce ? "motion-safe:animate-bounce-in" : ""} ${
-          damaged ? "opacity-60 grayscale" : ""
+          damaged ? "opacity-60 grayscale" : paused ? "opacity-70 saturate-50" : ""
         } ${lifted ? "opacity-40" : ""} cursor-pointer`}
       >
         {def.icon}
@@ -987,6 +1142,23 @@ function Building(props: {
           className="pointer-events-none absolute right-0 bottom-0 rounded-full bg-amber-100/90 px-0.5 text-[0.35em] leading-none shadow"
         >
           🛠️
+        </span>
+      )}
+      {paused && !damaged && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute top-0 left-0.5 rounded-full bg-stone-800/85 px-0.5 text-[0.3em] leading-tight text-white shadow"
+        >
+          ⏸
+        </span>
+      )}
+      {lent > 0 && !paused && !damaged && (
+        <span
+          aria-hidden
+          title={`${lent} lent to clearing`}
+          className="pointer-events-none absolute top-0 left-0.5 rounded-full bg-amber-300 px-0.5 text-[0.26em] leading-tight font-semibold text-amber-950 shadow"
+        >
+          🪓{lent}
         </span>
       )}
       {noPath && !damaged && (

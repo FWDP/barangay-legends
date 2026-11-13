@@ -10,6 +10,14 @@ const goods = (g?: Partial<Record<Resource, number>>) =>
     .map((r) => `${g![r]} ${RESOURCE_ICON[r]}`)
     .join(" and ") || "nothing";
 
+/** What happened at the landing: warriors who didn't make it, and whether a Kuta covered it. */
+function border(report: Report): string[] {
+  const lines: string[] = [];
+  if (report.late) lines.push(`${report.late} ${report.late === 1 ? "warrior was" : "warriors were"} too far away to reach the shore in time.`);
+  if (report.covered === false) lines.push("No Kuta stood close enough to the landing to help fully. Build one near the river.");
+  return lines;
+}
+
 /** The title and short lines of a report. Captives never appear: goods are abstract tribute. */
 export function describeReport(report: Report, content: Content): { icon: string; title: string; lines: string[] } {
   const who = neighborDef(content, report.neighbor);
@@ -35,13 +43,13 @@ export function describeReport(report: Report, content: Content): { icon: string
       return report.win
         ? {
             icon: "🛡️",
-            title: `${name}'s raid was beaten back`,
-            lines: [odds, `Warriors lost: ${report.ourLosses} of ours, ${report.theirLosses} of theirs.`, `+${report.renown} renown.`],
+            title: `${name}'s raid was beaten back at the shore`,
+            lines: [odds, `Warriors lost: ${report.ourLosses} of ours, ${report.theirLosses} of theirs.`, ...border(report), `+${report.renown} renown.`],
           }
         : {
             icon: "🔥",
             title: `${name} raided your barangay`,
-            lines: [odds, `They carried off ${goods(report.lost)}. Your buildings stand.`, `Warriors lost: ${report.ourLosses} of ours, ${report.theirLosses} of theirs.`],
+            lines: [odds, `They carried off ${goods(report.lost)}. Your buildings stand.`, `Warriors lost: ${report.ourLosses} of ours, ${report.theirLosses} of theirs.`, ...border(report)],
           };
     case "tributary":
       return { icon: "🏵️", title: `${name} is now your tributary`, lines: [`${who?.datu ?? "Their datu"} will send a share of their harvest every minute. Keep them loyal.`] };
