@@ -110,7 +110,9 @@ function regionStep(
       }
       them = { ...them, resources: left };
     }
-    return { ...n, state: them };
+    // Grudges fade while the player is away too.
+    const grudge = Math.max(0, n.grudge - (d.grudge.decayPerMinute * dt) / 60);
+    return { ...n, state: them, grudge };
   });
   return { region: { ...region, neighbors }, player: { ...player, resources }, tribute };
 }

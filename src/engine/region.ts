@@ -2,10 +2,11 @@
 // Pure and deterministic. Each neighbor is a full GameState run by the same engine rules as
 // the player (tick + commands), steered by a simple AI. All randomness comes from the seeded
 // RNG in the player's state, rolled once per whole game second.
-import { RESOURCES, type Content, type NeighborDef, type Resource, type TraitDef } from "./content";
+import { RESOURCES, type Content, type NeighborDef, type RefusalReason, type Resource, type TraitDef } from "./content";
 import { apply, canAfford, asCost, buildingCost, housing, newGame, owned, placeAuto, rates, tick, warriorCap, type GameState } from "./game";
 import { autoPlaceTile } from "./map";
 import { Rng } from "./rng";
+import { proposeTrade, type CounterOffer, type Proposal } from "./trading";
 import { borderDefense, chooseLanding } from "./border";
 import type { Point } from "./map";
 
@@ -30,6 +31,10 @@ export interface NeighborState {
   /** The player can't raid them again before this time. */
   raidCooldownUntil: number;
   nextDecisionAt: number;
+  /** 0..100: how much they resent the player's raids on them. Separate from trust; fades slowly. */
+  grudge: number;
+  /** Why they last turned a trade (or alliance) down, and when, for the diplomacy panel. */
+  lastRefusal: { reason: RefusalReason; at: number } | null;
 }
 
 export interface TradeOffer {
@@ -88,6 +93,8 @@ export interface RegionState {
   paths: Path[];
   /** Set once every neighbor is a tributary or ally: the player is Paramount Datu. */
   victory: { time: number; paths: Path[] } | null;
+  /** A neighbor's counter-offer to the player's last proposal, waiting for an answer. */
+  counter: CounterOffer | null;
 }
 
 const EPSILON = 1e-9;
@@ -141,6 +148,8 @@ export function createRegion(content: Content, time: number, seed: number): Regi
       loyalty: 0,
       guard: null,
       raidCooldownUntil: 0,
+      grudge: 0,
+      lastRefusal: null,
       // Stagger AI decisions so the neighbors don't all act on the same second.
       nextDecisionAt: Math.floor(time) + d.aiDecisionSeconds + i * 3,
     })),
@@ -152,6 +161,7 @@ export function createRegion(content: Content, time: number, seed: number): Regi
     reports: [],
     nextReportId: 1,
     nextTributeAt: Math.floor(time) + d.tribute.everySeconds,
+    counter: null,
     paths: [],
     victory: null,
   };
@@ -317,18 +327,30 @@ export function tradingPaused(state: GameState): boolean {
   return (state.region?.incomingRaid ?? null) !== null;
 }
 
-/** Trade: give a parcel of one resource for the other. Builds trust and influence; keeps tributaries loyal. */
+/** The standard parcel: give rules.diplomacy.trade.give of one resource for the other at the usual rate. */
+export function standardProposal(content: Content, id: string, give: Resource): Proposal {
+  const t = content.rules.diplomacy.trade;
+  const get = RESOURCES.find((r) => r !== give)!;
+  const receive = Math.floor((t.give * (t.receivePercent + traitOf(content, id).tradeBonusPercent)) / 100);
+  return { give: { resource: give, amount: t.give }, want: { resource: get, amount: receive } };
+}
+
+/** Trade: offer the standard parcel. The neighbor decides like any proposal (see trading.ts). */
 export function trade(state: GameState, content: Content, id: string, give: Resource): GameState {
-  if (tradingPaused(state)) return state;
+  return proposeTrade(state, content, id, standardProposal(content, id, give));
+}
+
+/**
+ * Carries out an agreed trade: the goods change hands, trust and influence grow, a tributary
+ * grows more loyal. Refused (same state) if either side can't pay.
+ */
+export function executeTrade(state: GameState, content: Content, id: string, p: Proposal): GameState {
   const t = content.rules.diplomacy.trade;
   return withNeighbor(state, id, (n, region) => {
-    const get = RESOURCES.find((r) => r !== give)!;
-    const trait = traitOf(content, id);
-    const receive = Math.floor((t.give * (t.receivePercent + trait.tradeBonusPercent)) / 100);
-    if (state.resources[give] < t.give || n.state.resources[get] < receive) return null;
-    let [player, them] = moveGoods(state, n.state, { [give]: t.give });
-    [them, player] = moveGoods(them, player, { [get]: receive });
-    let next: NeighborState = { ...n, state: them, trust: addTrust(n, t.trust, trait) };
+    if (state.resources[p.give.resource] < p.give.amount || n.state.resources[p.want.resource] < p.want.amount) return null;
+    let [player, them] = moveGoods(state, n.state, { [p.give.resource]: p.give.amount });
+    [them, player] = moveGoods(them, player, { [p.want.resource]: p.want.amount });
+    let next: NeighborState = { ...n, state: them, trust: addTrust(n, t.trust, traitOf(content, id)) };
     if (next.status === "tributary") next = { ...next, loyalty: clamp100(next.loyalty + t.loyalty) };
     let r = addPath(region, "trade");
     [r, next] = addInfluence(r, next, t.influence, content, state.time);
@@ -343,6 +365,7 @@ export function marriageBlocker(state: GameState, content: Content, id: string):
   if (!n) return "unknown";
   if (n.marriage) return "already-married";
   if (n.status === "ally") return "already-allied";
+  if (n.grudge > content.rules.diplomacy.grudge.noAlliancesAbove) return "grudge";
   if (n.trust <= m.trustNeeded) return "trust";
   if (!canAfford(state, asCost(m.cost))) return "cost";
   return null;
@@ -365,7 +388,7 @@ export function marry(state: GameState, content: Content, id: string): GameState
 export function sandugo(state: GameState, content: Content, id: string): GameState {
   const sd = content.rules.diplomacy.sandugo;
   return withNeighbor(state, id, (n, region) => {
-    if (!n.marriage || n.status === "ally" || !canAfford(state, asCost(sd.cost))) return null;
+    if (!n.marriage || n.status === "ally" || n.grudge > content.rules.diplomacy.grudge.noAlliancesAbove || !canAfford(state, asCost(sd.cost))) return null;
     const [player, them] = moveGoods(state, n.state, asCost(sd.cost));
     const next: NeighborState = { ...n, state: them, status: "ally", guard: null, trust: addTrust(n, sd.trust, traitOf(content, id)) };
     const r = addReport(addPath(region, "sandugo"), { time: state.time, kind: "alliance", neighbor: id });
@@ -407,6 +430,8 @@ export function raid(state: GameState, content: Content, id: string, warriors: n
     trust: clamp100(target.trust - d.raid.trustLossTarget),
     marriage: false,
     raidCooldownUntil: state.time + d.raid.cooldownSeconds,
+    // They won't forget it soon, less so if it worked.
+    grudge: clamp100(target.grudge + (battle.attackerWins ? d.grudge.raidWon : d.grudge.raidLost)),
   };
   if (battle.attackerWins) {
     // Every neighbor hears of it.
@@ -533,7 +558,13 @@ export function updateRegion(state: GameState, content: Content, t0: number, dt:
   let region: RegionState = { ...state.region };
 
   // Neighbors live their own lives.
-  region.neighbors = region.neighbors.map((n) => ({ ...n, state: tick(n.state, ai, dt) }));
+  // Grudges fade slowly.
+  region.neighbors = region.neighbors.map((n) => ({
+    ...n,
+    state: tick(n.state, ai, dt),
+    grudge: n.grudge > 0 ? Math.max(0, n.grudge - (d.grudge.decayPerMinute * dt) / 60) : n.grudge,
+  }));
+  if (region.counter && t1 > region.counter.expiresAt) region = { ...region, counter: null };
 
   // Tributary loyalty: guarded ones grow more loyal, the rest slowly drift away and may rebel.
   const rebels: string[] = [];
@@ -613,7 +644,9 @@ function onRegionSecond(state: GameState, content: Content, second: number, rng:
   if (!region.offer) {
     for (const n of region.neighbors) {
       if (n.trust < 10) continue;
-      if (rng.next() >= d.offers.chancePerSecond * traitOf(content, n.id).offerChanceMultiplier) continue;
+      // A grudge makes offers rarer; at the embargo line there are none. (The roll is made either way, so the sequence stays the same.)
+      const willing = Math.max(0, 1 - n.grudge / d.grudge.embargoAt);
+      if (rng.next() >= d.offers.chancePerSecond * traitOf(content, n.id).offerChanceMultiplier * willing) continue;
       // They offer what they have more of, for the other resource.
       const give = n.state.resources.rice >= n.state.resources.wood ? "rice" : "wood";
       const want = RESOURCES.find((r) => r !== give)!;

@@ -203,6 +203,8 @@ export interface TraitDef {
   raids: boolean;
   /** Share of their villagers they keep as warriors. */
   warriorPercent: number;
+  /** How readily they take a trade: traders above 0, proud ones below. */
+  tradeWillingness: number;
 }
 
 export interface DiplomacyRules {
@@ -235,7 +237,27 @@ export interface DiplomacyRules {
   offers: { chancePerSecond: number; expireSeconds: number; give: number; receivePercent: number };
   aiDecisionSeconds: number;
   traits: Record<string, TraitDef>;
+  /** Resentment of the player's raids (0..100). */
+  grudge: { raidLost: number; raidWon: number; decayPerMinute: number; embargoAt: number; noAlliancesAbove: number; raidsReasonAbove: number };
+  /** How a neighbor weighs a proposed trade (see trading.ts). */
+  tradeDecision: {
+    values: Partial<Record<string, number>>;
+    grudgeWeight: number;
+    trustWeight: number;
+    closeBand: number;
+    counterBand: number;
+    minAmount: number;
+    maxAmount: number;
+    counterSeconds: number;
+  };
+  /** Peace gifts: value per resource (unknown resources, like gold before it exists, are skipped). */
+  handog: { values: Partial<Record<string, number>>; grudgePerValue: number; trustPerValue: number; minValue: number };
+  /** What a datu says when refusing, by reason. May use {datu} and {resource}. */
+  refusals: Record<RefusalReason, string>;
 }
+
+export const REFUSAL_REASONS = ["embargo", "raids", "unfair", "short", "alliance"] as const;
+export type RefusalReason = (typeof REFUSAL_REASONS)[number];
 
 /** An AI neighbor barangay along the regional river. */
 export interface NeighborDef {
@@ -565,6 +587,19 @@ export function validateRules(raw: unknown): Rules {
   checkNumbers(off, ["maxSeconds", "minSeconds"], "rules: offline");
   checkNumbers(off, ["stepSeconds", "maxSteps", "aiDecisionSeconds"], "rules: offline", true);
   checkAmounts((d.marriage as Record<string, unknown>).cost, "rules: diplomacy.marriage.cost");
+  if (!isObject(d.grudge)) throw new Error('rules: missing "diplomacy.grudge"');
+  checkNumbers(d.grudge, ["raidLost", "raidWon", "decayPerMinute", "embargoAt", "noAlliancesAbove", "raidsReasonAbove"], "rules: diplomacy.grudge");
+  const td = d.tradeDecision;
+  if (!isObject(td) || !isObject(td.values)) throw new Error('rules: missing "diplomacy.tradeDecision.values"');
+  checkNumbers(td, ["grudgeWeight", "trustWeight", "closeBand", "counterBand"], "rules: diplomacy.tradeDecision");
+  checkNumbers(td, ["minAmount", "maxAmount", "counterSeconds"], "rules: diplomacy.tradeDecision", true);
+  for (const r of RESOURCES) if (!isNonNegNumber(td.values[r]) || td.values[r] === 0) throw new Error(`rules: tradeDecision.values.${r} must be > 0`);
+  const hg = d.handog;
+  if (!isObject(hg) || !isObject(hg.values)) throw new Error('rules: missing "diplomacy.handog.values"');
+  checkNumbers(hg, ["grudgePerValue", "trustPerValue", "minValue"], "rules: diplomacy.handog");
+  for (const [r, v] of Object.entries(hg.values)) if (!isNonNegNumber(v)) throw new Error(`rules: handog.values.${r} must be a number >= 0`);
+  if (!isObject(d.refusals)) throw new Error('rules: missing "diplomacy.refusals"');
+  checkStrings(d.refusals, [...REFUSAL_REASONS], "rules: diplomacy.refusals");
   const loot = (d.aiRaid as Record<string, unknown>).lootTargets;
   if (!Array.isArray(loot) || !loot.every((t) => typeof t === "string" && t !== "")) {
     throw new Error('rules: "diplomacy.aiRaid.lootTargets" must be a list of building ids');
@@ -580,6 +615,7 @@ export function validateRules(raw: unknown): Rules {
       ["trustGainPercent", "influenceGainPercent", "tradeBonusPercent", "offerChanceMultiplier", "warriorPercent"],
       `rules: trait ${name}`,
     );
+    if (typeof trait.tradeWillingness !== "number" || !Number.isFinite(trait.tradeWillingness)) throw new Error(`rules: trait ${name} needs "tradeWillingness"`);
   }
   return raw as unknown as Rules;
 }

@@ -1,6 +1,6 @@
 // Saving to the browser. The only engine module allowed to touch browser APIs,
 // and even here the storage is passed in so tests can use a fake.
-import { RESOURCES, type BuildingDef, type Content, type Resource } from "./content";
+import { REFUSAL_REASONS, RESOURCES, type BuildingDef, type Content, type RefusalReason, type Resource } from "./content";
 import { cleanName, newGame, placeAuto, STATE_VERSION, type ClearingJob, type GameState, type PlacedBuilding } from "./game";
 import {
   generateMap,
@@ -25,6 +25,7 @@ import {
   type Report,
   type TradeOffer,
 } from "./region";
+import { validProposal, type CounterOffer } from "./trading";
 
 export const SAVE_KEY = "barangay-legends/save";
 
@@ -136,6 +137,25 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
   // width. Every bridge is laid again that way; one that can't cross anywhere it stood is
   // removed and its price refunded, and the player is told once (notices).
   14: (raw, content) => migrateBridgesV15(raw, content),
+  // v15 → v16: neighbors resent raids (grudge). An older save's grudge is rebuilt from the
+  // raids still in its reports, each faded by the time since, so a recent raider isn't forgiven.
+  15: (raw, content) => {
+    const region = raw.region;
+    if (!isObject(region) || !Array.isArray(region.neighbors)) return { ...raw, version: 16 };
+    const g = content.rules.diplomacy.grudge;
+    const now = finiteNonNeg(raw.time) ? raw.time : 0;
+    const reports = (Array.isArray(region.reports) ? region.reports : []).filter(isObject);
+    const neighbors = region.neighbors.map((n) => {
+      if (!isObject(n)) return n;
+      let grudge = 0;
+      for (const r of reports) {
+        if (r.kind !== "raid" || r.neighbor !== n.id || !finiteNonNeg(r.time)) continue;
+        grudge += Math.max(0, (r.win === true ? g.raidWon : g.raidLost) - (g.decayPerMinute * Math.max(0, now - r.time)) / 60);
+      }
+      return { ...n, grudge: Math.min(100, grudge), lastRefusal: null };
+    });
+    return { ...raw, version: 16, region: { ...region, neighbors, counter: null } };
+  },
 };
 
 // ---------- Frozen v15 bridge rule (for the v14 → v15 migration only) ----------
@@ -438,6 +458,14 @@ function parseLanding(raw: unknown, map: MapState): { x: number; y: number } | n
   return t && t !== "river" && t !== "bridge" ? { x: raw.x as number, y: raw.y as number } : null;
 }
 
+/** A saved counter-offer: a known neighbor, two different resources in sane amounts. */
+function parseCounter(raw: unknown, ids: Set<string>, content: Content): CounterOffer | null {
+  if (!isObject(raw) || !ids.has(raw.neighbor as string) || !finiteNonNeg(raw.expiresAt) || !isObject(raw.give) || !isObject(raw.want)) return null;
+  const goods = (g: RawSave) => ({ resource: g.resource as Resource, amount: g.amount as number });
+  const p = { give: goods(raw.give), want: goods(raw.want) };
+  return validProposal(p, content) ? { neighbor: raw.neighbor as string, expiresAt: raw.expiresAt, ...p } : null;
+}
+
 function parseRegion(raw: unknown, content: Content, player: GameState): RegionState {
   const fresh = createRegion(content, player.time, player.rng);
   if (!isObject(raw)) return fresh;
@@ -465,6 +493,11 @@ function parseRegion(raw: unknown, content: Content, player: GameState): RegionS
           : null,
       raidCooldownUntil: finiteNonNeg(n.raidCooldownUntil) ? n.raidCooldownUntil : 0,
       nextDecisionAt: finiteNonNeg(n.nextDecisionAt) ? n.nextDecisionAt : base.nextDecisionAt,
+      grudge: pct(n.grudge, 0),
+      lastRefusal:
+        isObject(n.lastRefusal) && REFUSAL_REASONS.includes(n.lastRefusal.reason as RefusalReason) && finiteNonNeg(n.lastRefusal.at)
+          ? { reason: n.lastRefusal.reason as RefusalReason, at: n.lastRefusal.at }
+          : null,
     };
   });
   const ids = new Set(neighbors.map((n) => n.id));
@@ -482,6 +515,7 @@ function parseRegion(raw: unknown, content: Content, player: GameState): RegionS
         ? { from: incoming.from as string, strikeAt: incoming.strikeAt, landing: parseLanding(incoming.landing, player.map) }
         : null,
     nextAiRaidAt: finiteNonNeg(raw.nextAiRaidAt) ? raw.nextAiRaidAt : 0,
+    counter: parseCounter(raw.counter, ids, content),
     offer:
       isObject(offer) &&
       ids.has(offer.from as string) &&

@@ -38,9 +38,10 @@ import {
 import { DEFAULT_SEED } from "./rng";
 import { homeWarriors } from "./region";
 import { choose, updateChoices, type PendingChoice } from "./choices";
+import { acceptCounter, declineCounter, handog, proposeTrade, type Goods } from "./trading";
 import { advanceClearing, cancelClearing, clearArea, dropUnreachableJobs, workforce, type ClearingJob } from "./clearing";
 
-export const STATE_VERSION = 15;
+export const STATE_VERSION = 16;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -658,6 +659,10 @@ export type Command =
   | { type: "cancelClearing"; x: number; y: number }
   | { type: "pause"; x: number; y: number; paused: boolean }
   | { type: "dismissNotice" }
+  | { type: "proposeTrade"; neighbor: string; give: Goods; want: Goods }
+  | { type: "acceptCounter" }
+  | { type: "declineCounter" }
+  | { type: "handog"; neighbor: string; gift: Partial<Record<Resource, number>> }
   | { type: "train" }
   | { type: "trade"; neighbor: string; give: Resource }
   | { type: "marry"; neighbor: string }
@@ -700,6 +705,14 @@ function applyCommand(state: GameState, content: Content, command: Command): Gam
       return cancelClearing(state, command.x, command.y);
     case "pause":
       return setPaused(state, content, command.x, command.y, command.paused === true);
+    case "proposeTrade":
+      return proposeTrade(state, content, command.neighbor, { give: command.give, want: command.want });
+    case "acceptCounter":
+      return acceptCounter(state, content);
+    case "declineCounter":
+      return declineCounter(state);
+    case "handog":
+      return handog(state, content, command.neighbor, command.gift);
     case "dismissNotice":
       return state.notices.length ? { ...state, notices: state.notices.slice(1) } : state;
     case "train":

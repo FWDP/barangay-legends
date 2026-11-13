@@ -1,11 +1,13 @@
 import { useState, type ReactNode } from "react";
 import { RESOURCES, type Content, type Resource } from "../engine/content";
 import { asCost, canAfford, warriorCap, type Command, type GameState } from "../engine/game";
+import { fairness, fairnessNeeded, giftValue, isEmbargo, refusalText } from "../engine/trading";
 import {
   attackOf,
   defenseOf,
   homeWarriors,
   marriageBlocker,
+  standardProposal,
   neighborDef,
   traitOf,
   type NeighborState,
@@ -111,7 +113,7 @@ function RiverMap(props: { state: GameState; content: Content; selected?: string
             transform={`translate(${x}, ${y + dy})`}
             role="button"
             tabIndex={0}
-            aria-label={`${def.name}, ${STATUS[n.status].label}, influence ${Math.round(n.influence)}`}
+            aria-label={`${def.name}, ${STATUS[n.status].label}, influence ${Math.round(n.influence)}${isEmbargo(n, content) ? ", embargo: no trade" : ""}`}
             aria-pressed={isSel}
             onClick={() => onSelect(n.id)}
             onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onSelect(n.id)}
@@ -138,6 +140,11 @@ function RiverMap(props: { state: GameState; content: Content; selected?: string
             <text textAnchor="middle" y={dy < 0 ? -12 : 17} fontSize="4.6" fill="#fffbeb" fontWeight="bold">
               {def.name.replace("Barangay ", "")}
             </text>
+            {isEmbargo(n, content) && (
+              <text textAnchor="middle" y={dy < 0 ? -18 : 23} fontSize="4" fill="#fecaca" fontWeight="bold">
+                ⛔ Embargo
+              </text>
+            )}
           </g>
         );
       })}
@@ -251,7 +258,7 @@ function NeighborPanel(props: {
   const attack = attackOf(send, content);
   const theirDefense = defenseOf(n.state, content);
   const chance = attack / (attack + theirDefense);
-  const receive = Math.floor((d.trade.give * (d.trade.receivePercent + trait.tradeBonusPercent)) / 100);
+  const embargo = isEmbargo(n, content);
   const marry = marriageBlocker(state, content, n.id);
   const raidCooldown = n.raidCooldownUntil - state.time;
 
@@ -260,7 +267,10 @@ function NeighborPanel(props: {
       <header>
         <div className="flex flex-wrap items-baseline justify-between gap-1">
           <h2 className="font-display text-xl text-amber-900">{def.name}</h2>
-          <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS[n.status].chip}`}>{STATUS[n.status].label}</span>
+          <span className="flex gap-1">
+            {embargo && <span className="rounded-full bg-red-700 px-2 py-0.5 text-xs font-semibold text-white">⛔ Embargo</span>}
+            <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS[n.status].chip}`}>{STATUS[n.status].label}</span>
+          </span>
         </div>
         <p className="text-sm">
           {def.datu} · <span className="font-semibold">{trait.label}</span>
@@ -275,6 +285,19 @@ function NeighborPanel(props: {
       <div className="space-y-1.5">
         {n.status === "independent" && <Bar label="Influence" value={n.influence} color="bg-amber-500" />}
         <Bar label="Trust" value={n.trust} color="bg-sky-500" />
+        <Bar label="Grudge" value={n.grudge} color="bg-red-600" />
+        {n.grudge > 0 && (
+          <p className="text-[11px] text-stone-500">
+            {embargo
+              ? `They refuse all trade until their grudge falls below ${d.grudge.embargoAt}. A Handog helps.`
+              : `Grudge from your raids fades by ${d.grudge.decayPerMinute} a minute.${n.grudge > d.grudge.noAlliancesAbove ? " Too high for marriage or sandugo." : ""}`}
+          </p>
+        )}
+        {n.lastRefusal && (
+          <p className="rounded bg-stone-100 px-2 py-1 text-xs italic text-stone-700">
+            Last refusal: “{refusalText(n.lastRefusal.reason, content, def.datu)}”
+          </p>
+        )}
         {n.status === "tributary" && <Bar label="Loyalty" value={n.loyalty} color="bg-green-600" />}
         <p className="text-[11px] text-stone-500">
           {n.marriage ? "💍 Marriage alliance · " : ""}
@@ -289,24 +312,10 @@ function NeighborPanel(props: {
       <div className="space-y-2">
         <h3 className="font-display text-base text-amber-900">Trade</h3>
         {tradingPaused(state) && <p className="rounded bg-red-100 px-2 py-1 text-xs font-semibold text-red-900">⏸ Trade paused — raid in progress</p>}
-        <div className="grid grid-cols-2 gap-2">
-          {RESOURCES.map((give) => {
-            const get = RESOURCES.find((r) => r !== give)!;
-            const paused = tradingPaused(state);
-            const ok = !paused && state.resources[give] >= d.trade.give && n.state.resources[get] >= receive;
-            return (
-              <ActionButton
-                key={give}
-                onClick={() => dispatch({ type: "trade", neighbor: n.id, give })}
-                disabled={!ok}
-                why={paused ? "Trade paused — raid in progress." : state.resources[give] < d.trade.give ? `You need ${d.trade.give} ${give}.` : `They're short of ${get}.`}
-              >
-                {d.trade.give} {RESOURCE_ICON[give]} → {receive} {RESOURCE_ICON[get]}
-              </ActionButton>
-            );
-          })}
-        </div>
+        <TradeForm n={n} state={state} content={content} dispatch={dispatch} />
       </div>
+
+      <HandogForm n={n} state={state} content={content} dispatch={dispatch} />
 
       {n.status !== "ally" && (
         <div className="space-y-2">
@@ -316,7 +325,9 @@ function NeighborPanel(props: {
               onClick={() => dispatch({ type: "marry", neighbor: n.id })}
               disabled={marry !== null}
               why={
-                marry === "trust"
+                marry === "grudge"
+                  ? refusalText("alliance", content, def.datu)
+                  : marry === "trust"
                   ? `Needs trust above ${d.marriage.trustNeeded} (now ${Math.round(n.trust)}).`
                   : marry === "cost"
                     ? `Gift: ${fmt(d.marriage.cost)}.`
@@ -328,8 +339,8 @@ function NeighborPanel(props: {
           )}
           <ActionButton
             onClick={() => dispatch({ type: "sandugo", neighbor: n.id })}
-            disabled={!n.marriage || !canAfford(state, asCost(d.sandugo.cost))}
-            why={!n.marriage ? "Needs a marriage alliance first." : `Needs ${fmt(d.sandugo.cost)}.`}
+            disabled={!n.marriage || n.grudge > d.grudge.noAlliancesAbove || !canAfford(state, asCost(d.sandugo.cost))}
+            why={!n.marriage ? "Needs a marriage alliance first." : n.grudge > d.grudge.noAlliancesAbove ? refusalText("alliance", content, def.datu) : `Needs ${fmt(d.sandugo.cost)}.`}
           >
             🩸 Sandugo (blood compact) · {fmt(d.sandugo.cost)}
           </ActionButton>
@@ -376,6 +387,127 @@ function NeighborPanel(props: {
         </div>
       )}
     </section>
+  );
+}
+
+/** Propose a trade: what you give, what you ask for. Shows their counter-offer when they make one. */
+function TradeForm({ n, state, content, dispatch }: { n: NeighborState; state: GameState; content: Content; dispatch: (c: Command) => void }) {
+  const td = content.rules.diplomacy.tradeDecision;
+  const def = neighborDef(content, n.id)!;
+  const std = standardProposal(content, n.id, "rice");
+  const [give, setGive] = useState<Resource>("rice");
+  const want = RESOURCES.find((r) => r !== give)!;
+  const [giveAmount, setGiveAmount] = useState(std.give.amount);
+  const [wantAmount, setWantAmount] = useState(std.want.amount);
+  const paused = tradingPaused(state);
+  const embargo = isEmbargo(n, content);
+  const counter = state.region?.counter?.neighbor === n.id && state.time <= state.region.counter.expiresAt ? state.region.counter : null;
+  const margin = fairness({ give: { resource: give, amount: giveAmount }, want: { resource: want, amount: wantAmount } }, content) - fairnessNeeded(n, content);
+  const step = (v: number, by: number) => Math.min(td.maxAmount, Math.max(td.minAmount, v + by));
+  const why = paused
+    ? "Trade paused — raid in progress."
+    : embargo
+      ? refusalText("embargo", content, def.datu)
+      : state.resources[give] < giveAmount
+        ? `You have ${Math.floor(state.resources[give])} ${give}.`
+        : null;
+  return (
+    <div className="space-y-2">
+      {counter ? (
+        <div className="rounded-lg border-2 border-amber-500 bg-amber-50 p-2 text-sm">
+          <p>
+            <b>{def.datu} counters:</b> {counter.want.amount} {RESOURCE_ICON[counter.want.resource]} for your {counter.give.amount} {RESOURCE_ICON[counter.give.resource]} ·{" "}
+            {clock(counter.expiresAt - state.time)}
+          </p>
+          <div className="mt-1.5 flex gap-2">
+            <button type="button" onClick={() => dispatch({ type: "acceptCounter" })} className="game-btn border-2 border-green-950 bg-green-700 px-3 py-1 text-xs font-semibold text-white">
+              Accept
+            </button>
+            <button type="button" onClick={() => dispatch({ type: "declineCounter" })} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-3 py-1 text-xs font-semibold text-amber-950">
+              No thanks
+            </button>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="flex flex-wrap items-center gap-1.5 text-sm">
+            <span className="text-stone-600">Give</span>
+            <AmountStepper value={giveAmount} onChange={(v) => setGiveAmount(step(v, 0))} by={5} />
+            <button type="button" className="game-btn border-2 border-amber-900/50 bg-amber-100 px-1.5 text-base" aria-label={`Give ${give}; tap to swap`} onClick={() => setGive(want)}>
+              {RESOURCE_ICON[give]} ⇄
+            </button>
+            <span className="text-stone-600">for</span>
+            <AmountStepper value={wantAmount} onChange={(v) => setWantAmount(step(v, 0))} by={5} />
+            <span className="text-base">{RESOURCE_ICON[want]}</span>
+          </div>
+          <p className="text-[11px] text-stone-500">
+            {embargo
+              ? "They won't trade at all right now."
+              : margin >= td.closeBand
+                ? "They'll likely accept."
+                : margin > -td.closeBand
+                  ? "A close call: it could go either way."
+                  : margin >= -td.counterBand
+                    ? "Not quite enough for them: they may counter."
+                    : "They'll likely refuse."}{" "}
+            Their trust, grudge and temper change what they'll take.
+          </p>
+          <ActionButton
+            onClick={() => dispatch({ type: "proposeTrade", neighbor: n.id, give: { resource: give, amount: giveAmount }, want: { resource: want, amount: wantAmount } })}
+            disabled={why !== null}
+            why={why}
+          >
+            🛶 Propose: {giveAmount} {RESOURCE_ICON[give]} for {wantAmount} {RESOURCE_ICON[want]}
+          </ActionButton>
+        </>
+      )}
+    </div>
+  );
+}
+
+/** Handog: a peace gift of rice and wood that eases their grudge and builds trust. */
+function HandogForm({ n, state, content, dispatch }: { n: NeighborState; state: GameState; content: Content; dispatch: (c: Command) => void }) {
+  const h = content.rules.diplomacy.handog;
+  const [gift, setGift] = useState<Record<Resource, number>>(() => Object.fromEntries(RESOURCES.map((r) => [r, r === "rice" ? 20 : 0])) as Record<Resource, number>);
+  const v = giftValue(gift, content);
+  const short = RESOURCES.find((r) => state.resources[r] < gift[r]);
+  return (
+    <div className="space-y-2">
+      <h3 className="font-display text-base text-amber-900">Handog (peace gift)</h3>
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        {RESOURCES.map((r) => (
+          <span key={r} className="flex items-center gap-1">
+            <AmountStepper value={gift[r]} onChange={(x) => setGift({ ...gift, [r]: Math.max(0, Math.min(500, x)) })} by={10} min={0} />
+            <span className="text-base">{RESOURCE_ICON[r]}</span>
+          </span>
+        ))}
+      </div>
+      <p className="text-[11px] text-stone-500">
+        Grudge −{Math.round(Math.min(n.grudge, v * h.grudgePerValue))}, trust +{Math.round(Math.min(100 - n.trust, v * h.trustPerValue))}.
+      </p>
+      <ActionButton
+        onClick={() => dispatch({ type: "handog", neighbor: n.id, gift })}
+        disabled={v < h.minValue || !!short}
+        why={short ? `You have ${Math.floor(state.resources[short])} ${short}.` : `A gift must be worth at least ${h.minValue}.`}
+      >
+        🎁 Send Handog
+      </ActionButton>
+    </div>
+  );
+}
+
+function AmountStepper(props: { value: number; onChange: (n: number) => void; by: number; min?: number }) {
+  const { value, onChange, by, min = 0 } = props;
+  return (
+    <span className="inline-flex items-center gap-1">
+      <button type="button" aria-label="Less" className="game-btn size-7 border-2 border-amber-900/50 bg-amber-100 text-sm" onClick={() => onChange(Math.max(min, value - by))}>
+        −
+      </button>
+      <span className="w-8 text-center font-display tabular-nums">{value}</span>
+      <button type="button" aria-label="More" className="game-btn size-7 border-2 border-amber-900/50 bg-amber-100 text-sm" onClick={() => onChange(value + by)}>
+        +
+      </button>
+    </span>
   );
 }
 

@@ -26,6 +26,8 @@ export const RICE_WARNING_SECONDS = 60;
 export const UNSTAFFED_SECONDS = 15;
 /** "Nothing built for 2 minutes." */
 export const IDLE_SECONDS = 120;
+/** A trade refusal counts as news for this long. */
+export const REFUSAL_FRESH_SECONDS = 30;
 /** Suggest Daan once the barangay has this many workplaces and no path yet. */
 export const ROADS_AFTER_WORKPLACES = 3;
 
@@ -155,6 +157,12 @@ export function observe(session: AdvisorSession, state: GameState, content: Cont
   if (offer) {
     const who = neighborDef(content, offer.from);
     active.set("trade-offer", { neighbor: who?.name ?? offer.from, datu: who?.datu ?? "" });
+  }
+  // A neighbor just turned a trade down because of the player's raids.
+  const sore = state.region?.neighbors.find((n) => n.lastRefusal && (n.lastRefusal.reason === "raids" || n.lastRefusal.reason === "embargo") && t - n.lastRefusal.at <= REFUSAL_FRESH_SECONDS);
+  if (sore) {
+    const who = neighborDef(content, sore.id);
+    active.set("refused-raids", { neighbor: who?.name ?? sore.id, datu: who?.datu ?? "" });
   }
   const raid = state.region?.incomingRaid;
   if (raid) {

@@ -1,5 +1,5 @@
 {
-  "_comment": "Core balance numbers. Values marked in docs/game-design.md are copied here; the rest are playtest guesses. map: size and features of the generated map. placement: undo window after building, moving cost (percent of the current price) and demolish refund (percent of what the last copy cost). secondsPerVillagerLeavingOvercrowded: when demolished houses leave more villagers than shelter, one leaves this often. clearing: the cost of turning forest into buildable land; seconds and the rice cost (cost, paid upfront per tile) grow by secondsGrowth for every tile cleared or queued; each job needs `workers` free villagers (not working in a building); when none are free, clearing borrows from workplaces in `borrow.order` first, then the busiest, never from `borrow.protect` while rice would last less than protectBelowRiceSeconds. military/diplomacy: warriors, battles and the four paths to absorb a neighbor (trade, marriage alliance, sandugo, mangayaw); all placeholders for playtesting. choices: choice events (content/events/choices); minGapSeconds is the 4-minute limit, the start time and chance are playtest guesses. offline: time away credited on return (maxSeconds is the 8-hour cap from docs/game-design.md); the rest only set how coarse, and so how fast, the offline steps are. roads: Daan footpaths (cost per tile, the Connected output bonus for buildings joined to the plaza by an unbroken Daan, and how much faster villagers walk on them, which is visual only); playtest guesses. Raids at the border: raiders land on a river bank, picked among the aiRaid.landingChoices spots nearest the barangay; a Kuta gives its full defense only if the landing is within military.kutaRadius tiles, kutaOutsidePercent of it otherwise; warriors walk military.warriorTilesPerSecond (forest is slower) and only fight if they get there within the raid warning. aiRaid.lootTargets is where winning raiders go for loot, first one that exists ('kamalig' is listed for when it's built). Playtest guesses. Mandirigma are part-time: they work like any villager except while a raid is coming (they go to meet it) or while away guarding; each Kuta allows military.warriorsPerKuta of them. staffing: below foodFirstBelowRiceSeconds of rice, food workplaces are filled first; the adviser warns once if rice is falling and fewer than foodWorkersWarnPercent of villagers grow food.",
+  "_comment": "Core balance numbers. Values marked in docs/game-design.md are copied here; the rest are playtest guesses. map: size and features of the generated map. placement: undo window after building, moving cost (percent of the current price) and demolish refund (percent of what the last copy cost). secondsPerVillagerLeavingOvercrowded: when demolished houses leave more villagers than shelter, one leaves this often. clearing: the cost of turning forest into buildable land; seconds and the rice cost (cost, paid upfront per tile) grow by secondsGrowth for every tile cleared or queued; each job needs `workers` free villagers (not working in a building); when none are free, clearing borrows from workplaces in `borrow.order` first, then the busiest, never from `borrow.protect` while rice would last less than protectBelowRiceSeconds. military/diplomacy: warriors, battles and the four paths to absorb a neighbor (trade, marriage alliance, sandugo, mangayaw); all placeholders for playtesting. choices: choice events (content/events/choices); minGapSeconds is the 4-minute limit, the start time and chance are playtest guesses. offline: time away credited on return (maxSeconds is the 8-hour cap from docs/game-design.md); the rest only set how coarse, and so how fast, the offline steps are. roads: Daan footpaths (cost per tile, the Connected output bonus for buildings joined to the plaza by an unbroken Daan, and how much faster villagers walk on them, which is visual only); playtest guesses. Raids at the border: raiders land on a river bank, picked among the aiRaid.landingChoices spots nearest the barangay; a Kuta gives its full defense only if the landing is within military.kutaRadius tiles, kutaOutsidePercent of it otherwise; warriors walk military.warriorTilesPerSecond (forest is slower) and only fight if they get there within the raid warning. aiRaid.lootTargets is where winning raiders go for loot, first one that exists ('kamalig' is listed for when it's built). Playtest guesses. Mandirigma are part-time: they work like any villager except while a raid is coming (they go to meet it) or while away guarding; each Kuta allows military.warriorsPerKuta of them. staffing: below foodFirstBelowRiceSeconds of rice, food workplaces are filled first; the adviser warns once if rice is falling and fewer than foodWorkersWarnPercent of villagers grow food. diplomacy.grudge: how much a neighbor resents the player's raids (raises per raid, decays per minute); at embargoAt they refuse all trade and send no offers; above noAlliancesAbove no marriage or sandugo. tradeDecision: how a neighbor weighs a proposed trade (values per resource, how much trust and grudge shift what they ask, the close-call band decided by a seeded roll, and how far off a deal can be for a counter-offer). handog: peace gifts; value per resource ('gold' is listed for when it exists and skipped until then). refusals: what the datu says. Traits' tradeWillingness: traders accept more, proud ones less. Playtest guesses.",
   "start": {
     "resources": {
       "rice": 10,
@@ -138,7 +138,8 @@
         "tradeBonusPercent": 25,
         "offerChanceMultiplier": 3,
         "raids": false,
-        "warriorPercent": 10
+        "warriorPercent": 10,
+        "tradeWillingness": 0.15
       },
       "peaceful": {
         "label": "Peaceful",
@@ -147,7 +148,8 @@
         "tradeBonusPercent": 0,
         "offerChanceMultiplier": 1,
         "raids": false,
-        "warriorPercent": 5
+        "warriorPercent": 5,
+        "tradeWillingness": 0.05
       },
       "proud": {
         "label": "Proud",
@@ -156,7 +158,8 @@
         "tradeBonusPercent": 0,
         "offerChanceMultiplier": 1,
         "raids": false,
-        "warriorPercent": 25
+        "warriorPercent": 25,
+        "tradeWillingness": -0.15
       },
       "aggressive": {
         "label": "Aggressive",
@@ -165,8 +168,47 @@
         "tradeBonusPercent": 0,
         "offerChanceMultiplier": 0.5,
         "raids": true,
-        "warriorPercent": 35
+        "warriorPercent": 35,
+        "tradeWillingness": -0.05
       }
+    },
+    "grudge": {
+      "raidLost": 15,
+      "raidWon": 30,
+      "decayPerMinute": 2,
+      "embargoAt": 60,
+      "noAlliancesAbove": 30,
+      "raidsReasonAbove": 20
+    },
+    "tradeDecision": {
+      "values": {
+        "rice": 1,
+        "wood": 1
+      },
+      "grudgeWeight": 0.6,
+      "trustWeight": 0.3,
+      "closeBand": 0.06,
+      "counterBand": 0.35,
+      "minAmount": 5,
+      "maxAmount": 200,
+      "counterSeconds": 30
+    },
+    "handog": {
+      "values": {
+        "rice": 1,
+        "wood": 1.2,
+        "gold": 5
+      },
+      "grudgePerValue": 0.4,
+      "trustPerValue": 0.15,
+      "minValue": 10
+    },
+    "refusals": {
+      "embargo": "{datu} will not trade with you while the memory of your raids is fresh.",
+      "raids": "{datu} remembers your raids.",
+      "unfair": "This trade is unfair to us.",
+      "short": "We don't have that much {resource} to give.",
+      "alliance": "{datu} will not bind our people to raiders. Make peace first."
     }
   },
   "choices": {

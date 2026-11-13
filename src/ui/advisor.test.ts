@@ -283,3 +283,19 @@ describe("adviser and raids at the shore", () => {
     expect(again.message?.kind === "tip" && again.message.lineId).not.toBe("raid-shore-1");
   });
 });
+
+describe("adviser and refused trades", () => {
+  it("suggests a Handog the first time a trade is refused for raids", () => {
+    const g = newGame(content, 3);
+    const s = {
+      ...withState({ resources: { rice: 1000, wood: 0 }, villagers: 2, time: 50 }),
+      region: { ...g.region!, neighbors: g.region!.neighbors.map((n, i) => (i === 1 ? { ...n, lastRefusal: { reason: "raids" as const, at: 45 } } : n)) },
+    };
+    const m = advise(tipsModel(s), input(s));
+    expect(m.message?.kind === "tip" && m.message.lineId).toBe("refused-raids-1");
+    expect(m.message!.text).toMatch(/Handog/);
+    // An old refusal isn't news.
+    const later = { ...s, time: 200 };
+    expect(trigger(advise(tipsModel(later), input(later)))).not.toBe("refused-raids");
+  });
+});
