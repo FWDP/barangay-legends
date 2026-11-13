@@ -5,10 +5,10 @@ import type { BuildingDef, Content, GroveBlessing, Resource } from "./content";
 import type { GameState, PlacedBuilding } from "./game";
 import { Rng } from "./rng";
 
-export type Tile = "forest" | "cleared" | "river" | "bridge" | "balete";
+export type Tile = "forest" | "cleared" | "river" | "bridge" | "balete" | "daan";
 
 /** Tiles are stored as one character each, row by row, to keep saves small. */
-export const TILE_CODE: Record<Tile, string> = { forest: "f", cleared: "c", river: "r", bridge: "b", balete: "t" };
+export const TILE_CODE: Record<Tile, string> = { forest: "f", cleared: "c", river: "r", bridge: "b", balete: "t", daan: "d" };
 const CODE_TILE: Record<string, Tile> = Object.fromEntries(Object.entries(TILE_CODE).map(([t, c]) => [c, t as Tile]));
 export const isTileCode = (c: string) => c in CODE_TILE;
 
@@ -196,6 +196,92 @@ export function reachableLand(map: MapState): number {
   return n;
 }
 
+// ---------- On foot: where villagers can walk to work ----------
+
+/**
+ * The barangay's center, where every path starts: the plaza for now. Kept in one place so it
+ * can move later (for example to a datu's house).
+ */
+export function barangayCenter(map: MapState): Point {
+  return map.plaza;
+}
+
+/** Tiles people walk on inside the barangay: cleared land, Daan and bridges. */
+export const isFootTile = (t: Tile | null) => t === "cleared" || t === "daan" || t === "bridge";
+
+const footCache = new WeakMap<MapState, Uint8Array>();
+const roadCache = new WeakMap<MapState, Uint8Array>();
+
+/** Flood fill from the center over tiles that pass `ok`. */
+function flood(map: MapState, ok: (code: string) => boolean): Uint8Array {
+  const W = map.width;
+  const seen = new Uint8Array(W * map.height);
+  const c = barangayCenter(map);
+  if (!inBounds(map, c.x, c.y)) return seen;
+  const start = c.y * W + c.x;
+  seen[start] = 1;
+  const queue = [start];
+  while (queue.length > 0) {
+    const i = queue.pop()!;
+    const x = i % W;
+    const y = (i - x) / W;
+    for (const [dx, dy] of NEIGHBOURS) {
+      const nx = x + dx;
+      const ny = y + dy;
+      if (!inBounds(map, nx, ny)) continue;
+      const j = ny * W + nx;
+      if (seen[j] || !ok(map.tiles[j])) continue;
+      seen[j] = 1;
+      queue.push(j);
+    }
+  }
+  return seen;
+}
+
+const FOOT_CODES = new Set([TILE_CODE.cleared, TILE_CODE.daan, TILE_CODE.bridge]);
+const ROAD_CODES = new Set([TILE_CODE.daan, TILE_CODE.bridge]);
+
+/**
+ * Tiles reachable on foot from the barangay's center through cleared land, Daan and bridges
+ * (1 = yes). Forest and open river are in the way. Cached per map (maps are never mutated).
+ */
+export function footReach(map: MapState): Uint8Array {
+  let r = footCache.get(map);
+  if (!r) footCache.set(map, (r = flood(map, (c) => FOOT_CODES.has(c))));
+  return r;
+}
+
+export function isFootReachable(map: MapState, x: number, y: number): boolean {
+  return inBounds(map, x, y) && footReach(map)[y * map.width + x] === 1;
+}
+
+/**
+ * The road network: Daan (and bridges along it) joined to the center without a break. The
+ * center counts, so a path starting next to the plaza is connected.
+ */
+export function roadNetwork(map: MapState): Uint8Array {
+  let r = roadCache.get(map);
+  if (!r) roadCache.set(map, (r = flood(map, (c) => ROAD_CODES.has(c))));
+  return r;
+}
+
+/** A building on (x, y) is "Connected" when a tile next to it is part of the road network. */
+export function isConnected(map: MapState, x: number, y: number): boolean {
+  const net = roadNetwork(map);
+  const c = barangayCenter(map);
+  return NEIGHBOURS.some(([dx, dy]) => {
+    const nx = x + dx;
+    const ny = y + dy;
+    if (!inBounds(map, nx, ny) || (nx === c.x && ny === c.y)) return false;
+    return net[ny * map.width + nx] === 1 && tileAt(map, nx, ny) !== "bridge";
+  });
+}
+
+/** Can a Daan go here? Cleared land the barangay can reach, free of buildings, not the plaza. */
+export function canPlaceRoad(state: GameState, x: number, y: number): boolean {
+  return tileAt(state.map, x, y) === "cleared" && !isPlaza(state.map, x, y) && !buildingAt(state, x, y) && isReachable(state.map, x, y);
+}
+
 /** Is this building available yet (from the start, or at a villager count)? */
 export function isUnlocked(state: GameState, def: BuildingDef): boolean {
   if (def.unlock.start) return true;
@@ -211,7 +297,8 @@ export function bridgeSpan(map: MapState, def: BuildingDef, x: number, y: number
   if (!def.bridge || tileAt(map, x, y) !== "river") return null;
   for (const [dx, dy] of NEIGHBOURS) {
     // We come from cleared land on the opposite side and build towards (dx, dy).
-    if (tileAt(map, x - dx, y - dy) !== "cleared" || !isReachable(map, x - dx, y - dy)) continue;
+    const from = tileAt(map, x - dx, y - dy);
+    if ((from !== "cleared" && from !== "daan") || !isReachable(map, x - dx, y - dy)) continue;
     const span: Point[] = [];
     let cx = x;
     let cy = y;
@@ -221,7 +308,7 @@ export function bridgeSpan(map: MapState, def: BuildingDef, x: number, y: number
       cy += dy;
     }
     const far = tileAt(map, cx, cy);
-    if (far === "forest" || far === "cleared" || far === "balete") return span;
+    if (far === "forest" || far === "cleared" || far === "balete" || far === "daan") return span;
   }
   return null;
 }
@@ -231,7 +318,7 @@ export function bridgeSpan(map: MapState, def: BuildingDef, x: number, y: number
  * stored: straight across from land, over bridge tiles, to land on the other side.
  */
 export function standingBridgeTiles(map: MapState, def: BuildingDef, x: number, y: number): Point[] {
-  const isLand = (t: Tile | null) => t === "cleared" || t === "forest" || t === "balete";
+  const isLand = (t: Tile | null) => t === "cleared" || t === "forest" || t === "balete" || t === "daan";
   if (!def.bridge || tileAt(map, x, y) !== "bridge") return [];
   for (const [dx, dy] of NEIGHBOURS) {
     if (!isLand(tileAt(map, x - dx, y - dy))) continue;
@@ -390,7 +477,7 @@ export function isClearable(map: MapState, x: number, y: number): boolean {
   if ((tile !== "forest" && tile !== "balete") || !isReachable(map, x, y)) return false;
   return NEIGHBOURS.some(([dx, dy]) => {
     const n = tileAt(map, x + dx, y + dy);
-    return n === "cleared" || n === "bridge";
+    return n === "cleared" || n === "bridge" || n === "daan";
   });
 }
 

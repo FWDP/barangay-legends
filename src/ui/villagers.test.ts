@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { at, content, withState } from "../engine/testUtils";
-import { dayPhase, destination, exitPoint, isNight, MAX_SPRITES, planVillagers, SPEED, walk } from "./villagers";
+import { tileAt } from "../engine/map";
+import { at, content, mapFrom, withState } from "../engine/testUtils";
+import { dayPhase, destination, edgeTile, exitPoint, isNight, MAX_SPRITES, newWalker, planVillagers, SPEED, stepWalker, walk } from "./villagers";
 
 const fed = { resources: { rice: 100, wood: 0 } };
 
@@ -77,5 +78,66 @@ describe("villager sprites", () => {
     const before = JSON.stringify(s);
     for (const p of planVillagers(s, content)) destination(p, 12, false, s.map.plaza, false);
     expect(JSON.stringify(s)).toBe(before);
+  });
+});
+
+describe("walking along paths", () => {
+  // River down column 4, a bridge at row 2, Daan along row 4 on the left bank.
+  const map = mapFrom([
+    "....~....",
+    "....~....",
+    ".P..=....",
+    "....~....",
+    "####~....",
+  ]);
+  const walkAll = (from: { x: number; y: number }, to: { x: number; y: number }, speed = 1, roadSpeed = 1) => {
+    let w = newWalker(from);
+    const visited: { x: number; y: number }[] = [];
+    for (let i = 0; i < 2000 && (i === 0 || w.moving); i++) {
+      w = stepWalker(w, to, map, speed, 0.05, roadSpeed);
+      visited.push(w.p);
+    }
+    return { w, visited };
+  };
+
+  it("never steps on the river, and crosses on the bridge", () => {
+    const { w, visited } = walkAll({ x: 0.5, y: 0.5 }, { x: 8.5, y: 0.5 });
+    expect(w.p).toEqual({ x: 8.5, y: 0.5 });
+    expect(visited.every((p) => tileAt(map, Math.floor(p.x), Math.floor(p.y)) !== "river")).toBe(true);
+    expect(visited.some((p) => Math.floor(p.x) === 4 && Math.floor(p.y) === 2)).toBe(true);
+  });
+
+  it("stays put when there is no way across", () => {
+    const cut = mapFrom(["..~..", ".P~.."]);
+    const w = stepWalker(newWalker({ x: 0.5, y: 0.5 }), { x: 4.5, y: 0.5 }, cut, 1, 1);
+    expect(w.p).toEqual({ x: 0.5, y: 0.5 });
+    expect(w.moving).toBe(false);
+  });
+
+  it("walks faster on Daan", () => {
+    const slow = walkAll({ x: 0.5, y: 4.5 }, { x: 3.5, y: 4.5 }, 1, 1).visited.length;
+    const fast = walkAll({ x: 0.5, y: 4.5 }, { x: 3.5, y: 4.5 }, 1, 1.5).visited.length;
+    expect(fast).toBeLessThan(slow);
+    expect(slow / fast).toBeCloseTo(1.5, 0);
+  });
+
+  it("re-plans when the map changes", () => {
+    const w = stepWalker(newWalker({ x: 0.5, y: 0.5 }), { x: 8.5, y: 0.5 }, map, 1, 0.01);
+    const bridged = { ...map };
+    expect(stepWalker(w, { x: 8.5, y: 0.5 }, bridged, 1, 0.01).map).toBe(bridged);
+  });
+
+  it("leaves and arrives by a walkable edge tile", () => {
+    const e = edgeTile(map, { x: 4.5, y: 0.5 });
+    expect(tileAt(map, e.x, e.y)).not.toBe("river");
+    expect(e.y === 0 || e.y === map.height - 1 || e.x === 0 || e.x === map.width - 1).toBe(true);
+  });
+
+  it("keeps destinations inside their tile, so nobody stands in the river", () => {
+    const s = withState({ ...fed, villagers: 3, buildings: [at("bahay-kubo", 1, 3)] });
+    for (const plan of planVillagers(s, content)) {
+      const d = destination(plan, 0, true, s.map.plaza, false);
+      expect(tileAt(s.map, Math.floor(d.x), Math.floor(d.y))).not.toBe("river");
+    }
   });
 });

@@ -29,8 +29,11 @@ export const TRIGGERS = [
   "event-typhoon",
   "event-sickness",
   "trade-offer",
+  "no-path",
+  "old-paths",
   "unlocked",
   "unstaffed",
+  "roads",
   "idle",
 ] as const;
 /** Listed most urgent first: when several hold at once, the adviser speaks about the first. */
@@ -51,6 +54,8 @@ export interface AdvisorLine {
   id: string;
   trigger: TriggerId;
   text: Localized;
+  /** Show this line at most this many times (default 3, the adviser's limit). */
+  max?: number;
 }
 
 export interface AdvisorDef {
@@ -141,6 +146,9 @@ const LINE_VARS: Record<TriggerId, string[]> = {
   "trade-offer": ["neighbor", "datu"],
   unlocked: ["building"],
   unstaffed: ["building"],
+  "no-path": ["building"],
+  "old-paths": ["building"],
+  roads: ["percent"],
   idle: [],
 };
 
@@ -178,6 +186,9 @@ export function validateAdvisor(raw: unknown, buildingIds: string[], file = "adv
     unique(line.id, where);
     if (!(TRIGGERS as readonly unknown[]).includes(line.trigger)) throw new Error(`${where}: unknown trigger "${String(line.trigger)}"`);
     const text = localized(line.text, `${where}.text`);
+    if (line.max !== undefined && (!Number.isInteger(line.max) || (line.max as number) < 1 || (line.max as number) > 3)) {
+      throw new Error(`${where}: "max" must be 1, 2 or 3`);
+    }
     const allowed = LINE_VARS[line.trigger as TriggerId];
     for (const l of LANGS) {
       for (const name of placeholders(text[l])) {

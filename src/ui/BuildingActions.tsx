@@ -2,7 +2,7 @@
 // demolish confirmation with its warnings, and the short-lived Undo button after building.
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Content } from "../engine/content";
-import { buildingWorkers, canAfford, demolishPreview, moveCost, undoSecondsLeft, type GameState } from "../engine/game";
+import { buildingWorkers, canAfford, canStaff, demolishPreview, moveCost, roadBonuses, undoSecondsLeft, type GameState } from "../engine/game";
 import { buildingAt } from "../engine/map";
 import { costText } from "./format";
 
@@ -67,7 +67,10 @@ export function BuildingMenu(props: {
   const refund = demolishPreview(state, content, target.x, target.y)?.refund ?? {};
   // Who works here: villagers fill worker buildings on their own.
   const slots = def.workers ?? 0;
-  const working = slots ? buildingWorkers(state, content)[state.buildings.indexOf(building)] : 0;
+  const index = state.buildings.indexOf(building);
+  const working = slots ? buildingWorkers(state, content)[index] : 0;
+  const noPath = slots > 0 && !building.damaged && !canStaff(state, building);
+  const connected = roadBonuses(state, content)[index] > 0;
 
   return (
     <div
@@ -86,7 +89,20 @@ export function BuildingMenu(props: {
       {slots > 0 && (
         <p className="px-1 pb-1.5 text-xs text-stone-600">
           👥 {working} of {slots} workers
-          {working < slots && !building.damaged && <span className="block text-[11px] text-stone-500">Free villagers fill it on their own. More houses bring more.</span>}
+          {noPath ? (
+            <span className="mt-0.5 block rounded bg-red-100 px-1 text-[11px] font-semibold text-red-900">🚫 No path: workers can't walk here. Join it with a Tulay, or move it.</span>
+          ) : (
+            working < slots && !building.damaged && <span className="block text-[11px] text-stone-500">Free villagers fill it on their own. More houses bring more.</span>
+          )}
+        </p>
+      )}
+      {def.produces && (
+        <p className="px-1 pb-1.5 text-[11px] text-stone-600">
+          {connected ? (
+            <span className="font-semibold text-amber-800">🛤️ Connected: +{content.rules.roads.connectedBonusPercent}% output</span>
+          ) : (
+            <>🛤️ Join it to the plaza with a Daan for +{content.rules.roads.connectedBonusPercent}%</>
+          )}
         </p>
       )}
       <div className="flex flex-col gap-1.5">
@@ -162,8 +178,14 @@ export function DemolishDialog(props: {
           )}
           {preview.cutsOffLand && (
             <p className="rounded-lg bg-red-100 p-2 text-sm font-semibold text-red-900">
-              🌊 The far bank will be cut off. Buildings there keep working, but you can't clear or build there until a new{" "}
+              🌊 The far bank will be cut off: nobody can walk there, and you can't clear or build there until a new{" "}
               {bridge?.name ?? "bridge"} is built.
+            </p>
+          )}
+          {preview.stranded > 0 && (
+            <p className="rounded-lg bg-red-100 p-2 text-sm font-semibold text-red-900">
+              🚫 {preview.stranded} {preview.stranded === 1 ? "workplace" : "workplaces"} will have no path. Nobody will work there until a{" "}
+              {bridge?.name ?? "bridge"} joins them again.
             </p>
           )}
           <div className="flex justify-end gap-2 pt-1">

@@ -82,6 +82,7 @@ export function gentleStep(state: GameState, content: Content, dt: number): Step
       s = {
         ...s,
         clearing: null,
+        legacyReach: false,
         tilesCleared: s.tilesCleared + 1,
         resources: { ...s.resources, wood: s.resources.wood + content.rules.clearing.wood },
         map: setTiles(s.map, [{ x: job.x, y: job.y, tile: "cleared" }]),

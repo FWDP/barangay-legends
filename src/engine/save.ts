@@ -113,6 +113,9 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
   // v8 → v9: saves record when they were written (savedAt, wall-clock ms from the UI) for offline
   // progress. Older saves have no time, so they get no offline credit.
   8: (raw) => ({ ...raw, version: 9 }),
+  // v9 → v10: footpaths. Workplaces now need a path from the plaza to be staffed. Older saves
+  // keep the old rule (every workplace staffed) until the player next changes the map.
+  9: (raw) => ({ ...raw, version: 10, legacyReach: true }),
 };
 
 // ---------- Frozen v2 map rules (for the v1 → v2 migration only) ----------
@@ -233,6 +236,7 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean): GameSta
     );
   }
   if (finiteNonNeg(data.tilesCleared)) state.tilesCleared = Math.floor(data.tilesCleared);
+  state.legacyReach = data.legacyReach === true;
   if (Array.isArray(data.recentChoices)) {
     state.recentChoices = data.recentChoices.filter((id): id is string => typeof id === "string" && content.choices.some((c) => c.id === id)).slice(-3);
   }

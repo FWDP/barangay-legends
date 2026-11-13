@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import type { Resource } from "../engine/content";
-import { buildingCost, canAfford, canMove, healthyWorkers, moveCost, owned, repairCost, withoutBuilding } from "../engine/game";
+import { buildingCost, canAfford, canMove, healthyWorkers, moveCost, owned, repairCost, roadCost, withoutBuilding } from "../engine/game";
 import { buildingAt, canPlace, clearBlocker, clearSeconds, isUnlocked, tileAt, type ClearBlocker } from "../engine/map";
 import { BarangayMap } from "./BarangayMap";
 import { BuildingMenu, DemolishDialog, UndoBar, type MenuTarget } from "./BuildingActions";
@@ -128,6 +128,8 @@ export function App() {
   const [moving, setMoving] = useState<{ x: number; y: number } | null>(null);
   const [demolishing, setDemolishing] = useState<{ x: number; y: number } | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
+  // Laying Daan footpaths (a placing mode of its own).
+  const [roadMode, setRoadMode] = useState(false);
   const settings = useSettings();
   const lang = useLang();
   const closeLore = useCallback(() => setLoreNote(null), []);
@@ -212,6 +214,7 @@ export function App() {
   const cancelPlacing = useCallback(() => {
     setSelected(null);
     setMoving(null);
+    setRoadMode(false);
   }, []);
   // Drop the selection if it stops being affordable (or the moved building is gone), and let Esc cancel placing.
   useEffect(() => {
@@ -219,11 +222,11 @@ export function App() {
     if (moving && !moved) setMoving(null);
   }, [placing, placingAffordable, moving, moved, cancelPlacing]);
   useEffect(() => {
-    if (!selected && !moving) return;
+    if (!selected && !moving && !roadMode) return;
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && cancelPlacing();
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [selected, moving, cancelPlacing]);
+  }, [selected, moving, roadMode, cancelPlacing]);
 
   // Once the player owns every starting producer (a palayan and a woodcutter camp), gathering
   // is no longer the main income, so the buttons step back.
@@ -419,6 +422,22 @@ export function App() {
             setLoreNote(id);
           }}
           clash={clash}
+          road={
+            roadMode
+              ? {
+                  costText: costText(roadCost(content)),
+                  onLay: (tiles) => {
+                    if (tiles.length === 0) return;
+                    dispatch({ type: "road", tiles });
+                    sfx.build();
+                  },
+                  onRemove: (x, y) => {
+                    dispatch({ type: "removeRoad", x, y });
+                    sfx.click();
+                  },
+                }
+              : null
+          }
           onBoat={() => {
             sfx.click();
             setOfferOpen(true);
@@ -427,6 +446,29 @@ export function App() {
         )}
         <LoreToast loreId={loreNote} onClose={closeLore} />
         <div className="pointer-events-none absolute top-2 left-1/2 z-10 flex w-max max-w-[calc(100%-1rem)] -translate-x-1/2 flex-col items-center gap-1.5">
+          {view === "barangay" && roadMode && (
+            <div
+              role="status"
+              className="wood-panel pointer-events-auto flex items-center gap-2 rounded-xl border-2 border-amber-950/70 py-1.5 pr-1.5 pl-3 text-amber-50 shadow-lg"
+            >
+              <span className="text-2xl leading-none" aria-hidden>
+                🛤️
+              </span>
+              <span className="text-sm leading-tight">
+                <span className="text-outline block font-display text-base">Lay Daan</span>
+                <span className="block text-xs text-amber-100/90">
+                  Tap tiles (or drag with a mouse) · {costText(roadCost(content))} each · tap a path to take it up
+                </span>
+              </span>
+              <button
+                type="button"
+                onClick={cancelPlacing}
+                className="game-btn border-2 border-amber-950/60 bg-amber-200 px-2.5 py-1 text-sm font-semibold text-amber-950"
+              >
+                Done
+              </button>
+            </div>
+          )}
           {view === "barangay" && placing && (
             <div
               role="status"
@@ -455,7 +497,7 @@ export function App() {
               </button>
             </div>
           )}
-          {view === "barangay" && !placing && (
+          {view === "barangay" && !placing && !roadMode && (
             <UndoBar
               state={state}
               content={content}
@@ -496,9 +538,19 @@ export function App() {
           state={state}
           content={content}
           selected={selected}
+          roadActive={roadMode}
+          onRoad={() => {
+            const on = !roadMode;
+            if (on) sfx.pick();
+            setSelected(null);
+            setMoving(null);
+            setMenu(null);
+            setRoadMode(on);
+          }}
           onSelect={(id) => {
             if (id && id !== selected) sfx.pick();
             setMoving(null);
+            setRoadMode(false);
             setSelected(id);
           }}
         />

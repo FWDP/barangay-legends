@@ -5,9 +5,24 @@ import { useEffect, useRef, useState } from "react";
 import type { Content } from "../engine/content";
 import { isHungry } from "../engine/events";
 import { overcrowded, type GameState } from "../engine/game";
-import type { Point } from "../engine/map";
+import { tileAt, type Point } from "../engine/map";
 import { origin, type Camera, type View } from "./camera";
-import { dayPhase, destination, exitPoint, isNight, MAX_SPRITES, planVillagers, presentVillagers, SPEED, walk, type Role, type VillagerPlan } from "./villagers";
+import {
+  dayPhase,
+  destination,
+  edgeTile,
+  exitPoint,
+  isNight,
+  MAX_SPRITES,
+  newWalker,
+  planVillagers,
+  presentVillagers,
+  SPEED,
+  stepWalker,
+  type Role,
+  type VillagerPlan,
+  type Walker,
+} from "./villagers";
 import {
   along,
   boatArriving,
@@ -17,6 +32,7 @@ import {
   LEAVE_SECONDS,
   raidApproach,
   raiderCount,
+  raidWalk,
   reach,
   riverPath,
 } from "./visitors";
@@ -33,6 +49,8 @@ interface RaidMemory {
   top: boolean;
   target: Point;
   count: number;
+  /** Their way on foot from the landing to the target (A*), if there is one. */
+  walk: Point[] | null;
   /** performance.now() when it struck, when the clash ended, and whether the barangay won. */
   struckAt?: number;
   retreatAt?: number;
@@ -46,7 +64,12 @@ interface Sprite {
   stride: number;
 }
 
-interface Leaver extends Sprite {
+/** A villager on screen: where they are and the route they're walking (display only). */
+interface Villager extends Sprite {
+  walker: Walker;
+}
+
+interface Leaver extends Villager {
   id: number;
   to: Point;
 }
@@ -218,6 +241,24 @@ function drawBoat(g: CanvasRenderingContext2D, x: number, y: number, tile: numbe
   g.restore();
 }
 
+/**
+ * A Tulay's deck, drawn over a boat passing underneath. Matches the map's bridge-tile look:
+ * bamboo planks between two dark rails.
+ */
+function drawDeck(g: CanvasRenderingContext2D, x: number, y: number, tile: number) {
+  const top = y + tile * 0.14;
+  const h = tile * 0.72;
+  g.fillStyle = "rgb(0 0 0 / 0.3)";
+  g.fillRect(x, top + 2, tile, h);
+  g.fillStyle = "#d8bb6c";
+  g.fillRect(x, top, tile, h);
+  g.fillStyle = "#6b4a1c";
+  g.fillRect(x, top, tile, h * 0.1);
+  g.fillRect(x, top + h * 0.9, tile, h * 0.1);
+  g.fillStyle = "rgb(90 60 20 / 0.45)";
+  for (let i = 0; i < 5; i++) g.fillRect(x + (tile * i) / 4.5, top, Math.max(1, tile * 0.03), h);
+}
+
 /** Flashes of blades where the two sides meet. */
 function drawSparks(g: CanvasRenderingContext2D, x: number, y: number, tile: number, t: number) {
   const beat = Math.floor(t * 6);
@@ -250,7 +291,7 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
   const boat = useRef<{ from: string; top: boolean; leftAt?: number; p?: Point; heading?: number } | null>(null);
   const raid = useRef<RaidMemory | null>(null);
   const river = useRef<{ map: GameState["map"] | null; path: Point[] }>({ map: null, path: [] });
-  const sprites = useRef(new Map<number, Sprite>());
+  const sprites = useRef(new Map<number, Villager>());
   const leavers = useRef<Leaver[]>([]);
   const before = useRef<GameState | null>(null);
   const started = useRef(false);
@@ -270,7 +311,10 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
       const from = sprites.current.get(id);
       if (k < MAX_SPRITES) sprites.current.delete(id);
       if (!goingAway || !from || leavers.current.length > 12) continue;
-      leavers.current.push({ id: id + 1000 + leavers.current.length, p: { ...from.p }, moving: true, stride: 0, to: exitPoint(from.p, state.map) });
+      // Off the map by the nearest walkable edge, never across the river.
+      const edge = edgeTile(state.map, from.p);
+      const off = exitPoint({ x: edge.x + 0.5, y: edge.y + 0.5 }, state.map);
+      leavers.current.push({ id: id + 1000 + leavers.current.length, p: { ...from.p }, moving: true, stride: 0, to: off, walker: { ...newWalker(from.p), route: [] } });
     }
   }, [state.villagers, state.warriors, reducedMotion]);
 
@@ -296,13 +340,15 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
       // The tint only cycles with motion on, so with reduced motion it is always day.
       const night = !reducedMotion && isNight(dayPhase(Date.now()));
       const hungry = isHungry(s);
+      const roadSpeed = content.rules.roads.walkSpeedPercent / 100;
       const visible = (p: Point) => {
         const x = o.x + p.x * T;
         const y = o.y + p.y * T;
         return x > -T && y > -T && x < v.w + T && y < v.h + T ? { x, y } : null;
       };
 
-      const drawn: { x: number; y: number; r?: number; f: () => void }[] = [];
+      // Layers, bottom to top: boats (0), bridge decks over them (1), everything on land (2).
+      const drawn: { x: number; y: number; r?: number; layer?: number; f: () => void }[] = [];
       let animating = leavers.current.length > 0;
 
       // ---- Visitors: trade boats and raiders, from the region's offer and raid ----
@@ -333,7 +379,7 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
         } else boat.current = null;
         const b = boat.current;
         const bp = b?.p && visible(b.p);
-        if (b && bp) drawn.push({ x: bp.x, y: bp.y, r: T * 0.7, f: () => drawBoat(g, bp.x, bp.y, T, b.heading ?? Math.PI / 2, "bangka", t) });
+        if (b && bp) drawn.push({ x: bp.x, y: bp.y, r: T * 0.7, layer: 0, f: () => drawBoat(g, bp.x, bp.y, T, b.heading ?? Math.PI / 2, "bangka", t) });
 
         const incoming = s.region?.incomingRaid ?? null;
         const defs = new Map(content.buildings.map((d) => [d.id, d]));
@@ -344,16 +390,16 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
         if (incoming) {
           const top = fromTop(content, incoming.from);
           const warriors = s.region?.neighbors.find((n) => n.id === incoming.from)?.state.warriors ?? 3;
-          raid.current = { from: incoming.from, top, target, count: raiderCount(warriors) };
+          raid.current = { from: incoming.from, top, target, count: raiderCount(warriors), walk: raidWalk(s.map, path, top, plaza, target) };
           const progress = reducedMotion ? 1 : Math.min(1, Math.max(0, 1 - (incoming.strikeAt - s.time) / warning));
-          const a = raidApproach(path, plaza, target, top, progress, raid.current.count);
+          const a = raidApproach(path, plaza, target, top, progress, raid.current.count, raid.current.walk);
           scene = { karakoa: a.karakoa, raiders: a.raiders, look: "raider", sparks: null };
           animating = !reducedMotion;
         } else if (raid.current && !reducedMotion) {
           const r = raid.current;
           r.struckAt ??= now;
           const land = along(reach(path, landingIndex(path, r.top), r.top), 1);
-          const atKuta = raidApproach(path, plaza, r.target, r.top, 1, r.count).raiders;
+          const atKuta = raidApproach(path, plaza, r.target, r.top, 1, r.count, r.walk).raiders;
           if (fight && now < fight.until) {
             // The clash: both sides lunge back and forth at the Kuta.
             r.win = fight.win;
@@ -372,7 +418,7 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
             const span = r.win === false ? LEAVE_SECONDS : LEAVE_SECONDS * 0.55;
             const back = (now - r.retreatAt) / 1000 / span;
             if (back < 1) {
-              const walking = raidApproach(path, plaza, r.target, r.top, 1 - back * (1 - 0.3), r.count).raiders;
+              const walking = raidApproach(path, plaza, r.target, r.top, 1 - back * (1 - 0.3), r.count, r.walk).raiders;
               scene = { karakoa: land, raiders: walking, look: r.win === false ? "looter" : "raider", sparks: null };
             } else if (back < 2) {
               const line = reach(path, landingIndex(path, r.top), r.top).reverse();
@@ -385,7 +431,7 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
           const k = scene.karakoa && visible(scene.karakoa.p);
           if (k && scene.karakoa) {
             const heading = scene.karakoa.heading;
-            drawn.push({ x: k.x, y: k.y, r: T * 1.1, f: () => drawBoat(g, k.x, k.y, T, heading, "karakoa", t) });
+            drawn.push({ x: k.x, y: k.y, r: T * 1.1, layer: 0, f: () => drawBoat(g, k.x, k.y, T, heading, "karakoa", t) });
           }
           scene.raiders.forEach((p, i) => {
             const at = visible(p);
@@ -404,18 +450,20 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
         const to = destination(plan, t, night, s.map.plaza, hungry);
         let sp = sprites.current.get(plan.id);
         if (!sp) {
-          // On first draw everyone is already in place; later arrivals walk in from the edge.
-          const start = started.current && !reducedMotion ? exitPoint(to, s.map) : to;
-          sp = { p: start, moving: false, stride: plan.id };
+          // On first draw everyone is already in place; later arrivals walk in from the map's edge.
+          const edge = edgeTile(s.map, to);
+          const start = started.current && !reducedMotion ? { x: edge.x + 0.5, y: edge.y + 0.5 } : to;
+          sp = { p: start, moving: false, stride: plan.id, walker: newWalker(start) };
           sprites.current.set(plan.id, sp);
         }
         if (reducedMotion) {
           sp.p = to;
           sp.moving = false;
         } else {
-          const step = walk(sp.p, to, SPEED[plan.role], dt);
-          sp.p = step.p;
-          sp.moving = step.moving;
+          // Along the A* route: on land and bridges only, faster on Daan.
+          sp.walker = stepWalker({ ...sp.walker, p: sp.p }, to, s.map, SPEED[plan.role], dt, roadSpeed);
+          sp.p = sp.walker.p;
+          sp.moving = sp.walker.moving;
           if (sp.moving) sp.stride += dt * 9 * (SPEED[plan.role] / SPEED.work);
         }
         // At night, villagers who reached home are indoors.
@@ -430,7 +478,17 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
       for (const id of sprites.current.keys()) if (!seen.has(id)) sprites.current.delete(id);
 
       leavers.current = leavers.current.filter((l) => {
-        const step = walk(l.p, l.to, SPEED.leaving, dt);
+        // Walk to the edge tile over land, then step off the map.
+        const edge = edgeTile(s.map, l.to);
+        const atEdge = Math.floor(l.p.x) === edge.x && Math.floor(l.p.y) === edge.y;
+        l.walker = stepWalker({ ...l.walker, p: l.p }, atEdge ? l.to : { x: edge.x + 0.5, y: edge.y + 0.5 }, s.map, SPEED.leaving, dt, roadSpeed);
+        if (atEdge && !l.walker.route.length && Math.hypot(l.p.x - l.to.x, l.p.y - l.to.y) > 0.01) {
+          // Off the map: plain steps (the route planner only knows tiles on the map).
+          const d = Math.hypot(l.to.x - l.p.x, l.to.y - l.p.y);
+          const m = Math.min(d, SPEED.leaving * dt);
+          l.walker = { ...l.walker, p: { x: l.p.x + ((l.to.x - l.p.x) / d) * m, y: l.p.y + ((l.to.y - l.p.y) / d) * m }, moving: d > m };
+        }
+        const step = { p: l.walker.p, moving: l.walker.moving || Math.hypot(l.walker.p.x - l.to.x, l.walker.p.y - l.to.y) > 0.01 };
         l.p = step.p;
         l.moving = step.moving;
         l.stride += dt * 9;
@@ -470,7 +528,21 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
       g.setTransform(dpr, 0, 0, dpr, -area.x0 * dpr, -area.y0 * dpr);
       g.clearRect(area.x0, area.y0, area.x1 - area.x0, area.y1 - area.y0);
       // Back to front, so nearer villagers overlap farther ones.
-      drawn.sort((a, b) => a.y - b.y);
+      // A boat passing under a Tulay goes beneath the deck: repaint the deck tiles it overlaps.
+      const decks = new Set<string>();
+      for (const d of drawn) {
+        if (d.layer !== 0) continue;
+        const cx = (d.x - o.x) / T;
+        const cy = (d.y - o.y) / T;
+        for (let y = Math.floor(cy - 1.2); y <= Math.floor(cy + 1.2); y++) {
+          for (let x = Math.floor(cx - 1.2); x <= Math.floor(cx + 1.2); x++) if (tileAt(s.map, x, y) === "bridge") decks.add(`${x},${y}`);
+        }
+      }
+      for (const key of decks) {
+        const [x, y] = key.split(",").map(Number);
+        drawn.push({ x: o.x + (x + 0.5) * T, y: o.y + (y + 0.5) * T, r: T, layer: 1, f: () => drawDeck(g, o.x + x * T, o.y + y * T, T) });
+      }
+      drawn.sort((a, b) => (a.layer ?? 2) - (b.layer ?? 2) || a.y - b.y);
       for (const d of drawn) d.f();
     };
 

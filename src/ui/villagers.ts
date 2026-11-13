@@ -3,7 +3,8 @@
 import type { Content } from "../engine/content";
 import { buildingWorkers, healthyWorkers, type GameState } from "../engine/game";
 import { isHungry } from "../engine/events";
-import type { Point } from "../engine/map";
+import { tileAt, type MapState, type Point } from "../engine/map";
+import { cachedPath, isWalkable } from "../engine/paths";
 import { homeWarriors } from "../engine/region";
 
 /** Length of the day/night tint cycle (the CSS day-night animation), in real seconds. */
@@ -88,9 +89,15 @@ export function planVillagers(state: GameState, content: Content, cap = MAX_SPRI
  */
 export function destination(plan: VillagerPlan, t: number, night: boolean, plaza: Point, hungry: boolean): Point {
   const o = jitter(plan.id);
-  const at = (p: Point, dy = 0.2): Point => ({ x: centre(p).x + o.x, y: centre(p).y + dy + o.y });
+  // Stay inside the tile, so a house by the river never sends anyone onto the water.
+  const inTile = (v: number, base: number) => Math.min(base + 0.92, Math.max(base + 0.08, v));
+  const at = (p: Point, dy = 0.2): Point => ({ x: inTile(centre(p).x + o.x, p.x), y: inTile(centre(p).y + dy + o.y, p.y) });
   const home = at(plan.home, 0.3);
-  const square = { x: centre(plaza).x + o.x * 2.2, y: centre(plaza).y + o.y * 2.2 };
+  // A crowd around the fire, within the plaza's own 3 × 3 (always cleared land).
+  const square = {
+    x: Math.min(plaza.x + 1.9, Math.max(plaza.x - 0.9, centre(plaza).x + o.x * 2.2)),
+    y: Math.min(plaza.y + 1.9, Math.max(plaza.y - 0.9, centre(plaza).y + o.y * 2.2)),
+  };
   // Each villager keeps their own rhythm, so they don't all move at once.
   const cycle = (t / 80 + ((plan.id * 0.618) % 1)) % 1;
   if (night && plan.role !== "warrior") return home;
@@ -139,4 +146,83 @@ export function walk(from: Point, to: Point, speed: number, dt: number): { p: Po
     y += Math.sign(dy) * step;
   }
   return { p: { x, y }, moving: Math.abs(to.x - x) > 1e-3 || Math.abs(to.y - y) > 1e-3 };
+}
+
+// ---------- Walking along paths ----------
+
+/** A sprite walking along an A* route (display only). */
+export interface Walker {
+  p: Point;
+  /** Points still to walk to: tile centres, then the exact spot. */
+  route: Point[];
+  /** The tile the route leads to, and the map it was planned on (a new map means re-planning). */
+  goal: string | null;
+  map: MapState | null;
+  moving: boolean;
+}
+
+export const newWalker = (p: Point): Walker => ({ p, route: [], goal: null, map: null, moving: false });
+
+const tileOf = (map: MapState, p: Point): Point => ({
+  x: Math.min(map.width - 1, Math.max(0, Math.floor(p.x))),
+  y: Math.min(map.height - 1, Math.max(0, Math.floor(p.y))),
+});
+
+/** The route from `from` to `to`: through tile centres, never over open water. Null if there is none. */
+export function routeTo(map: MapState, from: Point, to: Point): Point[] | null {
+  const path = cachedPath(map, tileOf(map, from), tileOf(map, to));
+  if (!path) return null;
+  return [...path.slice(1, -1).map((t) => ({ x: t.x + 0.5, y: t.y + 0.5 })), to];
+}
+
+/**
+ * One frame of walking toward `to`. The route is planned once per goal tile (A* results are
+ * cached per map) and re-planned when the map changes. With no way there (the river is in the
+ * way and there's no bridge), the walker stays put rather than wade across. On Daan it walks
+ * `roadSpeed` times faster.
+ */
+export function stepWalker(w: Walker, to: Point, map: MapState, speed: number, dt: number, roadSpeed = 1): Walker {
+  const goal = `${Math.floor(to.x)},${Math.floor(to.y)}`;
+  let route: Point[];
+  if (w.goal !== goal || w.map !== map) route = routeTo(map, w.p, to) ?? [];
+  else route = w.route.length ? [...w.route.slice(0, -1), to] : [];
+  let p = w.p;
+  let left = speed * dt;
+  let i = 0;
+  while (left > 1e-9 && i < route.length) {
+    const target = route[i];
+    const boost = tileAt(map, Math.floor(p.x), Math.floor(p.y)) === "daan" ? roadSpeed : 1;
+    const d = Math.hypot(target.x - p.x, target.y - p.y);
+    const reach = left * boost;
+    if (reach >= d) {
+      p = target;
+      left -= d / boost;
+      i++;
+    } else {
+      p = { x: p.x + ((target.x - p.x) / d) * reach, y: p.y + ((target.y - p.y) / d) * reach };
+      left = 0;
+    }
+  }
+  const rest = route.slice(i);
+  return { p, route: rest, goal, map, moving: rest.length > 0 };
+}
+
+/** The nearest walkable tile on the map's edge: where newcomers come in and leavers go out. */
+export function edgeTile(map: MapState, from: Point): Point {
+  let best: Point = { x: 0, y: 0 };
+  let bestD = Infinity;
+  const consider = (x: number, y: number) => {
+    if (!isWalkable(map, x, y)) return;
+    const d = Math.abs(x + 0.5 - from.x) + Math.abs(y + 0.5 - from.y);
+    if (d < bestD) [best, bestD] = [{ x, y }, d];
+  };
+  for (let x = 0; x < map.width; x++) {
+    consider(x, 0);
+    consider(x, map.height - 1);
+  }
+  for (let y = 0; y < map.height; y++) {
+    consider(0, y);
+    consider(map.width - 1, y);
+  }
+  return best;
 }

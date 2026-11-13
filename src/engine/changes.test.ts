@@ -17,6 +17,7 @@ import {
   tick,
   undoSecondsLeft,
   STATE_VERSION,
+  unreachableWorkplaces,
   type GameState,
 } from "./game";
 import { canPlace, countTiles, isClearable, isReachable, tileAt } from "./map";
@@ -297,11 +298,13 @@ describe("demolishing a Tulay", () => {
     expect(canPlace(rebuilt, content, def("palayan"), 7, 1)).toBe(true);
   });
 
-  it("leaves the buildings on the far bank working", () => {
+  it("strands the workplaces on the far bank: no path, no workers (and the warning says so)", () => {
     const s = bridged();
+    expect(rates(s, calm).produced.wood).toBeGreaterThan(0);
+    expect(demolishPreview(s, calm, 4, 2)!.stranded).toBeGreaterThan(0);
     const after = apply(s, calm, { type: "demolish", x: 4, y: 2 });
-    expect(rates(after, calm).produced.wood).toBeCloseTo(rates(s, calm).produced.wood);
-    expect(rates(after, calm).produced.wood).toBeGreaterThan(0);
+    expect(rates(after, calm).produced.wood).toBe(0);
+    expect(unreachableWorkplaces(after, calm).length).toBeGreaterThan(0);
   });
 
   it("stops a clearing job on the far bank", () => {

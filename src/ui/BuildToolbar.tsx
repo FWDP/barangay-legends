@@ -1,5 +1,5 @@
 import { RESOURCES, type BuildingDef, type Content } from "../engine/content";
-import { buildingCost, canAfford, owned, staffedBuildings, type GameState } from "../engine/game";
+import { buildingCost, canAfford, owned, roadCost, staffedBuildings, unreachableWorkplaces, type GameState } from "../engine/game";
 import { isUnlocked } from "../engine/map";
 import { bonusRuleText, groveRuleText, RESOURCE_ICON } from "./format";
 
@@ -25,9 +25,16 @@ export function BuildToolbar(props: {
   content: Content;
   selected: string | null;
   onSelect: (id: string | null) => void;
+  /** Laying Daan right now. */
+  roadActive: boolean;
+  onRoad: () => void;
 }) {
-  const { state, content, selected, onSelect } = props;
+  const { state, content, selected, onSelect, roadActive, onRoad } = props;
   const staffed = staffedBuildings(state, content);
+  const noPath = unreachableWorkplaces(state, content).reduce<Record<string, number>>((m, b) => ({ ...m, [b.type]: (m[b.type] ?? 0) + 1 }), {});
+  const daanCost = roadCost(content);
+  const daanParts = RESOURCES.filter((r) => daanCost[r] > 0);
+  const canLay = canAfford(state, daanCost);
 
   return (
     <nav
@@ -81,6 +88,11 @@ export function BuildToolbar(props: {
                   <span className="hidden text-[11px] leading-tight text-stone-500 sm:block">{effectText(b)}</span>
                   {bonus && <span className="hidden text-[11px] leading-tight text-amber-800 sm:block">✨ {bonus}</span>}
                   {groveRule && <span className="hidden text-[11px] leading-tight text-emerald-800 sm:block">{groveRule}</span>}
+                  {noPath[b.id] > 0 && (
+                    <span className="rounded bg-red-100 px-1 text-[10px] leading-tight font-semibold text-red-900 sm:text-[11px]" title="Workers can't walk there: build a Tulay or move it">
+                      🚫 {noPath[b.id]} no path
+                    </span>
+                  )}
                   <span
                     className={`mt-auto w-full rounded-md px-1 py-0.5 text-[11px] leading-tight font-semibold sm:text-sm ${
                       affordable ? "bg-green-700 text-white" : unlocked ? "bg-stone-300 text-stone-500" : "bg-stone-700 text-stone-100"
@@ -94,6 +106,29 @@ export function BuildToolbar(props: {
               </li>
             );
           })}
+        <li className="min-w-[5rem] flex-1 snap-start sm:min-w-[6.6rem]">
+          <button
+            type="button"
+            disabled={!canLay && !roadActive}
+            onClick={onRoad}
+            aria-pressed={roadActive}
+            title={`Daan: a dirt footpath on cleared land. Villagers walk faster on it, and buildings joined to the plaza by an unbroken Daan get +${content.rules.roads.connectedBonusPercent}% output. Taking one up is free.`}
+            aria-label={`${roadActive ? "Stop laying" : "Lay"} Daan footpaths for ${daanParts.map((r) => `${daanCost[r]} ${r}`).join(", ")} a tile`}
+            className={`game-btn mat-card flex h-full w-full flex-col items-center gap-0.5 border-2 px-1.5 pt-1.5 pb-1 text-stone-800 shadow-md disabled:cursor-not-allowed ${
+              roadActive ? "-translate-y-1 border-amber-500 ring-4 ring-amber-300" : "border-amber-900/70"
+            }`}
+          >
+            <span className={`text-3xl leading-none sm:text-4xl ${canLay ? "" : "opacity-50 grayscale"}`} aria-hidden>
+              🛤️
+            </span>
+            <span className="text-center font-display text-[13px] leading-tight text-amber-950 sm:text-base">Daan</span>
+            <span className="text-[10px] leading-tight text-stone-600 sm:text-xs">footpath</span>
+            <span className="hidden text-[11px] leading-tight text-amber-800 sm:block">✨ +{content.rules.roads.connectedBonusPercent}% when linked to the plaza</span>
+            <span className={`mt-auto w-full rounded-md px-1 py-0.5 text-[11px] leading-tight font-semibold sm:text-sm ${canLay ? "bg-green-700 text-white" : "bg-stone-300 text-stone-500"}`}>
+              {daanParts.map((r) => `${RESOURCE_ICON[r]} ${daanCost[r]}`).join(" ")} / tile
+            </span>
+          </button>
+        </li>
       </ul>
     </nav>
   );

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { content, TEST_MAP } from "../engine/testUtils";
+import { tileAt } from "../engine/map";
+import { mapFrom } from "../engine/testUtils";
+import { isWalkable } from "../engine/paths";
+import { isWater, raidWalk } from "./visitors";
 import { along, boatArriving, boatLeaving, dockIndex, dockPoint, fromTop, LANDING_SHARE, LEAVE_SECONDS, raidApproach, raiderCount, riverPath, SAIL_SECONDS } from "./visitors";
 
 // TEST_MAP: river in column 0, plaza at (5, 4), 9 rows.
@@ -66,5 +70,72 @@ describe("raiders", () => {
     expect(along(line, 0.5).p).toEqual({ x: 2, y: 0 });
     expect(along(line, 0.75).p).toEqual({ x: 2, y: 1 });
     expect(along(line, 2).p).toEqual({ x: 2, y: 2 });
+  });
+});
+
+describe("raiders on foot", () => {
+  it("walk from their landing to the target over land, crossing on the bridge", () => {
+    // The river down columns 4–5; they land on the plaza's side and must come round by the bridge.
+    const m = mapFrom([
+      "....~~....",
+      "....~~....",
+      "....~~....",
+      "....~~....",
+      "....~~....",
+      "....~~....",
+      ".P..~~....",
+      "....==....",
+    ]);
+    const river = riverPath(m);
+    const walk = raidWalk(m, river, true, m.plaza, { x: 1, y: 7 })!;
+    expect(walk).not.toBeNull();
+    expect(walk.every((p) => tileAt(m, Math.floor(p.x), Math.floor(p.y)) !== "river")).toBe(true);
+    expect(walk.at(-1)).toEqual({ x: 1.5, y: 7.5 });
+  });
+});
+
+describe("boats pass under a Tulay", () => {
+  // A two-wide river with a bridge across it at row 3.
+  const m = mapFrom([
+    "...~~...",
+    "...~~...",
+    ".P.~~...",
+    "...==...",
+    "...~~...",
+    "...~~...",
+  ]);
+  const path = riverPath(m);
+
+  it("a bridge tile is water to a boat and land to people", () => {
+    expect(isWater(m, 3, 3)).toBe(true);
+    expect(isWalkable(m, 3, 3)).toBe(true);
+    expect(isWalkable(m, 3, 2)).toBe(false);
+  });
+
+  it("the river path runs unbroken under the bridge", () => {
+    // One point per row, every row, including the bridge's, straight down the middle.
+    expect(path).toHaveLength(m.height + 2);
+    expect(path.find((p) => p.y === 3.5)).toEqual({ x: 4, y: 3.5, bridge: true });
+    expect(path.slice(1, -1).every((p) => p.x === 4)).toBe(true);
+  });
+
+  it("a bangka sails from the top edge past the bridge to the bottom edge", () => {
+    const below = { x: 1, y: 5 }; // a plaza-like point below the bridge: the dock is under it
+    const arriving = boatArriving(path, below, true, SAIL_SECONDS);
+    expect(arriving.docked).toBe(true);
+    expect(arriving.p.y).toBeGreaterThan(3.5);
+    // Leaving downstream, it goes under the bridge and off the bottom of the map.
+    const leaving = boatLeaving(path, { x: 1, y: 1 }, false, LEAVE_SECONDS * 0.99)!;
+    expect(leaving.p.y).toBeGreaterThan(m.height);
+  });
+
+  it("ties up beside a bridge, not under it, so the boat can be seen and tapped", () => {
+    expect(path[dockIndex(path, { x: 1, y: 3 })].bridge).toBeUndefined();
+    expect(Math.abs(path[dockIndex(path, { x: 1, y: 3 })].y - 3.5)).toBe(1);
+  });
+
+  it("is the same when the bridge spans the whole river", () => {
+    const full = mapFrom(["..~~..", "P.==..", "..~~.."]);
+    expect(riverPath(full).slice(1, -1).map((p) => p.x)).toEqual([3, 3, 3]);
   });
 });

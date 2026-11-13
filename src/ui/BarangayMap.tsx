@@ -15,18 +15,22 @@ import {
 } from "react";
 import { RESOURCES, type BuildingDef, type Content } from "../engine/content";
 import { seasonAt } from "../engine/events";
-import { buildingWorkers, rates, type GameState } from "../engine/game";
+import { buildingWorkers, rates, roadBonuses, unreachableWorkplaces, type GameState } from "../engine/game";
 import {
   adjacencyBonusAt,
   buildingBonuses,
   buildingGroveBonuses,
   groveBonusAt,
   clearSeconds,
+  canPlaceRoad,
   isClearable,
+  isConnected,
+  isFootReachable,
   isPlaza,
   occupancy,
   tileAt,
   validTiles,
+  type Point,
   type Tile,
 } from "../engine/map";
 import {
@@ -70,6 +74,10 @@ interface BuildingInfo {
   def: BuildingDef;
   key: string;
   bonus: number;
+  /** Joined to the plaza by an unbroken Daan. */
+  connected: boolean;
+  /** A workplace nobody can walk to. */
+  noPath: boolean;
   damaged: boolean;
   burning: boolean;
   repairText: string;
@@ -100,8 +108,12 @@ export function BarangayMap(props: {
   clash?: Clash | null;
   /** The player tapped the trade boat at the dock. */
   onBoat?: () => void;
+  /** Laying Daan: tap a tile to lay one, tap a path to take it up; drag with a mouse to lay a line. */
+  road?: { onLay: (tiles: Point[]) => void; onRemove: (x: number, y: number) => void; costText: string } | null;
 }) {
-  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat } = props;
+  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null } = props;
+  // Tiles being painted with a mouse drag in road mode (laid on release).
+  const [paint, setPaint] = useState<Point[]>([]);
   const plan = props.planState ?? state;
   const { map } = state;
   const area = useRef<HTMLDivElement>(null);
@@ -146,6 +158,8 @@ export function BarangayMap(props: {
   const buildings = useMemo(() => {
     const bonuses = buildingBonuses(state, content);
     const groves = buildingGroveBonuses(state, content);
+    const roads = roadBonuses(state, content);
+    const stranded = new Set(unreachableWorkplaces(state, content));
     const defs = new Map(content.buildings.map((d) => [d.id, d]));
     const byTile = new Map<string, BuildingInfo>();
     state.buildings.forEach((b, i) => {
@@ -155,14 +169,16 @@ export function BarangayMap(props: {
       byTile.set(`${b.x},${b.y}`, {
         def,
         key: buildingKey(b),
-        bonus: bonuses[i] + Object.values(groves[i]).reduce((sum, g) => sum + (g ?? 0), 0),
+        bonus: bonuses[i] + roads[i] + Object.values(groves[i]).reduce((sum, g) => sum + (g ?? 0), 0),
+        connected: roads[i] > 0,
+        noPath: stranded.has(b),
         damaged: b.damaged === true,
         burning: b.burningSince !== undefined,
         repairText: repair || "free",
       });
     });
     return byTile;
-  }, [state.buildings, map, content]);
+  }, [state.buildings, map, content, state.legacyReach]);
 
   // The scenic drift moves the view up to SCENIC_DRIFT tiles, so draw that much more around it.
   const range = cam && view.w > 0 ? visibleRange(cam, view, map, scenic ? SCENIC_DRIFT + 1 : 1) : null;
@@ -175,13 +191,15 @@ export function BarangayMap(props: {
   const placement = useMemo(() => {
     if (!placing || !range) return null;
     const taken = occupancy(plan);
-    return new Map<string, { adjacency: number; grove: number }>(
+    return new Map<string, { adjacency: number; grove: number; road: number; noPath: boolean }>(
       validTiles(plan, content, placing, range)
         .filter((t) => !(moveFrom && t.x === moveFrom.x && t.y === moveFrom.y))
         .map((t) => {
           const adjacency = adjacencyBonusAt(plan.map, taken, placing, t.x, t.y);
           const g = grove ? groveBonusAt(plan.map, content, placing, t.x, t.y, grove.resource) : 0;
-          return [`${t.x},${t.y}`, { adjacency, grove: g }];
+          const road = placing.produces && isConnected(plan.map, t.x, t.y) ? content.rules.roads.connectedBonusPercent / 100 : 0;
+          const noPath = (placing.workers ?? 0) > 0 && !isFootReachable(plan.map, t.x, t.y);
+          return [`${t.x},${t.y}`, { adjacency, grove: g, road, noPath }];
         }),
     );
   }, [placing, plan.buildings, plan.map, content, rangeKey, moveFrom?.x, moveFrom?.y]);
@@ -234,6 +252,8 @@ export function BarangayMap(props: {
     spirit?: boolean;
     /** The press started on the trade boat. */
     boat?: boolean;
+    /** A mouse drag laying Daan. */
+    painting?: boolean;
     pinch?: { dist: number; mid: { x: number; y: number } };
   } | null>(null);
   const local = (e: { clientX: number; clientY: number }) => {
@@ -249,6 +269,11 @@ export function BarangayMap(props: {
     if (!cam) return;
     const t = screenToTile(cam, view, px, py);
     if (tileAt(map, t.x, t.y) === null) return;
+    if (road) {
+      if (tileAt(map, t.x, t.y) === "daan") road.onRemove(t.x, t.y);
+      else if (canPlaceRoad(state, t.x, t.y)) road.onLay([t]);
+      return;
+    }
     if (placing) {
       if (placement?.has(`${t.x},${t.y}`)) onPlace(t.x, t.y);
     } else {
@@ -263,6 +288,13 @@ export function BarangayMap(props: {
     pointers.current.set(e.pointerId, p);
     const spirit = !!(e.target as Element).closest?.("[data-spirit]");
     const boat = !!(e.target as Element).closest?.("[data-boat]");
+    // Road mode with a mouse: the drag paints a path instead of panning.
+    if (road && e.pointerType === "mouse" && pointers.current.size === 1) {
+      const t = screenToTile(cam, view, p.x, p.y);
+      gesture.current = { x: p.x, y: p.y, cam, moved: false, painting: true };
+      setPaint(tileAt(map, t.x, t.y) === "daan" ? [] : [t]);
+      return;
+    }
     if (pointers.current.size === 1) gesture.current = { x: p.x, y: p.y, cam, moved: false, spirit, boat };
     else if (pointers.current.size === 2) gesture.current = { x: p.x, y: p.y, cam, moved: true, pinch: pinchOf() };
   };
@@ -276,6 +308,27 @@ export function BarangayMap(props: {
     pointers.current.set(e.pointerId, p);
     const g = gesture.current;
     if (!g) return;
+    if (g.painting && cam) {
+      const t = screenToTile(cam, view, p.x, p.y);
+      if (Math.hypot(p.x - g.x, p.y - g.y) > TAP_SLOP_PX) g.moved = true;
+      setHover(t);
+      setPaint((tiles) => {
+        const last = tiles[tiles.length - 1];
+        if (last && last.x === t.x && last.y === t.y) return tiles;
+        // Fill in skipped tiles (a fast drag), stepping along x then y like the path is walked.
+        const out = [...tiles];
+        let cx = last?.x ?? t.x;
+        let cy = last?.y ?? t.y;
+        while (cx !== t.x || cy !== t.y) {
+          if (cx !== t.x) cx += Math.sign(t.x - cx);
+          else cy += Math.sign(t.y - cy);
+          if (!out.some((q) => q.x === cx && q.y === cy)) out.push({ x: cx, y: cy });
+        }
+        if (!out.length) out.push(t);
+        return out;
+      });
+      return;
+    }
     if (g.pinch && pointers.current.size >= 2) {
       const now = pinchOf();
       const zoomed = zoomAt(g.cam, view, now.dist / g.pinch.dist, g.pinch.mid.x, g.pinch.mid.y);
@@ -294,6 +347,17 @@ export function BarangayMap(props: {
   const onPointerUp = (e: PointerEvent<HTMLDivElement>) => {
     const g = gesture.current;
     if (!pointers.current.delete(e.pointerId)) return;
+    if (pointers.current.size === 0 && g?.painting) {
+      // A drag lays the whole line; a click is a normal tap (lay or take up one tile).
+      if (e.type === "pointerup" && g.moved && road) road.onLay(paint.filter((t) => canPlaceRoad(state, t.x, t.y)));
+      else if (e.type === "pointerup") {
+        const p = local(e);
+        tapAt(p.x, p.y, e.clientX, e.clientY);
+      }
+      setPaint([]);
+      gesture.current = null;
+      return;
+    }
     if (pointers.current.size === 0) {
       if (g && !g.moved && e.type === "pointerup") {
         const p = local(e);
@@ -436,7 +500,9 @@ export function BarangayMap(props: {
         const key = `${x},${y}`;
         const building = buildings.get(key) ?? null;
         const hovered = hover?.x === x && hover?.y === y;
-        const clearable = !placing && isClearable(map, x, y);
+        const clearable = !placing && !road && isClearable(map, x, y);
+        const painted = paint.some((t) => t.x === x && t.y === y);
+        const roadTarget = road ? (tile === "daan" || canPlaceRoad(state, x, y) ? 0 : "blocked") : null;
         cells.push(
           <Cell
             key={key}
@@ -447,7 +513,8 @@ export function BarangayMap(props: {
             building={building}
             fresh={building ? fresh.has(building.key) : false}
             lifted={moveFrom?.x === x && moveFrom?.y === y}
-            target={placement ? (placement.has(key) ? totalBonus(placement.get(key)!) : "blocked") : null}
+            target={roadTarget ?? (placement ? (placement.has(key) ? totalBonus(placement.get(key)!) : "blocked") : null)}
+            pathPreview={painted && canPlaceRoad(state, x, y)}
             ghost={
               placing && hovered && placement?.has(key)
                 ? { def: placing, ...placement.get(key)!, groveName: grove?.name ?? "" }
@@ -461,7 +528,19 @@ export function BarangayMap(props: {
             }
             onSpiritKey={onSpiritKey}
             clearable={clearable}
-            hint={clearable && hovered ? (tile === "balete" ? "🌳 Old balete tree" : clearLabel) : null}
+            hint={
+              road && hovered
+                ? tile === "daan"
+                  ? "Tap to take up the path (free)"
+                  : canPlaceRoad(state, x, y)
+                    ? `🛤️ Daan · ${road.costText}`
+                    : null
+                : clearable && hovered
+                  ? tile === "balete"
+                    ? "🌳 Old balete tree"
+                    : clearLabel
+                  : null
+            }
             progress={job && job.x === x && job.y === y ? Math.min(1, job.progress / job.seconds) : null}
             onActivate={onActivate}
           />,
@@ -487,7 +566,7 @@ export function BarangayMap(props: {
               role: "application",
               "aria-label": "Your barangay. Drag to move, scroll or pinch to zoom, arrow keys to pan, C to centre.",
               className: `forest-ground absolute inset-0 touch-none overflow-hidden outline-none select-none focus-visible:ring-4 focus-visible:ring-amber-300 focus-visible:ring-inset ${
-                placing ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"
+                placing || road ? "cursor-pointer" : "cursor-grab active:cursor-grabbing"
               }`,
               onPointerDown,
               onPointerMove,
@@ -636,6 +715,7 @@ function useIncomeFloats(
 
 const GROUND: Record<Tile, string> = {
   cleared: "bg-green-600/60",
+  daan: "daan-tile",
   forest: "bg-green-900/40",
   balete: "bg-emerald-950/60",
   river: "river-tile",
@@ -664,8 +744,10 @@ const Cell = memo(function Cell(props: {
   /** Clearing progress 0..1 on the tile being cleared. */
   progress: number | null;
   onActivate: (x: number, y: number, el: Element) => void;
+  /** Part of a Daan being dragged out (not laid yet). */
+  pathPreview?: boolean;
 }) {
-  const { x, y, tile, plaza, building, fresh, lifted, target, ghost, glow, spirit, onSpiritKey, clearable, hint, progress, onActivate } = props;
+  const { x, y, tile, plaza, building, fresh, lifted, target, ghost, glow, spirit, onSpiritKey, clearable, hint, progress, onActivate, pathPreview } = props;
   const h = hash(x, y);
   const valid = typeof target === "number";
   const paddy = building?.def.produces?.rice;
@@ -677,6 +759,7 @@ const Cell = memo(function Cell(props: {
       style={{ left: `calc(${x} * var(--tile))`, top: `calc(${y} * var(--tile))`, width: "var(--tile)", height: "var(--tile)" }}
     >
       {tile === "bridge" && <div aria-hidden className="bridge-tile absolute inset-x-0 inset-y-[14%]" />}
+      {pathPreview && <div aria-hidden className="daan-tile pointer-events-none absolute inset-0 opacity-70" />}
       {tile === "forest" && progress === null && (
         <span aria-hidden className="pointer-events-none text-[0.95em] leading-none">
           {h < 70 ? "🌳" : "🌴"}
@@ -767,12 +850,12 @@ function FirePit() {
   );
 }
 
-function Label({ text, good }: { text: string; good?: boolean }) {
+function Label({ text, good, warn }: { text: string; good?: boolean; warn?: boolean }) {
   return (
     <span
       role="status"
       className={`pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 -translate-x-1/2 rounded-md border px-1.5 py-0.5 font-display text-xs whitespace-nowrap shadow-lg ${
-        good ? "border-amber-900 bg-amber-300 text-amber-950" : "border-stone-600 bg-stone-800/90 text-stone-100"
+        warn ? "border-red-950 bg-red-700 text-white" : good ? "border-amber-900 bg-amber-300 text-amber-950" : "border-stone-600 bg-stone-800/90 text-stone-100"
       }`}
     >
       {text}
@@ -785,19 +868,34 @@ interface GhostInfo {
   adjacency: number;
   grove: number;
   groveName: string;
+  /** The Connected bonus this tile would get. */
+  road: number;
+  /** Workers couldn't walk here. */
+  noPath: boolean;
 }
 
-const totalBonus = (b: { adjacency: number; grove: number }) => b.adjacency + b.grove;
+const totalBonus = (b: { adjacency: number; grove: number; road: number }) => b.adjacency + b.grove + b.road;
 
 function Ghost({ info }: { info: GhostInfo }) {
-  const { def, adjacency, grove, groveName } = info;
-  const text = def.bridge ? "Bridge to the far bank" : bonusPreviewText(def, adjacency, { name: groveName, bonus: grove });
+  const { def, adjacency, grove, groveName, road, noPath } = info;
+  if (noPath) {
+    return (
+      <>
+        <span aria-hidden className="pointer-events-none leading-none opacity-60 select-none">
+          {def.icon}
+        </span>
+        <Label text="🚫 No path: workers can't walk here" warn />
+      </>
+    );
+  }
+  const base = def.bridge ? "Bridge to the far bank" : bonusPreviewText(def, adjacency, { name: groveName, bonus: grove });
+  const text = road > 0 ? `${base} · 🛤️ Connected +${Math.round(road * 100)}%` : base;
   return (
     <>
       <span aria-hidden className="pointer-events-none leading-none opacity-60 select-none">
         {def.icon}
       </span>
-      <Label text={text} good={adjacency + grove > 0 || !!def.bridge} />
+      <Label text={text} good={adjacency + grove + road > 0 || !!def.bridge} />
     </>
   );
 }
@@ -839,16 +937,18 @@ function Building(props: {
   onActivate: (x: number, y: number, el: Element) => void;
 }) {
   const { x, y, info, fresh, lifted, onActivate } = props;
-  const { def, bonus, damaged, burning, repairText } = info;
+  const { def, bonus, damaged, burning, repairText, connected, noPath } = info;
   // Decided once, at mount: only buildings that were just built bounce in.
   const [bounce] = useState(fresh);
   const label = burning
     ? `${def.name}, on fire! Tap to put it out`
     : damaged
       ? `${def.name}, damaged. Tap to repair for ${repairText}`
-      : bonus > 0
-        ? `${def.name}, +${Math.round(bonus * 100)}% bonus. Tap to move or demolish`
-        : `${def.name}. Tap to move or demolish`;
+      : noPath
+        ? `${def.name}: no path. Workers can't walk here. Tap to move or demolish`
+        : bonus > 0
+          ? `${def.name}, +${Math.round(bonus * 100)}% bonus${connected ? ", connected by Daan" : ""}. Tap to move or demolish`
+          : `${def.name}. Tap to move or demolish`;
   return (
     <>
       {lifted && (
@@ -887,6 +987,19 @@ function Building(props: {
           className="pointer-events-none absolute right-0 bottom-0 rounded-full bg-amber-100/90 px-0.5 text-[0.35em] leading-none shadow"
         >
           🛠️
+        </span>
+      )}
+      {noPath && !damaged && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute -top-[0.15em] left-1/2 -translate-x-1/2 rounded-full border border-red-950 bg-red-700 px-1 font-display text-[0.26em] leading-tight whitespace-nowrap text-white shadow"
+        >
+          🚫 No path
+        </span>
+      )}
+      {connected && !damaged && !noPath && (
+        <span aria-hidden className="pointer-events-none absolute bottom-0 left-0.5 text-[0.28em] leading-none">
+          🛤️
         </span>
       )}
       {bonus > 0 && !damaged && (

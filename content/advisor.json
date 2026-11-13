@@ -1,18 +1,32 @@
 {
-  "_comment": "The datu's elder adviser. 'portrait' is an emoji, or an image in public/art written as '/art/<file>.png'. The tutorial runs in order; a step is done when its 'done' condition holds: {\"event\": \"gather\" | \"menu\" | \"rehiyon\"} (the player gathered, opened a building's menu, opened the Rehiyon map) or {\"built\": \"<building id>\"} (more of that building than the barangay started with). Tips: each line has an id, a trigger id and text in every language. Triggers: rice-low, unstaffed, event-typhoon, event-fire, event-sickness, trade-offer, raid-warning, idle, unlocked. Text may use {building}, {neighbor}, {datu} and {seconds} where the trigger provides them. Add more lines for a trigger and the adviser rotates through them; each line is shown at most 3 times.",
+  "_comment": "The datu's elder adviser. 'portrait' is an emoji, or an image in public/art written as '/art/<file>.png'. The tutorial runs in order; a step is done when its 'done' condition holds: {\"event\": \"gather\" | \"menu\" | \"rehiyon\"} (the player gathered, opened a building's menu, opened the Rehiyon map) or {\"built\": \"<building id>\"} (more of that building than the barangay started with). Tips: each line has an id, a trigger id and text in every language. Triggers: rice-low, unstaffed, event-typhoon, event-fire, event-sickness, trade-offer, raid-warning, idle, unlocked, no-path, old-paths, roads. Text may use {building}, {neighbor}, {datu}, {seconds} and {percent} where the trigger provides them. A line may set \"max\" (1-3) to be shown fewer times. Add more lines for a trigger and the adviser rotates through them; each line is shown at most 3 times.",
   "name": "Dalisay",
-  "title": { "en": "Elder adviser to the datu", "fil": "Matandang tagapayo ng datu" },
+  "title": {
+    "en": "Elder adviser to the datu",
+    "fil": "Matandang tagapayo ng datu"
+  },
   "portrait": "👵🏽",
   "fictional": true,
   "ui": {
-    "skip": { "en": "Skip tutorial", "fil": "Laktawan" },
-    "dismiss": { "en": "Tap to dismiss", "fil": "Pindutin para isara" },
-    "step": { "en": "Step", "fil": "Hakbang" }
+    "skip": {
+      "en": "Skip tutorial",
+      "fil": "Laktawan"
+    },
+    "dismiss": {
+      "en": "Tap to dismiss",
+      "fil": "Pindutin para isara"
+    },
+    "step": {
+      "en": "Step",
+      "fil": "Hakbang"
+    }
   },
   "tutorial": [
     {
       "id": "gather",
-      "done": { "event": "gather" },
+      "done": {
+        "event": "gather"
+      },
       "text": {
         "en": "Welcome, Datu. Our people eat rice every moment of the day. Tap Gather Rice or Gather Wood to bring some in.",
         "fil": "Maligayang pagdating, Datu. Kumakain ng palay ang ating mga tao sa buong araw. Pindutin ang Gather Rice o Gather Wood para mangalap."
@@ -20,7 +34,9 @@
     },
     {
       "id": "build-house",
-      "done": { "built": "bahay-kubo" },
+      "done": {
+        "built": "bahay-kubo"
+      },
       "text": {
         "en": "More homes bring more families. Gather wood, pick the Bahay Kubo below, then tap a glowing tile.",
         "fil": "Mas maraming bahay, mas maraming pamilya. Mangalap ng kahoy, piliin ang Bahay Kubo sa ibaba, saka pindutin ang tile na may ilaw."
@@ -28,7 +44,9 @@
     },
     {
       "id": "build-field",
-      "done": { "built": "palayan" },
+      "done": {
+        "built": "palayan"
+      },
       "text": {
         "en": "Now a Palayan, a rice field, so the rice grows without your hands. Fields by the river yield more.",
         "fil": "Ngayon, isang Palayan para tumubo ang palay kahit hindi ka nangangalap. Mas malaki ang ani ng palayan sa tabi ng ilog."
@@ -36,7 +54,9 @@
     },
     {
       "id": "workers",
-      "done": { "event": "menu" },
+      "done": {
+        "event": "menu"
+      },
       "text": {
         "en": "Healthy villagers take up work on their own. Tap your Palayan to see who works there.",
         "fil": "Kusang nagtatrabaho ang malulusog na tao. Pindutin ang iyong Palayan para makita kung sino ang nagtatrabaho roon."
@@ -44,7 +64,9 @@
     },
     {
       "id": "rehiyon",
-      "done": { "event": "rehiyon" },
+      "done": {
+        "event": "rehiyon"
+      },
       "text": {
         "en": "We are not alone on this river. Open the Rehiyon map (🗺️ at the top) to meet our neighbors.",
         "fil": "Hindi tayo nag-iisa sa ilog na ito. Buksan ang mapa ng Rehiyon (🗺️ sa itaas) para makilala ang ating mga karatig."
@@ -146,6 +168,31 @@
       "text": {
         "en": "Our people know how to build a {building} now. Look for it in the bar below.",
         "fil": "Marunong nang magtayo ng {building} ang ating mga tao. Hanapin ito sa ibaba."
+      }
+    },
+    {
+      "id": "roads-1",
+      "trigger": "roads",
+      "text": {
+        "en": "Lay a Daan, Datu. Our people walk faster on a footpath, and a building joined to the plaza by an unbroken path works {percent}% better.",
+        "fil": "Maglatag ng Daan, Datu. Mas mabilis maglakad ang ating mga tao sa landas, at {percent}% na mas mahusay ang gusaling nakadugtong sa plasa sa tuloy-tuloy na daan."
+      }
+    },
+    {
+      "id": "no-path-1",
+      "trigger": "no-path",
+      "text": {
+        "en": "No one can walk to the {building}: the river is in the way. Build a Tulay to reach it, or move it to our side.",
+        "fil": "Walang makalakad papunta sa {building}: harang ang ilog. Magtayo ng Tulay para maabot ito, o ilipat ito sa ating pampang."
+      }
+    },
+    {
+      "id": "old-paths-1",
+      "trigger": "old-paths",
+      "max": 1,
+      "text": {
+        "en": "Datu, our people now walk to work along real paths. The {building} across the water has no path, but it keeps working until you next change the land. After that, join it with a Tulay.",
+        "fil": "Datu, naglalakad na ngayon ang ating mga tao sa tunay na mga landas. Walang daan papunta sa {building} sa kabila ng tubig, pero patuloy itong gagana hanggang sa susunod mong pagbabago sa lupa. Pagkatapos noon, idugtong ito ng Tulay."
       }
     }
   ]

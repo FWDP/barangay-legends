@@ -2,6 +2,7 @@
 // villagers.ts: the canvas layer calls these and never writes back to GameState.
 import type { Content } from "../engine/content";
 import { tileAt, type MapState, type Point } from "../engine/map";
+import { cachedPath, isWalkable } from "../engine/paths";
 
 /** Game seconds a bangka takes to sail from the map edge to the dock. */
 export const SAIL_SECONDS = 14;
@@ -14,7 +15,8 @@ export const LANDING_SHARE = 0.3;
 /** How far upstream or downstream of the map edge the karakoa beaches, in rows. */
 const LANDING_ROWS = 5;
 
-const isWater = (map: MapState, x: number, y: number) => {
+/** Boats float on river and under bridges: a Tulay is water to a boat and land to people walking. */
+export const isWater = (map: MapState, x: number, y: number) => {
   const t = tileAt(map, x, y);
   return t === "river" || t === "bridge";
 };
@@ -23,22 +25,33 @@ const isWater = (map: MapState, x: number, y: number) => {
  * The river as a line of points, one per row from the top of the map to the bottom (the middle
  * of the water in that row), with a point off the map at each end.
  */
-export function riverPath(map: MapState): Point[] {
-  const pts: Point[] = [];
+export function riverPath(map: MapState): RiverPoint[] {
+  const pts: RiverPoint[] = [];
   for (let y = 0; y < map.height; y++) {
     const xs: number[] = [];
     for (let x = 0; x < map.width; x++) if (isWater(map, x, y)) xs.push(x);
-    if (xs.length) pts.push({ x: (xs[0] + xs[xs.length - 1] + 1) / 2, y: y + 0.5 });
+    const under = xs.some((x) => tileAt(map, x, y) === "bridge");
+    if (xs.length) pts.push(under ? { x: (xs[0] + xs[xs.length - 1] + 1) / 2, y: y + 0.5, bridge: true } : { x: (xs[0] + xs[xs.length - 1] + 1) / 2, y: y + 0.5 });
   }
   if (pts.length === 0) return [];
   return [{ x: pts[0].x, y: -1.5 }, ...pts, { x: pts[pts.length - 1].x, y: map.height + 1.5 }];
 }
 
-/** The index on the path nearest the plaza: where boats tie up. */
-export function dockIndex(path: Point[], plaza: Point): number {
+/** A point on the river; `bridge` marks a row with a Tulay over it. */
+export interface RiverPoint extends Point {
+  bridge?: boolean;
+}
+
+/**
+ * The index on the path nearest the plaza: where boats tie up. Never under a bridge (the boat
+ * would be hidden by the deck) unless every row has one.
+ */
+export function dockIndex(path: RiverPoint[], plaza: Point): number {
   let best = 1;
   let bestD = Infinity;
+  const open = path.slice(1, -1).some((p) => !p.bridge);
   for (let i = 1; i < path.length - 1; i++) {
+    if (open && path[i].bridge) continue;
     const d = Math.hypot(path[i].x - (plaza.x + 0.5), path[i].y - (plaza.y + 0.5));
     if (d < bestD) [best, bestD] = [i, d];
   }
@@ -104,6 +117,25 @@ export function landingBank(path: Point[], top: boolean, plaza: Point): Point {
   return { x: p.x + side * 1.6, y: p.y };
 }
 
+/** The first walkable tile beside the beached karakoa, on the barangay's side of the river. */
+export function landingTile(map: MapState, path: Point[], top: boolean, plaza: Point): Point | null {
+  const p = path[landingIndex(path, top)];
+  const y = Math.floor(p.y);
+  const side = Math.sign(plaza.x + 0.5 - p.x) || 1;
+  for (let x = Math.floor(p.x); x >= 0 && x < map.width; x += side) if (isWalkable(map, x, y)) return { x, y };
+  return null;
+}
+
+/**
+ * The raiders' walk from their landing to the target, over land (A*, never across open water),
+ * as points through tile centres. Null if there's no way on foot.
+ */
+export function raidWalk(map: MapState, path: Point[], top: boolean, plaza: Point, target: Point): Point[] | null {
+  const from = landingTile(map, path, top, plaza);
+  const steps = from && cachedPath(map, from, target);
+  return steps ? steps.map((t) => ({ x: t.x + 0.5, y: t.y + 0.5 })) : null;
+}
+
 export interface RaidScene {
   /** The war canoe on the river. */
   karakoa: { p: Point; heading: number };
@@ -124,15 +156,15 @@ export function raiderOffset(i: number): Point {
  * walk to the target (the Kuta, or the plaza if there is none), arriving as the warning ends.
  * `progress` is 0 when the warning starts and 1 when the raid strikes.
  */
-export function raidApproach(path: Point[], plaza: Point, target: Point, top: boolean, progress: number, count: number): RaidScene {
+export function raidApproach(path: Point[], plaza: Point, target: Point, top: boolean, progress: number, count: number, walk?: Point[] | null): RaidScene {
   const land = landingIndex(path, top);
   const sail = along(reach(path, land, top), progress / LANDING_SHARE);
   if (progress < LANDING_SHARE) return { karakoa: sail, raiders: [] };
   const bank = landingBank(path, top, plaza);
-  const walk = (progress - LANDING_SHARE) / (1 - LANDING_SHARE);
-  // Along the bank first, then straight across to the target.
-  const line = [bank, { x: bank.x, y: target.y + 0.5 }, { x: target.x + 0.5, y: target.y + 0.5 }];
-  const lead = along(line, walk).p;
+  const share = (progress - LANDING_SHARE) / (1 - LANDING_SHARE);
+  // Over land along the given walk (A*); without one, along the bank and straight across.
+  const line = walk && walk.length > 0 ? walk : [bank, { x: bank.x, y: target.y + 0.5 }, { x: target.x + 0.5, y: target.y + 0.5 }];
+  const lead = along(line, share).p;
   return {
     karakoa: sail,
     raiders: Array.from({ length: count }, (_, i) => {

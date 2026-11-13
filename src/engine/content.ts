@@ -65,6 +65,17 @@ export interface Rules {
   diplomacy: DiplomacyRules;
   choices: ChoiceRules;
   offline: OfflineRules;
+  roads: RoadRules;
+}
+
+/** Daan: footpaths laid tile by tile on cleared land. */
+export interface RoadRules {
+  /** Cost of one tile. Removing a path is free. */
+  cost: ResourceAmounts;
+  /** Extra output for a building joined to the barangay's center by an unbroken Daan. */
+  connectedBonusPercent: number;
+  /** How fast villagers walk on Daan (visual only), in percent of normal. */
+  walkSpeedPercent: number;
 }
 
 /** Progress while the game is closed (see engine/offline.ts). */
@@ -499,6 +510,11 @@ export function validateRules(raw: unknown): Rules {
   if (!isObject(ch)) throw new Error('rules: missing "choices"');
   checkNumbers(ch, ["startsAfterSeconds", "minGapSeconds", "chancePerSecond"], "rules: choices");
   if ((ch.chancePerSecond as number) > 1) throw new Error("rules: choices.chancePerSecond can't be over 1");
+  const roads = raw.roads;
+  if (!isObject(roads)) throw new Error('rules: missing "roads"');
+  checkAmounts(roads.cost, "rules: roads.cost");
+  checkNumbers(roads, ["connectedBonusPercent"], "rules: roads");
+  checkNumbers(roads, ["walkSpeedPercent"], "rules: roads", true);
   const off = raw.offline;
   if (!isObject(off)) throw new Error('rules: missing "offline"');
   checkNumbers(off, ["maxSeconds", "minSeconds"], "rules: offline");

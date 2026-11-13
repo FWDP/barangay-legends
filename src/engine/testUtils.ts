@@ -5,11 +5,11 @@ import { TILE_CODE, type MapState, type Point } from "./map";
 
 export const content = loadContent();
 
-const ASCII: Record<string, string> = { ".": TILE_CODE.cleared, P: TILE_CODE.cleared, "~": TILE_CODE.river, T: TILE_CODE.forest, "=": TILE_CODE.bridge, B: TILE_CODE.balete };
+const ASCII: Record<string, string> = { ".": TILE_CODE.cleared, P: TILE_CODE.cleared, "~": TILE_CODE.river, T: TILE_CODE.forest, "=": TILE_CODE.bridge, B: TILE_CODE.balete, "#": TILE_CODE.daan };
 
 /**
  * A map drawn as text, one string per row:
- *   . cleared   P plaza (cleared)   ~ river   T forest   = bridge   B balete
+ *   . cleared   P plaza (cleared)   ~ river   T forest   = bridge   B balete   # daan
  */
 export function mapFrom(rows: string[], seed = 1): MapState {
   let plaza: Point | null = null;

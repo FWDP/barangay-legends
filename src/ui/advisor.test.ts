@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { apply, newGame, type GameState } from "../engine/game";
-import { at, content, withState } from "../engine/testUtils";
+import { at, content, mapFrom, withState } from "../engine/testUtils";
 import {
   advise,
   dismiss,
@@ -192,5 +192,45 @@ describe("adviser memory", () => {
       events: ["gather"],
       shown: { a: 2 },
     });
+  });
+});
+
+describe("adviser and paths", () => {
+  const riverMap = mapFrom([
+    "....~....",
+    "....~....",
+    ".P..~....",
+    "....~....",
+  ]);
+  const stranded = (legacyReach: boolean) =>
+    withState({ map: riverMap, time: 10, villagers: 6, resources: { rice: 1000, wood: 0 }, buildings: [at("bahay-kubo", 0, 0), at("woodcutter-camp", 7, 2)], legacyReach });
+
+  it("says when a workplace has no path", () => {
+    const s = stranded(false);
+    const m = advise(tipsModel(s), input(s));
+    expect(trigger(m)).toBe("no-path");
+    expect(m.message!.text).toContain("Woodcutter Camp");
+  });
+
+  it("explains the new rule once to old saves", () => {
+    const s = stranded(true);
+    let m = advise(tipsModel(s), input(s));
+    expect(trigger(m)).toBe("old-paths");
+    // Never again, however often the condition comes back.
+    let later = s;
+    for (let i = 0; i < 5; i++) {
+      m = dismiss(m);
+      m = advise(m, input({ ...later, legacyReach: false, buildings: [at("bahay-kubo", 0, 0)] }));
+      later = { ...later, time: later.time + TIP_GAP_SECONDS };
+      m = advise(m, input(later));
+      expect(trigger(m)).not.toBe("old-paths");
+    }
+  });
+
+  it("suggests Daan once there are a few workplaces and no path", () => {
+    const s = withState({ time: 10, villagers: 2, resources: { rice: 1000, wood: 0 }, buildings: [at("bahay-kubo", 5, 3), at("palayan", 6, 3), at("palayan", 7, 3), at("woodcutter-camp", 8, 3)] });
+    const m = advise(tipsModel(s), input({ ...s, villagers: 6 }));
+    expect(trigger(m)).toBe("roads");
+    expect(m.message!.text).toContain(`${content.rules.roads.connectedBonusPercent}%`);
   });
 });

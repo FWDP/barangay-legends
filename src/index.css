@@ -219,6 +219,16 @@
   background-size: 48px 48px;
 }
 
+/* Daan: a packed dirt footpath with a few pebbles, worn lighter down the middle. */
+@utility daan-tile {
+  background-color: #a0743f;
+  background-image:
+    radial-gradient(circle at 22% 30%, rgb(255 240 210 / 0.35) 0 5%, transparent 6%),
+    radial-gradient(circle at 70% 72%, rgb(60 35 15 / 0.35) 0 4%, transparent 5%),
+    linear-gradient(90deg, rgb(120 85 40 / 0.6), rgb(196 152 92 / 0.55) 30% 70%, rgb(120 85 40 / 0.6));
+  box-shadow: inset 0 0 0 1px rgb(80 50 20 / 0.25);
+}
+
 /* Bamboo planks of a tulay, laid across the river with a rail on each side. */
 @utility bridge-tile {
   background-color: #c9a85a;

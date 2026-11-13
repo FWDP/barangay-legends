@@ -12,11 +12,15 @@ import {
   clearBlocker,
   clearSeconds,
   generateMap,
+  canPlaceRoad,
   isClearable,
+  isConnected,
+  isFootReachable,
   isUnlocked,
   reachableLand,
   setTiles,
   standingBridgeTiles,
+  tileAt,
   type MapState,
   type Point,
 } from "./map";
@@ -36,7 +40,7 @@ import {
 import { DEFAULT_SEED } from "./rng";
 import { choose, updateChoices, type PendingChoice } from "./choices";
 
-export const STATE_VERSION = 9;
+export const STATE_VERSION = 10;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -122,6 +126,11 @@ export interface GameState {
   choice: PendingChoice | null;
   /** Choice events seen most recently, kept out of the next draws. */
   recentChoices: string[];
+  /**
+   * Saves from before footpaths keep their old rule (every workplace can be staffed, path or
+   * not) until the player next changes the map. Always false for new games.
+   */
+  legacyReach: boolean;
 }
 
 export interface ClearingJob {
@@ -168,6 +177,7 @@ export function newGame(
     lastBuild: null,
     choice: null,
     recentChoices: [],
+    legacyReach: false,
   };
   if (withRegion && content.neighbors.length > 0) state.region = createRegion(content, 0, seed);
   for (const def of content.buildings) {
@@ -234,6 +244,28 @@ export function overcrowded(state: GameState, content: Content): number {
   return Math.max(0, state.villagers - shelter(state, content));
 }
 
+/**
+ * Can workers get to this building? Not if it's damaged, and not if no path leads there on foot
+ * from the barangay's center (a far bank cut off by a lost bridge), except in old saves (legacyReach).
+ */
+export function canStaff(state: GameState, b: PlacedBuilding): boolean {
+  if (b.damaged) return false;
+  return state.legacyReach || isFootReachable(state.map, b.x, b.y);
+}
+
+/** Workplaces nobody can walk to (shown as "No path"). Empty while an old save keeps its old rule. */
+export function unreachableWorkplaces(state: GameState, content: Content): PlacedBuilding[] {
+  if (state.legacyReach) return [];
+  const defs = new Map(content.buildings.map((d) => [d.id, d]));
+  return state.buildings.filter((b) => (defs.get(b.type)?.workers ?? 0) > 0 && !b.damaged && !isFootReachable(state.map, b.x, b.y));
+}
+
+/** The Connected bonus (a fraction, e.g. 0.05) for each building, in state.buildings order. */
+export function roadBonuses(state: GameState, content: Content): number[] {
+  const pct = content.rules.roads.connectedBonusPercent / 100;
+  return state.buildings.map((b) => (isConnected(state.map, b.x, b.y) ? pct : 0));
+}
+
 /** Villagers able to work: none while hungry (gutom), never the sick (sakit). */
 export function healthyWorkers(state: GameState): number {
   if (isHungry(state)) return 0;
@@ -252,7 +284,7 @@ export function assignWorkers(state: GameState, content: Content): Record<string
   const slots = Object.fromEntries(
     producers.map((def) => [
       def.id,
-      state.buildings.filter((b) => b.type === def.id && !b.damaged).length * (def.workers ?? 0),
+      state.buildings.filter((b) => b.type === def.id && canStaff(state, b)).length * (def.workers ?? 0),
     ]),
   );
   const assigned: Record<string, number> = Object.fromEntries(producers.map((b) => [b.id, 0]));
@@ -279,8 +311,9 @@ export function assignWorkers(state: GameState, content: Content): Record<string
 export function buildingWorkers(state: GameState, content: Content): number[] {
   const perType = assignWorkers(state, content);
   const groves = buildingGroveBonuses(state, content);
+  const roads = roadBonuses(state, content);
   const bonuses = buildingBonuses(state, content).map(
-    (b, i) => b + Object.values(groves[i]).reduce((sum, g) => sum + (g ?? 0), 0),
+    (b, i) => b + roads[i] + Object.values(groves[i]).reduce((sum, g) => sum + (g ?? 0), 0),
   );
   const defs = new Map(content.buildings.map((d) => [d.id, d]));
   const order = state.buildings.map((_, i) => i).sort((a, b) => bonuses[b] - bonuses[a] || a - b);
@@ -288,7 +321,7 @@ export function buildingWorkers(state: GameState, content: Content): number[] {
   const workers = state.buildings.map(() => 0);
   for (const i of order) {
     const b = state.buildings[i];
-    if (b.damaged) continue;
+    if (!canStaff(state, b)) continue;
     const n = Math.min(left[b.type] ?? 0, defs.get(b.type)?.workers ?? 0);
     workers[i] = n;
     if (n) left[b.type] -= n;
@@ -320,13 +353,15 @@ export function rates(state: GameState, content: Content): Rates {
   const workers = buildingWorkers(state, content);
   const bonuses = buildingBonuses(state, content);
   const groves = buildingGroveBonuses(state, content);
+  const roads = roadBonuses(state, content);
   const defs = new Map(content.buildings.map((d) => [d.id, d]));
   const produced = Object.fromEntries(RESOURCES.map((r) => [r, 0])) as Record<Resource, number>;
   state.buildings.forEach((b, i) => {
     const def = defs.get(b.type);
     for (const r of RESOURCES) {
       // Adjacency and grove bonuses add up: a camp by the forest in a kapre's grove gets +10% +25%.
-      produced[r] += workers[i] * (def?.produces?.[r] ?? 0) * (1 + bonuses[i] + (groves[i][r] ?? 0));
+      // Connected by Daan adds on top: +10% by the river and +5% connected is +15%.
+      produced[r] += workers[i] * (def?.produces?.[r] ?? 0) * (1 + bonuses[i] + roads[i] + (groves[i][r] ?? 0));
     }
   });
   for (const r of RESOURCES) produced[r] *= seasonMultiplier(content, state.time, r);
@@ -480,6 +515,8 @@ export interface DemolishPreview {
   villagersLeaving: number;
   /** A bridge whose loss cuts off land (the far bank can't grow until a new bridge is built). */
   cutsOffLand: boolean;
+  /** Workplaces that would have no path left (on a far bank cut off), so nobody could work there. */
+  stranded: number;
 }
 
 /** What demolishing the building at (x, y) would do, for the confirmation. Null if there's none. */
@@ -491,6 +528,7 @@ export function demolishPreview(state: GameState, content: Content, x: number, y
     refund: demolishRefund(state, content, target.type),
     villagersLeaving: overcrowded(after, content) - overcrowded(state, content),
     cutsOffLand: after.map !== state.map && reachableLand(after.map) < reachableLand(state.map),
+    stranded: unreachableWorkplaces({ ...after, legacyReach: false }, content).length - unreachableWorkplaces({ ...state, legacyReach: false }, content).length,
   };
 }
 
@@ -570,9 +608,17 @@ export type Command =
   | { type: "guard"; neighbor: string; warriors: number }
   | { type: "acceptOffer" }
   | { type: "declineOffer" }
-  | { type: "choose"; option: string };
+  | { type: "choose"; option: string }
+  | { type: "road"; tiles: Point[] }
+  | { type: "removeRoad"; x: number; y: number };
 
 export function apply(state: GameState, content: Content, command: Command): GameState {
+  const next = applyCommand(state, content, command);
+  // An old save keeps its old staffing rule until the player changes the map.
+  return next.legacyReach && mapChanged(state, next) ? { ...next, legacyReach: false } : next;
+}
+
+function applyCommand(state: GameState, content: Content, command: Command): GameState {
   switch (command.type) {
     case "gather":
       return gather(state, content, command.resource);
@@ -608,7 +654,47 @@ export function apply(state: GameState, content: Content, command: Command): Gam
       return declineOffer(state);
     case "choose":
       return choose(state, content, command.option);
+    case "road":
+      return buildRoad(state, content, command.tiles);
+    case "removeRoad":
+      return removeRoad(state, command.x, command.y);
   }
+}
+
+/** One Daan tile's cost. */
+export const roadCost = (content: Content) => asCost(content.rules.roads.cost);
+
+/**
+ * Lays Daan on each tile in order, paying for each, skipping tiles where a path can't go and
+ * stopping when the barangay can't pay for the next one.
+ */
+export function buildRoad(state: GameState, content: Content, tiles: Point[]): GameState {
+  const cost = roadCost(content);
+  let s = state;
+  const laid: { x: number; y: number; tile: "daan" }[] = [];
+  const seen = new Set<string>();
+  for (const t of Array.isArray(tiles) ? tiles.slice(0, 200) : []) {
+    const key = `${t?.x},${t?.y}`;
+    if (seen.has(key) || !Number.isInteger(t?.x) || !Number.isInteger(t?.y) || !canPlaceRoad(s, t.x, t.y)) continue;
+    if (!canAfford(s, cost)) break;
+    seen.add(key);
+    laid.push({ x: t.x, y: t.y, tile: "daan" });
+    s = { ...s, resources: pay(s, cost) };
+  }
+  if (laid.length === 0) return state;
+  return { ...s, map: setTiles(s.map, laid) };
+}
+
+/** Takes up a Daan tile (free): it becomes plain cleared land again. */
+export function removeRoad(state: GameState, x: number, y: number): GameState {
+  if (tileAt(state.map, x, y) !== "daan") return state;
+  return { ...state, map: setTiles(state.map, [{ x, y, tile: "cleared" }]) };
+}
+
+/** Did a command change the map (land, paths, bridges, or where buildings stand)? */
+function mapChanged(before: GameState, after: GameState): boolean {
+  if (before.map !== after.map || before.buildings.length !== after.buildings.length) return true;
+  return before.buildings.some((b, i) => b.x !== after.buildings[i].x || b.y !== after.buildings[i].y || b.type !== after.buildings[i].type);
 }
 
 const MAX_STEP = 1;
@@ -692,6 +778,7 @@ function advanceClearing(state: GameState, content: Content, dt: number, hungry:
   return {
     ...state,
     clearing: null,
+    legacyReach: false,
     tilesCleared: state.tilesCleared + 1,
     resources: { ...state.resources, wood: state.resources.wood + content.rules.clearing.wood },
     map: setTiles(state.map, [{ x: job.x, y: job.y, tile: "cleared" }]),

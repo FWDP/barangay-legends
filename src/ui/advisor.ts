@@ -4,8 +4,8 @@
 // Pure functions, so the rules (one tip per 90 s, at most 3 repeats...) are tested.
 import type { Content } from "../engine/content";
 import { isBurning, isHungry } from "../engine/events";
-import { buildingWorkers, owned, rates, type GameState } from "../engine/game";
-import { isUnlocked } from "../engine/map";
+import { buildingWorkers, owned, rates, unreachableWorkplaces, type GameState } from "../engine/game";
+import { isUnlocked, TILE_CODE } from "../engine/map";
 import { neighborDef } from "../engine/region";
 import type { Lang } from "./settings";
 import { fill, TRIGGERS, TUTORIAL_EVENTS, type AdvisorDef, type TriggerId, type TutorialEvent, type TutorialStep } from "./uiContent";
@@ -24,6 +24,8 @@ export const RICE_WARNING_SECONDS = 60;
 export const UNSTAFFED_SECONDS = 15;
 /** "Nothing built for 2 minutes." */
 export const IDLE_SECONDS = 120;
+/** Suggest Daan once the barangay has this many workplaces and no path yet. */
+export const ROADS_AFTER_WORKPLACES = 3;
 
 /** Kept in localStorage: survives reloads, never part of the game save. */
 export interface AdvisorMemory {
@@ -149,6 +151,17 @@ export function observe(session: AdvisorSession, state: GameState, content: Cont
   s.buildingCount = state.buildings.length;
   if (t - s.lastBuildAt >= IDLE_SECONDS) active.set("idle", {});
 
+  // Paths: a workplace nobody can walk to; an old save still on the old rule; no roads yet.
+  const stranded = unreachableWorkplaces({ ...state, legacyReach: false }, content);
+  if (stranded.length > 0) {
+    const name = defs.get(stranded[0].type)?.name ?? stranded[0].type;
+    active.set(state.legacyReach ? "old-paths" : "no-path", { building: name });
+  }
+  const workplaces = state.buildings.filter((b) => (defs.get(b.type)?.produces ? 1 : 0)).length;
+  if (workplaces >= ROADS_AFTER_WORKPLACES && !state.map.tiles.includes(TILE_CODE.daan)) {
+    active.set("roads", { percent: content.rules.roads.connectedBonusPercent });
+  }
+
   const nowUnlocked = unlockedIds(state, content);
   const fresh = nowUnlocked.filter((id) => !s.unlocked.includes(id));
   if (fresh.length > 0) {
@@ -175,7 +188,7 @@ export function currentStep(advisor: AdvisorDef, state: GameState, content: Cont
 
 /** The line to use for a trigger: one shown fewer than MAX_REPEATS times, least shown first. */
 export function pickLine(advisor: AdvisorDef, memory: AdvisorMemory, trigger: TriggerId) {
-  const lines = advisor.lines.filter((l) => l.trigger === trigger && (memory.shown[l.id] ?? 0) < MAX_REPEATS);
+  const lines = advisor.lines.filter((l) => l.trigger === trigger && (memory.shown[l.id] ?? 0) < Math.min(MAX_REPEATS, l.max ?? MAX_REPEATS));
   return lines.sort((a, b) => (memory.shown[a.id] ?? 0) - (memory.shown[b.id] ?? 0))[0] ?? null;
 }
 
