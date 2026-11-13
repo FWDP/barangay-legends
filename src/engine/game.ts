@@ -40,7 +40,7 @@ import { homeWarriors } from "./region";
 import { choose, updateChoices, type PendingChoice } from "./choices";
 import { advanceClearing, cancelClearing, clearArea, dropUnreachableJobs, workforce, type ClearingJob } from "./clearing";
 
-export const STATE_VERSION = 14;
+export const STATE_VERSION = 15;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -133,6 +133,8 @@ export interface GameState {
    * not) until the player next changes the map. Always false for new games.
    */
   legacyReach: boolean;
+  /** One-time messages for the player (e.g. what a save update changed), shown until dismissed. */
+  notices: string[];
 }
 
 export type { ClearingJob } from "./clearing";
@@ -174,6 +176,7 @@ export function newGame(
     choice: null,
     recentChoices: [],
     legacyReach: false,
+    notices: [],
   };
   if (withRegion && content.neighbors.length > 0) state.region = createRegion(content, 0, seed);
   for (const def of content.buildings) {
@@ -654,6 +657,7 @@ export type Command =
   | { type: "clearArea"; tiles: Point[]; confirmBalete?: boolean }
   | { type: "cancelClearing"; x: number; y: number }
   | { type: "pause"; x: number; y: number; paused: boolean }
+  | { type: "dismissNotice" }
   | { type: "train" }
   | { type: "trade"; neighbor: string; give: Resource }
   | { type: "marry"; neighbor: string }
@@ -696,6 +700,8 @@ function applyCommand(state: GameState, content: Content, command: Command): Gam
       return cancelClearing(state, command.x, command.y);
     case "pause":
       return setPaused(state, content, command.x, command.y, command.paused === true);
+    case "dismissNotice":
+      return state.notices.length ? { ...state, notices: state.notices.slice(1) } : state;
     case "train":
       return train(state, content);
     case "trade":

@@ -23,7 +23,7 @@ import { loadUiContent } from "./uiContent";
 import { content, useGame } from "./useGame";
 import { useGameSounds } from "./useGameSounds";
 import { awayStory, offlineStory } from "./away";
-import { AwayDialog, ChoiceBanner, ChoiceDialog } from "./StoryDialogs";
+import { AwayDialog, ChoiceBanner, ChoiceDialog, NoticeDialog } from "./StoryDialogs";
 import { useReducedMotion, type Clash } from "./VillagerLayer";
 import { BOAT_RETURN_MS, CLASH_MS, SAIL_SECONDS } from "./visitors";
 import { tradingPaused } from "../engine/region";
@@ -424,7 +424,7 @@ export function App() {
   const advisor = useAdvisor(state, content, ui.advisor, {
     lang,
     tipsOn: settings.tips,
-    blocked: screen === "title" || clash !== null || choiceOpen || away !== null || unseenReport(state, seenReport) !== undefined || loreNote !== null,
+    blocked: screen === "title" || clash !== null || choiceOpen || away !== null || state.notices.length > 0 || unseenReport(state, seenReport) !== undefined || loreNote !== null,
   });
 
   // Moving uses the same placing mode as building, with the building picked up first.
@@ -892,6 +892,7 @@ export function App() {
       <ReportDialog state={state} content={content} seen={seenReport} onSeen={setSeenReport} hold={clash !== null || away !== null} />
       <ChoiceDialog state={state} content={content} open={choiceOpen && !raidComing} onClose={() => setChoiceOpen(false)} dispatch={dispatch} />
       <AwayDialog lines={away} onClose={() => setAway(null)} />
+      <NoticeDialog notice={away ? null : (state.notices[0] ?? null)} onDismiss={() => dispatch({ type: "dismissNotice" })} />
       <VictoryDialog state={state} content={content} waiting={unseenReport(state, seenReport) !== undefined} />
       <FloatLayer />
       {helpPanel}

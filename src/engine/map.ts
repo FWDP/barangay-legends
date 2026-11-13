@@ -288,29 +288,77 @@ export function isUnlocked(state: GameState, def: BuildingDef): boolean {
   return def.unlock.villagers !== undefined && state.villagers >= def.unlock.villagers;
 }
 
+/** Which way a bridge runs: across a river flowing down the map it's horizontal, and the reverse. */
+export type BridgeDir = "h" | "v";
+
+const isLandTile = (t: Tile | null) => t === "cleared" || t === "forest" || t === "balete" || t === "daan";
+
 /**
- * The river tiles a bridge at (x, y) would span: starting from a tile next to cleared land the
- * barangay can reach, straight across until the far bank, at most maxSpan tiles. Null if
- * there's no such crossing.
+ * The crossing a bridge placed at (x, y) would make: straight across the river through that
+ * tile, perpendicular to its flow, spanning exactly the river's width there. Both ways (left to
+ * right, top to bottom) are measured; a way is possible if it is at most maxSpan tiles of open
+ * river with land at both ends, one of them land the barangay can reach. The shorter possible
+ * way wins: that is the one across the flow, never along it. Null if neither way works.
  */
-export function bridgeSpan(map: MapState, def: BuildingDef, x: number, y: number): Point[] | null {
+export function crossingAt(map: MapState, def: BuildingDef, x: number, y: number): { span: Point[]; dir: BridgeDir } | null {
   if (!def.bridge || tileAt(map, x, y) !== "river") return null;
-  for (const [dx, dy] of NEIGHBOURS) {
-    // We come from cleared land on the opposite side and build towards (dx, dy).
-    const from = tileAt(map, x - dx, y - dy);
-    if ((from !== "cleared" && from !== "daan") || !isReachable(map, x - dx, y - dy)) continue;
+  let best: { span: Point[]; dir: BridgeDir } | null = null;
+  for (const dir of ["h", "v"] as const) {
+    const [dx, dy] = dir === "h" ? [1, 0] : [0, 1];
+    let ax = x;
+    let ay = y;
+    while (tileAt(map, ax - dx, ay - dy) === "river") [ax, ay] = [ax - dx, ay - dy];
     const span: Point[] = [];
-    let cx = x;
-    let cy = y;
-    while (tileAt(map, cx, cy) === "river" && span.length < def.bridge.maxSpan) {
-      span.push({ x: cx, y: cy });
-      cx += dx;
-      cy += dy;
+    let bx = ax;
+    let by = ay;
+    while (tileAt(map, bx, by) === "river") {
+      span.push({ x: bx, y: by });
+      [bx, by] = [bx + dx, by + dy];
     }
-    const far = tileAt(map, cx, cy);
-    if (far === "forest" || far === "cleared" || far === "balete" || far === "daan") return span;
+    if (span.length > def.bridge.maxSpan) continue;
+    const startEnd = { x: ax - dx, y: ay - dy };
+    const farEnd = { x: bx, y: by };
+    const ends = [startEnd, farEnd];
+    if (!ends.every((e) => isLandTile(tileAt(map, e.x, e.y)))) continue;
+    const fromHome = ends.some((e) => {
+      const t = tileAt(map, e.x, e.y);
+      return (t === "cleared" || t === "daan") && isReachable(map, e.x, e.y);
+    });
+    if (!fromHome) continue;
+    if (!best || span.length < best.span.length) best = { span, dir };
   }
-  return null;
+  return best;
+}
+
+/** The river tiles a bridge at (x, y) would span (see crossingAt), or null if it can't cross there. */
+export function bridgeSpan(map: MapState, def: BuildingDef, x: number, y: number): Point[] | null {
+  return crossingAt(map, def, x, y)?.span ?? null;
+}
+
+/** One bridge tile as drawn: which way the deck runs, and whether it meets a bank on either end. */
+export interface BridgeTile {
+  dir: BridgeDir;
+  /** The first tile (left or top end) and the last (right or bottom end): posts go there. */
+  start: boolean;
+  end: boolean;
+}
+
+/** Every bridge tile of a span, keyed "x,y", laid out for drawing. */
+export function layOutSpan(map: MapState, span: Point[], into = new Map<string, BridgeTile>()): Map<string, BridgeTile> {
+  if (span.length === 0) return into;
+  const dir = bridgeDir(map, span);
+  const sorted = [...span].sort((a, b) => (dir === "h" ? a.x - b.x : a.y - b.y));
+  sorted.forEach((p, i) => into.set(`${p.x},${p.y}`, { dir, start: i === 0, end: i === sorted.length - 1 }));
+  return into;
+}
+
+/** Which way a standing bridge runs, from its tiles (or, for one tile, the land beside it). */
+export function bridgeDir(map: MapState, span: Point[]): BridgeDir {
+  if (span.length > 1) return span[0].y === span[1].y ? "h" : "v";
+  const p = span[0];
+  if (!p) return "h";
+  const landSides = (dx: number, dy: number) => isLandTile(tileAt(map, p.x - dx, p.y - dy)) && isLandTile(tileAt(map, p.x + dx, p.y + dy));
+  return landSides(1, 0) || !landSides(0, 1) ? "h" : "v";
 }
 
 /**

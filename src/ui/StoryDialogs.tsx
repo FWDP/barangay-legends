@@ -162,3 +162,31 @@ export function AwayDialog(props: { lines: string[] | null; onClose: () => void 
     </dialog>
   );
 }
+
+/** A one-time notice from the game (e.g. what a save update changed). OK dismisses it for good. */
+export function NoticeDialog(props: { notice: string | null; onDismiss: () => void }) {
+  const { notice, onDismiss } = props;
+  const dialog = useModal(!!notice);
+  return (
+    <dialog
+      ref={dialog}
+      aria-labelledby="notice-title"
+      onClose={onDismiss}
+      className="m-auto w-[calc(100%-1.5rem)] max-w-sm rounded-2xl border-4 border-amber-950/70 p-0 text-stone-800 shadow-2xl backdrop:bg-stone-900/60"
+    >
+      {notice && (
+        <div className="mat-card space-y-3 p-5">
+          <h2 id="notice-title" className="font-display text-xl text-amber-900">
+            <span aria-hidden>📜</span> A note for the datu
+          </h2>
+          <p className="text-sm leading-snug">{notice}</p>
+          <div className="flex justify-end">
+            <button type="button" autoFocus onClick={onDismiss} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-4 py-2 text-sm font-semibold text-amber-950">
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+    </dialog>
+  );
+}

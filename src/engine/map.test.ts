@@ -3,7 +3,9 @@ import { apply, availableWorkers, build, newGame, owned, tick, type GameState } 
 import {
   autoPlaceTile,
   bonusAt,
+  bridgeDir,
   bridgeSpan,
+  crossingAt,
   canPlace,
   clearBlocker,
   clearSeconds,
@@ -226,8 +228,56 @@ describe("Tulay (bridge)", () => {
       { x: 5, y: 2 },
     ]);
     expect(canPlace(town(20), content, tulay, 4, 2)).toBe(true);
-    expect(canPlace(town(20), content, tulay, 5, 2)).toBe(false); // not next to cleared land
+    // Any tile of the crossing gives the same bridge.
+    expect(bridgeSpan(riverside, tulay, 5, 2)).toEqual(bridgeSpan(riverside, tulay, 4, 2));
     expect(canPlace(town(20), content, tulay, 2, 1)).toBe(false); // not on the river
+  });
+
+  it("a one-tile river gets a one-tile bridge, across the flow", () => {
+    const down = mapFrom([
+      "T.~TT",
+      ".P~TT",
+      "..~TT",
+    ]);
+    expect(crossingAt(down, tulay, 2, 1)).toEqual({ span: [{ x: 2, y: 1 }], dir: "h" });
+    const across = mapFrom([
+      "TTTTT",
+      "~~~~~",
+      "..P..",
+    ]);
+    expect(crossingAt(across, tulay, 2, 1)).toEqual({ span: [{ x: 2, y: 1 }], dir: "v" });
+    expect(bridgeDir(across, [{ x: 2, y: 1 }])).toBe("v");
+    expect(bridgeDir(down, [{ x: 2, y: 1 }])).toBe("h");
+  });
+
+  it("spans the river's full width, never along its length", () => {
+    const wide = mapFrom([
+      "T..~~~TT",
+      "T.P~~~TT",
+      "T..~~~TT",
+    ]);
+    for (const x of [3, 4, 5]) {
+      expect(crossingAt(wide, tulay, x, 1)).toEqual({ span: [{ x: 3, y: 1 }, { x: 4, y: 1 }, { x: 5, y: 1 }], dir: "h" });
+    }
+    // At a bend the way across is still the short way, perpendicular to the flow.
+    const bend = mapFrom([
+      "..~TTT",
+      "..~~~T",
+      ".P..~T",
+      "....~T",
+    ]);
+    const c = crossingAt(bend, tulay, 3, 1)!;
+    expect(c.dir).toBe("v");
+    expect(c.span).toEqual([{ x: 3, y: 1 }]);
+  });
+
+  it("rejects spots without land at both ends, or too wide, or cut off", () => {
+    // Water beyond the river's end (a pond with no far bank in reach).
+    expect(crossingAt(mapFrom(["P.~~~~", "..~~~~"]), tulay, 2, 0)).toBeNull();
+    // Land on both ends, but both on the far side of the water from the barangay.
+    expect(crossingAt(mapFrom(["P.~TT~T", "..~TT~T"]), tulay, 5, 0)).toBeNull();
+    expect(crossingAt(riverside, tulay, 2, 2)).toBeNull(); // not river
+    expect(crossingAt(riverside, def("palayan"), 4, 2)).toBeNull(); // not a bridge
   });
 
   it("can't cross a river wider than its span", () => {

@@ -22,6 +22,9 @@ import {
   buildingGroveBonuses,
   groveBonusAt,
   canPlaceRoad,
+  crossingAt,
+  layOutSpan,
+  type BridgeTile,
   isClearable,
   isConnected,
   isFootReachable,
@@ -221,6 +224,17 @@ export function BarangayMap(props: {
   }, [state.buildings, map, content, state.legacyReach, state.clearing, state.villagers, state.sick.length, state.resources.rice > 0]);
 
   // The scenic drift moves the view up to SCENIC_DRIFT tiles, so draw that much more around it.
+  // Bridge decks: which way each bridge tile runs and where its banks are, so the whole bridge
+  // is drawn as one piece across the river.
+  const decks = useMemo(() => {
+    const out = new Map<string, BridgeTile>();
+    for (const b of state.buildings) {
+      const d = content.buildings.find((x) => x.id === b.type);
+      if (d?.bridge && b.span) layOutSpan(map, b.span, out);
+    }
+    return out;
+  }, [state.buildings, map, content]);
+
   const range = cam && view.w > 0 ? visibleRange(cam, view, map, scenic ? SCENIC_DRIFT + 1 : 1) : null;
   const rangeKey = range ? `${range.x0},${range.y0},${range.x1},${range.y1}` : "";
 
@@ -245,6 +259,12 @@ export function BarangayMap(props: {
         }),
     );
   }, [placing, plan.buildings, plan.map, content, rangeKey, moveFrom?.x, moveFrom?.y]);
+
+  // Placing a bridge: the crossing it would make from the hovered tile, drawn in full (or a red
+  // "Can't cross here" on river where it can't).
+  const crossing = placing?.bridge && hover ? crossingAt(plan.map, placing, hover.x, hover.y) : null;
+  const crossingDecks = useMemo(() => (crossing ? layOutSpan(plan.map, crossing.span) : new Map<string, BridgeTile>()), [crossing?.span.map((p) => `${p.x},${p.y}`).join(";"), plan.map]);
+  const cantCross = !!placing?.bridge && !!hover && !crossing && (tileAt(plan.map, hover.x, hover.y) === "river" || tileAt(plan.map, hover.x, hover.y) === "bridge");
 
   // The grove's reach, drawn as a soft glow while placing a building it boosts.
   const glow = useMemo(() => {
@@ -346,6 +366,10 @@ export function BarangayMap(props: {
     }
     if (placing) {
       if (placement?.has(`${t.x},${t.y}`)) onPlace(t.x, t.y);
+      else if (placing.bridge) {
+        const tt = tileAt(map, t.x, t.y);
+        if (tt === "river" || tt === "bridge") spawnFloat(clientX, clientY, "Can't cross here", "info");
+      }
     } else {
       onTapTile(t.x, t.y, clientX, clientY);
     }
@@ -630,6 +654,9 @@ export function BarangayMap(props: {
             }
             glow={glow.has(key)}
             guard={guard.has(key)}
+            deck={decks.get(key) ?? (tile === "bridge" ? FALLBACK_DECK : null)}
+            deckPreview={crossingDecks.get(key) ?? null}
+            cantCross={cantCross && hovered}
             spirit={
               tile === "balete" && sighting
                 ? hash(x * 31 + sightingWindow, y * 17 + sightingWindow) < sighting.sighting!.chancePercent
@@ -938,8 +965,13 @@ const Cell = memo(function Cell(props: {
   picked?: boolean;
   /** Inside a Kuta's defense radius (shown while placing or looking at a Kuta, and during a raid warning). */
   guard?: boolean;
+  /** A bridge deck on this tile, and a planned one (placing a Tulay). */
+  deck?: BridgeTile | null;
+  deckPreview?: BridgeTile | null;
+  /** Placing a Tulay over this river tile can't work. */
+  cantCross?: boolean;
 }) {
-  const { x, y, tile, plaza, building, fresh, lifted, target, ghost, glow, spirit, onSpiritKey, clearable, hint, progress, onActivate, pathPreview, waiting, picked, guard } = props;
+  const { x, y, tile, plaza, building, fresh, lifted, target, ghost, glow, spirit, onSpiritKey, clearable, hint, progress, onActivate, pathPreview, waiting, picked, guard, deck, deckPreview, cantCross } = props;
   const h = hash(x, y);
   const valid = typeof target === "number";
   const paddy = building?.def.produces?.rice;
@@ -950,7 +982,9 @@ const Cell = memo(function Cell(props: {
       className={`absolute flex items-center justify-center ${GROUND[tile]} ${target === "blocked" ? "brightness-75" : ""}`}
       style={{ left: `calc(${x} * var(--tile))`, top: `calc(${y} * var(--tile))`, width: "var(--tile)", height: "var(--tile)" }}
     >
-      {tile === "bridge" && <div aria-hidden className="bridge-tile absolute inset-x-0 inset-y-[14%]" />}
+      {deck && <Deck deck={deck} />}
+      {deckPreview && <Deck deck={deckPreview} preview />}
+      {cantCross && <Label text="Can't cross here" warn />}
       {pathPreview && <div aria-hidden className="daan-tile pointer-events-none absolute inset-0 opacity-70" />}
       {tile === "forest" && progress === null && (
         <span aria-hidden className="pointer-events-none text-[0.95em] leading-none">
@@ -1012,6 +1046,37 @@ const Cell = memo(function Cell(props: {
     </div>
   );
 });
+
+/** Used for a stray bridge tile with no building (shouldn't happen): drawn across. */
+const FALLBACK_DECK: BridgeTile = { dir: "h", start: false, end: false };
+
+/**
+ * One tile of a bridge deck. Each piece runs the full length of its tile (a hair over, so
+ * neighbours meet with no seam or water between), with posts where the bridge meets a bank.
+ */
+function Deck({ deck, preview = false }: { deck: BridgeTile; preview?: boolean }) {
+  const h = deck.dir === "h";
+  const post = "absolute size-[18%] rounded-[2px] bg-amber-950 shadow";
+  return (
+    <div
+      aria-hidden
+      className={`pointer-events-none absolute ${h ? "bridge-tile inset-y-[14%] -inset-x-px" : "bridge-tile-v inset-x-[14%] -inset-y-px"} ${preview ? "opacity-70 ring-2 ring-amber-300" : ""}`}
+    >
+      {deck.start && (
+        <>
+          <span className={`${post} ${h ? "-top-[6%] left-0" : "top-0 -left-[6%]"}`} />
+          <span className={`${post} ${h ? "-bottom-[6%] left-0" : "top-0 -right-[6%]"}`} />
+        </>
+      )}
+      {deck.end && (
+        <>
+          <span className={`${post} ${h ? "-top-[6%] right-0" : "bottom-0 -left-[6%]"}`} />
+          <span className={`${post} ${h ? "-bottom-[6%] right-0" : "bottom-0 -right-[6%]"}`} />
+        </>
+      )}
+    </div>
+  );
+}
 
 function ClearingProgress({ progress, waiting }: { progress: number; waiting: boolean }) {
   return (
@@ -1098,13 +1163,15 @@ function Ghost({ info }: { info: GhostInfo }) {
       </>
     );
   }
-  const base = def.bridge ? "Bridge to the far bank" : bonusPreviewText(def, adjacency, { name: groveName, bonus: grove });
+  const base = def.bridge ? "Bridge across to the far bank" : bonusPreviewText(def, adjacency, { name: groveName, bonus: grove });
   const text = road > 0 ? `${base} · 🛤️ Connected +${Math.round(road * 100)}%` : base;
   return (
     <>
-      <span aria-hidden className="pointer-events-none leading-none opacity-60 select-none">
-        {def.icon}
-      </span>
+      {!def.bridge && (
+        <span aria-hidden className="pointer-events-none leading-none opacity-60 select-none">
+          {def.icon}
+        </span>
+      )}
       <Label text={text} good={adjacency + grove + road > 0 || !!def.bridge} />
     </>
   );
@@ -1183,7 +1250,8 @@ function Building(props: {
           damaged ? "opacity-60 grayscale" : paused ? "opacity-70 saturate-50" : ""
         } ${lifted ? "opacity-40" : ""} cursor-pointer`}
       >
-        {def.icon}
+        {/* A bridge is drawn as its deck; the button over it is just the tap target. */}
+        {def.bridge ? <span className="inline-block size-[0.9em]" /> : def.icon}
       </span>
       {burning && (
         <span

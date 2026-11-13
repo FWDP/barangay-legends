@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Content } from "../engine/content";
 import { isHungry } from "../engine/events";
 import { overcrowded, type GameState } from "../engine/game";
-import { tileAt, type Point } from "../engine/map";
+import { layOutSpan, tileAt, type BridgeTile, type Point } from "../engine/map";
 import { origin, type Camera, type View } from "./camera";
 import {
   dayPhase,
@@ -264,18 +264,28 @@ function drawBoat(g: CanvasRenderingContext2D, x: number, y: number, tile: numbe
  * A Tulay's deck, drawn over a boat passing underneath. Matches the map's bridge-tile look:
  * bamboo planks between two dark rails.
  */
-function drawDeck(g: CanvasRenderingContext2D, x: number, y: number, tile: number) {
-  const top = y + tile * 0.14;
-  const h = tile * 0.72;
+function drawDeck(g: CanvasRenderingContext2D, x: number, y: number, tile: number, dir: "h" | "v") {
+  const across = tile * 0.72;
+  const off = tile * 0.14;
+  // A hair over the tile's length so neighbouring pieces meet without a seam.
+  const [dx, dy, w, h] = dir === "h" ? [x - 0.5, y + off, tile + 1, across] : [x + off, y - 0.5, across, tile + 1];
   g.fillStyle = "rgb(0 0 0 / 0.3)";
-  g.fillRect(x, top + 2, tile, h);
+  g.fillRect(dx + (dir === "v" ? 2 : 0), dy + (dir === "h" ? 2 : 0), w, h);
   g.fillStyle = "#d8bb6c";
-  g.fillRect(x, top, tile, h);
+  g.fillRect(dx, dy, w, h);
   g.fillStyle = "#6b4a1c";
-  g.fillRect(x, top, tile, h * 0.1);
-  g.fillRect(x, top + h * 0.9, tile, h * 0.1);
+  if (dir === "h") {
+    g.fillRect(dx, dy, w, h * 0.1);
+    g.fillRect(dx, dy + h * 0.9, w, h * 0.1);
+  } else {
+    g.fillRect(dx, dy, w * 0.1, h);
+    g.fillRect(dx + w * 0.9, dy, w * 0.1, h);
+  }
   g.fillStyle = "rgb(90 60 20 / 0.45)";
-  for (let i = 0; i < 5; i++) g.fillRect(x + (tile * i) / 4.5, top, Math.max(1, tile * 0.03), h);
+  for (let i = 0; i < 5; i++) {
+    if (dir === "h") g.fillRect(x + (tile * i) / 4.5, dy, Math.max(1, tile * 0.03), h);
+    else g.fillRect(dx, y + (tile * i) / 4.5, w, Math.max(1, tile * 0.03));
+  }
 }
 
 /** Flashes of blades where the two sides meet. */
@@ -614,9 +624,11 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
           for (let x = Math.floor(cx - 1.2); x <= Math.floor(cx + 1.2); x++) if (tileAt(s.map, x, y) === "bridge") decks.add(`${x},${y}`);
         }
       }
+      const deckDirs = new Map<string, BridgeTile>();
+      if (decks.size > 0) for (const b of s.buildings) if (b.span?.length) layOutSpan(s.map, b.span, deckDirs);
       for (const key of decks) {
         const [x, y] = key.split(",").map(Number);
-        drawn.push({ x: o.x + (x + 0.5) * T, y: o.y + (y + 0.5) * T, r: T, layer: 1, f: () => drawDeck(g, o.x + x * T, o.y + y * T, T) });
+        drawn.push({ x: o.x + (x + 0.5) * T, y: o.y + (y + 0.5) * T, r: T, layer: 1, f: () => drawDeck(g, o.x + x * T, o.y + y * T, T, deckDirs.get(key)?.dir ?? "h") });
       }
       drawn.sort((a, b) => (a.layer ?? 2) - (b.layer ?? 2) || a.y - b.y);
       for (const d of drawn) d.f();

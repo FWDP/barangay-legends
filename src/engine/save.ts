@@ -132,7 +132,88 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
   // all warriors goes back to work by itself. The hunger clock restarts, so nobody leaves just
   // because this save was loaded before the change (the player gathers rice to get going).
   13: (raw) => ({ ...raw, version: 14, hunger: 0, migration: typeof raw.migration === "number" ? Math.max(0, raw.migration) : 0 }),
+  // v14 → v15: bridges cross the river straight, perpendicular to its flow, spanning exactly its
+  // width. Every bridge is laid again that way; one that can't cross anywhere it stood is
+  // removed and its price refunded, and the player is told once (notices).
+  14: (raw, content) => migrateBridgesV15(raw, content),
 };
+
+// ---------- Frozen v15 bridge rule (for the v14 → v15 migration only) ----------
+
+type FrozenTile = "f" | "c" | "r" | "b" | "t" | "d";
+
+function migrateBridgesV15(raw: RawSave, content: Content): RawSave {
+  const out: RawSave = { ...raw, version: 15, notices: Array.isArray(raw.notices) ? raw.notices : [] };
+  const map = raw.map;
+  if (!isObject(map) || typeof map.tiles !== "string" || !Number.isInteger(map.width) || !Array.isArray(raw.buildings)) return out;
+  const W = map.width as number;
+  const H = (map.tiles as string).length / W;
+  const tiles = (map.tiles as string).split("") as FrozenTile[];
+  const at = (x: number, y: number): FrozenTile | null => (x >= 0 && y >= 0 && x < W && y < H ? tiles[y * W + x] : null);
+  const land = (t: FrozenTile | null) => t === "c" || t === "f" || t === "t" || t === "d";
+  const bridges = new Map(content.buildings.filter((d) => d.bridge).map((d) => [d.id, d]));
+  const buildings: RawSave[] = [];
+  let removed = 0;
+  const refund: Record<string, number> = {};
+  const seen: Record<string, number> = {};
+  for (const item of raw.buildings as unknown[]) {
+    if (!isObject(item) || typeof item.type !== "string" || !bridges.has(item.type)) {
+      if (isObject(item)) buildings.push(item);
+      continue;
+    }
+    const def = bridges.get(item.type)!;
+    const maxSpan = def.bridge!.maxSpan;
+    const nth = (seen[item.type] = (seen[item.type] ?? 0) + 1) - 1;
+    // Its old tiles turn back into river first: the old span, or every bridge tile touching its anchor in a line.
+    const old: { x: number; y: number }[] = Array.isArray(item.span)
+      ? item.span.filter(isObject).map((p) => ({ x: p.x as number, y: p.y as number }))
+      : [{ x: item.x as number, y: item.y as number }];
+    for (const [dx, dy] of NEIGHBOURS) {
+      if (Array.isArray(item.span)) break;
+      for (let k = 1; at((item.x as number) + dx * k, (item.y as number) + dy * k) === "b"; k++) old.push({ x: (item.x as number) + dx * k, y: (item.y as number) + dy * k });
+    }
+    for (const p of old) if (at(p.x, p.y) === "b") tiles[p.y * W + p.x] = "r";
+    // The straight way across through any of its old tiles: the shorter of across and down, land at both ends.
+    let best: { x: number; y: number }[] | null = null;
+    let anchor: { x: number; y: number } | null = null;
+    for (const start of old) {
+      if (at(start.x, start.y) !== "r") continue;
+      for (const [dx, dy] of [[1, 0], [0, 1]] as const) {
+        let ax = start.x;
+        let ay = start.y;
+        while (at(ax - dx, ay - dy) === "r") [ax, ay] = [ax - dx, ay - dy];
+        const span: { x: number; y: number }[] = [];
+        let bx = ax;
+        let by = ay;
+        while (at(bx, by) === "r") {
+          span.push({ x: bx, y: by });
+          [bx, by] = [bx + dx, by + dy];
+        }
+        if (span.length > maxSpan || !land(at(ax - dx, ay - dy)) || !land(at(bx, by))) continue;
+        if (!best || span.length < best.length) [best, anchor] = [span, start];
+      }
+    }
+    if (best && anchor) {
+      for (const p of best) tiles[p.y * W + p.x] = "b";
+      buildings.push({ ...item, x: anchor.x, y: anchor.y, span: best });
+    } else {
+      removed++;
+      for (const [r, n] of Object.entries(def.cost)) refund[r] = (refund[r] ?? 0) + Math.ceil((n ?? 0) * content.rules.costGrowth ** nth);
+    }
+  }
+  out.map = { ...map, tiles: tiles.join("") };
+  out.buildings = buildings;
+  if (removed > 0) {
+    const resources = isObject(raw.resources) ? { ...raw.resources } : {};
+    for (const [r, n] of Object.entries(refund)) resources[r] = (finiteNonNeg(resources[r]) ? (resources[r] as number) : 0) + n;
+    out.resources = resources;
+    const goods = Object.entries(refund).map(([r, n]) => `${n} ${r}`).join(" and ");
+    (out.notices as string[]).push(
+      `Bridges now cross the river straight across. ${removed === 1 ? "One bridge" : `${removed} bridges`} couldn't be laid that way where ${removed === 1 ? "it stood, so it was" : "they stood, so they were"} taken down and you got ${goods} back.`,
+    );
+  }
+  return out;
+}
 
 // ---------- Frozen v2 map rules (for the v1 → v2 migration only) ----------
 
@@ -253,6 +334,7 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean): GameSta
   }
   if (finiteNonNeg(data.tilesCleared)) state.tilesCleared = Math.floor(data.tilesCleared);
   state.legacyReach = data.legacyReach === true;
+  if (isPlayer && Array.isArray(data.notices)) state.notices = data.notices.filter((n): n is string => typeof n === "string" && n !== "").slice(0, 5);
   if (Array.isArray(data.recentChoices)) {
     state.recentChoices = data.recentChoices.filter((id): id is string => typeof id === "string" && content.choices.some((c) => c.id === id)).slice(-3);
   }
@@ -334,8 +416,12 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean): GameSta
 function parseSpan(raw: unknown, map: MapState, maxSpan: number, x: number, y: number): { x: number; y: number }[] | null {
   if (!Array.isArray(raw) || raw.length === 0 || raw.length > maxSpan) return null;
   const span = raw.filter(isObject).map((p) => ({ x: p.x as number, y: p.y as number }));
-  if (span.length !== raw.length || span[0].x !== x || span[0].y !== y) return null;
-  const straight = span.every((p, i) => Math.abs(p.x - x) + Math.abs(p.y - y) === i && (p.x === x || p.y === y));
+  if (span.length !== raw.length || !span.some((p) => p.x === x && p.y === y)) return null;
+  // A straight line of bridge tiles, one step at a time, through the bridge's own tile.
+  const dx = span.length > 1 ? span[1].x - span[0].x : 0;
+  const dy = span.length > 1 ? span[1].y - span[0].y : 0;
+  if (span.length > 1 && Math.abs(dx) + Math.abs(dy) !== 1) return null;
+  const straight = span.every((p, i) => p.x === span[0].x + dx * i && p.y === span[0].y + dy * i);
   return straight && span.every((p) => tileAt(map, p.x, p.y) === "bridge") ? span : null;
 }
 

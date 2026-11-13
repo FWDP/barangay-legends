@@ -237,3 +237,12 @@
     linear-gradient(180deg, #6b4a1c 0 10%, #d8bb6c 10% 90%, #6b4a1c 90%);
   box-shadow: 0 2px 3px rgb(0 0 0 / 0.35);
 }
+
+/* The same deck running down the screen (a bridge across a river that flows sideways). */
+@utility bridge-tile-v {
+  background-color: #c9a85a;
+  background-image:
+    repeating-linear-gradient(180deg, rgb(90 60 20 / 0.45) 0 2px, transparent 2px 22%),
+    linear-gradient(90deg, #6b4a1c 0 10%, #d8bb6c 10% 90%, #6b4a1c 90%);
+  box-shadow: 2px 0 3px rgb(0 0 0 / 0.35);
+}
