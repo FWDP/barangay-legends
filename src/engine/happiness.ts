@@ -5,6 +5,7 @@ import type { Content } from "./content";
 import { isHungry } from "./events";
 import type { GameState } from "./game";
 import { barangayCenter } from "./map";
+import { neglectPenalty } from "./worship";
 
 /** Standing houses within plazaRadius tiles of the plaza (straight-line distance). */
 export function housesNearPlaza(state: GameState, content: Content): number {
@@ -19,6 +20,8 @@ export interface HappinessParts {
   houses: number;
   hunger: number;
   sickness: number;
+  /** A Dambana left without offerings for a long time (0 or below). */
+  neglect: number;
   target: number;
 }
 
@@ -28,8 +31,9 @@ export function happinessTarget(state: GameState, content: Content): HappinessPa
   const houses = Math.min(h.maxFromHouses, housesNearPlaza(state, content) * h.perHouseNearPlaza);
   const hunger = isHungry(state) ? h.hungry : 0;
   const sickness = Math.max(h.maxFromSick, state.sick.length * h.perSick);
-  const target = Math.min(100, Math.max(0, h.start + houses + hunger + sickness));
-  return { base: h.start, houses, hunger, sickness, target };
+  const neglect = neglectPenalty(state, content);
+  const target = Math.min(100, Math.max(0, h.start + houses + hunger + sickness + neglect));
+  return { base: h.start, houses, hunger, sickness, neglect, target };
 }
 
 /** Happiness after dt seconds: pointsPerSecond closer to its target. */

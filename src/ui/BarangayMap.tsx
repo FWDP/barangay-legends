@@ -55,7 +55,9 @@ import { useReducedMotion, VillagerLayer, type Clash, type NamedHit } from "./Vi
 import type { NamedVillager } from "../engine/people";
 import { dockPoint, riverPath, SAIL_SECONDS, waitIndex } from "./visitors";
 import { isClear, labelSize, placeLabel, type Rect } from "./labels";
-import { DAY_SECONDS } from "./villagers";
+import { dayPhaseAt } from "../engine/daynight";
+import { isPranked } from "../engine/forest";
+import { sarimanokAt } from "../engine/worship";
 
 const INCOME_EVERY_MS = 3000;
 const WAITING_TEXT = "⏸ Trade paused — raid in progress";
@@ -131,8 +133,12 @@ export function BarangayMap(props: {
   focus?: Point | null;
   /** Trade is paused for a raid: the bangka waits offshore and can't be tapped. */
   tradeHeld?: boolean;
+  /** The player tapped the Sarimanok crossing the sky. */
+  onSarimanok?: () => void;
+  /** A ritual being led at the Dambana right now (the short animation). */
+  ritual?: { x: number; y: number; icon: string } | null;
 }) {
-  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onVillager, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null, selection = [], onSelectArea, focus = null, tradeHeld = false } = props;
+  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onVillager, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null, selection = [], onSelectArea, focus = null, tradeHeld = false, onSarimanok, ritual = null } = props;
   // The rectangle being dragged over the forest (desktop), from its first tile to the current one.
   const [dragArea, setDragArea] = useState<{ from: Point; to: Point } | null>(null);
   // Tiles being painted with a mouse drag in road mode (laid on release).
@@ -343,6 +349,8 @@ export function BarangayMap(props: {
     spirit?: boolean;
     /** The press started on the trade boat. */
     boat?: boolean;
+    /** The press started on another tappable thing on the map (the Sarimanok): its element, clicked on a tap. */
+    tapEl?: HTMLElement | null;
     /** A mouse drag laying Daan. */
     painting?: boolean;
     /** A mouse drag selecting forest to clear. */
@@ -389,6 +397,7 @@ export function BarangayMap(props: {
     pointers.current.set(e.pointerId, p);
     const spirit = !!(e.target as Element).closest?.("[data-spirit]");
     const boat = !!(e.target as Element).closest?.("[data-boat]");
+    const tapEl = (e.target as Element).closest?.<HTMLElement>("[data-map-tap]") ?? null;
     // Road mode with a mouse: the drag paints a path instead of panning.
     if (road && e.pointerType === "mouse" && pointers.current.size === 1) {
       const t = screenToTile(cam, view, p.x, p.y);
@@ -401,11 +410,11 @@ export function BarangayMap(props: {
       const t = screenToTile(cam, view, p.x, p.y);
       const tile = tileAt(map, t.x, t.y);
       if (tile === "forest" || tile === "balete") {
-        gesture.current = { x: p.x, y: p.y, cam, moved: false, selecting: true, spirit, boat };
+        gesture.current = { x: p.x, y: p.y, cam, moved: false, selecting: true, spirit, boat, tapEl };
         return;
       }
     }
-    if (pointers.current.size === 1) gesture.current = { x: p.x, y: p.y, cam, moved: false, spirit, boat };
+    if (pointers.current.size === 1) gesture.current = { x: p.x, y: p.y, cam, moved: false, spirit, boat, tapEl };
     else if (pointers.current.size === 2) gesture.current = { x: p.x, y: p.y, cam, moved: true, pinch: pinchOf() };
   };
 
@@ -472,7 +481,8 @@ export function BarangayMap(props: {
         onSelectArea(tiles);
       } else if (e.type === "pointerup" && !g.moved) {
         const p = local(e);
-        if (g.boat && onBoat) onBoat();
+        if (g.tapEl) g.tapEl.click();
+        else if (g.boat && onBoat) onBoat();
         else if (g.spirit && sighting?.lore) onSpirit(sighting.lore, e.clientX, e.clientY);
         else tapAt(p.x, p.y, e.clientX, e.clientY);
       }
@@ -494,7 +504,8 @@ export function BarangayMap(props: {
     if (pointers.current.size === 0) {
       if (g && !g.moved && e.type === "pointerup") {
         const p = local(e);
-        if (g.boat && onBoat) onBoat();
+        if (g.tapEl) g.tapEl.click();
+        else if (g.boat && onBoat) onBoat();
         else if (g.spirit && sighting?.lore) onSpirit(sighting.lore, e.clientX, e.clientY);
         else tapAt(p.x, p.y, e.clientX, e.clientY);
       }
@@ -617,7 +628,9 @@ export function BarangayMap(props: {
     };
   }, [scenic, reducedMotion, driftPx]);
 
-  const dayOffset = useMemo(() => -((Date.now() / 1000) % DAY_SECONDS), []);
+  // The tint follows the game's own day (rules.dayNight), so the eclipse comes when it looks like night.
+  const daySeconds = content.rules.dayNight.daySeconds;
+  const dayOffset = -(dayPhaseAt(content, state.time) * daySeconds);
   const typhoonComing = state.typhoon !== null;
   const dry = (seasonAt(content, state.time)?.season.productionPercent.rice ?? 100) < 100;
 
@@ -750,6 +763,9 @@ export function BarangayMap(props: {
             {cells}
           </div>
         )}
+        {cam && !scenic && (
+          <SpiritOverlays state={state} content={content} cam={cam} o={o} ritual={ritual} onSarimanok={onSarimanok} reducedMotion={reducedMotion} />
+        )}
         {cam && view.w > 0 && <VillagerLayer state={state} content={content} cam={cam} view={view} reducedMotion={reducedMotion} clash={clash} hitRef={scenic ? undefined : namedHit} />}
         {cam && landing && <LandingMarker cam={cam} view={view} landing={landing} avoid={avoid} />}
         {waitingAt && (
@@ -791,7 +807,12 @@ export function BarangayMap(props: {
         <div
           aria-hidden
           className="pointer-events-none absolute inset-0 mix-blend-multiply motion-safe:animate-day-night"
-          style={{ animationDelay: `${dayOffset}s` }}
+          style={{ animationDelay: `${dayOffset}s`, animationDuration: `${daySeconds}s` }}
+        />
+        {/* The Bakunawa swallowing the moon: the night goes darker and redder. */}
+        <div
+          aria-hidden
+          className={`pointer-events-none absolute inset-0 transition-colors duration-[2000ms] ${state.eclipse ? "bg-red-950/45" : "bg-transparent"}`}
         />
         <div
           aria-hidden
@@ -1310,6 +1331,84 @@ function Building(props: {
         <span aria-hidden className="pointer-events-none absolute top-0 right-0.5 text-[0.3em] leading-none">
           ✨
         </span>
+      )}
+    </>
+  );
+}
+
+/**
+ * Things the spirits and the babaylan put on the map: saplings growing on replanted tiles, a
+ * kapre's prank on a Woodcutter Camp, the babaylan's ritual at the Dambana, and the Sarimanok
+ * flying across (tap it).
+ */
+function SpiritOverlays(props: {
+  state: GameState;
+  content: Content;
+  cam: Camera;
+  o: Point;
+  ritual: { x: number; y: number; icon: string } | null;
+  onSarimanok?: () => void;
+  reducedMotion: boolean;
+}) {
+  const { state, content, cam, o, ritual, onSarimanok, reducedMotion } = props;
+  const T = cam.tile;
+  const at = (x: number, y: number) => ({ left: o.x + x * T, top: o.y + y * T });
+  const bird = state.sarimanok ? sarimanokAt(state.sarimanok, state.time) : null;
+  const camps = state.buildings.filter((b) => isPranked(state, b.x, b.y));
+  return (
+    <>
+      {state.replanting.map((j) => (
+        <span
+          key={`r${j.x},${j.y}`}
+          aria-hidden
+          className="pointer-events-none absolute flex flex-col items-center justify-center"
+          style={{ ...at(j.x, j.y), width: T, height: T, fontSize: T * 0.45 }}
+        >
+          <span className="leading-none">🌱</span>
+          <span className="mt-0.5 h-1 w-3/5 overflow-hidden rounded-full bg-black/30">
+            <span className="block h-full bg-lime-400" style={{ width: `${Math.round((100 * j.progress) / j.seconds)}%` }} />
+          </span>
+        </span>
+      ))}
+      {camps.map((b) => (
+        <span
+          key={`p${b.x},${b.y}`}
+          aria-hidden
+          title="A kapre hid the tools"
+          className="pointer-events-none absolute -translate-y-1/3 rounded-full bg-stone-900/75 px-1 text-center leading-tight motion-safe:animate-bounce"
+          style={{ ...at(b.x + 0.55, b.y - 0.1), fontSize: T * 0.3 }}
+        >
+          🌲❓
+        </span>
+      ))}
+      {ritual && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute z-10 flex -translate-x-1/2 -translate-y-full flex-col items-center"
+          style={{ left: o.x + (ritual.x + 0.5) * T, top: o.y + (ritual.y + 0.2) * T, fontSize: T * 0.5 }}
+        >
+          <span className="leading-none motion-safe:animate-ping">✨</span>
+          <span className="leading-none motion-safe:animate-bounce">{ritual.icon}</span>
+          <span className="leading-none">🙌</span>
+        </span>
+      )}
+      {bird && content.visitor && (
+        <button
+          type="button"
+          data-map-tap
+          aria-label={`${content.visitor.name.en}: tap for a gift`}
+          onClick={onSarimanok}
+          className="absolute z-20 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full outline-none focus-visible:ring-4 focus-visible:ring-amber-300"
+          style={{
+            ...at(bird.x, bird.y),
+            width: Math.max(44, T * 1.2),
+            height: Math.max(44, T * 1.2),
+            fontSize: Math.max(26, T * 0.8),
+            transition: reducedMotion ? undefined : "left 0.15s linear, top 0.15s linear",
+          }}
+        >
+          <span className="drop-shadow-[0_0_8px_rgba(250,204,21,0.9)] motion-safe:animate-bounce">🦚</span>
+        </button>
       )}
     </>
   );

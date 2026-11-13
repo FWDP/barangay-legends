@@ -9,15 +9,8 @@ import { cachedPath, isWalkable } from "../engine/paths";
 import { homeWarriors } from "../engine/region";
 import type { NamedVillager } from "../engine/people";
 
-/** Length of the day/night tint cycle (the CSS day-night animation), in real seconds. */
-export const DAY_SECONDS = 240;
-/** Never draw more sprites than this, however big the barangay grows. */
+/** Never draw more sprites than this, however big the barangay grows. Night comes from engine/daynight.ts. */
 export const MAX_SPRITES = 60;
-
-/** Where in the day/night cycle we are (0..1). Matches the tint, which is keyed on the same clock. */
-export const dayPhase = (nowMs: number) => (nowMs / 1000 / DAY_SECONDS) % 1;
-/** Villagers head home at dusk and come out at dawn (the tint is darkest from 62% to 82%). */
-export const isNight = (phase: number) => phase >= 0.55 && phase < 0.88;
 
 export type Role = "work" | "clearing" | "sick" | "warrior" | "idle";
 

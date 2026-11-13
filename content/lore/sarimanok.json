@@ -1,0 +1,35 @@
+{
+  "id": "sarimanok",
+  "name": "Sarimanok",
+  "description": "A legendary bird of many colors, a symbol in Maranao art.",
+  "tradition": "Maranao",
+  "sources": [
+    "https://en.wikipedia.org/wiki/Sarimanok",
+    "https://en.wikipedia.org/wiki/Maranao_people"
+  ],
+  "aklat": {
+    "order": 11,
+    "icon": "🦚",
+    "name": {
+      "en": "Sarimanok",
+      "fil": "Sarimanok"
+    },
+    "lore": {
+      "en": "The Sarimanok is a legendary bird of the Maranao people, drawn with bright plumage and often a fish in its beak. It is a central figure in Maranao okir art and appears on banners and carvings. Stories link it with good fortune. This game shows it as a figure of art and story only.",
+      "fil": "Ang Sarimanok ay maalamat na ibon ng mga Maranao, iginuguhit na may makukulay na balahibo at kadalasang may isda sa tuka. Pangunahing anyo ito sa sining na okir ng Maranao at makikita sa mga bandila at ukit. Iniuugnay ito ng mga kuwento sa suwerte. Sa larong ito, bilang anyo ng sining at kuwento lamang ito ipinapakita."
+    },
+    "inGame": {
+      "en": "Now and then it crosses the sky. Tap it for a gift of rice, wood or gold. It comes often to barangays of the Maranao tradition.",
+      "fil": "Paminsan-minsan, tumatawid ito sa langit. Pindutin para sa handog na bigas, kahoy o ginto. Madalas itong dumalaw sa mga barangay ng tradisyong Maranao."
+    },
+    "hint": {
+      "en": "A bright bird crosses the sky now and then. Catch it.",
+      "fil": "May makulay na ibong tumatawid sa langit paminsan-minsan. Hulihin ito."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "sarimanok"
+    }
+  },
+  "reviewed": false
+}

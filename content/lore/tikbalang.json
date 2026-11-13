@@ -1,0 +1,35 @@
+{
+  "id": "tikbalang",
+  "name": "Tikbalang",
+  "description": "A tall creature with a horse's head that leads travelers astray.",
+  "tradition": "Tagalog",
+  "sources": [
+    "Maximo D. Ramos, The Creatures of Philippine Lower Mythology (University of the Philippines Press, 1971)",
+    "https://en.wikipedia.org/wiki/Tikbalang"
+  ],
+  "aklat": {
+    "order": 10,
+    "icon": "🐴",
+    "name": {
+      "en": "Tikbalang",
+      "fil": "Tikbalang"
+    },
+    "lore": {
+      "en": "The tikbalang is a tall, bony creature with the head and hooves of a horse. In Tagalog folklore it haunts forests and makes travelers lose their way, walking in circles. Turning one's shirt inside out was said to break the spell. It is a trickster more than a killer.",
+      "fil": "Ang tikbalang ay matangkad at payat na nilalang na may ulo at paa ng kabayo. Sa alamat ng mga Tagalog, nagmumulto ito sa gubat at inililigaw ang mga manlalakbay hanggang paikot-ikot sila. Sinasabing nasisira ang engkanto kapag binaligtad ang damit. Mas manloloko ito kaysa mamamatay-tao."
+    },
+    "inGame": {
+      "en": "Sometimes a tikbalang leads a few workers astray for a minute. Answer its riddle and they come home at once. It comes more often when the forest is cut too fast.",
+      "fil": "Paminsan-minsan, inililigaw ng tikbalang ang ilang manggagawa nang isang minuto. Sagutin ang bugtong nito at makauuwi sila agad. Mas madalas itong dumating kapag masyadong mabilis ang pagputol ng gubat."
+    },
+    "hint": {
+      "en": "Something in the forest plays tricks on workers.",
+      "fil": "May nanloloko sa mga manggagawa sa gubat."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "tikbalang"
+    }
+  },
+  "reviewed": false
+}

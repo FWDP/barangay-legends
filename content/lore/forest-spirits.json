@@ -1,0 +1,36 @@
+{
+  "id": "forest-spirits",
+  "name": "The inhabited forest",
+  "description": "The belief that forests, old trees and mounds are home to spirits whose leave is asked.",
+  "tradition": "Widespread in the lowland Philippines",
+  "sources": [
+    "Maximo D. Ramos, The Creatures of Philippine Lower Mythology (University of the Philippines Press, 1971)",
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "https://en.wikipedia.org/wiki/Nuno_sa_punso"
+  ],
+  "aklat": {
+    "order": 9,
+    "icon": "🍃",
+    "name": {
+      "en": "The inhabited forest",
+      "fil": "Ang gubat na may nananahan"
+    },
+    "lore": {
+      "en": "Across the lowland Philippines, forests, old trees and mounds were believed to be home to spirits. Before clearing land or passing a spirit's place, people asked leave: in Tagalog, 'tabi-tabi po'. Those who did not might fall sick or have bad luck. The belief taught care for places that were not only people's own.",
+      "fil": "Sa buong kapatagan ng Pilipinas, pinaniniwalaang tahanan ng mga espiritu ang gubat, matatandang puno at punso. Bago maglinis ng lupa o dumaan sa tirahan ng espiritu, humihingi ng pahintulot ang mga tao: sa Tagalog, 'tabi-tabi po'. Ang hindi gumagawa nito ay maaaring magkasakit o malasin. Itinuro ng paniniwalang ito ang pag-iingat sa mga lugar na hindi lamang sa tao."
+    },
+    "inGame": {
+      "en": "Forest Balance falls as you clear forest and recovers slowly. Ask permission at the Dambana before clearing, and replant cleared land, to keep the spirits at peace.",
+      "fil": "Bumababa ang Forest Balance habang naglilinis ng gubat at dahan-dahang bumabalik. Humingi ng pahintulot sa Dambana bago maglinis at magtanim muli upang manatiling payapa ang mga espiritu."
+    },
+    "hint": {
+      "en": "Clear a lot of forest, or ask the spirits' leave.",
+      "fil": "Maglinis ng maraming gubat, o humingi ng pahintulot sa mga espiritu."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "forest-spirits"
+    }
+  },
+  "reviewed": false
+}

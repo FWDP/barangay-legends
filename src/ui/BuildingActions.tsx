@@ -27,8 +27,10 @@ export function BuildingMenu(props: {
   onDemolish: (x: number, y: number) => void;
   /** Pause or resume a workplace. */
   onPause: (x: number, y: number, paused: boolean) => void;
+  /** Open the Dambana's offerings and rituals (shrines only). */
+  onShrine?: () => void;
 }) {
-  const { state, content, target, onClose, onMove, onDemolish, onPause } = props;
+  const { state, content, target, onClose, onMove, onDemolish, onPause, onShrine } = props;
   const box = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
   const building = target ? buildingAt(state, target.x, target.y) : undefined;
@@ -116,6 +118,16 @@ export function BuildingMenu(props: {
         </p>
       )}
       <div className="flex flex-col gap-1.5">
+        {def.shrine && onShrine && (
+          <button
+            type="button"
+            role="menuitem"
+            onClick={onShrine}
+            className="game-btn flex items-center justify-between border-2 border-green-950 bg-green-700 px-3 py-1.5 text-sm font-semibold text-white"
+          >
+            <span>🕯️ Offerings and rituals</span>
+          </button>
+        )}
         <button
           type="button"
           role="menuitem"

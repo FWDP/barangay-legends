@@ -1,0 +1,36 @@
+{
+  "id": "bathala",
+  "name": "Bathala",
+  "description": "The supreme deity of the Tagalogs, creator of the world, as Plasencia recorded.",
+  "tradition": "Tagalog",
+  "sources": [
+    "Juan de Plasencia, Customs of the Tagalogs (1589), in Blair and Robertson, The Philippine Islands 1493–1898, vol. 7",
+    "F. Landa Jocano, Philippine Mythology (Community Publishers, 1969)",
+    "https://en.wikipedia.org/wiki/Bathala"
+  ],
+  "aklat": {
+    "order": 7,
+    "icon": "☀️",
+    "name": {
+      "en": "Bathala",
+      "fil": "Bathala"
+    },
+    "lore": {
+      "en": "Plasencia wrote in 1589 that the Tagalogs honored Bathala above all others as the maker of all things. Bathala was not approached for everyday favors: those went to the anito. In the stories Bathala is distant and great. This game names Bathala only in story, never as a power to buy or call.",
+      "fil": "Isinulat ni Plasencia noong 1589 na iginagalang ng mga Tagalog si Bathala higit sa lahat bilang lumikha ng lahat ng bagay. Hindi kay Bathala hinihingi ang pang-araw-araw na pabor: sa anito iyon. Sa mga kuwento, malayo at dakila si Bathala. Sa larong ito, sa kuwento lamang binabanggit si Bathala, hindi kailanman bilang kapangyarihang mabibili o matatawag."
+    },
+    "inGame": {
+      "en": "Only in story: Bathala is never a blessing or a reward.",
+      "fil": "Sa kuwento lamang: hindi kailanman basbas o gantimpala si Bathala."
+    },
+    "hint": {
+      "en": "Choose the Tagalog tradition at the Dambana.",
+      "fil": "Piliin ang tradisyong Tagalog sa Dambana."
+    },
+    "unlock": {
+      "type": "tradition",
+      "tradition": "tagalog"
+    }
+  },
+  "reviewed": false
+}

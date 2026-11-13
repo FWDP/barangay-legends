@@ -212,3 +212,23 @@ describe("stale news", () => {
     expect(m.message?.kind).not.toBe("news");
   });
 });
+
+describe("worship and the spirits in words", () => {
+  it("tells the spirits' message, Aklat finds and events", () => {
+    const tagalog = fresh({ tradition: "tagalog" });
+    const spirit = content.traditions.find((t) => t.id === "tagalog")!.forestSpirit;
+    expect(historyLine({ at: 1, kind: "spirits", stage: 1 }, content, game, "en", tagalog)).toContain(spirit.stage1.en);
+    expect(historyLine({ at: 1, kind: "spirits", stage: 2 }, content, game, "en", tagalog)).toContain(`−${content.rules.forest.riceWithheldPercent}%`);
+    expect(historyLine({ at: 1, kind: "aklat", entry: "kapre" }, content, game, "en")).toBe("New in the Aklat ng Alamat: Kapre");
+    expect(historyLine({ at: 1, kind: "event", event: "eclipseWon", favor: 15, amounts: { gold: 10 } }, content, game, "en")).toContain("+15 Favor, +10 gold");
+    expect(historyLine({ at: 1, kind: "event", event: "sarimanok", amounts: { gold: 7 } }, content, game, "en")).toContain("🪙 7");
+  });
+
+  it("announces Aklat finds and the spirits' anger as news", () => {
+    const s = fresh({ time: 10, resources: { rice: 1000, wood: 0, gold: 0 }, villagers: 2 });
+    const input = (state: GameState) => ({ state, content, advisor: ui.advisor, lang: "en" as const, tipsOn: true, blocked: false, game });
+    let m = advise(newModel({ ...NEW_MEMORY, tutorial: "done" }, s, content), input(s));
+    m = advise(m, input({ ...s, time: 11, history: [{ at: 11, kind: "aklat", entry: "babaylan" }] }));
+    expect(m.message).toMatchObject({ kind: "news", text: "New in the Aklat ng Alamat: Babaylan" });
+  });
+});

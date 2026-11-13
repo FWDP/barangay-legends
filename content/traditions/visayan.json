@@ -1,0 +1,63 @@
+{
+  "id": "visayan",
+  "order": 2,
+  "name": {
+    "en": "Visayan",
+    "fil": "Bisaya"
+  },
+  "description": {
+    "en": "The peoples of the central islands, recorded in the Boxer Codex and in Alcina's history of the Bisayans.",
+    "fil": "Ang mga mamamayan ng gitnang mga pulo, na naitala sa Boxer Codex at sa kasaysayan ni Alcina tungkol sa mga Bisaya."
+  },
+  "beings": [
+    "anito",
+    "diwata",
+    "bakunawa",
+    "kapre",
+    "forest-spirits"
+  ],
+  "rituals": {
+    "offering": {
+      "en": "Halad",
+      "fil": "Halad"
+    },
+    "permission": {
+      "en": "Asking the diwata's leave",
+      "fil": "Paghingi ng pahintulot sa diwata"
+    },
+    "healer": {
+      "en": "Babaylan",
+      "fil": "Babaylan"
+    }
+  },
+  "burial": {
+    "en": "The honored dead were placed in carved wooden coffins or jars, sometimes reburied later in jars (Scott).",
+    "fil": "Inilalagay ang mga pinarangalang patay sa inukit na kabaong o sa banga, kung minsan ay inililipat sa banga pagkaraan (Scott)."
+  },
+  "forestSpirit": {
+    "name": {
+      "en": "The diwata of the forest",
+      "fil": "Ang diwata ng gubat"
+    },
+    "stage1": {
+      "en": "The diwata watch the felled trees. Small mischief follows those who cut without asking.",
+      "fil": "Nagmamasid ang diwata sa mga pinutol na puno. May munting gulo sa mga pumuputol nang hindi nagpapaalam."
+    },
+    "stage2": {
+      "en": "The diwata withhold their gifts: the rice will not ripen as it should while the forest suffers.",
+      "fil": "Ipinagkakait ng diwata ang kanilang biyaya: hindi mahihinog nang wasto ang palay habang naghihirap ang gubat."
+    },
+    "sources": [
+      "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+      "https://en.wikipedia.org/wiki/Diwata"
+    ]
+  },
+  "sarimanokChance": 1,
+  "tradition": "Visayan",
+  "reviewed": false,
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Boxer Codex (c. 1590), Lilly Library, Indiana University",
+    "https://en.wikipedia.org/wiki/Boxer_Codex"
+  ]
+}

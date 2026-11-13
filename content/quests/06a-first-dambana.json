@@ -1,0 +1,18 @@
+{
+  "id": "first-dambana",
+  "text": {
+    "en": "Build a Dambana near the babaylan",
+    "fil": "Magtayo ng Dambana malapit sa babaylan"
+  },
+  "condition": {
+    "type": "built",
+    "building": "dambana",
+    "count": 1
+  },
+  "reward": {
+    "resources": {
+      "rice": 20
+    }
+  },
+  "next": "aklat-five"
+}

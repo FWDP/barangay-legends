@@ -167,7 +167,9 @@ function onSecond(state: GameState, content: Content, second: number, rng: Rng):
 
   // New disasters, in a fixed order so the rolls are reproducible.
   if (sickness && s.sick.length === 0 && s.villagers > 0 && ready(sickness.id, sickness.startsAfterSeconds)) {
-    if (rng.next() < sickness.chancePerSecond) {
+    // Slightly more likely while the forest spirits are angry.
+    const angry = !content.ai && s.forest.stage >= 2 ? 1 + content.rules.forest.sicknessPercent / 100 : 1;
+    if (rng.next() < sickness.chancePerSecond * angry) {
       const cases = Math.min(sickness.firstCases, s.villagers);
       s = {
         ...s,

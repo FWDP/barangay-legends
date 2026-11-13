@@ -1,51 +1,343 @@
 {
   "_comment": "In-game labels for Mga Gawain, named villagers, the barangay history, the share card and the adviser's news, in every language. Text may use the {placeholders} shown; the game checks them. Filipino text needs a native speaker's review.",
   "gawain": {
-    "title": { "en": "Mga Gawain", "fil": "Mga Gawain" },
-    "reward": { "en": "Reward: {reward}", "fil": "Gantimpala: {reward}" },
-    "titleReward": { "en": "the title {title}", "fil": "ang titulong {title}" },
-    "progress": { "en": "{have} of {need}", "fil": "{have} sa {need}" },
-    "count": { "en": "Task {n} of {total}", "fil": "Gawain {n} sa {total}" },
-    "moreSoon": { "en": "More tasks coming soon.", "fil": "May darating pang mga gawain." },
-    "allDone": { "en": "All {total} tasks done!", "fil": "Tapos na ang lahat ng {total} gawain!" },
-    "open": { "en": "Show tasks", "fil": "Ipakita ang mga gawain" },
-    "close": { "en": "Hide tasks", "fil": "Itago ang mga gawain" },
-    "history": { "en": "Barangay history", "fil": "Kasaysayan ng barangay" },
-    "noHistory": { "en": "Nothing written down yet.", "fil": "Wala pang naitala." }
+    "title": {
+      "en": "Mga Gawain",
+      "fil": "Mga Gawain"
+    },
+    "reward": {
+      "en": "Reward: {reward}",
+      "fil": "Gantimpala: {reward}"
+    },
+    "titleReward": {
+      "en": "the title {title}",
+      "fil": "ang titulong {title}"
+    },
+    "progress": {
+      "en": "{have} of {need}",
+      "fil": "{have} sa {need}"
+    },
+    "count": {
+      "en": "Task {n} of {total}",
+      "fil": "Gawain {n} sa {total}"
+    },
+    "moreSoon": {
+      "en": "More tasks coming soon.",
+      "fil": "May darating pang mga gawain."
+    },
+    "allDone": {
+      "en": "All {total} tasks done!",
+      "fil": "Tapos na ang lahat ng {total} gawain!"
+    },
+    "open": {
+      "en": "Show tasks",
+      "fil": "Ipakita ang mga gawain"
+    },
+    "close": {
+      "en": "Hide tasks",
+      "fil": "Itago ang mga gawain"
+    },
+    "history": {
+      "en": "Barangay history",
+      "fil": "Kasaysayan ng barangay"
+    },
+    "noHistory": {
+      "en": "Nothing written down yet.",
+      "fil": "Wala pang naitala."
+    }
   },
   "roles": {
-    "villager": { "en": "Villager", "fil": "Taga-barangay" },
-    "farmer": { "en": "Farmer", "fil": "Magsasaka" },
-    "woodcutter": { "en": "Woodcutter", "fil": "Mangangahoy" },
-    "fisher": { "en": "Fisher", "fil": "Mangingisda" },
-    "warrior": { "en": "Mandirigma", "fil": "Mandirigma" }
+    "villager": {
+      "en": "Villager",
+      "fil": "Taga-barangay"
+    },
+    "farmer": {
+      "en": "Farmer",
+      "fil": "Magsasaka"
+    },
+    "woodcutter": {
+      "en": "Woodcutter",
+      "fil": "Mangangahoy"
+    },
+    "fisher": {
+      "en": "Fisher",
+      "fil": "Mangingisda"
+    },
+    "warrior": {
+      "en": "Mandirigma",
+      "fil": "Mandirigma"
+    }
   },
   "history": {
-    "named": { "en": "{story} joined the barangay.", "fil": "{story}: sumama sa barangay." },
-    "left": { "en": "{name} left the barangay.", "fil": "Umalis si {name} sa barangay." },
-    "leftHunger": { "en": "{name} left: there was not enough rice.", "fil": "Umalis si {name}: kulang ang bigas." },
-    "leftCrowded": { "en": "{name} left: there was no house for them.", "fil": "Umalis si {name}: walang bahay para sa kanila." },
-    "fell": { "en": "{name} fell defending the barangay.", "fil": "Nasawi si {name} sa pagtatanggol sa barangay." },
-    "task": { "en": "Task done: {task}.", "fil": "Natapos ang gawain: {task}." }
+    "named": {
+      "en": "{story} joined the barangay.",
+      "fil": "{story}: sumama sa barangay."
+    },
+    "left": {
+      "en": "{name} left the barangay.",
+      "fil": "Umalis si {name} sa barangay."
+    },
+    "leftHunger": {
+      "en": "{name} left: there was not enough rice.",
+      "fil": "Umalis si {name}: kulang ang bigas."
+    },
+    "leftCrowded": {
+      "en": "{name} left: there was no house for them.",
+      "fil": "Umalis si {name}: walang bahay para sa kanila."
+    },
+    "fell": {
+      "en": "{name} fell defending the barangay.",
+      "fil": "Nasawi si {name} sa pagtatanggol sa barangay."
+    },
+    "task": {
+      "en": "Task done: {task}.",
+      "fil": "Natapos ang gawain: {task}."
+    }
   },
   "villager": {
-    "sick": { "en": "Sick: resting until well.", "fil": "May sakit: nagpapahinga hanggang gumaling." },
-    "close": { "en": "Close", "fil": "Isara" },
-    "ledDefense": { "en": "{name} led the defense.", "fil": "Si {name} ang nanguna sa pagtatanggol." }
+    "sick": {
+      "en": "Sick: resting until well.",
+      "fil": "May sakit: nagpapahinga hanggang gumaling."
+    },
+    "close": {
+      "en": "Close",
+      "fil": "Isara"
+    },
+    "ledDefense": {
+      "en": "{name} led the defense.",
+      "fil": "Si {name} ang nanguna sa pagtatanggol."
+    }
   },
   "news": {
-    "taskDone": { "en": "Task done: {task}! {reward}", "fil": "Tapos na ang gawain: {task}! {reward}" },
-    "next": { "en": "Next: {task}.", "fil": "Susunod: {task}." },
-    "title": { "en": "The people now call you {title}.", "fil": "Tinatawag ka na ngayong {title}." },
-    "moreSoon": { "en": "That was the last task for now. More tasks coming soon.", "fil": "Iyan ang huling gawain sa ngayon. May darating pang mga gawain." },
-    "firstNamed": { "en": "Meet {story}. Tap a villager with a star to hear their story.", "fil": "Kilalanin: {story}. Pindutin ang taong may bituin para sa kanilang kuwento." }
+    "taskDone": {
+      "en": "Task done: {task}! {reward}",
+      "fil": "Tapos na ang gawain: {task}! {reward}"
+    },
+    "next": {
+      "en": "Next: {task}.",
+      "fil": "Susunod: {task}."
+    },
+    "title": {
+      "en": "The people now call you {title}.",
+      "fil": "Tinatawag ka na ngayong {title}."
+    },
+    "moreSoon": {
+      "en": "That was the last task for now. More tasks coming soon.",
+      "fil": "Iyan ang huling gawain sa ngayon. May darating pang mga gawain."
+    },
+    "firstNamed": {
+      "en": "Meet {story}. Tap a villager with a star to hear their story.",
+      "fil": "Kilalanin: {story}. Pindutin ang taong may bituin para sa kanilang kuwento."
+    }
   },
   "share": {
-    "button": { "en": "Share my barangay", "fil": "Ibahagi ang aking barangay" },
-    "villagers": { "en": "{n} villagers", "fil": "{n} taga-barangay" },
-    "datu": { "en": "Datu {datu}", "fil": "Datu {datu}" },
-    "text": { "en": "My barangay in Barangay Legends", "fil": "Ang aking barangay sa Barangay Legends" },
-    "saved": { "en": "Picture saved", "fil": "Na-save ang larawan" },
-    "failed": { "en": "Couldn't make the picture", "fil": "Hindi magawa ang larawan" }
+    "button": {
+      "en": "Share my barangay",
+      "fil": "Ibahagi ang aking barangay"
+    },
+    "villagers": {
+      "en": "{n} villagers",
+      "fil": "{n} taga-barangay"
+    },
+    "datu": {
+      "en": "Datu {datu}",
+      "fil": "Datu {datu}"
+    },
+    "text": {
+      "en": "My barangay in Barangay Legends",
+      "fil": "Ang aking barangay sa Barangay Legends"
+    },
+    "saved": {
+      "en": "Picture saved",
+      "fil": "Na-save ang larawan"
+    },
+    "failed": {
+      "en": "Couldn't make the picture",
+      "fil": "Hindi magawa ang larawan"
+    }
+  },
+  "aklat": {
+    "title": {
+      "en": "Aklat ng Alamat",
+      "fil": "Aklat ng Alamat"
+    },
+    "progress": {
+      "en": "{found} of {total} found",
+      "fil": "{found} sa {total} natagpuan"
+    },
+    "tradition": {
+      "en": "Tradition: {tradition}",
+      "fil": "Tradisyon: {tradition}"
+    },
+    "inGame": {
+      "en": "In the game",
+      "fil": "Sa laro"
+    },
+    "sources": {
+      "en": "Sources",
+      "fil": "Mga sanggunian"
+    },
+    "locked": {
+      "en": "Not found yet",
+      "fil": "Hindi pa natatagpuan"
+    },
+    "hint": {
+      "en": "Hint: {hint}",
+      "fil": "Pahiwatig: {hint}"
+    },
+    "review": {
+      "en": "Not yet reviewed by a historian.",
+      "fil": "Hindi pa nasusuri ng historyador."
+    },
+    "open": {
+      "en": "Aklat ng Alamat",
+      "fil": "Aklat ng Alamat"
+    },
+    "found": {
+      "en": "New in the Aklat ng Alamat: {name}",
+      "fil": "Bago sa Aklat ng Alamat: {name}"
+    }
+  },
+  "dambana": {
+    "title": {
+      "en": "Dambana",
+      "fil": "Dambana"
+    },
+    "favor": {
+      "en": "Favor {favor}",
+      "fil": "Favor {favor}"
+    },
+    "chooseTitle": {
+      "en": "Choose your barangay's tradition",
+      "fil": "Piliin ang tradisyon ng iyong barangay"
+    },
+    "chooseText": {
+      "en": "The babaylan asks which ancestors' ways the barangay follows. It decides the beings and rituals you meet. You can change it later at a cost.",
+      "fil": "Itinatanong ng babaylan kung kaninong kaugalian ng ninuno sumusunod ang barangay. Ito ang magpapasya sa mga nilalang at ritwal na makikilala mo. Mababago ito sa ibang pagkakataon nang may bayad."
+    },
+    "choose": {
+      "en": "Follow this tradition",
+      "fil": "Sundin ang tradisyong ito"
+    },
+    "change": {
+      "en": "Change tradition ({cost})",
+      "fil": "Palitan ang tradisyon ({cost})"
+    },
+    "offer": {
+      "en": "Make an offering",
+      "fil": "Maghandog"
+    },
+    "offerHint": {
+      "en": "Offerings build Favor. The babaylan leads every ritual.",
+      "fil": "Nagpaparami ng Favor ang handog. Pinangungunahan ng babaylan ang bawat ritwal."
+    },
+    "bless": {
+      "en": "Perform",
+      "fil": "Isagawa"
+    },
+    "cooldown": {
+      "en": "Ready in {time}",
+      "fil": "Handa sa loob ng {time}"
+    },
+    "active": {
+      "en": "Active: {time} left",
+      "fil": "Aktibo: {time} pa"
+    },
+    "permission": {
+      "en": "Ask permission before clearing ({cost} Favor)",
+      "fil": "Humingi ng pahintulot bago maglinis ({cost} Favor)"
+    },
+    "permissionActive": {
+      "en": "Permission given: {tiles} more tiles",
+      "fil": "May pahintulot: {tiles} pang bahagi"
+    },
+    "needTradition": {
+      "en": "Choose a tradition first.",
+      "fil": "Pumili muna ng tradisyon."
+    },
+    "needFavor": {
+      "en": "Not enough Favor.",
+      "fil": "Kulang ang Favor."
+    },
+    "close": {
+      "en": "Close",
+      "fil": "Isara"
+    },
+    "burial": {
+      "en": "Burial: {style}",
+      "fil": "Paglilibing: {style}"
+    },
+    "healer": {
+      "en": "Ritual leader: {name}",
+      "fil": "Tagapanguna sa ritwal: {name}"
+    }
+  },
+  "forest": {
+    "label": {
+      "en": "Forest Balance {balance}",
+      "fil": "Balanse ng Gubat {balance}"
+    },
+    "tip": {
+      "en": "Clearing forest lowers it; it recovers when the axes rest, faster with more forest and old balete. Ask permission at the Dambana, or replant, to make amends.",
+      "fil": "Bumababa ito sa paglilinis ng gubat; bumabalik kapag nagpapahinga ang palakol, mas mabilis kung maraming gubat at matandang balete. Humingi ng pahintulot sa Dambana o magtanim muli."
+    },
+    "stage1": {
+      "en": "The spirits are restless: kapre pranks and tikbalang tricks.",
+      "fil": "Balisa ang mga espiritu: biro ng kapre at panlilinlang ng tikbalang."
+    },
+    "stage2": {
+      "en": "The spirits are angry: rice −{percent}%, more sickness.",
+      "fil": "Galit ang mga espiritu: bigas −{percent}%, mas maraming sakit."
+    },
+    "replant": {
+      "en": "Magtanim (replant) · {cost}",
+      "fil": "Magtanim · {cost}"
+    },
+    "replanting": {
+      "en": "Growing back: {time}",
+      "fil": "Tumutubo: {time}"
+    },
+    "prank": {
+      "en": "A kapre hid the tools at the {building}: back in {time}.",
+      "fil": "Itinago ng kapre ang kasangkapan sa {building}: babalik sa {time}."
+    }
+  },
+  "events": {
+    "eclipse": {
+      "en": "The moon is darkening: the Bakunawa! Beat the gongs!",
+      "fil": "Dumidilim ang buwan: ang Bakunawa! Paluin ang mga gong!"
+    },
+    "gong": {
+      "en": "Beat the gong",
+      "fil": "Paluin ang gong"
+    },
+    "gongs": {
+      "en": "{taps} of {needed}",
+      "fil": "{taps} sa {needed}"
+    },
+    "eclipseWon": {
+      "en": "The serpent let go of the moon! +{favor} Favor, +{gold} gold.",
+      "fil": "Binitawan ng ahas ang buwan! +{favor} Favor, +{gold} ginto."
+    },
+    "eclipseLost": {
+      "en": "The serpent ate part of the night: you lost {rice} rice.",
+      "fil": "Kinain ng ahas ang bahagi ng gabi: nawalan ka ng {rice} bigas."
+    },
+    "tikbalang": {
+      "en": "A tikbalang led {n} workers astray! Answer its riddle:",
+      "fil": "Inililigaw ng tikbalang ang {n} manggagawa! Sagutin ang bugtong nito:"
+    },
+    "right": {
+      "en": "Right! The workers found their way home.",
+      "fil": "Tama! Nakauwi na ang mga manggagawa."
+    },
+    "wrong": {
+      "en": "Wrong. They'll be back in {time}.",
+      "fil": "Mali. Babalik sila sa loob ng {time}."
+    },
+    "sarimanok": {
+      "en": "The Sarimanok gave you {gift}!",
+      "fil": "Binigyan ka ng Sarimanok ng {gift}!"
+    }
   }
 }

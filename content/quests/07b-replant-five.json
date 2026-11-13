@@ -1,0 +1,18 @@
+{
+  "id": "replant-five",
+  "text": {
+    "en": "Replant 5 tiles of forest",
+    "fil": "Magtanim muli ng 5 bahagi ng gubat"
+  },
+  "condition": {
+    "type": "replanted",
+    "count": 5
+  },
+  "reward": {
+    "title": {
+      "en": "Friend of the Forest",
+      "fil": "Kaibigan ng Gubat"
+    }
+  },
+  "next": "fifteen-villagers"
+}

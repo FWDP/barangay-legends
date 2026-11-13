@@ -1,0 +1,63 @@
+{
+  "id": "tagalog",
+  "order": 1,
+  "name": {
+    "en": "Tagalog",
+    "fil": "Tagalog"
+  },
+  "description": {
+    "en": "The lowland peoples around Manila Bay and Laguna de Bay, as Spanish writers such as Juan de Plasencia described them in 1589.",
+    "fil": "Ang mga taga-kapatagan sa paligid ng Look ng Maynila at Lawa ng Laguna, ayon sa paglalarawan ng mga manunulat na Espanyol gaya ni Juan de Plasencia noong 1589."
+  },
+  "beings": [
+    "bathala",
+    "anito",
+    "diwata",
+    "kapre",
+    "tikbalang",
+    "forest-spirits"
+  ],
+  "rituals": {
+    "offering": {
+      "en": "Pag-aalay",
+      "fil": "Pag-aalay"
+    },
+    "permission": {
+      "en": "Tabi-tabi po: asking the spirits' leave",
+      "fil": "Tabi-tabi po: paghingi ng pahintulot"
+    },
+    "healer": {
+      "en": "Katalonan",
+      "fil": "Katalonan"
+    }
+  },
+  "burial": {
+    "en": "The dead were laid near the house with food and belongings, and the household mourned with set customs (Plasencia).",
+    "fil": "Inililibing ang patay malapit sa bahay kasama ang pagkain at mga gamit, at nagluluksa ang sambahayan ayon sa kaugalian (Plasencia)."
+  },
+  "forestSpirit": {
+    "name": {
+      "en": "The nuno and the spirits of the trees",
+      "fil": "Ang nuno at ang mga espiritu ng puno"
+    },
+    "stage1": {
+      "en": "Rustling from the old trees: someone is cutting without asking. The kapre are getting restless.",
+      "fil": "May kaluskos sa matatandang puno: may pumuputol nang hindi nagpapaalam. Nababagabag ang mga kapre."
+    },
+    "stage2": {
+      "en": "The spirits of the trees are angry. The fields will not give their full harvest until the forest is respected.",
+      "fil": "Galit ang mga espiritu ng puno. Hindi ibibigay ng bukid ang buong ani hangga't hindi iginagalang ang gubat."
+    },
+    "sources": [
+      "Maximo D. Ramos, The Creatures of Philippine Lower Mythology (University of the Philippines Press, 1971)",
+      "https://en.wikipedia.org/wiki/Nuno_sa_punso"
+    ]
+  },
+  "sarimanokChance": 1,
+  "tradition": "Tagalog",
+  "reviewed": false,
+  "sources": [
+    "Juan de Plasencia, Customs of the Tagalogs (1589), in Blair and Robertson, The Philippine Islands 1493–1898, vol. 7",
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+  ]
+}

@@ -27,16 +27,20 @@ export const TRIGGERS = [
   "event-fire",
   "rice-low",
   "food-workers",
+  "forest-angry",
   "event-typhoon",
   "event-sickness",
   "trade-offer",
   "refused-raids",
+  "forest-restless",
   "no-path",
   "old-paths",
   "borrowing",
   "unlocked",
   "unstaffed",
   "roads",
+  "dambana",
+  "aklat",
   "idle",
 ] as const;
 /** Listed most urgent first: when several hold at once, the adviser speaks about the first. */
@@ -103,6 +107,13 @@ export const GAME_TEXT = {
   villager: { sick: [], close: [], ledDefense: ["name"] },
   news: { taskDone: ["task", "reward"], next: ["task"], title: ["title"], moreSoon: [], firstNamed: ["story"] },
   share: { button: [], villagers: ["n"], datu: ["datu"], text: [], saved: [], failed: [] },
+  aklat: { title: [], progress: ["found", "total"], tradition: ["tradition"], inGame: [], sources: [], locked: [], hint: ["hint"], review: [], open: [], found: ["name"] },
+  dambana: {
+    title: [], favor: ["favor"], chooseTitle: [], chooseText: [], choose: [], change: ["cost"], offer: [], offerHint: [], bless: [], cooldown: ["time"],
+    active: ["time"], permission: ["cost"], permissionActive: ["tiles"], needTradition: [], needFavor: [], close: [], burial: ["style"], healer: ["name"],
+  },
+  forest: { label: ["balance"], tip: [], stage1: [], stage2: ["percent"], replant: ["cost"], replanting: ["time"], prank: ["building", "time"] },
+  events: { eclipse: [], gong: [], gongs: ["taps", "needed"], eclipseWon: ["favor", "gold"], eclipseLost: ["rice"], tikbalang: ["n"], right: [], wrong: ["time"], sarimanok: ["gift"] },
 } as const satisfies Record<string, Record<string, readonly string[]>>;
 
 export type GameText = { [G in keyof typeof GAME_TEXT]: { [K in keyof (typeof GAME_TEXT)[G]]: Localized } };
@@ -189,6 +200,10 @@ const LINE_VARS: Record<TriggerId, string[]> = {
   "old-paths": ["building"],
   roads: ["percent"],
   borrowing: ["building"],
+  "forest-angry": [],
+  "forest-restless": [],
+  dambana: [],
+  aklat: [],
   idle: [],
 };
 

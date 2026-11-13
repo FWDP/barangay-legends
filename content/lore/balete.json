@@ -7,5 +7,31 @@
   "sources": [
     "Maximo D. Ramos, The Creatures of Philippine Lower Mythology (University of the Philippines Press, 1971)",
     "https://en.wikipedia.org/wiki/Kapre"
-  ]
+  ],
+  "aklat": {
+    "order": 1,
+    "icon": "🌳",
+    "name": {
+      "en": "Old balete tree",
+      "fil": "Matandang puno ng balete"
+    },
+    "lore": {
+      "en": "The balete is a strangler fig that grows around other trees until it stands alone, hollow and huge. In Tagalog and other lowland folklore, old balete trees are homes of spirits such as the kapre. People passing one would ask permission or keep their distance. Cutting one down was thought to invite misfortune.",
+      "fil": "Ang balete ay punong sumasakal sa ibang puno hanggang sa ito na lamang ang matira, guwang at napakalaki. Sa alamat ng mga Tagalog at iba pang taga-kapatagan, tahanan ng mga espiritu gaya ng kapre ang matatandang balete. Humihingi ng pahintulot o lumalayo ang mga dumaraan. Pinaniniwalaang nagdadala ng kamalasan ang pagputol nito."
+    },
+    "inGame": {
+      "en": "A few old balete stand in the forest. While one stands, nearby Woodcutter Camps get Kapre's grove bonus. Felling one can't be undone.",
+      "fil": "May ilang matandang balete sa gubat. Habang nakatayo ito, may dagdag na kahoy ang kalapit na Woodcutter Camp. Hindi na maibabalik kapag pinutol."
+    },
+    "hint": {
+      "en": "Clear land up to an old tree in the forest.",
+      "fil": "Maglinis ng lupa hanggang sa isang matandang puno sa gubat."
+    },
+    "unlock": {
+      "type": "near",
+      "tile": "balete",
+      "radius": 3
+    }
+  },
+  "reviewed": false
 }

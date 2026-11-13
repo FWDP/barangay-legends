@@ -15,6 +15,8 @@ import { checkTasks } from "./gawain";
 import { nextHappiness } from "./happiness";
 import { reconcilePeople } from "./people";
 import { capGrowth, riceCap } from "./storage";
+import { checkAklat } from "./aklat";
+import { advanceReplanting, afterClearing, updateForest } from "./forest";
 
 export interface OfflineReport {
   /** Seconds credited (after the cap). */
@@ -53,7 +55,8 @@ interface StepResult {
  * rice runs out), newcomers while fed and there is room, recovery, and land clearing.
  */
 export function gentleStep(state: GameState, content: Content, dt: number): StepResult {
-  const r = rates(state, content);
+  // No forest reactions offline: the diwata don't withhold rice while the player is away.
+  const r = rates(state, content, { offline: true });
   const resources = { ...state.resources };
   const produced = zero();
   // The share of the step the barangay is fed (workers stop at 0 rice).
@@ -87,12 +90,16 @@ export function gentleStep(state: GameState, content: Content, dt: number): Step
   let cleared = 0;
   if (fed > 0 && s.clearing.length > 0) {
     const before = s.resources.wood;
+    const prev = s;
     const done = advanceClearing(s, content, dt * fed, false);
-    s = done.state;
+    s = content.ai ? done.state : afterClearing(prev, done.state, content);
     cleared = done.cleared;
     produced.wood += s.resources.wood - before;
   }
   // Newcomers may get names; recoveries clear named villagers' sickness. Then tasks met are credited.
+  // The forest recovers (and replanting goes on) offline, but the spirits don't react: no
+  // pranks, no tikbalang, no messages. Aklat entries met (e.g. a new building) are found.
+  if (!content.ai) s = checkAklat(updateForest(fed > 0 ? advanceReplanting(s, content, dt * fed) : s, content, dt, false), content);
   s = checkTasks(reconcilePeople(state, s, content), content);
   return { state: s, produced, eaten, hungry: dt * (1 - fed), arrived, recovered, cleared };
 }
@@ -188,6 +195,12 @@ export function offlineProgress(state: GameState, content: Content, awaySeconds:
     hunger: 0,
     typhoon: s.typhoon ? { strikeAt: s.typhoon.strikeAt + seconds } : null,
     buildings: s.buildings.map((b) => (b.burningSince === undefined ? b : { ...b, burningSince: b.burningSince + seconds })),
+    // Time away doesn't count as neglecting the Dambana, and the beings who were here wait too.
+    lastRitualAt: s.lastRitualAt === null ? null : s.lastRitualAt + seconds,
+    eclipse: s.eclipse ? { ...s.eclipse, endsAt: s.eclipse.endsAt + seconds } : null,
+    tikbalang: s.tikbalang ? { ...s.tikbalang, until: s.tikbalang.until + seconds } : null,
+    sarimanok: s.sarimanok ? { ...s.sarimanok, at: s.sarimanok.at + seconds, until: s.sarimanok.until + seconds } : null,
+    pranks: s.pranks.map((p) => ({ ...p, until: p.until + seconds })),
   };
   if (region) {
     // A raid paused while away also keeps trading paused: the offer's time stands still too.

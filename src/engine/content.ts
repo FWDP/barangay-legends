@@ -46,6 +46,10 @@ export interface BuildingDef {
   placeNextTo?: string[];
   /** Storage added per copy (a Kamalig: +100 rice). */
   storage?: ResourceAmounts;
+  /** A shrine (the Dambana): where offerings and rituals happen. */
+  shrine?: boolean;
+  /** It must stand within `radius` tiles (straight line) of a standing building of this type. */
+  requiresNear?: { building: string; radius: number };
   /** Available from the start, or once the barangay has this many villagers. */
   unlock: { start?: boolean; villagers?: number };
   sources: string[];
@@ -75,6 +79,9 @@ export interface Rules {
   staffing: StaffingRules;
   /** Resources the Gather buttons can give. */
   gatherable: Resource[];
+  dayNight: { daySeconds: number; nightFrom: number; nightTo: number };
+  worship: WorshipRules;
+  forest: ForestRules;
   /** Rice the barangay holds with no Kamalig. */
   storage: { baseRice: number };
   happiness: HappinessRules;
@@ -93,6 +100,163 @@ export interface HappinessRules {
   maxFromSick: number;
 }
 
+export interface WorshipRules {
+  offeringValues: ResourceAmounts;
+  favorPerValue: number;
+  maxFavor: number;
+  changeTraditionCost: ResourceAmounts;
+  neglectAfterSeconds: number;
+  neglectPerMinute: number;
+  neglectMax: number;
+  permission: { tiles: number; favorCost: number; balanceFactor: number };
+}
+
+export interface ForestRules {
+  start: number;
+  perTile: number;
+  perTileNearBalete: number;
+  baleteRadius: number;
+  baleteFelled: number;
+  quietSeconds: number;
+  recoveryPerMinute: number;
+  recoveryPerForestShare: number;
+  recoveryPerBalete: number;
+  stage1Below: number;
+  stage2Below: number;
+  prankChancePerSecond: number;
+  prankSeconds: number;
+  riceWithheldPercent: number;
+  sicknessPercent: number;
+  replant: { cost: ResourceAmounts; seconds: number; balance: number };
+}
+
+/** Cultural fields every being, ritual and lore entry carries (see docs/cultural-review.md). */
+export interface Heritage {
+  tradition: string;
+  sources: string[];
+  /** False until a historian or educator has checked it. */
+  reviewed: boolean;
+}
+
+/** A tradition the barangay follows (content/traditions): its beings, ritual names, burial style and forest spirit. */
+export interface TraditionDef extends Heritage {
+  id: string;
+  /** Position in the chooser (lower first). */
+  order?: number;
+  name: Text;
+  description: Text;
+  /** Aklat entries (lore ids) belonging to this tradition. */
+  beings: string[];
+  rituals: { offering: Text; permission: Text; healer: Text };
+  burial: Text;
+  forestSpirit: { name: Text; stage1: Text; stage2: Text; sources: string[] };
+  /** How much more often the Sarimanok visits (1 = the base rate). */
+  sarimanokChance: number;
+}
+
+/** A ritual at the Dambana, paid for with Favor. */
+export interface RitualDef extends Heritage {
+  id: string;
+  type: "ritual";
+  name: Text;
+  description: Text;
+  favorCost: number;
+  cooldownSeconds: number;
+  /** All production +percent while active. */
+  durationSeconds?: number;
+  productionPercent?: number;
+  /** Rice: this many minutes of the fields' current output, at once. */
+  riceMinutes?: number;
+  /** Forest Balance restored. */
+  forestRestore: number;
+  lore?: string;
+}
+
+/** The Sarimanok: a visitor crossing the map. */
+export interface VisitorDef extends Heritage {
+  id: string;
+  type: "visitor";
+  name: Text;
+  description: Text;
+  chancePerSecond: number;
+  minVillagers: number;
+  visibleSeconds: number;
+  cooldownSeconds: number;
+  /** A gift of one resource, an amount from [min, max]. */
+  rewards: Partial<Record<Resource, [number, number]>>;
+  lore?: string;
+}
+
+/** The Bakunawa eclipse: at night, tap the gongs. */
+export interface EclipseDef extends Heritage {
+  id: string;
+  type: "eclipse";
+  name: Text;
+  description: Text;
+  minVillagers: number;
+  chancePerSecond: number;
+  cooldownSeconds: number;
+  durationSeconds: number;
+  gongsNeeded: number;
+  success: { favor: number; gold: number };
+  failure: { ricePercent: number };
+  lore?: string;
+}
+
+export interface Riddle {
+  id: string;
+  question: Text;
+  options: Text[];
+  answer: number;
+}
+
+/** Tikbalang trickery: workers lost until a riddle is answered. */
+export interface TrickeryDef extends Heritage {
+  id: string;
+  type: "trickery";
+  name: Text;
+  description: Text;
+  minVillagers: number;
+  chancePerSecond: number;
+  lowForestMultiplier: number;
+  cooldownSeconds: number;
+  lostSeconds: number;
+  workersLost: number;
+  riddles: Riddle[];
+  lore?: string;
+}
+
+/** When an Aklat entry unlocks, checked by the engine from GameState. */
+export type AklatUnlock =
+  | { type: "built"; building: string }
+  | { type: "near"; tile: "balete"; radius: number }
+  | { type: "grove" }
+  | { type: "path"; path: string }
+  | { type: "flag"; flag: string }
+  | { type: "tradition"; tradition: string }
+  | { type: "report"; kind: string }
+  | { type: "any"; of: AklatUnlock[] };
+
+export interface AklatDef {
+  order: number;
+  /** Illustration placeholder. */
+  icon: string;
+  name: Text;
+  lore: Text;
+  inGame: Text;
+  hint: Text;
+  unlock: AklatUnlock;
+}
+
+/** A lore note that is an entry in the Aklat ng Alamat. */
+export interface AklatEntry {
+  id: string;
+  aklat: AklatDef;
+  tradition: string;
+  sources: string[];
+  reviewed: boolean;
+}
+
 /** Text in every language the game has. */
 export interface Text {
   en: string;
@@ -109,9 +273,12 @@ export type QuestCondition =
   | { type: "traded" }
   | { type: "warriors"; count: number }
   | { type: "raidsDefended"; count: number }
-  | { type: "tributaries"; count: number };
+  | { type: "tributaries"; count: number }
+  | { type: "aklat"; count: number }
+  | { type: "replanted"; count: number }
+  | { type: "permittedClears"; count: number };
 
-export const QUEST_CONDITIONS = ["built", "villagers", "tilesCleared", "connected", "survivedSeason", "traded", "warriors", "raidsDefended", "tributaries"] as const;
+export const QUEST_CONDITIONS = ["built", "villagers", "tilesCleared", "connected", "survivedSeason", "traded", "warriors", "raidsDefended", "tributaries", "aklat", "replanted", "permittedClears"] as const;
 
 /** One of the Mga Gawain: a task in a chain, with a reward (resources and/or a title for the datu). */
 export interface QuestDef {
@@ -507,6 +674,15 @@ export interface Content {
   /** Mga Gawain, in chain order (first task first). */
   quests: QuestDef[];
   villagers: VillagerContent;
+  traditions: TraditionDef[];
+  rituals: RitualDef[];
+  visitor: VisitorDef | null;
+  eclipse: EclipseDef | null;
+  trickery: TrickeryDef | null;
+  /** Aklat ng Alamat entries, in book order. */
+  aklat: AklatEntry[];
+  /** Set for AI barangays' content: no Forest Balance, Aklat or visitors for them. */
+  ai?: boolean;
 }
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
@@ -713,6 +889,28 @@ export function validateRules(raw: unknown): Rules {
     if (typeof raw.happiness[key] !== "number" || !Number.isFinite(raw.happiness[key])) throw new Error(`rules: "happiness.${key}" must be a number`);
   }
   if ((raw.happiness.start as number) > 100) throw new Error('rules: "happiness.start" must be 0–100');
+  const dn = raw.dayNight;
+  if (!isObject(dn)) throw new Error('rules: missing "dayNight"');
+  checkNumbers(dn, ["daySeconds"], "rules: dayNight", true);
+  checkNumbers(dn, ["nightFrom", "nightTo"], "rules: dayNight");
+  if ((dn.nightFrom as number) >= (dn.nightTo as number) || (dn.nightTo as number) > 1) throw new Error("rules: dayNight needs 0 <= nightFrom < nightTo <= 1");
+  const w = raw.worship;
+  if (!isObject(w)) throw new Error('rules: missing "worship"');
+  checkAmounts(w.offeringValues, "rules: worship.offeringValues");
+  checkAmounts(w.changeTraditionCost, "rules: worship.changeTraditionCost");
+  checkNumbers(w, ["favorPerValue", "maxFavor", "neglectAfterSeconds", "neglectPerMinute", "neglectMax"], "rules: worship");
+  if (!isObject(w.permission)) throw new Error('rules: missing "worship.permission"');
+  checkNumbers(w.permission, ["tiles", "favorCost", "balanceFactor"], "rules: worship.permission");
+  const f = raw.forest;
+  if (!isObject(f)) throw new Error('rules: missing "forest"');
+  checkNumbers(
+    f,
+    ["start", "perTile", "perTileNearBalete", "baleteRadius", "baleteFelled", "quietSeconds", "recoveryPerMinute", "recoveryPerForestShare", "recoveryPerBalete", "stage1Below", "stage2Below", "prankChancePerSecond", "prankSeconds", "riceWithheldPercent", "sicknessPercent"],
+    "rules: forest",
+  );
+  if (!isObject(f.replant)) throw new Error('rules: missing "forest.replant"');
+  checkAmounts(f.replant.cost, "rules: forest.replant.cost");
+  checkNumbers(f.replant, ["seconds", "balance"], "rules: forest.replant", true);
   return raw as unknown as Rules;
 }
 
@@ -975,6 +1173,121 @@ export function validateVillagers(raw: unknown, rawNames: unknown, buildingIds: 
   return { chance: raw.chance, names: names as string[], stories: raw.stories as unknown as VillagerStory[], roleBuildings: rb as VillagerContent["roleBuildings"] };
 }
 
+/** The cultural rule: a tradition, at least one source, and a reviewed flag. */
+function checkHeritage(raw: Record<string, unknown>, file: string) {
+  if (typeof raw.tradition !== "string" || raw.tradition === "") throw new Error(`${file}: needs a "tradition"`);
+  if (!Array.isArray(raw.sources) || raw.sources.length === 0 || !raw.sources.every((x) => typeof x === "string" && x !== "")) {
+    throw new Error(`${file}: needs at least one source`);
+  }
+  if (typeof raw.reviewed !== "boolean") throw new Error(`${file}: needs "reviewed": true or false`);
+}
+
+function checkText(v: unknown, where: string): Text {
+  if (!isText(v)) throw new Error(`${where} needs "en" and "fil" text`);
+  return v;
+}
+
+export function validateTradition(raw: unknown, file = "tradition"): TraditionDef {
+  if (!isObject(raw)) throw new Error(`${file}: must be a JSON object`);
+  checkStrings(raw, ["id"], file);
+  checkHeritage(raw, file);
+  for (const k of ["name", "description", "burial"]) checkText(raw[k], `${file}: ${k}`);
+  if (!Array.isArray(raw.beings) || !raw.beings.every((b) => typeof b === "string")) throw new Error(`${file}: "beings" must list lore ids`);
+  if (!isObject(raw.rituals)) throw new Error(`${file}: missing "rituals"`);
+  for (const k of ["offering", "permission", "healer"]) checkText(raw.rituals[k], `${file}: rituals.${k}`);
+  const fs = raw.forestSpirit;
+  if (!isObject(fs)) throw new Error(`${file}: missing "forestSpirit"`);
+  for (const k of ["name", "stage1", "stage2"]) checkText(fs[k], `${file}: forestSpirit.${k}`);
+  if (!Array.isArray(fs.sources) || fs.sources.length === 0) throw new Error(`${file}: forestSpirit needs a source`);
+  checkNumbers(raw, ["sarimanokChance"], file);
+  return raw as unknown as TraditionDef;
+}
+
+type Blessing = GroveBlessing | RitualDef | VisitorDef | EclipseDef | TrickeryDef;
+
+/** Checks one file in content/blessings: a grove, a ritual, a visitor or an event. */
+export function validateBlessing(raw: unknown, file = "blessing"): Blessing {
+  if (!isObject(raw)) throw new Error(`${file}: must be a JSON object`);
+  if (raw.type === "grove") {
+    const g = validateGrove(raw, file);
+    checkHeritage(raw, file);
+    return g;
+  }
+  checkStrings(raw, ["id"], file);
+  checkHeritage(raw, file);
+  checkText(raw.name, `${file}: name`);
+  checkText(raw.description, `${file}: description`);
+  switch (raw.type) {
+    case "ritual":
+      checkNumbers(raw, ["favorCost", "cooldownSeconds", "forestRestore"], file);
+      if (raw.productionPercent !== undefined) checkNumbers(raw, ["productionPercent", "durationSeconds"], file, true);
+      if (raw.riceMinutes !== undefined) checkNumbers(raw, ["riceMinutes"], file, true);
+      if (raw.productionPercent === undefined && raw.riceMinutes === undefined) throw new Error(`${file}: a ritual needs "productionPercent" or "riceMinutes"`);
+      return raw as unknown as RitualDef;
+    case "visitor": {
+      checkNumbers(raw, ["chancePerSecond", "minVillagers", "visibleSeconds", "cooldownSeconds"], file);
+      const r = raw.rewards;
+      if (!isObject(r) || Object.keys(r).length === 0) throw new Error(`${file}: "rewards" must list resources`);
+      for (const [k, v] of Object.entries(r)) {
+        if (!(RESOURCES as readonly string[]).includes(k) || !Array.isArray(v) || v.length !== 2 || !v.every(isNonNegNumber) || v[0] > v[1]) {
+          throw new Error(`${file}: rewards.${k} must be [min, max]`);
+        }
+      }
+      return raw as unknown as VisitorDef;
+    }
+    case "eclipse":
+      checkNumbers(raw, ["minVillagers", "chancePerSecond", "cooldownSeconds"], file);
+      checkNumbers(raw, ["durationSeconds", "gongsNeeded"], file, true);
+      if (!isObject(raw.success) || !isObject(raw.failure)) throw new Error(`${file}: needs "success" and "failure"`);
+      checkNumbers(raw.success, ["favor", "gold"], `${file}: success`);
+      checkNumbers(raw.failure, ["ricePercent"], `${file}: failure`);
+      return raw as unknown as EclipseDef;
+    case "trickery": {
+      checkNumbers(raw, ["minVillagers", "chancePerSecond", "lowForestMultiplier", "cooldownSeconds"], file);
+      checkNumbers(raw, ["lostSeconds", "workersLost"], file, true);
+      if (!Array.isArray(raw.riddles) || raw.riddles.length === 0) throw new Error(`${file}: needs at least one riddle`);
+      for (const r of raw.riddles) {
+        if (!isObject(r) || typeof r.id !== "string") throw new Error(`${file}: every riddle needs an "id"`);
+        checkText(r.question, `${file}: riddle ${r.id} question`);
+        if (!Array.isArray(r.options) || r.options.length < 2) throw new Error(`${file}: riddle ${r.id} needs at least two options`);
+        r.options.forEach((o, i) => checkText(o, `${file}: riddle ${r.id} option ${i}`));
+        if (!Number.isInteger(r.answer) || (r.answer as number) < 0 || (r.answer as number) >= r.options.length) throw new Error(`${file}: riddle ${r.id} "answer" must be an option's index`);
+      }
+      return raw as unknown as TrickeryDef;
+    }
+    default:
+      throw new Error(`${file}: unknown blessing type "${String(raw.type)}"`);
+  }
+}
+
+const UNLOCK_TYPES = ["built", "near", "grove", "path", "flag", "tradition", "report", "any"];
+
+function checkUnlock(u: unknown, where: string, ctx: { buildings: Set<string> }): void {
+  if (!isObject(u) || !UNLOCK_TYPES.includes(u.type as string)) throw new Error(`${where}: "unlock.type" must be one of ${UNLOCK_TYPES.join(", ")}`);
+  if (u.type === "built" && !ctx.buildings.has(u.building as string)) throw new Error(`${where}: unknown building "${String(u.building)}"`);
+  if (u.type === "near" && (u.tile !== "balete" || !isNonNegNumber(u.radius))) throw new Error(`${where}: "near" needs tile "balete" and a radius`);
+  for (const k of ["path", "flag", "tradition", "kind"] as const) {
+    if (u.type === (k === "kind" ? "report" : k) && (typeof u[k] !== "string" || u[k] === "")) throw new Error(`${where}: "${u.type}" needs "${k}"`);
+  }
+  if (u.type === "any") {
+    if (!Array.isArray(u.of) || u.of.length === 0) throw new Error(`${where}: "any" needs a list in "of"`);
+    for (const x of u.of) checkUnlock(x, where, ctx);
+  }
+}
+
+/** The Aklat part of a lore note (if it has one), with the cultural fields. */
+export function validateAklat(note: LoreNote, file: string, ctx: { buildings: Set<string> }): AklatEntry | null {
+  checkHeritage(note, file);
+  const a = note.aklat;
+  if (a === undefined) return null;
+  if (!isObject(a)) throw new Error(`${file}: "aklat" must be an object`);
+  if (!Number.isFinite(a.order)) throw new Error(`${file}: aklat.order must be a number`);
+  if (typeof a.icon !== "string" || a.icon === "") throw new Error(`${file}: aklat.icon is missing`);
+  for (const k of ["name", "lore", "inGame", "hint"]) checkText(a[k], `${file}: aklat.${k}`);
+  checkUnlock(a.unlock, `${file}: aklat`, ctx);
+  return { id: note.id, aklat: a as unknown as AklatDef, tradition: note.tradition!, sources: note.sources, reviewed: note.reviewed as boolean };
+}
+
 export function buildContent(
   buildingFiles: Record<string, unknown>,
   rawRules: unknown,
@@ -983,7 +1296,7 @@ export function buildContent(
   blessingFiles: Record<string, unknown> = {},
   neighborFiles: Record<string, unknown> = {},
   choiceFiles: Record<string, unknown> = {},
-  extra: { quests?: Record<string, unknown>; villagers?: unknown; names?: unknown } = {},
+  extra: { quests?: Record<string, unknown>; villagers?: unknown; names?: unknown; traditions?: Record<string, unknown> } = {},
 ): Content {
   const buildings = Object.entries(buildingFiles)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -1026,14 +1339,40 @@ export function buildContent(
     const note = validateLore(raw, file);
     lore[note.id] = note;
   }
-  const groves = Object.entries(blessingFiles)
+  const blessings = Object.entries(blessingFiles)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([file, raw]) => {
-      const grove = validateGrove(raw, file);
-      if (!ids.has(grove.affects)) throw new Error(`${file}: "affects" names unknown building "${grove.affects}"`);
-      if (grove.lore && !lore[grove.lore]) throw new Error(`${file}: "lore" names unknown lore note "${grove.lore}"`);
-      return grove;
+      const b = validateBlessing(raw, file);
+      if (b.lore && !lore[b.lore]) throw new Error(`${file}: "lore" names unknown lore note "${b.lore}"`);
+      if (b.type === "grove" && !ids.has(b.affects)) throw new Error(`${file}: "affects" names unknown building "${b.affects}"`);
+      return b;
     });
+  const groves = blessings.filter((b): b is GroveBlessing => b.type === "grove");
+  const rituals = blessings.filter((b): b is RitualDef => b.type === "ritual");
+  const one = <T extends Blessing>(type: T["type"]) => {
+    const list = blessings.filter((b) => b.type === type);
+    if (list.length > 1) throw new Error(`Only one blessing of type "${type}" is supported`);
+    return (list[0] as T | undefined) ?? null;
+  };
+  const visitor = one<VisitorDef>("visitor");
+  const eclipse = one<EclipseDef>("eclipse");
+  const trickery = one<TrickeryDef>("trickery");
+  const aklat = Object.entries(loreFiles)
+    .map(([file, raw]) => validateAklat(raw as LoreNote, file, { buildings: ids }))
+    .filter((e): e is AklatEntry => e !== null)
+    .sort((a, b) => a.aklat.order - b.aklat.order);
+  const traditions = Object.entries(extra.traditions ?? {})
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([file, raw]) => {
+      const t = validateTradition(raw, file);
+      for (const id of t.beings) if (!lore[id]) throw new Error(`${file}: "beings" names unknown lore note "${id}"`);
+      return t;
+    });
+  if (new Set(traditions.map((t) => t.id)).size !== traditions.length) throw new Error("Two traditions share an id");
+  traditions.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
+  for (const b of buildings) {
+    if (b.requiresNear && !ids.has(b.requiresNear.building)) throw new Error(`${b.id}: requiresNear names unknown building "${b.requiresNear.building}"`);
+  }
   const neighbors = Object.entries(neighborFiles)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([file, raw]) => {
@@ -1067,7 +1406,7 @@ export function buildContent(
     seasonIds,
   );
   const villagers = validateVillagers(extra.villagers, extra.names, ids);
-  return { buildings, rules, events, lore, groves, neighbors, choices, quests, villagers };
+  return { buildings, rules, events, lore, groves, neighbors, choices, quests, villagers, traditions, rituals, visitor, eclipse, trickery, aklat };
 }
 
 /** Loads every JSON file in content/ at build time (Vite bundles them). */
@@ -1089,5 +1428,6 @@ export function loadContent(): Content {
     quests,
     villagers: Object.values(villagers)[0],
     names: Object.values(names)[0],
+    traditions: import.meta.glob("../../content/traditions/*.json", { eager: true, import: "default" }),
   });
 }

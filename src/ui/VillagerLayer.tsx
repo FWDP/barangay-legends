@@ -7,13 +7,12 @@ import { isHungry } from "../engine/events";
 import { overcrowded, type GameState } from "../engine/game";
 import { layOutSpan, tileAt, type BridgeTile, type Point } from "../engine/map";
 import type { NamedVillager } from "../engine/people";
+import { isNightAt } from "../engine/daynight";
 import { origin, type Camera, type View } from "./camera";
 import {
-  dayPhase,
   destination,
   edgeTile,
   exitPoint,
-  isNight,
   MAX_SPRITES,
   namedSprites,
   newWalker,
@@ -419,7 +418,8 @@ export function VillagerLayer(props: {
       const { plans, named } = planned.current;
       const spots: { x: number; y: number; v: NamedVillager }[] = [];
       // The tint only cycles with motion on, so with reduced motion it is always day.
-      const night = !reducedMotion && isNight(dayPhase(Date.now()));
+      // The game's own night (rules.dayNight), the same clock as the map's tint.
+      const night = !reducedMotion && isNightAt(content, s.time);
       const hungry = isHungry(s);
       const roadSpeed = content.rules.roads.walkSpeedPercent / 100;
       const visible = (p: Point) => {

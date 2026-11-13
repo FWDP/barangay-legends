@@ -1,0 +1,25 @@
+{
+  "id": "anito-blessing",
+  "type": "ritual",
+  "name": {
+    "en": "Anito blessing",
+    "fil": "Basbas ng anito"
+  },
+  "description": {
+    "en": "The babaylan calls on the ancestral spirits: all work goes better for a while.",
+    "fil": "Tinatawag ng babaylan ang mga espiritu ng ninuno: gumagaan ang lahat ng gawain nang ilang sandali."
+  },
+  "favorCost": 30,
+  "durationSeconds": 300,
+  "cooldownSeconds": 0,
+  "productionPercent": 20,
+  "forestRestore": 4,
+  "lore": "anito",
+  "tradition": "Widespread (ancestral spirits)",
+  "reviewed": false,
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Juan de Plasencia, Customs of the Tagalogs (1589), in Blair and Robertson, The Philippine Islands 1493–1898, vol. 7",
+    "https://en.wikipedia.org/wiki/Anito"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "id": "diwata-favor",
+  "type": "ritual",
+  "name": {
+    "en": "Diwata's favor",
+    "fil": "Biyaya ng diwata"
+  },
+  "description": {
+    "en": "The nature spirits ripen the fields at once: minutes of rice come in now.",
+    "fil": "Pinahihinog agad ng mga espiritu ng kalikasan ang bukid: ilang minutong ani ang dumarating ngayon."
+  },
+  "favorCost": 40,
+  "cooldownSeconds": 900,
+  "riceMinutes": 3,
+  "forestRestore": 8,
+  "lore": "diwata",
+  "tradition": "Widespread (nature spirits)",
+  "reviewed": false,
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "F. Landa Jocano, Philippine Mythology (Community Publishers, 1969)",
+    "https://en.wikipedia.org/wiki/Diwata"
+  ]
+}

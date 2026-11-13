@@ -46,6 +46,12 @@ export function taskProgress(state: GameState, content: Content, q: QuestDef): {
       return { have: state.stats.raidsDefended, need: c.count };
     case "tributaries":
       return { have: state.region?.neighbors.filter((n) => n.status === "tributary").length ?? 0, need: c.count };
+    case "aklat":
+      return { have: state.aklat.length, need: c.count };
+    case "replanted":
+      return { have: state.stats.replanted, need: c.count };
+    case "permittedClears":
+      return { have: state.stats.permittedClears, need: c.count };
   }
 }
 

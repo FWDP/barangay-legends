@@ -1,0 +1,58 @@
+{
+  "id": "maranao",
+  "order": 3,
+  "name": {
+    "en": "Maranao",
+    "fil": "Maranao"
+  },
+  "description": {
+    "en": "The people of the lake, around Lake Lanao in Mindanao, known for the okir art and the Sarimanok. Only the Sarimanok as a figure of art and story appears here: the game does not depict the living community's religious practice.",
+    "fil": "Ang mga taga-lawa sa paligid ng Lawa ng Lanao sa Mindanao, kilala sa sining na okir at sa Sarimanok. Ang Sarimanok lamang bilang anyo ng sining at kuwento ang narito: hindi inilalarawan ng laro ang buhay na pananampalataya ng pamayanan."
+  },
+  "beings": [
+    "sarimanok",
+    "forest-spirits"
+  ],
+  "rituals": {
+    "offering": {
+      "en": "Offering",
+      "fil": "Handog"
+    },
+    "permission": {
+      "en": "Asking leave of the forest",
+      "fil": "Paghingi ng pahintulot sa gubat"
+    },
+    "healer": {
+      "en": "Healer",
+      "fil": "Manggagamot"
+    }
+  },
+  "burial": {
+    "en": "Not shown: pending review by a historian or Maranao educator.",
+    "fil": "Hindi ipinapakita: hinihintay ang pagsusuri ng isang historyador o gurong Maranao."
+  },
+  "forestSpirit": {
+    "name": {
+      "en": "The spirits of the forest",
+      "fil": "Ang mga espiritu ng gubat"
+    },
+    "stage1": {
+      "en": "The elders say the forest is not empty. Cut with care.",
+      "fil": "Sabi ng matatanda, hindi walang laman ang gubat. Pumutol nang may ingat."
+    },
+    "stage2": {
+      "en": "The forest has been hurt too much. The harvest is thin until it heals.",
+      "fil": "Labis nang nasaktan ang gubat. Manipis ang ani hangga't hindi ito gumagaling."
+    },
+    "sources": [
+      "https://en.wikipedia.org/wiki/Philippine_mythology"
+    ]
+  },
+  "sarimanokChance": 4,
+  "tradition": "Maranao",
+  "reviewed": false,
+  "sources": [
+    "https://en.wikipedia.org/wiki/Maranao_people",
+    "https://en.wikipedia.org/wiki/Sarimanok"
+  ]
+}

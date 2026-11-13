@@ -1,0 +1,94 @@
+{
+  "id": "tikbalang",
+  "type": "trickery",
+  "name": {
+    "en": "Tikbalang trickery",
+    "fil": "Panlilinlang ng tikbalang"
+  },
+  "description": {
+    "en": "A tikbalang leads some workers astray. Answer its riddle and they find their way home at once.",
+    "fil": "Inililigaw ng tikbalang ang ilang manggagawa. Sagutin ang bugtong nito at makauuwi sila agad."
+  },
+  "minVillagers": 20,
+  "chancePerSecond": 0.0004,
+  "lowForestMultiplier": 3,
+  "cooldownSeconds": 900,
+  "lostSeconds": 60,
+  "workersLost": 2,
+  "riddles": [
+    {
+      "id": "banig",
+      "question": {
+        "en": "When it is rolled up, it is small; when it is spread out, it is wide. What is it?",
+        "fil": "Kung bilutin ay maliit, kung iladlad ay malapad. Ano ito?"
+      },
+      "options": [
+        {
+          "en": "A sleeping mat (banig)",
+          "fil": "Banig"
+        },
+        {
+          "en": "A fishing net",
+          "fil": "Lambat"
+        },
+        {
+          "en": "A leaf",
+          "fil": "Dahon"
+        }
+      ],
+      "answer": 0
+    },
+    {
+      "id": "anino",
+      "question": {
+        "en": "I follow you everywhere, but I am never caught. What am I?",
+        "fil": "Sumusunod saan ka man, ngunit hindi mahuli kailanman. Ano ako?"
+      },
+      "options": [
+        {
+          "en": "Your shadow",
+          "fil": "Anino"
+        },
+        {
+          "en": "The wind",
+          "fil": "Hangin"
+        },
+        {
+          "en": "A dog",
+          "fil": "Aso"
+        }
+      ],
+      "answer": 0
+    },
+    {
+      "id": "kawayan",
+      "question": {
+        "en": "It has many joints but cannot walk; it sways but has no legs. What is it?",
+        "fil": "Maraming buko ngunit hindi lumalakad, umuugoy ngunit walang paa. Ano ito?"
+      },
+      "options": [
+        {
+          "en": "A snake",
+          "fil": "Ahas"
+        },
+        {
+          "en": "Bamboo",
+          "fil": "Kawayan"
+        },
+        {
+          "en": "A river",
+          "fil": "Ilog"
+        }
+      ],
+      "answer": 1
+    }
+  ],
+  "lore": "tikbalang",
+  "tradition": "Tagalog",
+  "reviewed": false,
+  "sources": [
+    "Maximo D. Ramos, The Creatures of Philippine Lower Mythology (University of the Philippines Press, 1971)",
+    "Damiana L. Eugenio, Philippine Folk Literature: The Riddles (University of the Philippines Press, 1994)",
+    "https://en.wikipedia.org/wiki/Tikbalang"
+  ]
+}

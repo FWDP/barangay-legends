@@ -18,7 +18,7 @@ describe("content", () => {
   it("loads every building file in content/ and passes the schema check", () => {
     const content = loadContent();
     // In menu order ("order" in each file), not file-name order.
-    expect(content.buildings.map((b) => b.id)).toEqual(["bahay-kubo", "palayan", "woodcutter-camp", "babaylan-hut", "kamalig", "tulay", "kuta", "fishing-dock"]);
+    expect(content.buildings.map((b) => b.id)).toEqual(["bahay-kubo", "palayan", "woodcutter-camp", "babaylan-hut", "dambana", "kamalig", "tulay", "kuta", "fishing-dock"]);
   });
 
   it("matches the Week 1 numbers in docs/game-design.md", () => {
@@ -119,5 +119,17 @@ describe("event content", () => {
       buildContent(files, rules, { "s.json": { ...events.sickness, crowding: { building: "castle", percentPerAdjacentPair: 5 } } }),
     ).toThrow(/not a building/);
     expect(() => buildContent(files, rules, { "a.json": events.fire, "b.json": events.fire })).toThrow(/already a "fire"/);
+  });
+});
+
+describe("cultural fields", () => {
+  it("every being, ritual and lore entry needs a tradition, sources and reviewed", async () => {
+    const { validateBlessing, validateTradition } = await import("./content");
+    const real = loadContent();
+    const anito = real.rituals[0];
+    expect(() => validateBlessing({ ...anito, reviewed: undefined })).toThrow(/reviewed/);
+    expect(() => validateBlessing({ ...anito, sources: [] })).toThrow(/source/);
+    expect(() => validateBlessing({ ...anito, tradition: "" })).toThrow(/tradition/);
+    expect(() => validateTradition({ ...real.traditions[0], forestSpirit: { ...real.traditions[0].forestSpirit, sources: [] } })).toThrow(/forestSpirit/);
   });
 });

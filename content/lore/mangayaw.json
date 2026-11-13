@@ -5,5 +5,30 @@
   "tradition": "Visayan and other precolonial societies",
   "sources": [
     "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
-  ]
+  ],
+  "aklat": {
+    "order": 4,
+    "icon": "⛵",
+    "name": {
+      "en": "Mangayaw",
+      "fil": "Mangayaw"
+    },
+    "lore": {
+      "en": "Mangayaw were raiding expeditions between communities. They brought renown to the warriors and goods to the barangay. Scott describes them as a regular part of Visayan life, with their own customs and seasons. In this game a raid's gains are abstract tribute: no people are ever taken.",
+      "fil": "Ang mangayaw ay mga paglusob sa pagitan ng mga pamayanan. Nagdadala ito ng karangalan sa mga mandirigma at ng yaman sa barangay. Inilalarawan ito ni Scott bilang karaniwang bahagi ng buhay-Bisaya, na may sariling kaugalian at panahon. Sa larong ito, abstraktong tributo lamang ang nakukuha: walang taong binibihag kailanman."
+    },
+    "inGame": {
+      "en": "A diplomacy path in the Rehiyon: send your Mandirigma to raid a rival.",
+      "fil": "Isang landas sa Rehiyon: ipadala ang iyong Mandirigma upang lusubin ang karibal."
+    },
+    "hint": {
+      "en": "Lead a raid of your own.",
+      "fil": "Mamuno ng sariling paglusob."
+    },
+    "unlock": {
+      "type": "path",
+      "path": "mangayaw"
+    }
+  },
+  "reviewed": false
 }

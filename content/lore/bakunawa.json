@@ -1,0 +1,36 @@
+{
+  "id": "bakunawa",
+  "name": "Bakunawa",
+  "description": "A great sea serpent that swallows the moon, causing eclipses.",
+  "tradition": "Visayan",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Damiana L. Eugenio, Philippine Folk Literature: The Myths (University of the Philippines Press, 1993)",
+    "https://en.wikipedia.org/wiki/Bakunawa"
+  ],
+  "aklat": {
+    "order": 12,
+    "icon": "🐉",
+    "name": {
+      "en": "Bakunawa",
+      "fil": "Bakunawa"
+    },
+    "lore": {
+      "en": "In Visayan belief the Bakunawa is a huge serpent from the sea that tries to swallow the moon, which causes an eclipse. People went out and beat gongs and pots to frighten it into letting the moon go. Scott records the custom among sixteenth-century Visayans. Similar moon-eating serpents appear elsewhere in Southeast Asia.",
+      "fil": "Sa paniniwalang Bisaya, ang Bakunawa ay napakalaking ahas mula sa dagat na sumusubok lunukin ang buwan, kaya nagkakaroon ng eklipse. Lumalabas ang mga tao at pinapalo ang mga gong at kaldero upang takutin ito hanggang bitawan ang buwan. Itinala ni Scott ang kaugaliang ito sa mga Bisaya noong ika-16 na siglo. May katulad na ahas na kumakain ng buwan sa ibang bahagi ng Timog-silangang Asya."
+    },
+    "inGame": {
+      "en": "Once the barangay has 30 villagers, the moon may darken at night. Tap the gongs: drive the serpent off for Favor and gold, or lose some rice.",
+      "fil": "Kapag may 30 taga-barangay na, maaaring dumilim ang buwan sa gabi. Paluin ang mga gong: itaboy ang ahas para sa Favor at ginto, o mawawalan ng kaunting bigas."
+    },
+    "hint": {
+      "en": "Watch the night sky of a large barangay.",
+      "fil": "Bantayan ang langit sa gabi ng isang malaking barangay."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "bakunawa"
+    }
+  },
+  "reviewed": false
+}

@@ -1,0 +1,44 @@
+{
+  "id": "karakoa",
+  "name": "Karakoa",
+  "description": "The large outrigger warship of the Visayans.",
+  "tradition": "Visayan",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "https://en.wikipedia.org/wiki/Karakoa"
+  ],
+  "aklat": {
+    "order": 13,
+    "icon": "🚣",
+    "name": {
+      "en": "Karakoa",
+      "fil": "Karakoa"
+    },
+    "lore": {
+      "en": "The karakoa was the great outrigger warship of the Visayans, long and fast, driven by paddlers and sail. Warriors fought from a raised platform while the paddlers kept time with gongs. Scott describes karakoa carrying raiders on mangayaw. They were also used to carry chiefs and goods.",
+      "fil": "Ang karakoa ang malaking barkong pandigma ng mga Bisaya na may katig, mahaba at mabilis, pinatatakbo ng mga mananagwan at layag. Lumalaban ang mga mandirigma mula sa nakataas na plataporma habang sinasabayan ng gong ang pagsagwan. Inilalarawan ni Scott ang karakoa na nagdadala ng mga lumulusob sa mangayaw. Ginagamit din ito sa paghahatid ng mga pinuno at kalakal."
+    },
+    "inGame": {
+      "en": "Raiders from rival barangays come by karakoa and land on your riverbank.",
+      "fil": "Dumarating sakay ng karakoa ang mga lumulusob mula sa karibal na barangay at dumadaong sa iyong pampang."
+    },
+    "hint": {
+      "en": "Face a raid on your barangay.",
+      "fil": "Harapin ang isang paglusob sa iyong barangay."
+    },
+    "unlock": {
+      "type": "any",
+      "of": [
+        {
+          "type": "flag",
+          "flag": "karakoa"
+        },
+        {
+          "type": "report",
+          "kind": "defense"
+        }
+      ]
+    }
+  },
+  "reviewed": false
+}

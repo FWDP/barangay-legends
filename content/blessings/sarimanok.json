@@ -1,0 +1,37 @@
+{
+  "id": "sarimanok",
+  "type": "visitor",
+  "name": {
+    "en": "Sarimanok's fortune",
+    "fil": "Suwerte ng Sarimanok"
+  },
+  "description": {
+    "en": "Sometimes the Sarimanok crosses the sky. Tap it before it is gone for a gift of rice, wood or gold.",
+    "fil": "Paminsan-minsan, tumatawid sa langit ang Sarimanok. Pindutin bago ito mawala para sa handog na bigas, kahoy o ginto."
+  },
+  "chancePerSecond": 0.0006,
+  "minVillagers": 8,
+  "visibleSeconds": 14,
+  "cooldownSeconds": 600,
+  "rewards": {
+    "rice": [
+      20,
+      60
+    ],
+    "wood": [
+      15,
+      45
+    ],
+    "gold": [
+      5,
+      15
+    ]
+  },
+  "lore": "sarimanok",
+  "tradition": "Maranao",
+  "reviewed": false,
+  "sources": [
+    "https://en.wikipedia.org/wiki/Sarimanok",
+    "https://en.wikipedia.org/wiki/Maranao_people"
+  ]
+}

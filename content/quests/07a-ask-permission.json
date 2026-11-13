@@ -1,0 +1,17 @@
+{
+  "id": "ask-permission",
+  "text": {
+    "en": "Ask the spirits' permission before clearing",
+    "fil": "Humingi ng pahintulot sa mga espiritu bago maglinis"
+  },
+  "condition": {
+    "type": "permittedClears",
+    "count": 1
+  },
+  "reward": {
+    "resources": {
+      "wood": 15
+    }
+  },
+  "next": "replant-five"
+}

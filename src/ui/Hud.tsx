@@ -10,8 +10,8 @@ import { clock } from "./EventBanners";
 import { formatAmount, formatBreakdown, formatRate, RESOURCE_ICON } from "./format";
 
 /** Slim top bar: title, resources, and whatever controls are passed as children. */
-export function Hud(props: { state: GameState; content: Content; children: ReactNode }) {
-  const { state, content, children } = props;
+export function Hud(props: { state: GameState; content: Content; children: ReactNode; extraChips?: ReactNode }) {
+  const { state, content, children, extraChips } = props;
   const r = rates(state, content);
   const working = buildingWorkers(state, content).reduce((a, b) => a + b, 0);
   const free = freeVillagers(state, content);
@@ -76,6 +76,7 @@ export function Hud(props: { state: GameState; content: Content; children: React
       <span className="hidden sm:block">
         <HappinessChip state={state} content={content} />
       </span>
+      {extraChips && <span className="hidden sm:block">{extraChips}</span>}
       {/* On phones the season sits on the map instead (MapSeasonBadge): the bar has no room. */}
       <span className="hidden sm:block">
         <SeasonChip state={state} content={content} />
@@ -144,10 +145,13 @@ function HappinessChip({ state, content }: { state: GameState; content: Content 
 }
 
 /** The season on the map's top-right corner, for phones (the top bar shows it on wider screens). */
-export function MapSeasonBadge({ state, content }: { state: GameState; content: Content }) {
+export function MapSeasonBadge({ state, content, children }: { state: GameState; content: Content; children?: ReactNode }) {
   return (
-    <div data-map-overlay className="pointer-events-auto absolute top-2 right-2 z-10 rounded-lg bg-stone-900/50 sm:hidden">
-      <SeasonChip state={state} content={content} />
+    <div data-map-overlay className="pointer-events-auto absolute top-2 right-2 z-10 flex flex-col items-end gap-1.5 sm:hidden">
+      <span className="rounded-lg bg-stone-900/50">
+        <SeasonChip state={state} content={content} />
+      </span>
+      {children}
     </div>
   );
 }

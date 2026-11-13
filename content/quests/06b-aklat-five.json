@@ -1,0 +1,17 @@
+{
+  "id": "aklat-five",
+  "text": {
+    "en": "Find 5 entries for the Aklat ng Alamat",
+    "fil": "Makahanap ng 5 tala para sa Aklat ng Alamat"
+  },
+  "condition": {
+    "type": "aklat",
+    "count": 5
+  },
+  "reward": {
+    "resources": {
+      "gold": 5
+    }
+  },
+  "next": "tag-araw"
+}

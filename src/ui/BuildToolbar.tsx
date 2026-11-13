@@ -8,6 +8,8 @@ function effectText(b: BuildingDef): string {
   if (b.housing) parts.push(`+${b.housing} villager capacity`);
   if (b.storage?.rice) parts.push(`+${b.storage.rice} rice storage`);
   if (b.placeNextTo) parts.push(`next to the ${b.placeNextTo.join(" or ")}`);
+  if (b.shrine) parts.push("offerings and rituals");
+  if (b.requiresNear) parts.push(`within ${b.requiresNear.radius} tiles of a ${b.requiresNear.building === "babaylan-hut" ? "Babaylan's Hut" : b.requiresNear.building}`);
   for (const r of RESOURCES) {
     const amount = b.produces?.[r];
     if (amount) parts.push(`+${amount} ${r}/s per worker`);

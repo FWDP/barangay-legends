@@ -1,0 +1,36 @@
+{
+  "id": "diwata",
+  "name": "Diwata",
+  "description": "Spirits of nature: of forests, mountains and fields.",
+  "tradition": "Widespread (Visayan and other lowland peoples)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "F. Landa Jocano, Philippine Mythology (Community Publishers, 1969)",
+    "https://en.wikipedia.org/wiki/Diwata"
+  ],
+  "aklat": {
+    "order": 8,
+    "icon": "🌸",
+    "name": {
+      "en": "Diwata",
+      "fil": "Diwata"
+    },
+    "lore": {
+      "en": "Diwata were spirits of nature who lived in forests, mountains and fields. Visayans made offerings to them before planting and harvest. They could bless a field or withhold its harvest. Many later stories picture them as beautiful guardians of the forest.",
+      "fil": "Ang diwata ay mga espiritu ng kalikasan na naninirahan sa gubat, bundok at bukid. Naghahandog sa kanila ang mga Bisaya bago magtanim at mag-ani. Kaya nilang basbasan ang bukid o ipagkait ang ani nito. Sa mga sumunod na kuwento, inilalarawan sila bilang magagandang tagapag-ingat ng gubat."
+    },
+    "inGame": {
+      "en": "Diwata's favor ripens the fields at once (minutes of rice now). If the forest suffers, the diwata hold back part of the harvest.",
+      "fil": "Pinahihinog agad ng Biyaya ng diwata ang bukid. Kapag naghihirap ang gubat, ipinagkakait ng diwata ang bahagi ng ani."
+    },
+    "hint": {
+      "en": "Ask the nature spirits for a harvest.",
+      "fil": "Humingi ng ani sa mga espiritu ng kalikasan."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "diwata"
+    }
+  },
+  "reviewed": false
+}

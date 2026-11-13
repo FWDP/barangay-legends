@@ -1,0 +1,37 @@
+{
+  "id": "babaylan",
+  "name": "Babaylan",
+  "description": "The community's healer and ritual specialist, who spoke with the spirits.",
+  "tradition": "Visayan (babaylan) and Tagalog (katalonan)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Carolyn Brewer, Shamanism, Catholicism and Gender Relations in Colonial Philippines, 1521–1685 (Ashgate, 2004)",
+    "Juan de Plasencia, Customs of the Tagalogs (1589), in Blair and Robertson, The Philippine Islands 1493–1898, vol. 7",
+    "https://en.wikipedia.org/wiki/Babaylan"
+  ],
+  "aklat": {
+    "order": 5,
+    "icon": "🌿",
+    "name": {
+      "en": "Babaylan",
+      "fil": "Babaylan"
+    },
+    "lore": {
+      "en": "The babaylan was the community's healer and ritual specialist, most often a woman. Visayans called them babaylan; Tagalogs called them katalonan. They led offerings to the anito, healed the sick and kept the community's knowledge. Their standing was high, and Spanish missionaries worked hard to replace them.",
+      "fil": "Ang babaylan ang manggagamot at tagapanguna sa ritwal ng pamayanan, kadalasang babae. Babaylan ang tawag ng mga Bisaya; katalonan naman sa mga Tagalog. Pinangungunahan nila ang paghahandog sa anito, nagpapagaling ng maysakit at nag-iingat ng kaalaman ng pamayanan. Mataas ang kanilang katayuan, at pinagsikapan ng mga misyonerong Espanyol na palitan sila."
+    },
+    "inGame": {
+      "en": "The Babaylan's Hut heals the sick faster, and its babaylan leads every ritual at the Dambana.",
+      "fil": "Pinabibilis ng Babaylan's Hut ang paggaling, at pinangungunahan ng babaylan nito ang bawat ritwal sa Dambana."
+    },
+    "hint": {
+      "en": "Build a home for a healer.",
+      "fil": "Magtayo ng tahanan para sa isang manggagamot."
+    },
+    "unlock": {
+      "type": "built",
+      "building": "babaylan-hut"
+    }
+  },
+  "reviewed": false
+}

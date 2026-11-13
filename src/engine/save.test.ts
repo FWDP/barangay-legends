@@ -264,7 +264,7 @@ describe("v16 → v17: gold, happiness, tasks and named villagers", () => {
     expect(s.gawainDone).toEqual([]);
     expect(s.named).toEqual([]);
     expect(s.history).toEqual([]);
-    expect(s.stats).toEqual({ raidsDefended: 0, rolls: 0, named: 0 });
+    expect(s.stats).toMatchObject({ raidsDefended: 0, rolls: 0, named: 0 });
     expect(s.region!.neighbors.every((n) => n.state.resources.gold === 0)).toBe(true);
   });
 
@@ -294,7 +294,7 @@ describe("v16 → v17: gold, happiness, tasks and named villagers", () => {
         { at: 30, kind: "task", task: "first-palayan" },
         { at: 35, kind: "left", name: "Ulan", story: "singer", cause: "hunger" },
       ],
-      stats: { raidsDefended: 2, rolls: 17, named: 3 },
+      stats: { raidsDefended: 2, rolls: 17, named: 3, replanted: 1, permittedClears: 2 },
     });
     saveGame(s, storage);
     expect({ ...loadGame(content, storage), region: null }).toEqual(s);

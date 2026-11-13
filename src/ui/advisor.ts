@@ -242,6 +242,14 @@ export function observe(session: AdvisorSession, state: GameState, content: Cont
   }
   if (s.pendingUnlocks.length > 0) active.set("unlocked", { building: defs.get(s.pendingUnlocks[0])?.name ?? s.pendingUnlocks[0] });
 
+  // The forest spirits, the Dambana and the Aklat.
+  if (state.forest.stage >= 2) active.set("forest-angry", {});
+  else if (state.forest.stage === 1) active.set("forest-restless", {});
+  const shrineDef = content.buildings.find((d) => d.shrine);
+  const healer = content.buildings.find((d) => d.id === shrineDef?.requiresNear?.building);
+  if (shrineDef && healer && owned(state, healer.id) > 0 && owned(state, shrineDef.id) === 0 && isUnlocked(state, shrineDef)) active.set("dambana", {});
+  if (state.aklat.length > 0 && state.aklat.length < 5) active.set("aklat", {});
+
   // News from the history: tasks done, named villagers leaving.
   const added = newEntries(state.history, s.historyMark);
   if (added.length > 0) {

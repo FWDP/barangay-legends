@@ -1,0 +1,29 @@
+{
+  "id": "dambana",
+  "name": "Dambana",
+  "description": "A small shrine where the babaylan leads offerings to the anito. It must stand near a Babaylan's Hut.",
+  "icon": "🕯️",
+  "order": 4.2,
+  "cost": {
+    "wood": 30,
+    "rice": 20
+  },
+  "repairCost": {
+    "wood": 10
+  },
+  "shrine": true,
+  "requiresNear": {
+    "building": "babaylan-hut",
+    "radius": 3
+  },
+  "unlock": {
+    "start": true
+  },
+  "tradition": "Widespread in the precolonial Philippines",
+  "reviewed": false,
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Juan de Plasencia, Customs of the Tagalogs (1589), in Blair and Robertson, The Philippine Islands 1493–1898, vol. 7",
+    "https://en.wikipedia.org/wiki/Anito"
+  ]
+}

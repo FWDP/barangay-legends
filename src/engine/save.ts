@@ -27,6 +27,7 @@ import {
 } from "./region";
 import { validProposal, type CounterOffer } from "./trading";
 import { MAX_HISTORY, type HistoryEntry, type HistoryKind, type NamedVillager } from "./people";
+import { forestStage } from "./forest";
 
 export const SAVE_KEY = "barangay-legends/save";
 
@@ -172,6 +173,29 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
       };
     }
     return out;
+  },
+  // v17 → v18: worship and the forest spirits. No Favor or tradition yet, Forest Balance full,
+  // nothing replanting, no Aklat entries found: entries for things the save already met
+  // (buildings, raids, sandugo, mangayaw, a balete near the land) unlock on the first step.
+  17: (raw) => {
+    const st = isObject(raw.stats) ? raw.stats : {};
+    return {
+      ...raw,
+      version: 18,
+      stats: { ...st, replanted: 0, permittedClears: 0 },
+      favor: 0,
+      tradition: null,
+      lastRitualAt: null,
+      blessings: {},
+      sarimanok: null,
+      eclipse: null,
+      tikbalang: null,
+      pranks: [],
+      forest: { balance: 100, stage: 0, permission: 0, lastClearAt: null },
+      replanting: [],
+      aklat: [],
+      flags: [],
+    };
   },
 };
 
@@ -441,6 +465,7 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean): GameSta
   if (finiteNonNeg(data.warriors)) state.warriors = Math.min(Math.floor(data.warriors), state.villagers);
   if (finiteNonNeg(data.happiness)) state.happiness = Math.min(100, data.happiness);
   parsePeople(data, content, state, isPlayer);
+  if (isPlayer) parseWorship(data, content, state);
   if (isPlayer && content.neighbors.length > 0) state.region = parseRegion(data.region, content, state);
   // A waiting choice event: a known event, and a neighbor that still exists (or none).
   const ch = data.choice;
@@ -451,14 +476,79 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean): GameSta
   return state;
 }
 
-const HISTORY_KINDS: HistoryKind[] = ["named", "left", "fell", "task"];
+const HISTORY_KINDS: HistoryKind[] = ["named", "left", "fell", "task", "spirits", "aklat", "event"];
+const EVENTS = ["eclipseWon", "eclipseLost", "sarimanok", "riddleRight"];
+const isPoint = (v: unknown): v is { x: number; y: number } => isObject(v) && Number.isFinite(v.x) && Number.isFinite(v.y);
+
+/** Favor, tradition, rituals, the visitors and the forest. Anything that doesn't fit is dropped. */
+function parseWorship(data: RawSave, content: Content, state: GameState) {
+  const w = content.rules.worship;
+  if (finiteNonNeg(data.favor)) state.favor = Math.min(w.maxFavor, data.favor);
+  if (typeof data.tradition === "string" && content.traditions.some((t) => t.id === data.tradition)) state.tradition = data.tradition;
+  if (finiteNonNeg(data.lastRitualAt) && data.lastRitualAt <= state.time) state.lastRitualAt = data.lastRitualAt;
+  if (isObject(data.blessings)) {
+    for (const r of content.rituals) {
+      const b = data.blessings[r.id];
+      if (!isObject(b)) continue;
+      const timer: { until?: number; readyAt?: number } = {};
+      if (finiteNonNeg(b.until)) timer.until = b.until;
+      if (finiteNonNeg(b.readyAt)) timer.readyAt = b.readyAt;
+      state.blessings[r.id] = timer;
+    }
+  }
+  const sv = data.sarimanok;
+  if (content.visitor && isObject(sv) && isPoint(sv.from) && isPoint(sv.to) && finiteNonNeg(sv.at) && finiteNonNeg(sv.until) && sv.until > state.time) {
+    state.sarimanok = { from: { x: sv.from.x, y: sv.from.y }, to: { x: sv.to.x, y: sv.to.y }, at: sv.at, until: sv.until };
+  }
+  const ec = data.eclipse;
+  if (content.eclipse && isObject(ec) && finiteNonNeg(ec.endsAt) && finiteNonNeg(ec.taps)) state.eclipse = { endsAt: ec.endsAt, taps: Math.floor(ec.taps) };
+  const tk = data.tikbalang;
+  if (content.trickery && isObject(tk) && content.trickery.riddles.some((r) => r.id === tk.riddle) && finiteNonNeg(tk.workers) && finiteNonNeg(tk.until)) {
+    state.tikbalang = { riddle: tk.riddle as string, workers: Math.floor(tk.workers), until: tk.until, ...(tk.wrong === true ? { wrong: true } : {}) };
+  }
+  if (Array.isArray(data.pranks)) {
+    state.pranks = data.pranks
+      .filter((p): p is RawSave => isObject(p) && Number.isInteger(p.x) && Number.isInteger(p.y) && finiteNonNeg(p.until))
+      .slice(0, 5)
+      .map((p) => ({ x: p.x as number, y: p.y as number, until: p.until as number }));
+  }
+  const f = data.forest;
+  if (isObject(f)) {
+    const balance = finiteNonNeg(f.balance) ? Math.min(100, f.balance) : content.rules.forest.start;
+    state.forest = {
+      balance,
+      stage: forestStage(content, balance),
+      permission: finiteNonNeg(f.permission) ? Math.min(content.rules.worship.permission.tiles, Math.floor(f.permission)) : 0,
+      lastClearAt: finiteNonNeg(f.lastClearAt) && f.lastClearAt <= state.time ? f.lastClearAt : null,
+    };
+  }
+  if (Array.isArray(data.replanting)) {
+    const seen = new Set<string>();
+    for (const j of data.replanting.slice(0, 200)) {
+      if (!isObject(j) || !Number.isInteger(j.x) || !Number.isInteger(j.y) || !finiteNonNeg(j.progress) || !finiteNonNeg(j.seconds) || j.seconds <= 0) continue;
+      const k = `${j.x},${j.y}`;
+      if (seen.has(k) || tileAt(state.map, j.x as number, j.y as number) !== "cleared" || state.buildings.some((b) => b.x === j.x && b.y === j.y)) continue;
+      seen.add(k);
+      state.replanting.push({ x: j.x as number, y: j.y as number, progress: Math.min(j.progress, j.seconds), seconds: j.seconds });
+    }
+  }
+  const entries = new Set(content.aklat.map((e) => e.id));
+  if (Array.isArray(data.aklat)) state.aklat = [...new Set(data.aklat.filter((id): id is string => typeof id === "string" && entries.has(id)))];
+  if (Array.isArray(data.flags)) state.flags = [...new Set(data.flags.filter((x): x is string => typeof x === "string" && x.length <= 40))].slice(0, 100);
+}
 const CAUSES = ["hunger", "crowded", "other"];
 const count = (v: unknown) => (finiteNonNeg(v) ? Math.floor(v) : 0);
 
 /** Tasks done, named villagers, history and counters. Unknown tasks and stories are dropped. */
 function parsePeople(data: RawSave, content: Content, state: GameState, isPlayer: boolean) {
   const st = isObject(data.stats) ? data.stats : {};
-  state.stats = { raidsDefended: count(st.raidsDefended), rolls: count(st.rolls), named: count(st.named) };
+  state.stats = {
+    raidsDefended: count(st.raidsDefended),
+    rolls: count(st.rolls),
+    named: count(st.named),
+    replanted: count(st.replanted),
+    permittedClears: count(st.permittedClears),
+  };
   if (!isPlayer) return;
   const quests = new Set(content.quests.map((q) => q.id));
   if (Array.isArray(data.gawainDone)) {
@@ -498,7 +588,13 @@ function parsePeople(data: RawSave, content: Content, state: GameState, isPlayer
     if (typeof h.story === "string" && stories.has(h.story)) e.story = h.story;
     if (typeof h.cause === "string" && CAUSES.includes(h.cause)) e.cause = h.cause as HistoryEntry["cause"];
     if (typeof h.task === "string" && quests.has(h.task)) e.task = h.task;
-    if (e.kind === "task" ? !e.task : !e.name) continue;
+    if (Number.isInteger(h.stage)) e.stage = h.stage as number;
+    if (typeof h.entry === "string" && content.aklat.some((a) => a.id === h.entry)) e.entry = h.entry;
+    if (typeof h.event === "string" && EVENTS.includes(h.event)) e.event = h.event;
+    if (isObject(h.amounts)) e.amounts = Object.fromEntries(RESOURCES.filter((r) => finiteNonNeg((h.amounts as RawSave)[r])).map((r) => [r, (h.amounts as RawSave)[r] as number]));
+    if (finiteNonNeg(h.favor)) e.favor = h.favor;
+    const ok = e.kind === "task" ? !!e.task : e.kind === "spirits" ? e.stage !== undefined : e.kind === "aklat" ? !!e.entry : e.kind === "event" ? !!e.event : !!e.name;
+    if (!ok) continue;
     history.push(e);
   }
   state.history = history;

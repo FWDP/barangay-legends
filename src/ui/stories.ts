@@ -20,9 +20,25 @@ export function rewardText(q: QuestDef, game: GameText, lang: Lang): string {
 const questById = (content: Content, id: string | undefined) => content.quests.find((q) => q.id === id);
 
 /** One line of the barangay history. */
-export function historyLine(h: HistoryEntry, content: Content, game: GameText, lang: Lang): string {
+export function historyLine(h: HistoryEntry, content: Content, game: GameText, lang: Lang, state?: GameState): string {
   const t = game.history;
   switch (h.kind) {
+    case "spirits": {
+      // The tradition's forest spirit speaks, then what it means in the game.
+      const spirit = state ? content.traditions.find((x) => x.id === state.tradition)?.forestSpirit : undefined;
+      const said = spirit ? (h.stage === 2 ? spirit.stage2 : spirit.stage1)[lang] : "";
+      const means = h.stage === 2 ? fill(game.forest.stage2[lang], { percent: content.rules.forest.riceWithheldPercent }) : game.forest.stage1[lang];
+      return said ? `${said} ${means}` : means;
+    }
+    case "aklat":
+      return fill(game.aklat.found[lang], { name: content.aklat.find((e) => e.id === h.entry)?.aklat.name[lang] ?? h.entry ?? "" });
+    case "event": {
+      const e = game.events;
+      if (h.event === "eclipseWon") return fill(e.eclipseWon[lang], { favor: h.favor ?? 0, gold: h.amounts?.gold ?? 0 });
+      if (h.event === "eclipseLost") return fill(e.eclipseLost[lang], { rice: h.amounts?.rice ?? 0 });
+      if (h.event === "sarimanok") return fill(e.sarimanok[lang], { gift: costText(h.amounts ?? {}) });
+      return e.right[lang];
+    }
     case "task":
       return fill(t.task[lang], { task: questById(content, h.task)?.text[lang] ?? h.task ?? "" });
     case "named":

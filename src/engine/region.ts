@@ -109,7 +109,7 @@ export function aiContent(content: Content): Content {
   let c = aiContents.get(content);
   if (!c) {
     // No tasks or named villagers for them either.
-    c = { ...content, events: { hunger: content.events.hunger, seasons: content.events.seasons }, choices: [], quests: [], villagers: { ...content.villagers, chance: 0 } };
+    c = { ...content, events: { hunger: content.events.hunger, seasons: content.events.seasons }, choices: [], quests: [], villagers: { ...content.villagers, chance: 0 }, ai: true, visitor: null, eclipse: null, trickery: null };
     aiContents.set(content, c);
   }
   return c;

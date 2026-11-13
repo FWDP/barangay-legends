@@ -279,7 +279,7 @@ export function isConnected(map: MapState, x: number, y: number): boolean {
 
 /** Can a Daan go here? Cleared land the barangay can reach, free of buildings, not the plaza. */
 export function canPlaceRoad(state: GameState, x: number, y: number): boolean {
-  return tileAt(state.map, x, y) === "cleared" && !isPlaza(state.map, x, y) && !buildingAt(state, x, y) && isReachable(state.map, x, y);
+  return tileAt(state.map, x, y) === "cleared" && !isPlaza(state.map, x, y) && !buildingAt(state, x, y) && isReachable(state.map, x, y) && !state.replanting.some((j) => j.x === x && j.y === y);
 }
 
 /** Is this building available yet (from the start, or at a villager count)? */
@@ -391,6 +391,11 @@ export function canPlace(state: GameState, _content: Content, def: BuildingDef, 
   if (!inBounds(state.map, x, y) || buildingAt(state, x, y)) return false;
   if (def.placeOn === "river") return bridgeSpan(state.map, def, x, y) !== null;
   if (def.placeNextTo && !isNextTo(state.map, x, y, def.placeNextTo)) return false;
+  if (state.replanting.some((j) => j.x === x && j.y === y)) return false;
+  if (def.requiresNear) {
+    const { building, radius } = def.requiresNear;
+    if (!state.buildings.some((b) => b.type === building && !b.damaged && (b.x - x) ** 2 + (b.y - y) ** 2 <= radius * radius)) return false;
+  }
   return tileAt(state.map, x, y) === "cleared" && !isPlaza(state.map, x, y) && isReachable(state.map, x, y);
 }
 

@@ -143,7 +143,8 @@ describe("finishing tasks", () => {
     expect(datuTitle(done, content)).toEqual(quest("tag-araw").reward.title);
     const later = { ...done, gawainDone: [...done.gawainDone, ...upTo("first-dock").filter((id) => !done.gawainDone.includes(id)), "first-dock"] };
     expect(datuTitle(later, content)?.en).toBe("Datu ng Ilog");
-    expect(earnedTitles(later, content)).toHaveLength(2);
+    expect(earnedTitles(later, content).map((t) => t.en)).toContain("Datu of the Dry Season");
+    expect(earnedTitles(later, content).at(-1)?.en).toBe("Datu ng Ilog");
   });
 
   it("is checked every engine step", () => {
@@ -169,5 +170,16 @@ describe("finishing tasks", () => {
     expect(state.villagers).toBeGreaterThanOrEqual(10);
     expect(report.tasks).toContain("ten-villagers");
     expect(state.gawainDone).toContain("ten-villagers");
+  });
+});
+
+describe("worship and forest tasks", () => {
+  it("asks for the Dambana, 5 Aklat entries, permission before clearing and 5 replanted tiles", () => {
+    expect(taskMet(fresh({ buildings: [at("babaylan-hut", 2, 2), at("dambana", 2, 3)] }), content, quest("first-dambana"))).toBe(true);
+    expect(taskProgress(fresh({ aklat: ["kapre", "balete", "babaylan"] }), content, quest("aklat-five"))).toEqual({ have: 3, need: 5 });
+    const s = fresh();
+    expect(taskMet({ ...s, stats: { ...s.stats, permittedClears: 1 } }, content, quest("ask-permission"))).toBe(true);
+    expect(taskMet({ ...s, stats: { ...s.stats, replanted: 5 } }, content, quest("replant-five"))).toBe(true);
+    expect(quest("replant-five").reward.title?.en).toBe("Friend of the Forest");
   });
 });

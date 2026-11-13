@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { isNightAt } from "../engine/daynight";
 import { newGame } from "../engine/game";
 import { tileAt } from "../engine/map";
 import { at, content, mapFrom, withState } from "../engine/testUtils";
-import { dayPhase, destination, edgeTile, exitPoint, isNight, MAX_SPRITES, newWalker, planVillagers, SPEED, stepWalker, walk } from "./villagers";
+import { destination, edgeTile, exitPoint, MAX_SPRITES, newWalker, planVillagers, SPEED, stepWalker, walk } from "./villagers";
 
 const fed = { resources: { rice: 100, wood: 0, gold: 0 } };
 
@@ -61,9 +62,10 @@ describe("villager sprites", () => {
   });
 
   it("follows the tint: night in the dark part of the cycle", () => {
-    expect(isNight(dayPhase(0))).toBe(false);
-    expect(isNight(dayPhase(240_000 * 0.7))).toBe(true);
-    expect(isNight(dayPhase(240_000 * 3.95))).toBe(false);
+    const d = content.rules.dayNight.daySeconds;
+    expect(isNightAt(content, 0)).toBe(false);
+    expect(isNightAt(content, d * 0.7)).toBe(true);
+    expect(isNightAt(content, d * 3.95)).toBe(false);
   });
 
   it("walks along x, then y, at the given speed; the sick walk slower", () => {

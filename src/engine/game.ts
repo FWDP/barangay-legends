@@ -44,8 +44,26 @@ import { checkTasks } from "./gawain";
 import { happinessMultiplier, nextHappiness } from "./happiness";
 import { reconcilePeople, type HistoryEntry, type NamedVillager, type Stats } from "./people";
 import { capGrowth, riceCap, storageCap } from "./storage";
+import { checkAklat } from "./aklat";
+import { advanceReplanting, afterClearing, cancelReplant, isPranked, newForest, replant, updateForest, updatePranks, type ForestState, type Prank, type ReplantJob } from "./forest";
+import {
+  answerRiddle,
+  askPermission,
+  catchSarimanok,
+  chooseTradition,
+  gong,
+  lostToTikbalang,
+  offer,
+  perform,
+  ritualProductionBonus,
+  updateVisitors,
+  type BlessingTimer,
+  type Eclipse,
+  type SarimanokVisit,
+  type TikbalangTrick,
+} from "./worship";
 
-export const STATE_VERSION = 17;
+export const STATE_VERSION = 18;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -149,6 +167,27 @@ export interface GameState {
   /** The barangay's history: named villagers coming and going, tasks done. Newest last. */
   history: HistoryEntry[];
   stats: Stats;
+  /** Favor with the anito, built by offerings at the Dambana (worship.ts). */
+  favor: number;
+  /** The tradition the barangay follows (content/traditions), chosen at the first Dambana. */
+  tradition: string | null;
+  /** The last offering or ritual: a Dambana left alone too long slowly lowers happiness. */
+  lastRitualAt: number | null;
+  /** Rituals in effect and their cooldowns, by ritual id. */
+  blessings: Record<string, BlessingTimer>;
+  /** The Sarimanok crossing the sky, the Bakunawa eclipse and a tikbalang's trick, if happening. */
+  sarimanok: SarimanokVisit | null;
+  eclipse: Eclipse | null;
+  tikbalang: TikbalangTrick | null;
+  /** Woodcutter Camps whose tools a kapre hid. */
+  pranks: Prank[];
+  forest: ForestState;
+  /** Cleared tiles growing back into forest. */
+  replanting: ReplantJob[];
+  /** Aklat ng Alamat entries found. */
+  aklat: string[];
+  /** Beings and events the barangay has met (for the Aklat). */
+  flags: string[];
 }
 
 export type { ClearingJob } from "./clearing";
@@ -195,7 +234,19 @@ export function newGame(
     gawainDone: [],
     named: [],
     history: [],
-    stats: { raidsDefended: 0, rolls: 0, named: 0 },
+    stats: { raidsDefended: 0, rolls: 0, named: 0, replanted: 0, permittedClears: 0 },
+    favor: 0,
+    tradition: null,
+    lastRitualAt: null,
+    blessings: {},
+    sarimanok: null,
+    eclipse: null,
+    tikbalang: null,
+    pranks: [],
+    forest: newForest(content),
+    replanting: [],
+    aklat: [],
+    flags: [],
   };
   if (withRegion && content.neighbors.length > 0) state.region = createRegion(content, 0, seed);
   for (const def of content.buildings) {
@@ -267,7 +318,7 @@ export function overcrowded(state: GameState, content: Content): number {
  * from the barangay's center (a far bank cut off by a lost bridge), except in old saves (legacyReach).
  */
 export function canStaff(state: GameState, b: PlacedBuilding): boolean {
-  if (b.damaged || b.paused) return false;
+  if (b.damaged || b.paused || isPranked(state, b.x, b.y)) return false;
   return state.legacyReach || isFootReachable(state.map, b.x, b.y);
 }
 
@@ -286,6 +337,11 @@ export function roadBonuses(state: GameState, content: Content): number[] {
 
 /** Villagers able to work: none while hungry (gutom), never the sick (sakit). */
 export function healthyWorkers(state: GameState): number {
+  return Math.max(0, healthyWorkersBase(state) - lostToTikbalang(state));
+}
+
+/** Healthy workers before any are led astray by a tikbalang. */
+export function healthyWorkersBase(state: GameState): number {
   if (isHungry(state)) return 0;
   return Math.max(0, state.villagers - state.sick.length - warriorsOffWork(state));
 }
@@ -406,7 +462,11 @@ export interface Rates {
   net: Record<Resource, number>;
 }
 
-export function rates(state: GameState, content: Content): Rates {
+/**
+ * Production and eating per second. `offline` leaves out the forest spirits' reactions (the
+ * diwata withholding rice), which never happen during offline catch-up.
+ */
+export function rates(state: GameState, content: Content, opts: { offline?: boolean } = {}): Rates {
   const workers = buildingWorkers(state, content);
   const bonuses = buildingBonuses(state, content);
   const groves = buildingGroveBonuses(state, content);
@@ -421,8 +481,10 @@ export function rates(state: GameState, content: Content): Rates {
       produced[r] += workers[i] * (def?.produces?.[r] ?? 0) * (1 + bonuses[i] + roads[i] + (groves[i][r] ?? 0));
     }
   });
-  const mood = happinessMultiplier(state, content);
+  const mood = happinessMultiplier(state, content) * (1 + ritualProductionBonus(state, content));
   for (const r of RESOURCES) produced[r] *= seasonMultiplier(content, state.time, r) * mood;
+  // The diwata withhold part of the harvest while the forest spirits are angry.
+  if (!opts.offline && !content.ai && state.forest.stage >= 2) produced.rice *= 1 - content.rules.forest.riceWithheldPercent / 100;
   const eaten = Object.fromEntries(RESOURCES.map((r) => [r, 0])) as Record<Resource, number>;
   eaten.rice = state.villagers * content.rules.riceEatenPerVillagerPerSecond;
   const net = Object.fromEntries(RESOURCES.map((r) => [r, produced[r] - eaten[r]])) as Record<
@@ -694,7 +756,16 @@ export type Command =
   | { type: "declineOffer" }
   | { type: "choose"; option: string }
   | { type: "road"; tiles: Point[] }
-  | { type: "removeRoad"; x: number; y: number };
+  | { type: "removeRoad"; x: number; y: number }
+  | { type: "chooseTradition"; tradition: string }
+  | { type: "offer"; gift: ResourceAmounts }
+  | { type: "ritual"; ritual: string }
+  | { type: "askPermission" }
+  | { type: "catchSarimanok" }
+  | { type: "gong" }
+  | { type: "answerRiddle"; option: number }
+  | { type: "replant"; x: number; y: number }
+  | { type: "cancelReplant"; x: number; y: number };
 
 export function apply(state: GameState, content: Content, command: Command): GameState {
   const next = reconcilePeople(state, applyCommand(state, content, command), content);
@@ -758,6 +829,24 @@ function applyCommand(state: GameState, content: Content, command: Command): Gam
       return buildRoad(state, content, command.tiles);
     case "removeRoad":
       return removeRoad(state, command.x, command.y);
+    case "chooseTradition":
+      return chooseTradition(state, content, command.tradition);
+    case "offer":
+      return offer(state, content, command.gift);
+    case "ritual":
+      return perform(state, content, command.ritual);
+    case "askPermission":
+      return askPermission(state, content);
+    case "catchSarimanok":
+      return catchSarimanok(state, content);
+    case "gong":
+      return gong(state, content);
+    case "answerRiddle":
+      return answerRiddle(state, content, command.option);
+    case "replant":
+      return replant(state, content, command.x, command.y);
+    case "cancelReplant":
+      return cancelReplant(state, content, command.x, command.y);
   }
 }
 
@@ -867,11 +956,20 @@ function step(state: GameState, content: Content, dt: number): GameState {
   const warriors = Math.min(state.warriors, villagers);
   const happiness = nextHappiness(state, content, dt);
   let next: GameState = { ...state, resources, villagers, migration, hunger, warriors, happiness };
+  const beforeClearing = next;
   next = advanceClearing(next, content, dt, hungry).state;
+  if (!content.ai) next = advanceReplanting(afterClearing(beforeClearing, next, content), content, dt);
   next = updateEvents(next, content, dt);
   if (next.region) next = updateRegion(next, content, state.time, dt);
   next = updateChoices(next, content, state.time, dt);
+  if (!content.ai) {
+    // The spirits and visitors: only the player's barangay, only while playing.
+    next = updateVisitors(next, content, state.time, next.time);
+    next = updatePranks(next, content, state.time, next.time);
+    next = updateForest(next, content, dt, true);
+  }
   next = reconcilePeople(state, next, content, crowded ? "crowded" : "other");
-  return checkTasks(next, content);
+  next = checkTasks(next, content);
+  return content.ai ? next : checkAklat(next, content);
 }
 

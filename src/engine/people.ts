@@ -19,7 +19,7 @@ export interface NamedVillager {
   sick?: boolean;
 }
 
-export type HistoryKind = "named" | "left" | "fell" | "task";
+export type HistoryKind = "named" | "left" | "fell" | "task" | "spirits" | "aklat" | "event";
 
 /** One line of the barangay's history. Text is made by the UI, so it follows the language setting. */
 export interface HistoryEntry {
@@ -32,6 +32,14 @@ export interface HistoryEntry {
   cause?: "hunger" | "crowded" | "other";
   /** The task (task). */
   task?: string;
+  /** The forest spirits' stage (spirits): 1 restless, 2 angry. */
+  stage?: number;
+  /** The Aklat ng Alamat entry found (aklat). */
+  entry?: string;
+  /** What happened (event): eclipseWon, eclipseLost, sarimanok, riddleRight; and what it gave or took. */
+  event?: string;
+  amounts?: Partial<Record<"rice" | "wood" | "gold", number>>;
+  favor?: number;
 }
 
 /** Counters kept for tasks and for the villager rolls. */
@@ -42,6 +50,10 @@ export interface Stats {
   rolls: number;
   /** Villagers ever named (ids). */
   named: number;
+  /** Tiles replanted into forest. */
+  replanted: number;
+  /** Tiles cleared with the spirits' permission. */
+  permittedClears: number;
 }
 
 export const MAX_HISTORY = 60;

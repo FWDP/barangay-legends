@@ -25,8 +25,8 @@ function loadOpen(): boolean {
  * The current task, always on screen at the map's left edge. Folded it is a slim tab with the
  * task's text; open it shows progress, the reward and the history button.
  */
-export function GawainPanel(props: { state: GameState; content: Content; game: GameText; lang: Lang; onHistory: () => void }) {
-  const { state, content, game, lang, onHistory } = props;
+export function GawainPanel(props: { state: GameState; content: Content; game: GameText; lang: Lang; onHistory: () => void; inline?: boolean }) {
+  const { state, content, game, lang, onHistory, inline = false } = props;
   const [open, setOpen] = useState(loadOpen);
   if (content.quests.length === 0) return null;
   const toggle = () => {
@@ -45,9 +45,9 @@ export function GawainPanel(props: { state: GameState; content: Content; game: G
   const text = q ? q.text[lang] : t.moreSoon[lang];
   return (
     <section
-      data-map-overlay
+      data-map-overlay={inline ? undefined : true}
       aria-label={t.title[lang]}
-      className="pointer-events-auto absolute top-14 left-2 z-10 max-w-[min(15rem,calc(100%-5rem))] sm:top-16"
+      className={inline ? "pointer-events-auto max-w-full" : "pointer-events-auto absolute top-14 left-2 z-10 max-w-[min(15rem,calc(100%-5rem))] sm:top-16"}
     >
       {open ? (
         <div className="mat-card rounded-xl border-2 border-amber-900/70 p-2.5 text-stone-800 shadow-lg">

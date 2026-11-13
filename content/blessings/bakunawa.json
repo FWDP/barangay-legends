@@ -1,0 +1,32 @@
+{
+  "id": "bakunawa",
+  "type": "eclipse",
+  "name": {
+    "en": "Bakunawa eclipse",
+    "fil": "Eklipse ng Bakunawa"
+  },
+  "description": {
+    "en": "At night the moon darkens: the Bakunawa is swallowing it. Beat the gongs to make the serpent let go.",
+    "fil": "Sa gabi, dumidilim ang buwan: nilulunok ito ng Bakunawa. Paluin ang mga gong para bitawan ito ng ahas."
+  },
+  "minVillagers": 30,
+  "chancePerSecond": 0.004,
+  "cooldownSeconds": 1800,
+  "durationSeconds": 20,
+  "gongsNeeded": 15,
+  "success": {
+    "favor": 15,
+    "gold": 10
+  },
+  "failure": {
+    "ricePercent": 10
+  },
+  "lore": "bakunawa",
+  "tradition": "Visayan",
+  "reviewed": false,
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Damiana L. Eugenio, Philippine Folk Literature: The Myths (University of the Philippines Press, 1993)",
+    "https://en.wikipedia.org/wiki/Bakunawa"
+  ]
+}

@@ -6,5 +6,30 @@
   "sources": [
     "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
     "https://en.wikipedia.org/wiki/Sandugo"
-  ]
+  ],
+  "aklat": {
+    "order": 3,
+    "icon": "🩸",
+    "name": {
+      "en": "Sandugo",
+      "fil": "Sandugo"
+    },
+    "lore": {
+      "en": "The sandugo was a blood compact. Two leaders mixed drops of their blood in a drink and shared it. This made their peoples kin and allies, bound to help each other. Spanish accounts record such compacts with visiting captains in the 1500s.",
+      "fil": "Ang sandugo ay isang kasunduan sa dugo. Hinahalo ng dalawang pinuno ang patak ng kanilang dugo sa inumin at pinagsasaluhan ito. Ginagawa nitong magkamag-anak at magkakampi ang kanilang mga tao. Naitala ng mga Espanyol ang ganitong kasunduan sa mga dumadalaw na kapitan noong 1500s."
+    },
+    "inGame": {
+      "en": "A diplomacy path in the Rehiyon: a blood compact makes a neighbor your ally.",
+      "fil": "Isang landas ng diplomasya sa Rehiyon: ginagawang kakampi ng sandugo ang isang kapitbahay."
+    },
+    "hint": {
+      "en": "Bind a neighbor to you as kin.",
+      "fil": "Gawing kamag-anak ang isang kapitbahay."
+    },
+    "unlock": {
+      "type": "path",
+      "path": "sandugo"
+    }
+  },
+  "reviewed": false
 }

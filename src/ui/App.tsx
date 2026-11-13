@@ -32,6 +32,10 @@ import type { NamedVillager } from "../engine/people";
 import { GawainPanel, HistoryDialog, VillagerDialog } from "./Gawain";
 import { shareBarangay } from "./share";
 import { awayPeopleLines, battleNames } from "./stories";
+import { AklatButton, AklatDialog, DambanaDialog, EclipseBar, ForestChip, PrankBar, ReplantBar, TikbalangBar } from "./Spirits";
+import { shrines, standingShrine } from "../engine/worship";
+import { canReplant } from "../engine/forest";
+import { isPlaza } from "../engine/map";
 
 const ui = loadUiContent(content);
 
@@ -359,6 +363,29 @@ export function App() {
   // A named villager's card, and the barangay history.
   const [villager, setVillager] = useState<NamedVillager | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
+  // The Dambana, the Aklat ng Alamat, the babaylan's ritual animation and a tile to replant.
+  const [dambanaOpen, setDambanaOpen] = useState(false);
+  const [aklatOpen, setAklatOpen] = useState(false);
+  const [ritual, setRitual] = useState<{ x: number; y: number; icon: string } | null>(null);
+  const [replantAsk, setReplantAsk] = useState<{ x: number; y: number } | null>(null);
+  const ritualTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const playRitual = (icon: string) => {
+    const at = standingShrine(state, content);
+    if (!at) return;
+    sfx.build();
+    setRitual({ x: at.x, y: at.y, icon });
+    if (ritualTimer.current) clearTimeout(ritualTimer.current);
+    ritualTimer.current = setTimeout(() => setRitual(null), 2600);
+  };
+  // The first Dambana asks for the barangay's tradition.
+  const hasShrine = shrines(state, content).length > 0;
+  const askedTradition = useRef(false);
+  useEffect(() => {
+    if (screen === "game" && hasShrine && state.tradition === null && !askedTradition.current) {
+      askedTradition.current = true;
+      setDambanaOpen(true);
+    }
+  }, [screen, hasShrine, state.tradition]);
   const settings = useSettings();
   const lang = useLang();
   const closeLore = useCallback(() => setLoreNote(null), []);
@@ -443,7 +470,12 @@ export function App() {
       unseenReport(state, seenReport) !== undefined ||
       loreNote !== null ||
       villager !== null ||
-      historyOpen,
+      historyOpen ||
+      dambanaOpen ||
+      aklatOpen ||
+      // The eclipse and the tikbalang's riddle need the player's taps: no talking over them.
+      state.eclipse !== null ||
+      (state.tikbalang !== null && !state.tikbalang.wrong),
   });
 
   // Moving uses the same placing mode as building, with the building picked up first.
@@ -565,6 +597,12 @@ export function App() {
       return;
     }
     const tile = tileAt(state.map, x, y);
+    // Empty cleared land (or land growing back): offer to replant it.
+    if (tile === "cleared" && !isPlaza(state.map, x, y) && (canReplant(state, x, y) || state.replanting.some((j) => j.x === x && j.y === y))) {
+      sfx.click();
+      setReplantAsk({ x, y });
+      return;
+    }
     if (tile !== "forest" && tile !== "balete") return;
     // A tile already queued or being cleared: offer to cancel it.
     if (state.clearing.some((j) => j.x === x && j.y === y)) {
@@ -651,7 +689,10 @@ export function App() {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-green-800 pt-[env(safe-area-inset-top)] text-stone-800">
-      <Hud state={state} content={content}>
+      <Hud state={state} content={content} extraChips={<ForestChip state={state} content={content} game={ui.game} lang={lang} />}>
+        <span className="hidden sm:block">
+          <AklatButton state={state} content={content} game={ui.game} lang={lang} onOpen={() => setAklatOpen(true)} />
+        </span>
         {state.region && (
           <button
             type="button"
@@ -755,6 +796,11 @@ export function App() {
               : null
           }
           tradeHeld={tradeHeld}
+          ritual={ritual}
+          onSarimanok={() => {
+            sfx.gather("rice");
+            dispatch({ type: "catchSarimanok" });
+          }}
           onBoat={() => {
             sfx.click();
             setOfferOpen(true);
@@ -762,8 +808,22 @@ export function App() {
         />
         )}
         <LoreToast loreId={loreNote} onClose={closeLore} />
-        <MapSeasonBadge state={state} content={content} />
-        <div data-map-overlay className="pointer-events-none absolute top-2 left-1/2 z-10 flex w-max max-w-[calc(100%-1rem)] -translate-x-1/2 flex-col items-center gap-1.5">
+        <MapSeasonBadge state={state} content={content}>
+          <span className="rounded-lg bg-stone-900/50">
+            <ForestChip state={state} content={content} game={ui.game} lang={lang} />
+          </span>
+          <AklatButton state={state} content={content} game={ui.game} lang={lang} onOpen={() => setAklatOpen(true)} compact />
+        </MapSeasonBadge>
+        {/* On phones the banners keep clear of the season, leaf and book on the right, and the task joins them. */}
+        <div
+          data-map-overlay
+          className="pointer-events-none absolute top-2 right-14 left-2 z-10 flex flex-col items-center gap-1.5 sm:right-auto sm:left-1/2 sm:w-max sm:max-w-[calc(100%-1rem)] sm:-translate-x-1/2"
+        >
+          {view === "barangay" && !placing && !roadMode && (
+            <div className="sm:hidden">
+              <GawainPanel state={state} content={content} game={ui.game} lang={lang} inline onHistory={() => setHistoryOpen(true)} />
+            </div>
+          )}
           {view === "barangay" && selection.length > 0 && !placing && !roadMode && (
             <ClearSelectionBar state={state} selection={selection} onClear={() => confirmClearing(false)} onCancel={() => setSelection([])} />
           )}
@@ -857,11 +917,48 @@ export function App() {
               }}
             />
           )}
+          {view === "barangay" &&
+            replantAsk &&
+            !placing &&
+            !roadMode &&
+            (canReplant(state, replantAsk.x, replantAsk.y) || state.replanting.some((j) => j.x === replantAsk.x && j.y === replantAsk.y)) && (
+            <ReplantBar
+              state={state}
+              content={content}
+              game={ui.game}
+              lang={lang}
+              tile={replantAsk}
+              onReplant={() => {
+                dispatch({ type: "replant", x: replantAsk.x, y: replantAsk.y });
+                sfx.build();
+                setReplantAsk(null);
+              }}
+              onStop={() => {
+                dispatch({ type: "cancelReplant", x: replantAsk.x, y: replantAsk.y });
+                sfx.click();
+                setReplantAsk(null);
+              }}
+              onCancel={() => setReplantAsk(null)}
+            />
+          )}
+          <EclipseBar
+            state={state}
+            content={content}
+            game={ui.game}
+            lang={lang}
+            onGong={() => {
+              dispatch({ type: "gong" });
+              sfx.click();
+            }}
+          />
+          <TikbalangBar state={state} content={content} game={ui.game} lang={lang} onAnswer={(i) => dispatch({ type: "answerRiddle", option: i })} />
+          <PrankBar state={state} content={content} game={ui.game} lang={lang} />
           {banners.map((b) => (
             <EventBanner key={b.id} banner={b} />
           ))}
         </div>
         {view === "barangay" && !placing && !roadMode && (
+          <div className="hidden sm:block">
           <GawainPanel
             state={state}
             content={content}
@@ -872,6 +969,7 @@ export function App() {
               setHistoryOpen(true);
             }}
           />
+          </div>
         )}
         <AdvisorBubble message={advisor.message} advisor={ui.advisor} lang={lang} onDismiss={advisor.dismiss} onSkip={advisor.skip} />
         {view === "barangay" && <GatherButtons amount={content.rules.gatherPerClick} quiet={hasAutomation} onGather={gather} />}
@@ -919,7 +1017,22 @@ export function App() {
           sfx.click();
           setMenu(null);
         }}
+        onShrine={() => {
+          setMenu(null);
+          setDambanaOpen(true);
+        }}
       />
+      <DambanaDialog
+        open={dambanaOpen}
+        state={state}
+        content={content}
+        game={ui.game}
+        lang={lang}
+        dispatch={dispatch}
+        onRitual={playRitual}
+        onClose={() => setDambanaOpen(false)}
+      />
+      <AklatDialog open={aklatOpen} state={state} content={content} game={ui.game} lang={lang} onClose={() => setAklatOpen(false)} />
       <ClearingQueueDialog
         state={state}
         open={queueOpen}

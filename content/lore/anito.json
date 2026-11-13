@@ -1,0 +1,36 @@
+{
+  "id": "anito",
+  "name": "Anito",
+  "description": "The spirits of the ancestors and of nature, honored with offerings.",
+  "tradition": "Widespread in the precolonial Philippines",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Juan de Plasencia, Customs of the Tagalogs (1589), in Blair and Robertson, The Philippine Islands 1493–1898, vol. 7",
+    "https://en.wikipedia.org/wiki/Anito"
+  ],
+  "aklat": {
+    "order": 6,
+    "icon": "🕯️",
+    "name": {
+      "en": "Anito",
+      "fil": "Anito"
+    },
+    "lore": {
+      "en": "Anito were the spirits of ancestors and of the natural world. Households kept carved figures of them and made offerings of food and drink. A babaylan or katalonan led larger rites for the whole community. Keeping good relations with the anito was part of daily life.",
+      "fil": "Ang anito ay mga espiritu ng ninuno at ng kalikasan. May mga inukit na larawan nila sa bawat tahanan at hinahandugan sila ng pagkain at inumin. Pinangungunahan ng babaylan o katalonan ang malalaking ritwal ng buong pamayanan. Bahagi ng araw-araw na buhay ang mabuting pakikitungo sa anito."
+    },
+    "inGame": {
+      "en": "Offerings at the Dambana build Favor. Spend it on the Anito blessing: +20% production for 5 minutes.",
+      "fil": "Nagpaparami ng Favor ang handog sa Dambana. Gamitin ito sa Basbas ng anito: +20% produksyon sa loob ng 5 minuto."
+    },
+    "hint": {
+      "en": "Raise a shrine near the babaylan.",
+      "fil": "Magtayo ng dambana malapit sa babaylan."
+    },
+    "unlock": {
+      "type": "built",
+      "building": "dambana"
+    }
+  },
+  "reviewed": false
+}
