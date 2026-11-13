@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { tileAt } from "../engine/map";
 import { isWalkable } from "../engine/paths";
 import { at, content, mapFrom, TEST_MAP, withState } from "../engine/testUtils";
-import { bandAt, isWater, lootTarget, lootWalk, sailToLanding } from "./visitors";
+import { bandAt, isWater, lootTarget, lootWalk, nearestIndex, riverLine, sailToLanding, waitIndex } from "./visitors";
 import { along, boatArriving, boatLeaving, dockIndex, dockPoint, fromTop, LEAVE_SECONDS, raiderCount, riverPath, SAIL_SECONDS } from "./visitors";
 
 // TEST_MAP: river in column 0, plaza at (5, 4), 9 rows.
@@ -141,5 +141,34 @@ describe("boats pass under a Tulay", () => {
   it("is the same when the bridge spans the whole river", () => {
     const full = mapFrom(["..~~..", "P.==..", "..~~.."]);
     expect(riverPath(full).slice(1, -1).map((p) => p.x)).toEqual([3, 3, 3]);
+  });
+});
+
+describe("a trade bangka during a raid", () => {
+  const m = mapFrom([
+    "...~~...",
+    "...~~...",
+    ".P.~~...",
+    "...~~...",
+    "...~~...",
+    "...~~...",
+    "...~~...",
+    "...~~...",
+  ]);
+  const river = riverPath(m);
+
+  it("waits at the end of the river farther from the landing", () => {
+    expect(river[waitIndex(river, { x: 2, y: 1 })].y).toBeGreaterThan(m.height / 2);
+    expect(river[waitIndex(river, { x: 2, y: 7 })].y).toBeLessThan(m.height / 2);
+    expect(waitIndex(river, null)).toBe(2);
+  });
+
+  it("follows the river there and back", () => {
+    const from = { x: 4.4, y: 2.5 };
+    const out = riverLine(river, from, waitIndex(river, { x: 2, y: 1 }));
+    expect(out[0]).toEqual(from);
+    expect(out.slice(1).every((p) => isWater(m, Math.floor(p.x), Math.floor(p.y)) || p.y >= m.height)).toBe(true);
+    expect(out.at(-1)).toEqual(river[waitIndex(river, { x: 2, y: 1 })]);
+    expect(nearestIndex(river, { x: 4, y: 5.4 })).toBe(6);
   });
 });

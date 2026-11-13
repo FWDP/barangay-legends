@@ -9,7 +9,7 @@ import {
   neighborDef,
   traitOf,
   type NeighborState,
-} from "../engine/region";
+ tradingPaused } from "../engine/region";
 import { clock } from "./EventBanners";
 import { RESOURCE_ICON } from "./format";
 
@@ -288,16 +288,18 @@ function NeighborPanel(props: {
 
       <div className="space-y-2">
         <h3 className="font-display text-base text-amber-900">Trade</h3>
+        {tradingPaused(state) && <p className="rounded bg-red-100 px-2 py-1 text-xs font-semibold text-red-900">⏸ Trade paused — raid in progress</p>}
         <div className="grid grid-cols-2 gap-2">
           {RESOURCES.map((give) => {
             const get = RESOURCES.find((r) => r !== give)!;
-            const ok = state.resources[give] >= d.trade.give && n.state.resources[get] >= receive;
+            const paused = tradingPaused(state);
+            const ok = !paused && state.resources[give] >= d.trade.give && n.state.resources[get] >= receive;
             return (
               <ActionButton
                 key={give}
                 onClick={() => dispatch({ type: "trade", neighbor: n.id, give })}
                 disabled={!ok}
-                why={state.resources[give] < d.trade.give ? `You need ${d.trade.give} ${give}.` : `They're short of ${get}.`}
+                why={paused ? "Trade paused — raid in progress." : state.resources[give] < d.trade.give ? `You need ${d.trade.give} ${give}.` : `They're short of ${get}.`}
               >
                 {d.trade.give} {RESOURCE_ICON[give]} → {receive} {RESOURCE_ICON[get]}
               </ActionButton>

@@ -49,7 +49,7 @@ import { bonusPreviewText, RESOURCE_ICON } from "./format";
 import { activeJobs, jobCost, workforce } from "../engine/clearing";
 import { landingCandidates, raidLanding } from "../engine/border";
 import { useReducedMotion, VillagerLayer, type Clash } from "./VillagerLayer";
-import { dockPoint, riverPath, SAIL_SECONDS } from "./visitors";
+import { dockPoint, riverPath, SAIL_SECONDS, waitIndex } from "./visitors";
 import { DAY_SECONDS } from "./villagers";
 
 const INCOME_EVERY_MS = 3000;
@@ -121,8 +121,10 @@ export function BarangayMap(props: {
   onSelectArea?: (tiles: Point[]) => void;
   /** A building whose menu is open: a Kuta shows its defense radius. */
   focus?: Point | null;
+  /** Trade is paused for a raid: the bangka waits offshore and can't be tapped. */
+  tradeHeld?: boolean;
 }) {
-  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null, selection = [], onSelectArea, focus = null } = props;
+  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null, selection = [], onSelectArea, focus = null, tradeHeld = false } = props;
   // The rectangle being dragged over the forest (desktop), from its first tile to the current one.
   const [dragArea, setDragArea] = useState<{ from: Point; to: Point } | null>(null);
   // Tiles being painted with a mouse drag in road mode (laid on release).
@@ -643,8 +645,10 @@ export function BarangayMap(props: {
   // The docked trade boat's tap target (the boat itself is drawn on the villager canvas).
   const path = useMemo(() => riverPath(map), [map]);
   const offer = state.region?.offer ?? null;
-  const docked = offer && !scenic && onBoat && path.length > 2 && (reducedMotion || state.time - (offer.expiresAt - content.rules.diplomacy.offers.expireSeconds) >= SAIL_SECONDS);
+  const docked = offer && !tradeHeld && !scenic && onBoat && path.length > 2 && (reducedMotion || state.time - (offer.expiresAt - content.rules.diplomacy.offers.expireSeconds) >= SAIL_SECONDS);
   const dock = docked ? { p: dockPoint(path, map.plaza), name: content.neighbors.find((n) => n.id === offer.from)?.name ?? offer.from } : null;
+  // While trade is paused, a label where the bangka waits offshore.
+  const waiting = offer && tradeHeld && !scenic && landing && path.length > 2 ? path[waitIndex(path, landing)] : null;
 
   return (
     <div className="relative min-h-0 flex-1">
@@ -684,6 +688,15 @@ export function BarangayMap(props: {
         )}
         {cam && view.w > 0 && <VillagerLayer state={state} content={content} cam={cam} view={view} reducedMotion={reducedMotion} clash={clash} />}
         {cam && landing && <LandingMarker cam={cam} view={view} landing={landing} />}
+        {cam && waiting && (
+          <span
+            role="status"
+            className="pointer-events-none absolute z-10 -translate-x-1/2 rounded-full border border-red-950 bg-stone-900/85 px-1.5 py-0.5 text-[11px] font-semibold whitespace-nowrap text-amber-50 shadow"
+            style={{ left: o.x + waiting.x * cam.tile, top: o.y + waiting.y * cam.tile + cam.tile * 0.7 }}
+          >
+            ⏸ Trade paused — raid in progress
+          </span>
+        )}
         {cam && dock && (
           <span
             data-boat

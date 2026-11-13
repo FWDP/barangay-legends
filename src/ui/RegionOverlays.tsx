@@ -122,13 +122,28 @@ export function OfferBar(props: {
   folded?: boolean;
   /** The boat is still on its way. */
   sailing?: boolean;
+  /** Trade is paused for a raid (until the boat is back at the dock). */
+  held?: boolean;
   onOpen?: () => void;
 }) {
-  const { state, content, dispatch, folded = false, sailing = false, onOpen } = props;
+  const { state, content, dispatch, folded = false, sailing = false, held = false, onOpen } = props;
   const offer = state.region?.offer;
   if (!offer) return null;
   const who = neighborDef(content, offer.from);
   const canPay = state.resources[offer.want.resource] >= offer.want.amount;
+  if (held) {
+    return (
+      <div role="status" className="wood-panel pointer-events-auto flex max-w-full items-center gap-2 rounded-xl border-2 border-red-900 px-3 py-1.5 text-xs leading-tight text-amber-50 shadow-lg sm:text-sm">
+        <span className="text-xl leading-none" aria-hidden>
+          🛶
+        </span>
+        <span>
+          <b>⏸ Trade paused — raid in progress.</b> The bangka from <span className="font-display">{who?.name ?? offer.from}</span> waits offshore and
+          comes back after.
+        </span>
+      </div>
+    );
+  }
   if (folded) {
     return (
       <button

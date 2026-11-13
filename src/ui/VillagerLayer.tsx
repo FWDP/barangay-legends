@@ -33,6 +33,11 @@ import {
   LANDING_SHARE,
   riverPath,
   bandAt,
+  BOAT_RETURN_MS,
+  CLASH_MS,
+  nearestIndex,
+  riverLine,
+  waitIndex,
   lootTarget,
   lootWalk,
   sailToLanding,
@@ -302,7 +307,17 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
   const latest = useRef({ state, cam, view, clash });
   latest.current = { state, cam, view, clash };
   // Trade boat and raid shown last frame, for boats casting off and raiders going home.
-  const boat = useRef<{ from: string; top: boolean; leftAt?: number; p?: Point; heading?: number } | null>(null);
+  const boat = useRef<{
+    from: string;
+    top: boolean;
+    leftAt?: number;
+    p?: Point;
+    heading?: number;
+    /** Waiting offshore during a raid: where it set out from and when, then when it turned back. */
+    hold?: { from: Point; at: number; backFrom?: Point; backAt?: number };
+  } | null>(null);
+  // When the last raid ended (its warning), so a waiting boat comes back after the clash.
+  const raidEnded = useRef<number | null>(null);
   const raid = useRef<RaidMemory | null>(null);
   const river = useRef<{ map: GameState["map"] | null; path: Point[] }>({ map: null, path: [] });
   const sprites = useRef(new Map<number, Villager>());
@@ -376,15 +391,41 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
       if (path.length > 2) {
         const offer = s.region?.offer ?? null;
         const offers = content.rules.diplomacy.offers;
-        if (offer) {
+        // Trading pauses during a raid: the bangka waits offshore, out of the raiders' way, until
+        // the raid and its clash are over, then comes back.
+        if (s.region?.incomingRaid) raidEnded.current = null;
+        else if (raid.current && raidEnded.current === null) raidEnded.current = now;
+        const held = !!s.region?.incomingRaid || (raidEnded.current !== null && now < raidEnded.current + CLASH_MS);
+        if (offer && held && !reducedMotion) {
+          const top = fromTop(content, offer.from);
+          const b0 = boat.current?.from === offer.from && !boat.current.leftAt ? boat.current : null;
+          const start = b0?.p ?? boatArriving(path, plaza, top, 0).p;
+          const hold = b0?.hold && !b0.hold.backAt ? b0.hold : { from: start, at: now };
+          const out = riverLine(path, hold.from, waitIndex(path, raidLanding(s, content) ?? raid.current?.landing ?? null));
+          const at = along(out, Math.min(1, (now - hold.at) / 1000 / LEAVE_SECONDS));
+          boat.current = { from: offer.from, top, p: at.p, heading: at.heading, hold };
+          animating = true;
+        } else if (offer) {
           const top = fromTop(content, offer.from);
           const since = s.time - (offer.expiresAt - offers.expireSeconds);
           const where = boatArriving(path, plaza, top, reducedMotion ? Infinity : since);
-          const prev = boat.current?.from === offer.from && !boat.current.leftAt ? boat.current.p : undefined;
-          // Ease toward the target: the game moves ten times a second, the canvas thirty.
-          const p = prev && !reducedMotion ? { x: prev.x + (where.p.x - prev.x) * Math.min(1, dt * 8), y: prev.y + (where.p.y - prev.y) * Math.min(1, dt * 8) } : where.p;
-          boat.current = { from: offer.from, top, p, heading: where.heading };
-          if (!where.docked) animating = true;
+          const b0 = boat.current?.from === offer.from && !boat.current.leftAt ? boat.current : null;
+          if (b0?.hold && !reducedMotion) {
+            // Coming back from waiting offshore.
+            b0.hold.backAt ??= now;
+            b0.hold.backFrom ??= b0.p ?? where.p;
+            const back = [...riverLine(path, b0.hold.backFrom, nearestIndex(path, where.p)), where.p];
+            const f = (now - b0.hold.backAt) / BOAT_RETURN_MS;
+            const at = along(back, Math.min(1, f));
+            boat.current = { ...b0, p: at.p, heading: at.heading, hold: f < 1 ? b0.hold : undefined };
+            animating = true;
+          } else {
+            const prev = b0?.p;
+            // Ease toward the target: the game moves ten times a second, the canvas thirty.
+            const p = prev && !reducedMotion ? { x: prev.x + (where.p.x - prev.x) * Math.min(1, dt * 8), y: prev.y + (where.p.y - prev.y) * Math.min(1, dt * 8) } : where.p;
+            boat.current = { from: offer.from, top, p, heading: where.heading };
+            if (!where.docked) animating = true;
+          }
         } else if (boat.current && !reducedMotion) {
           boat.current.leftAt ??= now;
           const away = boatLeaving(path, plaza, boat.current.top, (now - boat.current.leftAt) / 1000);

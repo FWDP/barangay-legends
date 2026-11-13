@@ -174,6 +174,9 @@ export function offlineProgress(state: GameState, content: Content, awaySeconds:
     buildings: s.buildings.map((b) => (b.burningSince === undefined ? b : { ...b, burningSince: b.burningSince + seconds })),
   };
   if (region) {
+    // A raid paused while away also keeps trading paused: the offer's time stands still too.
+    const held = region.incomingRaid && region.offer ? { ...region.offer, expiresAt: region.offer.expiresAt + seconds } : region.offer;
+    if (held !== region.offer) region = { ...region, offer: held };
     const offer = region.offer && region.offer.expiresAt <= end ? null : region.offer;
     if (region.offer && !offer) report.offerExpired = region.offer.from;
     region = {

@@ -308,8 +308,18 @@ export function adjustRelations(state: GameState, content: Content, id: string, 
   });
 }
 
+/**
+ * Trading pauses from a raid's warning until the raid is over: nothing can be traded or
+ * accepted, no new offers come, and a waiting offer's time stands still. Every trade path
+ * checks this.
+ */
+export function tradingPaused(state: GameState): boolean {
+  return (state.region?.incomingRaid ?? null) !== null;
+}
+
 /** Trade: give a parcel of one resource for the other. Builds trust and influence; keeps tributaries loyal. */
 export function trade(state: GameState, content: Content, id: string, give: Resource): GameState {
+  if (tradingPaused(state)) return state;
   const t = content.rules.diplomacy.trade;
   return withNeighbor(state, id, (n, region) => {
     const get = RESOURCES.find((r) => r !== give)!;
@@ -439,6 +449,7 @@ export function guard(state: GameState, content: Content, id: string, warriors: 
 
 /** Accept the open trade offer: counts as a trade. */
 export function acceptOffer(state: GameState, content: Content): GameState {
+  if (tradingPaused(state)) return state;
   const offer = state.region?.offer;
   if (!offer || state.time > offer.expiresAt) return state;
   const t = content.rules.diplomacy.trade;
@@ -592,7 +603,12 @@ function onRegionSecond(state: GameState, content: Content, second: number, rng:
     }
   }
 
-  // Trade offers: one at a time, from neighbors that still trust the player a little.
+  // Trade offers: one at a time, from neighbors that still trust the player a little. During a
+  // raid none come, and a waiting offer's time stands still (its expiry moves on with the clock).
+  if (region.incomingRaid) {
+    if (region.offer) region = { ...region, offer: { ...region.offer, expiresAt: region.offer.expiresAt + 1 } };
+    return { ...s, region };
+  }
   if (region.offer && second >= region.offer.expiresAt) region = { ...region, offer: null };
   if (!region.offer) {
     for (const n of region.neighbors) {

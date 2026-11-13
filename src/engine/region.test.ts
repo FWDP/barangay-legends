@@ -9,8 +9,10 @@ import {
   homeWarriors,
   marriageBlocker,
   resolveBattle,
+  tradingPaused,
   type NeighborState,
 } from "./region";
+import { offlineProgress } from "./offline";
 import { nextRandom } from "./rng";
 import { at, calm, content, withState } from "./testUtils";
 
@@ -370,6 +372,66 @@ describe("trade offers", () => {
   it("can be declined", () => {
     const s = tick(world(), offers, 1.5);
     expect(apply(s, offers, { type: "declineOffer" }).region!.offer).toBeNull();
+  });
+});
+
+describe("no trading during a raid", () => {
+  const offers = withDiplomacy({ offers: { ...d.offers, chancePerSecond: 1 }, aiRaid: { ...d.aiRaid, chancePerSecond: 0 } });
+  /** A raid on its way, striking in `inSeconds`. */
+  const raiding = (s: GameState, inSeconds = 30): GameState => ({
+    ...s,
+    region: { ...s.region!, truceUntil: 0, nextAiRaidAt: 99999, incomingRaid: { from: "batong-buhay", strikeAt: Math.floor(s.time) + inSeconds } },
+  });
+
+  it("refuses trades and accepting offers from the warning until the raid ends", () => {
+    const s = tick(world(), offers, 1.5);
+    expect(s.region!.offer).toBeTruthy();
+    const r = raiding(s);
+    expect(tradingPaused(r)).toBe(true);
+    expect(apply(r, offers, { type: "acceptOffer" })).toBe(r);
+    expect(apply(r, offers, { type: "trade", neighbor: "pulang-lupa", give: "rice" })).toBe(r);
+    // Turning an offer down is still allowed.
+    expect(apply(r, offers, { type: "declineOffer" }).region!.offer).toBeNull();
+  });
+
+  it("creates no new offers during a raid", () => {
+    const r = tick(raiding(world(), 40), offers, 20);
+    expect(r.region!.incomingRaid).not.toBeNull();
+    expect(r.region!.offer).toBeNull();
+  });
+
+  it("pauses a waiting offer's timer, and starts it again after", () => {
+    const s = tick(world(), offers, 1.5);
+    const left = s.region!.offer!.expiresAt - s.time;
+    const during = tick(raiding(s, 30), offers, 20);
+    expect(during.region!.offer).toBeTruthy();
+    expect(during.region!.offer!.expiresAt - during.time).toBeCloseTo(left, 0);
+    // Even a wait longer than the offer's whole life doesn't make it expire.
+    const long = tick(raiding(s, d.offers.expireSeconds * 3), offers, d.offers.expireSeconds * 2);
+    expect(long.region!.offer).toBeTruthy();
+    // After the raid the clock runs again.
+    const after = tick(during, offers, 15);
+    expect(after.region!.incomingRaid).toBeNull();
+    expect(after.region!.offer!.expiresAt - after.time).toBeLessThan(left - 3);
+  });
+
+  it("trading works again after the raid", () => {
+    const s = tick(raiding(tick(world(), offers, 1.5), 5), offers, 6);
+    expect(s.region!.incomingRaid).toBeNull();
+    expect(tradingPaused(s)).toBe(false);
+    const accepted = apply(s, offers, { type: "acceptOffer" });
+    expect(accepted.region!.offer).toBeNull();
+    expect(accepted.region!.paths).toContain("trade");
+    const traded = apply(s, offers, { type: "trade", neighbor: "pulang-lupa", give: "rice" });
+    expect(traded).not.toBe(s);
+  });
+
+  it("keeps the offer's time paused through offline progress during a raid", () => {
+    const s = raiding(tick(world(), offers, 1.5), 30);
+    const left = s.region!.offer!.expiresAt - s.time;
+    const { state } = offlineProgress(s, offers, 3600);
+    expect(state.region!.offer).toBeTruthy();
+    expect(state.region!.offer!.expiresAt - state.time).toBeCloseTo(left, 5);
   });
 });
 

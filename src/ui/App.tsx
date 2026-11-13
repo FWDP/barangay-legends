@@ -25,7 +25,8 @@ import { useGameSounds } from "./useGameSounds";
 import { awayStory, offlineStory } from "./away";
 import { AwayDialog, ChoiceBanner, ChoiceDialog } from "./StoryDialogs";
 import { useReducedMotion, type Clash } from "./VillagerLayer";
-import { CLASH_MS, SAIL_SECONDS } from "./visitors";
+import { BOAT_RETURN_MS, CLASH_MS, SAIL_SECONDS } from "./visitors";
+import { tradingPaused } from "../engine/region";
 import type { GameState } from "../engine/game";
 
 const ui = loadUiContent(content);
@@ -379,6 +380,17 @@ export function App() {
   useEffect(() => setOfferOpen(false), [offerKey]);
   const sailing = !!offer && !reducedMotion && state.time - (offer.expiresAt - content.rules.diplomacy.offers.expireSeconds) < SAIL_SECONDS;
 
+  // Trading pauses from the raid warning until the waiting bangka is back at the dock (after the
+  // clash, and the boat's way back: the same timing as on the map).
+  const [tradeBack, setTradeBack] = useState(true);
+  const raidOn = tradingPaused(state);
+  useEffect(() => {
+    if (raidOn) return setTradeBack(false);
+    const t = setTimeout(() => setTradeBack(true), reducedMotion ? 0 : CLASH_MS + BOAT_RETURN_MS);
+    return () => clearTimeout(t);
+  }, [raidOn]);
+  const tradeHeld = raidOn || !tradeBack;
+
   // A choice event, never shown during a raid.
   const [choiceOpen, setChoiceOpen] = useState(false);
   const raidComing = !!state.region?.incomingRaid;
@@ -703,6 +715,7 @@ export function App() {
                 }
               : null
           }
+          tradeHeld={tradeHeld}
           onBoat={() => {
             sfx.click();
             setOfferOpen(true);
@@ -790,6 +803,7 @@ export function App() {
             dispatch={dispatch}
             folded={view === "barangay" && !offerOpen}
             sailing={sailing}
+            held={tradeHeld}
             onOpen={() => !sailing && setOfferOpen(true)}
           />
           {!raidComing && (

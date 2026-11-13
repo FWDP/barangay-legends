@@ -157,3 +157,40 @@ export function lootWalk(map: MapState, from: Point, to: Point): Point[] | null 
   const steps = cachedPath(map, from, to);
   return steps ? steps.map((t) => ({ x: t.x + 0.5, y: t.y + 0.5 })) : null;
 }
+
+// ---------- Trade boats during a raid ----------
+
+/** After the raid (and its clash), how long a waiting bangka takes to come back, in ms. */
+export const BOAT_RETURN_MS = 6000;
+
+/**
+ * Where a trade bangka waits while a raid is on: a couple of rows in from the end of the river
+ * farther from the landing, out of the raiders' way.
+ */
+export function waitIndex(path: Point[], landing: Point | null): number {
+  const first = Math.min(2, path.length - 2);
+  const last = Math.max(1, path.length - 3);
+  if (!landing) return first;
+  const d = (i: number) => Math.hypot(path[i].x - (landing.x + 0.5), path[i].y - (landing.y + 0.5));
+  return d(first) >= d(last) ? first : last;
+}
+
+/** The nearest point of the river path to `p`. */
+export function nearestIndex(path: Point[], p: Point): number {
+  let best = 0;
+  let bestD = Infinity;
+  path.forEach((q, i) => {
+    const d = Math.hypot(q.x - p.x, q.y - p.y);
+    if (d < bestD) [best, bestD] = [i, d];
+  });
+  return best;
+}
+
+/** A way along the river from a point to a path index (through the path's points in between). */
+export function riverLine(path: Point[], from: Point, to: number): Point[] {
+  const i = nearestIndex(path, from);
+  const step = to >= i ? 1 : -1;
+  const line = [from];
+  for (let k = i; k !== to + step; k += step) line.push(path[k]);
+  return line;
+}
