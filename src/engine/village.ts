@@ -12,7 +12,7 @@ import type { VillageBand } from "./content";
 import { entranceOf, solidTiles, updateDoors } from "./doors";
 import { autoPlaceTile, isPlaza, setTiles, tileAt } from "./map";
 import { findPath } from "./paths";
-import { closestLandings, kutaCovers } from "./border";
+import { chooseLanding, kutaCovers } from "./border";
 import { strengthOfState, type NeighborState } from "./region";
 
 /** The village band for a barangay level (rules.villages). */
@@ -137,7 +137,8 @@ export function generateVillage(content: Content, n: NeighborState, def: Neighbo
 
 /** When a cached village is out of date: its size or strength changed noticeably. */
 export function villageKey(content: Content, n: NeighborState): string {
-  return `${n.id}:${n.tradition}:${villageLevel(content, n)}:${Math.round(n.state.villagers / 3)}:${Math.round(strengthOfState(n.state, content) / 10)}`;
+  // The map seed too: another game (a new one, or a loaded save) has other maps under the same ids.
+  return `${n.id}:${n.state.map.seed}:${n.tradition}:${villageLevel(content, n)}:${Math.round(n.state.villagers / 3)}:${Math.round(strengthOfState(n.state, content) / 10)}`;
 }
 
 const cache = new Map<string, GameState>();
@@ -157,11 +158,12 @@ export function villageSnapshot(content: Content, n: NeighborState, def: Neighbo
 }
 
 /**
- * A raid on this village, before it is sent: the shore raiders would most likely land on (the
- * landing nearest the village) and the Kuta that would defend it in full there.
+ * A raid on this village, before it is sent: where the raiders land (one of the landing spots
+ * nearest the village, picked with the seeded roll for `key`: see battle.ts raidKey, the same
+ * pick the raid itself makes) and the Kutas that would defend it in full there.
  */
-export function raidPreview(village: GameState, content: Content): { landing: { x: number; y: number } | null; covering: PlacedBuilding[] } {
-  const landing = closestLandings(village.map, 1)[0] ?? null;
+export function raidPreview(village: GameState, content: Content, key: number): { landing: { x: number; y: number } | null; covering: PlacedBuilding[] } {
+  const landing = chooseLanding(village, content, key);
   if (!landing) return { landing: null, covering: [] };
   const forts = new Set(content.buildings.filter((b) => b.defense).map((b) => b.id));
   return { landing, covering: village.buildings.filter((b) => forts.has(b.type) && !b.damaged && kutaCovers(content, b, landing)) };

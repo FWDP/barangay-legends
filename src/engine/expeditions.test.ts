@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Content } from "./content";
 import { apply, tick, type GameState } from "./game";
 import { sameIsland } from "./archipelago";
-import { createRegion, defenseOf, neighborDef, type NeighborState } from "./region";
+import { createRegion, neighborDef, type NeighborState } from "./region";
 import { generateVillage } from "./village";
 import { tileAt } from "./map";
 import { nextRandom } from "./rng";
@@ -50,18 +50,21 @@ describe("expedition records: the player's raids", () => {
       expect(b.attackerWins).toBe(report.win);
       expect(b.attack).toBe(report.attack);
       expect(b.defense).toBe(report.defense);
-      expect(b.defense).toBe(defenseOf(nb(s, target).state, calm));
       expect(b.chance).toBe(report.chance);
       expect(b.attackerLosses).toBe(report.ourLosses);
       expect(b.defenderLosses).toBe(report.theirLosses);
       expect(b.loot).toEqual(report.loot);
       // The goods that changed hands are the loot, no more.
       expect(after.resources.rice - s.resources.rice).toBe(report.loot!.rice ?? 0);
-      // Every defender is in the log, and the Kuta bonus is what's left of the defense.
-      expect(b.defenders.count).toBe(3);
+      // Every defender at home is in the log (who got there in time, who didn't), and the
+      // defense is the muster's: base, warriors who arrived, the Kutas after their radius, allies.
       expect(b.defenders.posts.reduce((n, p) => n + p.warriors, 0)).toBe(3);
-      expect(b.kutaBonus).toBe(report.defense! - m.baseDefense - 3 * m.warrior.defense);
-      expect(b.allies).toEqual([]);
+      expect(b.defenders.count + b.defenders.late).toBe(3);
+      const allyDefense = b.allies.filter((a) => a.arrives).reduce((n, a) => n + (a.warriors * m.warrior.defense * d.sandugo.allyDefensePercent) / 100, 0);
+      expect(b.defense).toBeCloseTo(m.baseDefense + b.defenders.count * m.warrior.defense + b.kutaBonus + allyDefense, 9);
+      expect(report.landing).toEqual(e.landing);
+      expect(report.covered).toBe(b.covered);
+      expect(report.late).toBe(b.defenders.late);
     }
   });
 

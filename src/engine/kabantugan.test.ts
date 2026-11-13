@@ -211,7 +211,7 @@ describe("generated villages for AI barangays", () => {
   it("show the likely landing and the Kuta that cover it", () => {
     const { def, n } = pick("aggressive");
     const v = generateVillage(content, n, def, 0);
-    const p = raidPreview(v, content);
+    const p = raidPreview(v, content, 1);
     expect(p.landing).not.toBeNull();
     for (const k2 of p.covering) expect(v.buildings).toContain(k2);
   });

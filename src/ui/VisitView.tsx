@@ -9,6 +9,7 @@ import { neighborDef } from "../engine/region";
 import { parseSnapshot } from "../engine/save";
 import { isEmbargo } from "../engine/trading";
 import { raidPreview } from "../engine/village";
+import { raidKey } from "../engine/battle";
 import { blocOf } from "../engine/politics";
 import { BarangayMap } from "./BarangayMap";
 import { LevelBadge, levelOf } from "./LevelBadge";
@@ -43,7 +44,9 @@ export function VisitView(props: {
   const { snapshot, id, state, content, dispatch, onLore, onBack, game, lang } = props;
   const t = game.visit;
   const village = useMemo(() => parseSnapshot(snapshot, content), [snapshot, content]);
-  const preview = useMemo(() => (village ? raidPreview(village, content) : null), [village, content]);
+  // Where a raid would land today: the same seeded pick the raid makes (it holds for the day).
+  const key = raidKey(state, content);
+  const preview = useMemo(() => (village ? raidPreview(village, content, key) : null), [village, content, key]);
   const [planning, setPlanning] = useState(false);
   const n = state.region?.neighbors.find((x) => x.id === id);
   const def = neighborDef(content, id);

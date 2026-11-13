@@ -11,10 +11,11 @@ import { apply, canAfford, asCost, buildingCost, housing, newGame, owned, placeA
 import { autoPlaceTile } from "./map";
 import { Rng } from "./rng";
 import { proposeTrade, type CounterOffer, type Proposal } from "./trading";
-import { borderDefense, chooseLanding } from "./border";
+import { chooseLanding } from "./border";
 import { addExpedition, defenseExpedition } from "./expeditions";
+import { alliesComing, borderBattle, raidSetup } from "./battle";
 import type { Point } from "./map";
-import { generateArchipelago, islandDistance, sameIsland, travelSeconds, type Island, type Place } from "./archipelago";
+import { generateArchipelago, islandDistance, type Island, type Place } from "./archipelago";
 import {
   absorbed,
   atWarMembers,
@@ -555,12 +556,15 @@ export function raid(state: GameState, content: Content, id: string, warriors: n
   const target = state.region?.neighbors.find((n) => n.id === id);
   if (!target || target.status !== "independent" || state.time < target.raidCooldownUntil) return state;
 
+  // The same border battle as raids on the player: they land where the visit preview shows,
+  // the defenders muster from their Kutas, and their bloc mates may come in time.
+  const setup = raidSetup(state, content, id);
+  if (!setup) return state;
   const rng = new Rng(state.rng);
-  const attack = attackOf(warriors, content);
-  const defense = defenseOf(target.state, content);
-  const battle = resolveBattle(attack, defense, rng.next(), content);
+  const fight = borderBattle(setup.village, content, setup.landing, warriors, setup.allies, rng.next());
+  const { attack, defense, battle } = fight;
   const ourLosses = casualties(warriors, battle.attackerLossPercent, !battle.attackerWins);
-  const theirLosses = casualties(target.state.warriors, battle.defenderLossPercent, battle.attackerWins);
+  const theirLosses = casualties(fight.defenders, battle.defenderLossPercent, battle.attackerWins);
 
   let player = loseWarriors({ ...state, rng: rng.seed }, ourLosses);
   let them = loseWarriors(target.state, theirLosses);
@@ -617,6 +621,8 @@ export function raid(state: GameState, content: Content, id: string, warriors: n
     loot,
     renown: battle.attackerWins ? d.raid.renown : 0,
     renownFactor,
+    ...(fight.landing && fight.muster ? { landing: fight.landing, late: fight.muster.late, covered: fight.muster.covered } : {}),
+    ...(fight.allies.some((a) => a.arrives) ? { allies: fight.allies.filter((a) => a.arrives).map((a) => a.id) } : {}),
   });
   const i = region.neighbors.findIndex((n) => n.id === id);
   const neighbors = [...region.neighbors];
@@ -856,7 +862,6 @@ function onRegionSecond(state: GameState, content: Content, second: number, rng:
  */
 function aiRaidStrikes(state: GameState, content: Content, second: number, rng: Rng): GameState {
   const d = content.rules.diplomacy;
-  const m = content.rules.military;
   const region = state.region!;
   const raid = region.incomingRaid!;
   const i = region.neighbors.findIndex((n) => n.id === raid.from);
@@ -865,16 +870,15 @@ function aiRaidStrikes(state: GameState, content: Content, second: number, rng: 
   // Called off if they're no longer hostile or have no warriors left.
   if (!attacker || attacker.status !== "independent" || attacker.state.warriors < 1) return { ...state, region: base };
 
-  const helpers = alliedDefenders(state, content).filter((a) => a.arrives && a.id !== attacker.id);
-  const allies = helpers.reduce((sum, a) => sum + (a.warriors * m.warrior.defense * d.sandugo.allyDefensePercent) / 100, 0);
-  const attack = attackOf(attacker.state.warriors, content);
-  // The battle is at the landing: only warriors who get there in time fight, and each Kuta
-  // counts in full only if the landing is within its radius. Allies come too (by boat).
+  const coming = alliedDefenders(state, content).filter((a) => a.id !== attacker.id);
+  const helpers = coming.filter((a) => a.arrives);
+  // The battle is at the landing (the same border battle as the player's raids): only warriors
+  // who get there in time fight, each Kuta counts in full only if the landing is within its
+  // radius, and allies who arrive in time help.
   const landing = raid.landing ?? chooseLanding(state, content, raid.strikeAt - d.aiRaid.warningSeconds);
-  const border = landing ? borderDefense(state, content, landing, d.aiRaid.warningSeconds) : null;
-  const defense = (border ? border.defense : defenseOf(state, content)) + allies;
-  const battle = resolveBattle(attack, defense, rng.next(), content);
-  const defenders = border ? border.muster.joined : homeWarriors(state);
+  const fight = borderBattle(state, content, landing, attacker.state.warriors, coming, rng.next());
+  const { attack, defense, battle, defenders } = fight;
+  const border = fight.muster ? { muster: fight.muster } : null;
   const ourLosses = casualties(defenders, battle.defenderLossPercent, battle.attackerWins);
   const theirLosses = casualties(attacker.state.warriors, battle.attackerLossPercent, !battle.attackerWins);
 
@@ -910,7 +914,7 @@ function aiRaidStrikes(state: GameState, content: Content, second: number, rng: 
     content,
     { from: attacker.id, departAt: raid.strikeAt - d.aiRaid.warningSeconds, arriveAt: second, landing, attackers: attacker.state.warriors },
     border?.muster ?? null,
-    alliedDefenders(state, content).filter((a) => a.id !== attacker.id),
+    coming,
     { attack, defense, chance: battle.chance, attackerWins: battle.attackerWins, ourLosses, theirLosses, lost, defenders },
     next.nextReportId - 1,
   );
@@ -938,29 +942,11 @@ export interface AllyDefender {
 export function alliedDefenders(state: GameState, content: Content): AllyDefender[] {
   const region = state.region;
   if (!region) return [];
-  const a = content.rules.allyDefense;
-  const warning = content.rules.diplomacy.aiRaid.warningSeconds;
   const me = state.barangay.id;
   const myBloc = blocOf(region.politics, me);
-  return region.neighbors
-    .filter((n) => (n.status === "ally" || myBloc?.members.includes(n.id)) && n.state.warriors > 0)
-    .map((n) => {
-      const land = sameIsland(region.places, me, n.id);
-      const eta = land
-        ? Math.round(a.landSeconds + islandDistanceWithin(region, me, n.id) * a.landSecondsPerUnit)
-        : n.state.villagers >= a.balangayMinVillagers
-          ? travelSeconds(content, region.islands, region.places, n.id, me)
-          : null;
-      return { id: n.id, warriors: n.state.warriors, eta, arrives: eta !== null && eta <= warning, by: land ? ("land" as const) : ("sea" as const) };
-    });
+  return alliesComing(region, content, me, region.neighbors.filter((n) => n.status === "ally" || myBloc?.members.includes(n.id)));
 }
 
-/** Straight-line distance between two barangays' spots on the regional map. */
-function islandDistanceWithin(region: RegionState, a: string, b: string): number {
-  const pa = region.places[a];
-  const pb = region.places[b];
-  return pa && pb ? Math.hypot(pa.x - pb.x, pa.y - pb.y) : 0;
-}
 
 /** How far apart two barangays' islands are (0 on the same island). */
 export const seaDistance = (region: RegionState, a: string, b: string) => islandDistance(region.islands, region.places, a, b);

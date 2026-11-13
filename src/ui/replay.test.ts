@@ -78,7 +78,8 @@ describe("expedition replays", () => {
     const big: Expedition = { ...e, party: { ...e.party, count: 120 }, battle: { ...e.battle!, defenders: { ...e.battle!.defenders, count: 80, posts: [{ ...e.battle!.defenders.posts[0], warriors: 80 }] } } };
     const script = buildReplay(big, village, calm);
     expect(script.shown).toBeLessThanOrEqual(calm.rules.expeditions.maxSprites);
-    expect(script.total).toBe(200);
+    const allies = big.battle!.allies.filter((a) => a.arrives).reduce((n, a) => n + a.warriors, 0);
+    expect(script.total).toBe(200 + allies);
     for (const f of frames(script)) expect(f.people.length).toBeLessThanOrEqual(calm.rules.expeditions.maxSprites);
     expect(share([120, 80], 40)).toEqual([24, 16]);
     expect(share([3, 0, 1], 40)).toEqual([3, 0, 1]);

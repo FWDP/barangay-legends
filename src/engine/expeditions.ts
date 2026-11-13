@@ -6,13 +6,12 @@
 import { RESOURCES, type Content, type Resource } from "./content";
 import type { Command, GameState } from "./game";
 import { sameIsland } from "./archipelago";
-import { travelSeconds } from "./border";
 import type { Point } from "./map";
 import type { Muster } from "./border";
 import type { NamedVillager } from "./people";
-import { neighborDef, standardProposal, type AllyDefender, type Report } from "./region";
+import { standardProposal, type AllyDefender, type Report } from "./region";
 import type { Goods } from "./trading";
-import { generateVillage, raidPreview } from "./village";
+import { borderBattle, raidSetup } from "./battle";
 
 /** A named villager on an expedition, and whether they fell. */
 export interface ExpeditionMember {
@@ -161,24 +160,16 @@ export function noteExpedition(before: GameState, after: GameState, content: Con
   }
   if (command.type === "raid") {
     const report = newReport(before, after, "raid");
-    const target = before.region.neighbors.find((n) => n.id === command.neighbor);
-    const def = neighborDef(content, command.neighbor);
-    if (!report || !target || !def) return after;
-    // Where they landed and where the defenders came from, on the village a visit shows.
-    const village = generateVillage(content, target, def, time);
-    const landing = raidPreview(village, content).landing;
-    const forts = village.buildings.filter((b) => (content.buildings.find((d) => d.id === b.type)?.defense ?? 0) > 0 && !b.damaged);
+    const setup = raidSetup(before, content, command.neighbor);
+    if (!report || !setup) return after;
+    // The same setup the battle was fought with (only the roll differs, and it changes no muster).
+    const fight = borderBattle(setup.village, content, setup.landing, command.warriors, setup.allies, 0);
     const m = content.rules.military;
-    const defenders = target.state.warriors;
-    const starts: Point[] = forts.length ? forts.map((b) => ({ x: b.x, y: b.y })) : [village.map.plaza];
-    // The engine counts every defender at the battle (no muster for the player's raids).
-    const posts: ExpeditionPost[] = starts.map((from, i) => ({
-      from,
-      warriors: Math.floor(defenders / starts.length) + (i < defenders % starts.length ? 1 : 0),
-      seconds: landing ? travelSeconds(village.map, from, landing, content) : null,
-      arrives: true,
-    }));
-    const kutaBonus = Math.max(0, (report.defense ?? 0) - m.baseDefense - defenders * m.warrior.defense);
+    const posts: ExpeditionPost[] = fight.muster
+      ? fight.muster.posts.map((p) => ({ from: { ...p.from }, warriors: p.warriors, seconds: p.seconds, arrives: p.arrives }))
+      : [{ from: { ...setup.village.map.plaza }, warriors: fight.defenders, seconds: 0, arrives: true }];
+    const allyDefense = fight.allies.filter((a) => a.arrives).reduce((sum, a) => sum + (a.warriors * m.warrior.defense * content.rules.diplomacy.sandugo.allyDefensePercent) / 100, 0);
+    const kutaBonus = fight.muster ? fight.muster.walls : Math.max(0, (report.defense ?? 0) - allyDefense - m.baseDefense - fight.defenders * m.warrior.defense);
     const sea = crossesSea(before, me, command.neighbor);
     return addExpedition(after, content, {
       kind: "raid",
@@ -190,13 +181,13 @@ export function noteExpedition(before: GameState, after: GameState, content: Con
       sea,
       boat: "karakoa",
       route: [placeOf(before, me), placeOf(before, command.neighbor)],
-      landing,
+      landing: fight.landing ? { ...fight.landing } : null,
       party: { barangay: me, count: command.warriors, named: namedWarriors(before.named, command.warriors) },
       battle: {
-        defenders: { barangay: command.neighbor, count: defenders, named: [], posts, late: 0 },
-        allies: [],
+        defenders: { barangay: command.neighbor, count: fight.defenders, named: [], posts, late: fight.muster?.late ?? 0 },
+        allies: fight.allies.map((a) => ({ id: a.id, warriors: a.warriors, eta: a.eta, arrives: a.arrives, by: a.by })),
         kutaBonus,
-        covered: kutaBonus > 0 && raidPreview(village, content).covering.length > 0,
+        covered: fight.muster?.covered ?? false,
         attack: report.attack ?? 0,
         defense: report.defense ?? 0,
         chance: report.chance ?? 0,
