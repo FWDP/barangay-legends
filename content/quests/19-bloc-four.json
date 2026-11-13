@@ -1,0 +1,18 @@
+{
+  "id": "bloc-four",
+  "text": {
+    "en": "Bring 3 barangays into your bloc",
+    "fil": "Isama ang 3 barangay sa iyong alyansa"
+  },
+  "condition": {
+    "type": "blocMembers",
+    "count": 3
+  },
+  "reward": {
+    "title": {
+      "en": "Datu of Many Shores",
+      "fil": "Datu ng Maraming Pampang"
+    }
+  },
+  "next": "paramount"
+}

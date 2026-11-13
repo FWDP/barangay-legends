@@ -4,6 +4,7 @@
   "datu": "Dayang Dalisay",
   "trait": "peaceful",
   "description": "A quiet settlement of farmers by clear water.",
+  "home": true,
   "river": {
     "position": 0.32,
     "bank": "right"

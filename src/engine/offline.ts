@@ -10,7 +10,7 @@ import { RESOURCES, type Content, type Resource } from "./content";
 import { healRate, isHungry } from "./events";
 import { housing, rates, type GameState } from "./game";
 import { advanceClearing } from "./clearing";
-import { aiContent, aiDecide, traitOf, type NeighborState, type RegionState } from "./region";
+import { aiContent, aiDecide, traitOf, updatePolitics, type NeighborState, type RegionState } from "./region";
 import { checkTasks } from "./gawain";
 import { nextHappiness } from "./happiness";
 import { reconcilePeople } from "./people";
@@ -18,6 +18,9 @@ import { capGrowth, riceCap } from "./storage";
 import { checkAklat } from "./aklat";
 import { advanceReplanting, afterClearing, updateForest } from "./forest";
 import { passMourning } from "./death";
+
+/** Neighbors on other islands are stepped once every this many offline steps. */
+const FAR_EVERY = 4;
 
 export interface OfflineReport {
   /** Seconds credited (after the cap). */
@@ -37,6 +40,8 @@ export interface OfflineReport {
   offerExpired: string | null;
   /** Mga Gawain finished while away (ids, in order). */
   tasks: string[];
+  /** Balita news ids that came while away (at most one political event). */
+  news: number[];
 }
 
 const zero = (): Record<Resource, number> => Object.fromEntries(RESOURCES.map((r) => [r, 0])) as Record<Resource, number>;
@@ -114,19 +119,26 @@ function regionStep(
   content: Content,
   dt: number,
   decisions: number,
+  far?: { step: number; every: number; decisions: number },
 ): { region: RegionState; player: GameState; tribute: Record<Resource, number> } {
   const ai = aiContent(content);
   const d = content.rules.diplomacy;
   const tribute = zero();
   const resources = { ...player.resources };
+  const home = region.places?.[player.barangay.id]?.island;
   const neighbors = region.neighbors.map((n): NeighborState => {
-    let them = gentleStep(n.state, ai, dt).state;
-    for (let i = 0; i < decisions; i++) them = aiDecide(them, content, traitOf(content, n.id));
+    // Barangays on other islands are stepped more coarsely offline (every `every` steps), to keep catch-up quick.
+    const distant = !!far && home !== undefined && region.places?.[n.id] !== undefined && region.places[n.id].island !== home;
+    if (distant && far!.step % far!.every !== far!.every - 1) return n;
+    const span = distant ? dt * far!.every : dt;
+    const due = distant ? far!.decisions : decisions;
+    let them = gentleStep(n.state, ai, span).state;
+    for (let i = 0; i < due; i++) them = aiDecide(them, content, traitOf(content, n.id));
     if (n.status === "tributary") {
       const produced = rates(them, ai).produced;
       const left = { ...them.resources };
       for (const res of RESOURCES) {
-        const goods = Math.min(left[res], Math.floor((produced[res] * dt * d.tribute.percent) / 100));
+        const goods = Math.min(left[res], Math.floor((produced[res] * span * d.tribute.percent) / 100));
         left[res] -= goods;
         resources[res] += goods;
         tribute[res] += goods;
@@ -134,7 +146,7 @@ function regionStep(
       them = { ...them, resources: left };
     }
     // Grudges fade while the player is away too.
-    const grudge = Math.max(0, n.grudge - (d.grudge.decayPerMinute * dt) / 60);
+    const grudge = Math.max(0, n.grudge - (d.grudge.decayPerMinute * span) / 60);
     return { ...n, state: them, grudge };
   });
   return { region: { ...region, neighbors }, player: { ...player, resources }, tribute };
@@ -160,6 +172,7 @@ export function offlineProgress(state: GameState, content: Content, awaySeconds:
     tribute: zero(),
     offerExpired: null,
     tasks: [],
+    news: [],
   };
   if (seconds < off.minSeconds) return { state, report: { ...report, seconds: 0 } };
 
@@ -182,7 +195,8 @@ export function offlineProgress(state: GameState, content: Content, awaySeconds:
     report.recovered += step.recovered;
     report.cleared += step.cleared;
     if (region) {
-      const rs = regionStep(region, s, content, dt, due);
+      const farDue = Math.floor(((i + 1) * dt) / off.aiDecisionSeconds) - Math.floor(((i + 1 - FAR_EVERY) * dt) / off.aiDecisionSeconds);
+      const rs = regionStep(region, s, content, dt, due, { step: i, every: FAR_EVERY, decisions: Math.max(0, farDue) });
       decided += due;
       region = rs.region;
       s = rs.player;
@@ -205,6 +219,7 @@ export function offlineProgress(state: GameState, content: Content, awaySeconds:
     sarimanok: s.sarimanok ? { ...s.sarimanok, at: s.sarimanok.at + seconds, until: s.sarimanok.until + seconds } : null,
     pranks: s.pranks.map((p) => ({ ...p, until: p.until + seconds })),
   };
+
   if (region) {
     // A raid paused while away also keeps trading paused: the offer's time stands still too.
     const held = region.incomingRaid && region.offer ? { ...region.offer, expiresAt: region.offer.expiresAt + seconds } : region.offer;
@@ -218,6 +233,8 @@ export function offlineProgress(state: GameState, content: Content, awaySeconds:
       truceUntil: region.truceUntil + seconds,
       nextAiRaidAt: region.nextAiRaidAt + seconds,
       nextTributeAt: end + content.rules.diplomacy.tribute.everySeconds,
+      // Boats at sea wait too: they arrive as long after the return as they had left to go.
+      voyages: (region.voyages ?? []).map((v) => ({ ...v, departAt: v.departAt + seconds, arriveAt: v.arriveAt + seconds })),
       neighbors: region.neighbors.map((n) => ({
         ...n,
         // Guards come home if their time ran out; decisions resume from now.
@@ -226,6 +243,12 @@ export function offlineProgress(state: GameState, content: Content, awaySeconds:
       })),
     };
     s = { ...s, region };
+  }
+  // Politics: at most one scripted event while away; it never attacks the player.
+  if (s.region) {
+    const lastNews = s.region.nextNewsId;
+    s = updatePolitics(s, content, start, end, 1);
+    report.news = s.region!.news.filter((n) => n.id >= lastNews).map((n) => n.id);
   }
   report.tasks = s.gawainDone.filter((id) => !state.gawainDone.includes(id));
   return { state: s, report };

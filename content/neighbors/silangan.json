@@ -1,0 +1,24 @@
+{
+  "id": "silangan",
+  "name": "Barangay Silangan",
+  "datu": "Dayang Liwanag",
+  "trait": "peaceful",
+  "description": "An eastern shore village of fishers and weavers.",
+  "home": false,
+  "start": {
+    "villagers": 7,
+    "warriors": 0,
+    "resources": {
+      "rice": 60,
+      "wood": 40
+    },
+    "buildings": {
+      "bahay-kubo": 3,
+      "palayan": 2,
+      "woodcutter-camp": 1
+    }
+  },
+  "trust": 45,
+  "fictional": true,
+  "note": "Fictional barangay and datu, made up for the game; not a historical person or place."
+}

@@ -7,7 +7,7 @@ export type ResourceAmounts = Partial<Record<Resource, number>>;
 export type Resources = Record<Resource, number>;
 
 /** Map features a building can be next to (besides other buildings). */
-export const TERRAINS = ["river", "forest"] as const;
+export const TERRAINS = ["river", "forest", "sea"] as const;
 export type TerrainFeature = (typeof TERRAINS)[number];
 
 export interface AdjacencyBonus {
@@ -56,8 +56,10 @@ export interface BuildingDef {
   datuHouse?: DatuHouseDef;
   /** A resting place for the dead (the Libingan): mourning passes this much faster with one. */
   burial?: { mourningPercentFaster: number };
-  /** Available from the start, or once the barangay has this many villagers. */
-  unlock: { start?: boolean; villagers?: number };
+  /** Available from the start, once the barangay has this many villagers, or at a Bahay ng Datu level. */
+  unlock: { start?: boolean; villagers?: number; datuLevel?: number };
+  /** A Balangay dock: each one keeps `boats` balangay, trained for `boatCost`. */
+  balangayDock?: { boats: number; boatCost: ResourceAmounts };
   sources: string[];
 }
 
@@ -89,6 +91,11 @@ export interface Rules {
   worship: WorshipRules;
   forest: ForestRules;
   death: DeathRules;
+  archipelago: { minIslands: number; maxIslands: number };
+  blocs: { min: number; max: number; independents: number };
+  sea: { secondsPerUnit: number; minSeconds: number; raidWarriorsPerBoat: number };
+  politics: PoliticsRules;
+  allyDefense: { landSeconds: number; landSecondsPerUnit: number; balangayMinVillagers: number };
   mourning: { seconds: number; maxSeconds: number; happiness: number };
   /** Rice the barangay holds with no Kamalig. */
   storage: { baseRice: number };
@@ -119,6 +126,29 @@ export interface DatuHouseDef {
   influencePercentPerLevel: number;
   /** Level 1 first (it stands from the start); each later level has the cost of raising it. */
   levels: { level: number; cost?: ResourceAmounts; unlocks?: DatuUnlock }[];
+}
+
+export interface PoliticsRules {
+  startsAfterSeconds: number;
+  minGapSeconds: number;
+  chancePerSecond: number;
+  warTickSeconds: number;
+  warLossPercent: number;
+  joinTrust: number;
+  maxGrudge: number;
+  leaveTrustLoss: number;
+  expelTrustLoss: number;
+  solidarityPercent: number;
+}
+
+/** A scripted political event (content/events/politics): what kind of change it makes, and its news. */
+export const POLITICS_TYPES = ["leave", "war", "peace", "join"] as const;
+export interface PoliticsEventDef {
+  id: string;
+  type: (typeof POLITICS_TYPES)[number];
+  /** May use {datu}, {barangay}, {bloc} and {other}. */
+  text: Text;
+  weight: number;
 }
 
 export interface DeathRules {
@@ -178,6 +208,8 @@ export interface TraditionDef extends Heritage {
   burial: Text;
   /** How its Libingan looks: a burial cave with jars, or longon coffins. */
   burialLook: "jars" | "longon";
+  /** How its Bahay ng Datu looks (presentation only): a large raised lowland house, or torogan-inspired. */
+  houseStyle?: "lowland" | "torogan";
   forestSpirit: { name: Text; stage1: Text; stage2: Text; sources: string[] };
   /** How much more often the Sarimanok visits (1 = the base rate). */
   sarimanokChance: number;
@@ -309,9 +341,13 @@ export type QuestCondition =
   | { type: "aklat"; count: number }
   | { type: "replanted"; count: number }
   | { type: "permittedClears"; count: number }
-  | { type: "datuLevel"; count: number };
+  | { type: "datuLevel"; count: number }
+  | { type: "voyages"; count: number }
+  | { type: "leadBloc" }
+  | { type: "blocMembers"; count: number }
+  | { type: "paramount" };
 
-export const QUEST_CONDITIONS = ["built", "villagers", "tilesCleared", "connected", "survivedSeason", "traded", "warriors", "raidsDefended", "tributaries", "aklat", "replanted", "permittedClears", "datuLevel"] as const;
+export const QUEST_CONDITIONS = ["built", "villagers", "tilesCleared", "connected", "survivedSeason", "traded", "warriors", "raidsDefended", "tributaries", "aklat", "replanted", "permittedClears", "datuLevel", "voyages", "leadBloc", "blocMembers", "paramount"] as const;
 
 /** One of the Mga Gawain: a task in a chain, with a reward (resources and/or a title for the datu). */
 export interface QuestDef {
@@ -392,6 +428,10 @@ export interface ChoiceEffects {
   /** With the event's neighbor. */
   trust?: number;
   influence?: number;
+  /** Stand with the ally in its war: its enemies hold a grudge against the player. */
+  joinWar?: boolean;
+  /** Send this percent of the warriors at home to defend the ally against {enemy} (a battle). */
+  defendAlly?: number;
 }
 
 export type ResourceAmountsSigned = Partial<Record<Resource, number>>;
@@ -415,6 +455,8 @@ export interface ChoiceConditions {
   /** At least one sandugo ally (the event's neighbor is then an ally). */
   allied?: boolean;
   minVillagers?: number;
+  /** An ally (sandugo, or in the player's bloc) whose bloc is at war: the event's neighbor; {enemy} is a member of the other side. */
+  allyAtWar?: boolean;
 }
 
 /** A short story with 2–3 choices (content/events/choices). */
@@ -545,8 +587,12 @@ export interface NeighborDef {
   datu: string;
   trait: string;
   description: string;
-  /** Where it sits on the regional river: 0 = upstream, 1 = downstream, and which bank. */
-  river: { position: number; bank: "left" | "right" };
+  /** On the player's home island (the old river neighbors). Others are placed on other islands from the seed. */
+  home?: boolean;
+  /** Where it sits on the home island's river: 0 = upstream, 1 = downstream, and which bank (home neighbors only). */
+  river?: { position: number; bank: "left" | "right" };
+  /** Its tradition (content/traditions); picked from the seed when not given. */
+  tradition?: string;
   start: { villagers: number; warriors: number; resources: ResourceAmounts; buildings: Record<string, number> };
   /** Starting trust towards the player, 0..100. */
   trust: number;
@@ -574,6 +620,8 @@ export interface MapRules {
   baleteTrees: number;
   /** Balete trees grow at least this many tiles from the plaza. */
   baleteMinDistance: number;
+  /** Rows of sea along the bottom edge (the coast). */
+  seaDepth?: number;
 }
 
 /** Clearing a forest tile: villagers work for a while and bring back some wood. */
@@ -714,6 +762,9 @@ export interface Content {
   trickery: TrickeryDef | null;
   /** Aklat ng Alamat entries, in book order. */
   aklat: AklatEntry[];
+  /** Island names for the archipelago (content/islands.json), the home island first. */
+  islands: string[];
+  politics: PoliticsEventDef[];
   /** The Bahay ng Datu (from content/buildings, kept out of `buildings`: it is never placed). */
   datuHouse: (BuildingDef & { datuHouse: DatuHouseDef }) | null;
   /** Set for AI barangays' content: no Forest Balance, Aklat or visitors for them. */
@@ -800,6 +851,12 @@ export function validateBuilding(raw: unknown, file = "building"): BuildingDef {
     });
   }
   if (!isObject(raw.unlock)) throw new Error(`${file}: "unlock" must be an object`);
+  if (raw.unlock.datuLevel !== undefined && (!Number.isInteger(raw.unlock.datuLevel) || (raw.unlock.datuLevel as number) < 1)) throw new Error(`${file}: "unlock.datuLevel" must be a whole number >= 1`);
+  if (raw.balangayDock !== undefined) {
+    const b = raw.balangayDock;
+    if (!isObject(b) || !Number.isInteger(b.boats) || (b.boats as number) < 1) throw new Error(`${file}: "balangayDock.boats" must be a whole number >= 1`);
+    checkAmounts(b.boatCost, `${file}: balangayDock.boatCost`);
+  }
   if (raw.unlock.villagers !== undefined && !isNonNegNumber(raw.unlock.villagers)) {
     throw new Error(`${file}: "unlock.villagers" must be a number >= 0`);
   }
@@ -964,6 +1021,17 @@ export function validateRules(raw: unknown): Rules {
   if (!isObject(mo)) throw new Error('rules: missing "mourning"');
   checkNumbers(mo, ["seconds", "maxSeconds"], "rules: mourning");
   if (typeof mo.happiness !== "number" || mo.happiness > 0) throw new Error('rules: "mourning.happiness" must be 0 or below');
+  for (const [key, fields] of [
+    ["archipelago", ["minIslands", "maxIslands"]],
+    ["blocs", ["min", "max", "independents"]],
+    ["sea", ["secondsPerUnit", "minSeconds", "raidWarriorsPerBoat"]],
+    ["politics", ["startsAfterSeconds", "minGapSeconds", "chancePerSecond", "warTickSeconds", "warLossPercent", "joinTrust", "maxGrudge", "leaveTrustLoss", "expelTrustLoss", "solidarityPercent"]],
+    ["allyDefense", ["landSeconds", "landSecondsPerUnit", "balangayMinVillagers"]],
+  ] as const) {
+    const g = raw[key];
+    if (!isObject(g)) throw new Error(`rules: missing "${key}"`);
+    checkNumbers(g, [...fields], `rules: ${key}`);
+  }
   if (!isObject(f.replant)) throw new Error('rules: missing "forest.replant"');
   checkAmounts(f.replant.cost, "rules: forest.replant.cost");
   checkNumbers(f.replant, ["seconds", "balance"], "rules: forest.replant", true);
@@ -1070,10 +1138,12 @@ export function validateNeighbor(raw: unknown, file = "neighbor"): NeighborDef {
   if (!isObject(raw)) throw new Error(`${file}: must be a JSON object`);
   checkStrings(raw, ["id", "name", "datu", "trait", "description"], file);
   if (!/^[a-z0-9-]+$/.test(raw.id as string)) throw new Error(`${file}: "id" may only use a-z, 0-9 and "-"`);
+  if (raw.home !== undefined && typeof raw.home !== "boolean") throw new Error(`${file}: "home" must be true or false`);
   const river = raw.river;
-  if (!isObject(river) || !isNonNegNumber(river.position) || (river.position as number) > 1 || (river.bank !== "left" && river.bank !== "right")) {
+  if ((raw.home === true || river !== undefined) && (!isObject(river) || !isNonNegNumber(river.position) || (river.position as number) > 1 || (river.bank !== "left" && river.bank !== "right"))) {
     throw new Error(`${file}: "river" needs a "position" from 0 to 1 and a "bank" of "left" or "right"`);
   }
+  if (raw.tradition !== undefined && typeof raw.tradition !== "string") throw new Error(`${file}: "tradition" must be a tradition id`);
   const start = raw.start;
   if (!isObject(start)) throw new Error(`${file}: missing "start"`);
   checkNumbers(start, ["villagers", "warriors"], `${file}: start`);
@@ -1084,7 +1154,7 @@ export function validateNeighbor(raw: unknown, file = "neighbor"): NeighborDef {
   return raw as unknown as NeighborDef;
 }
 
-const CHOICE_EFFECTS = ["resources", "villagers", "sick", "trust", "influence"];
+const CHOICE_EFFECTS = ["resources", "villagers", "sick", "trust", "influence", "joinWar", "defendAlly"];
 const MAX_CHOICE_EFFECT = 1000;
 
 /** Checks one choice event file. Building and season ids are checked in buildContent. */
@@ -1107,16 +1177,18 @@ export function validateChoice(raw: unknown, file = "choice"): ChoiceEventDef {
     if (c[k] !== undefined && (typeof c[k] !== "string" || c[k] === "")) throw new Error(`${file}: "conditions.${k}" must be a building id`);
   }
   if (c.allied !== undefined && c.allied !== true) throw new Error(`${file}: "conditions.allied" can only be true`);
+  if (c.allyAtWar !== undefined && c.allyAtWar !== true) throw new Error(`${file}: "conditions.allyAtWar" can only be true`);
   if (c.minVillagers !== undefined && (!Number.isInteger(c.minVillagers) || (c.minVillagers as number) < 0)) {
     throw new Error(`${file}: "conditions.minVillagers" must be a whole number >= 0`);
   }
   for (const k of Object.keys(c)) {
-    if (!["season", "hasBuilding", "lacksBuilding", "allied", "minVillagers"].includes(k)) throw new Error(`${file}: unknown condition "${k}"`);
+    if (!["season", "hasBuilding", "lacksBuilding", "allied", "minVillagers", "allyAtWar"].includes(k)) throw new Error(`${file}: unknown condition "${k}"`);
   }
   raw.conditions = c;
   if (!Array.isArray(raw.choices) || raw.choices.length < 2 || raw.choices.length > 3) throw new Error(`${file}: needs 2 or 3 "choices"`);
   const ids = new Set<string>();
   const usesNeighbor = raw.neighbor !== undefined || c.allied === true;
+  const atWar = c.allyAtWar === true;
   raw.choices.forEach((o, i) => {
     const where = `${file}: choices[${i}]`;
     if (!isObject(o)) throw new Error(`${where} must be an object`);
@@ -1133,6 +1205,10 @@ export function validateChoice(raw: unknown, file = "choice"): ChoiceEventDef {
           if (!(RESOURCES as readonly string[]).includes(r)) throw new Error(`${where}: unknown resource "${r}"`);
           if (!Number.isInteger(n) || Math.abs(n as number) > MAX_CHOICE_EFFECT) throw new Error(`${where}: effects.resources.${r} must be a whole number`);
         }
+      } else if (k === "joinWar") {
+        if (v !== true || !atWar) throw new Error(`${where}: "joinWar" can only be true, in an event with "allyAtWar"`);
+      } else if (k === "defendAlly") {
+        if (!Number.isInteger(v) || (v as number) < 1 || (v as number) > 100 || !atWar) throw new Error(`${where}: "defendAlly" must be 1–100, in an event with "allyAtWar"`);
       } else if (!Number.isInteger(v) || Math.abs(v as number) > MAX_CHOICE_EFFECT) {
         throw new Error(`${where}: effects.${k} must be a whole number`);
       }
@@ -1141,6 +1217,7 @@ export function validateChoice(raw: unknown, file = "choice"): ChoiceEventDef {
   });
   const texts = [raw.story as string, ...(raw.choices as Record<string, string>[]).flatMap((o) => [o.label, o.result])];
   for (const p of texts.flatMap((t) => [...t.matchAll(/\{(\w+)\}/g)])) {
+    if (p[1] === "enemy" && atWar) continue;
     if (p[1] !== "neighbor" && p[1] !== "datu") throw new Error(`${file}: unknown placeholder {${p[1]}}`);
     if (!usesNeighbor) throw new Error(`${file}: {${p[1]}} needs the event to name a "neighbor"`);
   }
@@ -1161,7 +1238,7 @@ export function validateQuest(raw: unknown, file = "quest"): QuestDef {
   if (!isObject(c) || !(QUEST_CONDITIONS as readonly unknown[]).includes(c.type)) {
     throw new Error(`${file}: "condition.type" must be one of ${QUEST_CONDITIONS.join(", ")}`);
   }
-  if (c.type !== "traded" && c.type !== "survivedSeason" && (!Number.isInteger(c.count) || (c.count as number) < 1)) {
+  if (!["traded", "survivedSeason", "leadBloc", "paramount"].includes(c.type as string) && (!Number.isInteger(c.count) || (c.count as number) < 1)) {
     throw new Error(`${file}: "condition.count" must be a whole number >= 1`);
   }
   if (c.type === "built" && typeof c.building !== "string") throw new Error(`${file}: "condition.building" is missing`);
@@ -1229,6 +1306,19 @@ export function validateVillagers(raw: unknown, rawNames: unknown, buildingIds: 
   return { chance: raw.chance, names: names as string[], stories: raw.stories as unknown as VillagerStory[], roleBuildings: rb as VillagerContent["roleBuildings"] };
 }
 
+/** Checks one scripted political event (content/events/politics). */
+export function validatePolitics(raw: unknown, file = "politics"): PoliticsEventDef {
+  if (!isObject(raw)) throw new Error(`${file}: must be a JSON object`);
+  checkStrings(raw, ["id"], file);
+  if (!(POLITICS_TYPES as readonly unknown[]).includes(raw.type)) throw new Error(`${file}: "type" must be one of ${POLITICS_TYPES.join(", ")}`);
+  const text = checkText(raw.text, `${file}: text`);
+  for (const lang of ["en", "fil"] as const) {
+    for (const m of text[lang].matchAll(/\{(\w+)\}/g)) if (!["datu", "barangay", "bloc", "other"].includes(m[1])) throw new Error(`${file}: unknown placeholder {${m[1]}}`);
+  }
+  if (raw.weight !== undefined && !isNonNegNumber(raw.weight)) throw new Error(`${file}: "weight" must be a number >= 0`);
+  return { ...(raw as unknown as PoliticsEventDef), weight: (raw.weight as number | undefined) ?? 1 };
+}
+
 /** The cultural rule: a tradition, at least one source, and a reviewed flag. */
 function checkHeritage(raw: Record<string, unknown>, file: string) {
   if (typeof raw.tradition !== "string" || raw.tradition === "") throw new Error(`${file}: needs a "tradition"`);
@@ -1257,6 +1347,7 @@ export function validateTradition(raw: unknown, file = "tradition"): TraditionDe
   if (!Array.isArray(fs.sources) || fs.sources.length === 0) throw new Error(`${file}: forestSpirit needs a source`);
   checkNumbers(raw, ["sarimanokChance"], file);
   if (raw.burialLook !== "jars" && raw.burialLook !== "longon") throw new Error(`${file}: "burialLook" must be "jars" or "longon"`);
+  if (raw.houseStyle !== undefined && raw.houseStyle !== "lowland" && raw.houseStyle !== "torogan") throw new Error(`${file}: "houseStyle" must be "lowland" or "torogan"`);
   return raw as unknown as TraditionDef;
 }
 
@@ -1357,7 +1448,7 @@ export function buildContent(
   blessingFiles: Record<string, unknown> = {},
   neighborFiles: Record<string, unknown> = {},
   choiceFiles: Record<string, unknown> = {},
-  extra: { quests?: Record<string, unknown>; villagers?: unknown; names?: unknown; traditions?: Record<string, unknown> } = {},
+  extra: { quests?: Record<string, unknown>; villagers?: unknown; names?: unknown; traditions?: Record<string, unknown>; islands?: unknown; politics?: Record<string, unknown> } = {},
 ): Content {
   const all = Object.entries(buildingFiles)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -1449,7 +1540,8 @@ export function buildContent(
       }
       return n;
     })
-    .sort((a, b) => a.river.position - b.river.position);
+    // Home-island neighbors first, upstream to downstream; then the rest by id.
+    .sort((a, b) => Number(!!b.home) - Number(!!a.home) || (a.river?.position ?? 2) - (b.river?.position ?? 2) || a.id.localeCompare(b.id));
   if (new Set(neighbors.map((n) => n.id)).size !== neighbors.length) throw new Error("Two neighbors share an id");
   const seasonIds = events.seasons?.seasons.map((s) => s.id) ?? [];
   const choices = Object.entries(choiceFiles)
@@ -1472,7 +1564,14 @@ export function buildContent(
     seasonIds,
   );
   const villagers = validateVillagers(extra.villagers, extra.names, ids);
-  return { buildings, rules, events, lore, groves, neighbors, choices, quests, villagers, traditions, rituals, visitor, eclipse, trickery, aklat, datuHouse };
+  const islandsRaw = extra.islands;
+  const islands = isObject(islandsRaw) && Array.isArray(islandsRaw.names) ? islandsRaw.names.filter((n): n is string => typeof n === "string" && n !== "") : [];
+  if (extra.islands !== undefined && islands.length < rules.archipelago.maxIslands) throw new Error(`islands.json: needs at least ${rules.archipelago.maxIslands} names`);
+  const politics = Object.entries(extra.politics ?? {})
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([file, raw]) => validatePolitics(raw, file));
+  for (const n of neighbors) if (n.tradition && !traditions.some((t) => t.id === n.tradition)) throw new Error(`${n.id}: unknown tradition "${n.tradition}"`);
+  return { buildings, rules, events, lore, groves, neighbors, choices, quests, villagers, traditions, rituals, visitor, eclipse, trickery, aklat, datuHouse, islands, politics };
 }
 
 /** Loads every JSON file in content/ at build time (Vite bundles them). */
@@ -1495,5 +1594,7 @@ export function loadContent(): Content {
     villagers: Object.values(villagers)[0],
     names: Object.values(names)[0],
     traditions: import.meta.glob("../../content/traditions/*.json", { eager: true, import: "default" }),
+    islands: Object.values(import.meta.glob("../../content/islands.json", { eager: true, import: "default" }))[0],
+    politics: import.meta.glob("../../content/events/politics/*.json", { eager: true, import: "default" }),
   });
 }

@@ -114,7 +114,7 @@ export const GAME_TEXT = {
   },
   forest: { label: ["balance"], tip: [], stage1: [], stage2: ["percent"], replant: ["cost"], replanting: ["time"], prank: ["building", "time"] },
   build: {
-    tirahan: [], pagkain: [], depensa: [], pananampalataya: [], daan: [], iba: [], build: [], cancel: [], locked: ["villagers"], need: ["missing"],
+    tirahan: [], pagkain: [], depensa: [], pananampalataya: [], daan: [], iba: [], build: [], cancel: [], locked: ["villagers"], lockedDatu: ["level"], need: ["missing"],
     recommended: [], more: [], new: [], details: [], staffed: ["staffed"], noPath: ["n"], perTile: [], daanName: [], daanText: ["percent"], layDaan: [],
   },
   death: {
@@ -122,6 +122,16 @@ export const GAME_TEXT = {
     sickWarning: [], hungerWarning: [], remembered: [], none: [], others: ["count"], jars: [], longon: [],
   },
   datu: { title: [], level: ["level", "max"], bonus: ["production", "influence"], upgrade: ["level"], max: [], envoys: [], balangay: [], alliances: [], unlocks: ["what"], news: ["level", "what"], close: [] },
+  balita: {
+    title: [], none: [], formed: ["barangay"], joined: ["barangay", "bloc"], left: ["barangay", "bloc"], expelled: ["barangay", "bloc"], absorbed: ["barangay"],
+    defeated: ["barangay", "bloc"], "war-joined": ["barangay", "other"], "ally-defended": ["barangay", "other"], "ally-lost": ["barangay", "other"], you: [], yourBloc: [],
+    blocName: ["leader"], independent: [], atWar: ["other"], formedYou: [], joinedYou: ["bloc"], leftYou: ["bloc"],
+  },
+  alliance: {
+    title: [], level: [], form: [], leave: [], join: [], invite: [], expel: [], leader: [], members: ["n", "strength"], yours: ["bloc"], member: ["bloc"], none: [],
+    trust: ["trust"], grudge: [], tributary: [], taken: [], island: ["island"], tradition: ["tradition"], bloc: ["bloc"], noBloc: [], byBoat: ["time"], noBoat: [], atSea: ["n"],
+    waiting: [], boats: ["free", "total"], train: [], dockFull: [], paramount: [], list: [],
+  },
   events: { eclipse: [], gong: [], gongs: ["taps", "needed"], eclipseWon: ["favor", "gold"], eclipseLost: ["rice"], tikbalang: ["n"], right: [], wrong: ["time"], sarimanok: ["gift"] },
 } as const satisfies Record<string, Record<string, readonly string[]>>;
 

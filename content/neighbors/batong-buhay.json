@@ -4,6 +4,7 @@
   "datu": "Datu Kidlat",
   "trait": "aggressive",
   "description": "Hard-bitten warriors who prize renown from raids.",
+  "home": true,
   "river": {
     "position": 0.9,
     "bank": "right"

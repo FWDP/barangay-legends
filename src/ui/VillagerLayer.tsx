@@ -17,6 +17,7 @@ import {
   namedSprites,
   newWalker,
   planVillagers,
+  routeTo,
   presentVillagers,
   SPEED,
   stepWalker,
@@ -45,6 +46,7 @@ import {
   dockPoint,
 } from "./visitors";
 import { hasDatuUnlock } from "../engine/datu";
+import { alliedDefenders } from "../engine/region";
 import { raidLanding } from "../engine/border";
 
 /** A battle at the Kuta being shown right now (see App): who won, and when it ends (ms). */
@@ -407,6 +409,7 @@ export function VillagerLayer(props: {
   const datu = useRef<Villager | null>(null);
   const envoys = useRef<{ key: string; walkers: Villager[] } | null>(null);
   const markers = useRef<{ p: Point; until: number }[]>([]);
+  const allyRoutes = useRef(new Map<string, Point[]>());
   const before = useRef<GameState | null>(null);
   const started = useRef(false);
   const planned = useRef<{ state: GameState | null; rally: string; plans: VillagerPlan[]; named: Map<number, NamedVillager> }>({ state: null, rally: "", plans: [], named: new Map() });
@@ -616,6 +619,45 @@ export function VillagerLayer(props: {
           if (sp) drawn.push({ x: sp.x, y: sp.y + T, r: T * 0.8, f: () => drawSparks(g, sp.x, sp.y, T, t) });
         }
       }
+
+      // ---- Allies coming to the landing during a raid warning: on foot from the map's edge,
+      // or by boat from the sea. Only those who will make it in time are shown. ----
+      const raidNow = s.region?.incomingRaid ?? null;
+      const landAt = raidNow ? raidLanding(s, content) : null;
+      if (raidNow && landAt) {
+        const warning = content.rules.diplomacy.aiRaid.warningSeconds;
+        const elapsed = Math.max(0, warning - (raidNow.strikeAt - s.time));
+        const target = { x: landAt.x + 0.5, y: landAt.y + 0.5 };
+        alliedDefenders(s, content)
+          .filter((a) => a.arrives && a.eta !== null)
+          .forEach((a, k) => {
+            const f = reducedMotion ? 1 : Math.min(1, elapsed / Math.max(1, a.eta!));
+            if (f < 1) animating = true;
+            if (a.by === "sea") {
+              // Rowed in from the sea edge below the map.
+              const from = { x: target.x + (k % 2 ? 2 : -2), y: s.map.height + 1.5 };
+              const at = { x: from.x + (target.x - from.x) * f, y: from.y + (target.y + 0.6 - from.y) * f };
+              const v = visible(at);
+              if (v && f < 1) drawn.push({ x: v.x, y: v.y, r: T * 0.7, layer: 0, f: () => drawBoat(g, v.x, v.y, T, -Math.PI / 2, "bangka", t) });
+              if (f < 1) return;
+            }
+            const key = `${a.id}:${landAt.x},${landAt.y}`;
+            let route = allyRoutes.current.get(key);
+            if (!route) {
+              const edge = edgeTile(s.map, target);
+              route = routeTo(s.map, { x: edge.x + 0.5, y: edge.y + 0.5 }, target) ?? [target];
+              allyRoutes.current.set(key, route);
+            }
+            const shown = Math.min(3, a.warriors);
+            for (let i = 0; i < shown; i++) {
+              const p = a.by === "sea" ? { x: target.x + (i - 1) * 0.22, y: target.y + 0.15 } : along([{ x: route[0].x, y: route[0].y }, ...route], f).p;
+              const pos = { x: p.x + (i - 1) * 0.18, y: p.y + (i % 2) * 0.12 };
+              const v = visible(pos);
+              const sprite = { p: pos, moving: f < 1, stride: t * 9 + i + k };
+              if (v) drawn.push({ x: v.x, y: v.y, f: () => drawPerson(g, v.x, v.y, T, 9500 + k * 3 + i, "warrior", sprite, t) });
+            }
+          });
+      } else if (allyRoutes.current.size) allyRoutes.current.clear();
 
       const seen = new Set<number>();
       for (const plan of plans) {

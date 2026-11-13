@@ -1,0 +1,9 @@
+{
+  "id": "independent-joins",
+  "type": "join",
+  "text": {
+    "en": "{datu} of {barangay} joins {bloc}.",
+    "fil": "Sumama si {datu} ng {barangay} sa {bloc}."
+  },
+  "weight": 2
+}

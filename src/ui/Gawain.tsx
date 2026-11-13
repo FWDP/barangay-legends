@@ -5,6 +5,7 @@ import type { GameState } from "../engine/game";
 import { currentTask, earnedTitles, taskProgress } from "../engine/gawain";
 import type { NamedVillager } from "../engine/people";
 import { maxDatuLevel, nextDatuLevel } from "../engine/datu";
+import { datuHouseUrl, houseStyleFor } from "./datuHouseArt";
 import { asCost, canAfford } from "../engine/game";
 import { costText } from "./format";
 import type { Lang } from "./settings";
@@ -199,7 +200,7 @@ export function DatuDialog(props: { open: boolean; state: GameState; content: Co
       {open && house && def && (
         <div className="mat-card space-y-2 p-4 text-sm">
           <h2 id="datu-title" className="font-display text-xl text-amber-900">
-            <span aria-hidden>{house.icon}</span> {d.title[lang]}
+            <img src={datuHouseUrl(state.datuLevel, houseStyleFor(state, content))} alt="" className="inline size-12 align-middle" /> {d.title[lang]}
           </h2>
           <p className="text-xs text-stone-600">
             {state.barangay.datu ? `Datu ${state.barangay.datu} · ` : ""}

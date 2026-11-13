@@ -3,6 +3,7 @@
 import { REFUSAL_REASONS, RESOURCES, type BuildingDef, type Content, type RefusalReason, type Resource } from "./content";
 import { cleanName, newGame, placeAuto, STATE_VERSION, type ClearingJob, type GameState, type PlacedBuilding } from "./game";
 import {
+  addCoast,
   generateMap,
   inBounds,
   isPlaza,
@@ -24,8 +25,13 @@ import {
   type RegionState,
   type Report,
   type TradeOffer,
+  type Voyage,
+  MAX_NEWS,
+  strengthOfState,
 } from "./region";
 import { validProposal, type CounterOffer } from "./trading";
+import { generateArchipelago, type Island, type Place } from "./archipelago";
+import { generateBlocs, type Politics } from "./politics";
 import { MAX_HISTORY, type HistoryEntry, type HistoryKind, type NamedVillager } from "./people";
 import { forestStage } from "./forest";
 import { MAX_REMEMBERED, type Remembered } from "./death";
@@ -204,6 +210,29 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
   18: (raw) => {
     const st = isObject(raw.stats) ? raw.stats : {};
     return { ...raw, version: 19, stats: { ...st, deaths: 0 }, datuLevel: 1, mourning: 0, sickFor: 0, remembered: [] };
+  },
+  // v19 → v20: the archipelago. The barangay's map gets a coast: sea along the edge farthest
+  // from the plaza, turning only forest, river and balete into sea (never cleared land, paths,
+  // bridges, buildings or tiles queued for clearing). No boats yet. The region's islands, blocs
+  // and the new barangays are filled in when the region is read (parseRegion); the old
+  // neighbors keep their relations, tributaries and history, and stay out of the starting blocs
+  // if they are already the player's tributaries or allies.
+  19: (raw, content) => {
+    const st = isObject(raw.stats) ? raw.stats : {};
+    const m = raw.map;
+    let map = m;
+    if (isObject(m) && typeof m.tiles === "string" && Number.isInteger(m.width) && Number.isInteger(m.height) && isObject(m.plaza)) {
+      const ms = m as unknown as MapState;
+      const keep = [
+        ...(Array.isArray(raw.buildings) ? raw.buildings.filter(isObject).map((b) => ({ x: b.x as number, y: b.y as number })) : []),
+        ...(Array.isArray(raw.clearing) ? raw.clearing.filter(isObject).map((j) => ({ x: j.x as number, y: j.y as number })) : []),
+      ];
+      const edge = ms.plaza.y > ms.height / 2 ? "top" : "bottom";
+      // Only a map tall enough for the coast to stay a strip at its edge gets one.
+      const depth = content.rules.map.seaDepth ?? 0;
+      if (ms.height >= depth * 4) map = { ...m, ...addCoast(ms, edge, depth, keep) };
+    }
+    return { ...raw, version: 20, map, balangays: 0, stats: { ...st, voyages: 0 } };
   },
 };
 
@@ -475,6 +504,7 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean): GameSta
   parsePeople(data, content, state, isPlayer);
   if (isPlayer) parseWorship(data, content, state);
   if (isPlayer) parseDatuAndDeaths(data, content, state);
+  if (isPlayer && finiteNonNeg(data.balangays)) state.balangays = Math.floor(data.balangays);
   if (isPlayer && content.neighbors.length > 0) state.region = parseRegion(data.region, content, state);
   // A waiting choice event: a known event, and a neighbor that still exists (or none).
   const ch = data.choice;
@@ -573,6 +603,7 @@ function parsePeople(data: RawSave, content: Content, state: GameState, isPlayer
     replanted: count(st.replanted),
     permittedClears: count(st.permittedClears),
     deaths: count(st.deaths),
+    voyages: count(st.voyages),
   };
   if (!isPlayer) return;
   const quests = new Set(content.quests.map((q) => q.id));
@@ -676,7 +707,7 @@ function parseCounter(raw: unknown, ids: Set<string>, content: Content): Counter
 }
 
 function parseRegion(raw: unknown, content: Content, player: GameState): RegionState {
-  const fresh = createRegion(content, player.time, player.rng);
+  const fresh = createRegion(content, player.time, player.rng, player.barangay.id);
   if (!isObject(raw)) return fresh;
   const saved = new Map(
     (Array.isArray(raw.neighbors) ? raw.neighbors : []).filter(isObject).map((n) => [n.id as string, n as RawSave]),
@@ -707,6 +738,7 @@ function parseRegion(raw: unknown, content: Content, player: GameState): RegionS
         isObject(n.lastRefusal) && REFUSAL_REASONS.includes(n.lastRefusal.reason as RefusalReason) && finiteNonNeg(n.lastRefusal.at)
           ? { reason: n.lastRefusal.reason as RefusalReason, at: n.lastRefusal.at }
           : null,
+      tradition: typeof n.tradition === "string" && content.traditions.some((t) => t.id === n.tradition) ? n.tradition : base.tradition,
     };
   });
   const ids = new Set(neighbors.map((n) => n.id));
@@ -747,6 +779,89 @@ function parseRegion(raw: unknown, content: Content, player: GameState): RegionS
       isObject(victory) && finiteNonNeg(victory.time) && Array.isArray(victory.paths)
         ? { time: victory.time, paths: victory.paths.filter((p): p is Path => PATHS.includes(p as Path)) }
         : null,
+    ...parseArchipelago(raw, content, player, fresh, neighbors),
+  };
+}
+
+/** Islands, places, blocs and wars, the Balita and boats at sea. Missing (an older save): made from the seed. */
+function parseArchipelago(raw: RawSave, content: Content, player: GameState, fresh: RegionState, neighbors: NeighborState[]): Pick<RegionState, "islands" | "places" | "politics" | "news" | "nextNewsId" | "voyages" | "nextVoyageId"> {
+  const me = player.barangay.id;
+  const ids = new Set([me, ...neighbors.map((n) => n.id)]);
+  // Islands and places: kept only if every barangay has a spot on a known island.
+  const islands = (Array.isArray(raw.islands) ? raw.islands : []).filter(
+    (i): i is RawSave => isObject(i) && typeof i.id === "string" && typeof i.name === "string" && [i.x, i.y, i.r].every((v) => typeof v === "number" && Number.isFinite(v)),
+  ) as unknown as Island[];
+  const placesRaw = isObject(raw.places) ? raw.places : {};
+  const islandIds = new Set(islands.map((i) => i.id));
+  const placesOk = islands.length > 0 && [...ids].every((id) => {
+    const p = placesRaw[id];
+    return isObject(p) && islandIds.has(p.island as string) && typeof p.x === "number" && typeof p.y === "number";
+  });
+  const generated = generateArchipelago(content, player.map.seed, me);
+  const islandsOut = placesOk ? islands : generated.islands;
+  const places: Record<string, Place> = placesOk
+    ? Object.fromEntries([...ids].map((id) => [id, { island: (placesRaw[id] as RawSave).island as string, x: (placesRaw[id] as RawSave).x as number, y: (placesRaw[id] as RawSave).y as number }]))
+    : generated.places;
+  // Blocs: members must be known barangays; missing (an older save), they are made from the seed,
+  // leaving out the player's tributaries and allies.
+  const pol = raw.politics;
+  let politics: Politics;
+  if (isObject(pol) && Array.isArray(pol.blocs)) {
+    const blocs = pol.blocs
+      .filter((b): b is RawSave => isObject(b) && typeof b.id === "string" && typeof b.leader === "string" && Array.isArray(b.members))
+      .map((b) => ({ id: b.id as string, leader: b.leader as string, members: [...new Set((b.members as unknown[]).filter((m): m is string => typeof m === "string" && ids.has(m)))] }))
+      .filter((b) => b.members.length > 0 && b.members.includes(b.leader));
+    const seen = new Set<string>();
+    const unique = blocs.map((b) => ({ ...b, members: b.members.filter((m) => !seen.has(m) && (seen.add(m), true)) })).filter((b) => b.members.includes(b.leader));
+    const blocIds = new Set(unique.map((b) => b.id));
+    const wars = (Array.isArray(pol.wars) ? pol.wars : [])
+      .filter((w): w is RawSave => isObject(w) && blocIds.has(w.a as string) && blocIds.has(w.b as string) && w.a !== w.b && finiteNonNeg(w.since))
+      .map((w) => ({ a: w.a as string, b: w.b as string, since: w.since as number }));
+    politics = {
+      blocs: unique,
+      wars,
+      nextBlocId: Number.isInteger(pol.nextBlocId) ? Math.max(pol.nextBlocId as number, unique.length + 1) : unique.length + 1,
+      lastEventAt: finiteNonNeg(pol.lastEventAt) ? pol.lastEventAt : null,
+      nextWarTickAt: finiteNonNeg(pol.nextWarTickAt) ? pol.nextWarTickAt : fresh.politics.nextWarTickAt,
+    };
+  } else {
+    const free = neighbors.filter((n) => n.status === "independent").map((n) => n.id);
+    const strength = (id: string) => strengthOfState(neighbors.find((n) => n.id === id)!.state, content);
+    politics = { ...generateBlocs(content, free, strength, player.map.seed), nextWarTickAt: Math.floor(player.time) + content.rules.politics.warTickSeconds };
+  }
+  const news = (Array.isArray(raw.news) ? raw.news : [])
+    .filter((n): n is RawSave => isObject(n) && finiteNonNeg(n.id) && finiteNonNeg(n.time) && typeof n.key === "string")
+    .slice(-MAX_NEWS)
+    .map((n) => ({
+      id: n.id as number,
+      time: n.time as number,
+      key: n.key as string,
+      ...(typeof n.barangay === "string" ? { barangay: n.barangay } : {}),
+      ...(typeof n.bloc === "string" ? { bloc: n.bloc } : {}),
+      ...(typeof n.other === "string" ? { other: n.other } : {}),
+    }));
+  const voyages = (Array.isArray(raw.voyages) ? raw.voyages : [])
+    .filter((v): v is RawSave => isObject(v) && finiteNonNeg(v.id) && (v.leg === "out" || v.leg === "home") && ids.has(v.target as string) && finiteNonNeg(v.departAt) && finiteNonNeg(v.arriveAt) && finiteNonNeg(v.warriors))
+    .filter((v) => v.leg === "home" || (isObject(v.command) && typeof v.command.type === "string"))
+    .slice(0, player.balangays)
+    .map((v) => ({
+      id: v.id as number,
+      leg: v.leg as "out" | "home",
+      target: v.target as string,
+      command: v.leg === "out" ? (v.command as Voyage["command"]) : null,
+      departAt: v.departAt as number,
+      arriveAt: v.arriveAt as number,
+      warriors: Math.min(Math.floor(v.warriors as number), player.warriors),
+      ...(v.waiting === true ? { waiting: true } : {}),
+    }));
+  return {
+    islands: islandsOut,
+    places,
+    politics,
+    news,
+    nextNewsId: finiteNonNeg(raw.nextNewsId) ? Math.max(Math.floor(raw.nextNewsId), (news.at(-1)?.id ?? 0) + 1) : (news.at(-1)?.id ?? 0) + 1,
+    voyages,
+    nextVoyageId: finiteNonNeg(raw.nextVoyageId) ? Math.max(Math.floor(raw.nextVoyageId), ...voyages.map((v) => v.id + 1), 1) : voyages.length + 1,
   };
 }
 

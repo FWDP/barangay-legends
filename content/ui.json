@@ -420,6 +420,10 @@
     "layDaan": {
       "en": "Lay Daan",
       "fil": "Maglatag ng Daan"
+    },
+    "lockedDatu": {
+      "en": "🔒 Bahay ng Datu Lv {level}",
+      "fil": "🔒 Bahay ng Datu antas {level}"
     }
   },
   "death": {
@@ -532,6 +536,202 @@
     "close": {
       "en": "Close",
       "fil": "Isara"
+    }
+  },
+  "balita": {
+    "title": {
+      "en": "Balita",
+      "fil": "Balita"
+    },
+    "none": {
+      "en": "No news yet.",
+      "fil": "Wala pang balita."
+    },
+    "formed": {
+      "en": "{barangay} forms a new alliance.",
+      "fil": "Bumuo ang {barangay} ng bagong alyansa."
+    },
+    "joined": {
+      "en": "{barangay} joins {bloc}.",
+      "fil": "Sumama ang {barangay} sa {bloc}."
+    },
+    "left": {
+      "en": "{barangay} leaves {bloc}.",
+      "fil": "Umalis ang {barangay} sa {bloc}."
+    },
+    "expelled": {
+      "en": "{barangay} is sent out of {bloc}.",
+      "fil": "Pinaalis ang {barangay} sa {bloc}."
+    },
+    "absorbed": {
+      "en": "{barangay} becomes your tributary and leaves its alliance.",
+      "fil": "Naging sakop mo ang {barangay} at umalis sa alyansa nito."
+    },
+    "defeated": {
+      "en": "{barangay} is beaten in battle and loses the lead of {bloc}.",
+      "fil": "Natalo ang {barangay} sa labanan at nawala ang pamumuno sa {bloc}."
+    },
+    "war-joined": {
+      "en": "You stand with {barangay} in its war against {other}.",
+      "fil": "Kasama ka ng {barangay} sa digmaan laban sa {other}."
+    },
+    "ally-defended": {
+      "en": "Your warriors helped {barangay} drive off {other}.",
+      "fil": "Tinulungan ng iyong mga mandirigma ang {barangay} na itaboy ang {other}."
+    },
+    "ally-lost": {
+      "en": "Your warriors could not save {barangay} from {other}.",
+      "fil": "Hindi nailigtas ng iyong mga mandirigma ang {barangay} mula sa {other}."
+    },
+    "you": {
+      "en": "You",
+      "fil": "Ikaw"
+    },
+    "yourBloc": {
+      "en": "your alliance",
+      "fil": "ang iyong alyansa"
+    },
+    "blocName": {
+      "en": "{leader}'s alliance",
+      "fil": "alyansa ng {leader}"
+    },
+    "independent": {
+      "en": "Independent barangays",
+      "fil": "Mga malayang barangay"
+    },
+    "atWar": {
+      "en": "At war with {other}",
+      "fil": "Nakikidigma sa {other}"
+    },
+    "formedYou": {
+      "en": "You form a new alliance.",
+      "fil": "Bumuo ka ng bagong alyansa."
+    },
+    "joinedYou": {
+      "en": "You join {bloc}.",
+      "fil": "Sumama ka sa {bloc}."
+    },
+    "leftYou": {
+      "en": "You leave {bloc}.",
+      "fil": "Umalis ka sa {bloc}."
+    }
+  },
+  "alliance": {
+    "title": {
+      "en": "Alliances",
+      "fil": "Mga alyansa"
+    },
+    "level": {
+      "en": "Raise the Bahay ng Datu to level 4 to form or join an alliance.",
+      "fil": "Itaas sa antas 4 ang Bahay ng Datu para bumuo o sumali sa alyansa."
+    },
+    "form": {
+      "en": "Form your own alliance",
+      "fil": "Bumuo ng sariling alyansa"
+    },
+    "leave": {
+      "en": "Leave the alliance",
+      "fil": "Umalis sa alyansa"
+    },
+    "join": {
+      "en": "Ask to join",
+      "fil": "Humiling na sumali"
+    },
+    "invite": {
+      "en": "Invite into your alliance",
+      "fil": "Anyayahan sa iyong alyansa"
+    },
+    "expel": {
+      "en": "Send away",
+      "fil": "Paalisin"
+    },
+    "leader": {
+      "en": "leader",
+      "fil": "pinuno"
+    },
+    "members": {
+      "en": "Members: {n} · strength {strength}",
+      "fil": "Kasapi: {n} · lakas {strength}"
+    },
+    "yours": {
+      "en": "You lead {bloc}.",
+      "fil": "Pinamumunuan mo ang {bloc}."
+    },
+    "member": {
+      "en": "You are in {bloc}.",
+      "fil": "Kasapi ka ng {bloc}."
+    },
+    "none": {
+      "en": "You are in no alliance.",
+      "fil": "Wala ka sa anumang alyansa."
+    },
+    "trust": {
+      "en": "They don't trust you enough yet (needs {trust}).",
+      "fil": "Hindi pa sapat ang tiwala nila (kailangan {trust})."
+    },
+    "grudge": {
+      "en": "They still resent your raids.",
+      "fil": "Masama pa ang loob nila sa iyong paglusob."
+    },
+    "tributary": {
+      "en": "Your tributary already answers to you.",
+      "fil": "Sumasagot na sa iyo ang iyong sakop."
+    },
+    "taken": {
+      "en": "They already belong to an alliance.",
+      "fil": "Kasapi na sila ng isang alyansa."
+    },
+    "island": {
+      "en": "Island: {island}",
+      "fil": "Pulo: {island}"
+    },
+    "tradition": {
+      "en": "Tradition: {tradition}",
+      "fil": "Tradisyon: {tradition}"
+    },
+    "bloc": {
+      "en": "Alliance: {bloc}",
+      "fil": "Alyansa: {bloc}"
+    },
+    "noBloc": {
+      "en": "Alliance: none",
+      "fil": "Alyansa: wala"
+    },
+    "byBoat": {
+      "en": "On another island: actions go by Balangay ({time} away).",
+      "fil": "Nasa ibang pulo: sa Balangay ang mga gawain ({time} ang layo)."
+    },
+    "noBoat": {
+      "en": "Needs a Balangay: build a Balangay Dock (Bahay ng Datu level 3) and train a boat.",
+      "fil": "Kailangan ng Balangay: magtayo ng Balangay Dock (antas 3 ng Bahay ng Datu) at gumawa ng bangka."
+    },
+    "atSea": {
+      "en": "{n} Balangay at sea",
+      "fil": "{n} Balangay sa dagat"
+    },
+    "waiting": {
+      "en": "waiting offshore",
+      "fil": "naghihintay sa laot"
+    },
+    "boats": {
+      "en": "Balangay: {free} in port of {total}",
+      "fil": "Balangay: {free} sa daungan mula sa {total}"
+    },
+    "train": {
+      "en": "Train a Balangay",
+      "fil": "Gumawa ng Balangay"
+    },
+    "dockFull": {
+      "en": "The docks are full.",
+      "fil": "Puno na ang mga daungan."
+    },
+    "paramount": {
+      "en": "Paramount Datu: lead an alliance, and have every barangay be your ally, tributary, alliance member, or allied to your allies.",
+      "fil": "Pinakamataas na Datu: pamunuan ang isang alyansa, at gawing kakampi, sakop, kasapi o kakampi ng iyong kakampi ang bawat barangay."
+    },
+    "list": {
+      "en": "Barangays by alliance",
+      "fil": "Mga barangay ayon sa alyansa"
     }
   }
 }

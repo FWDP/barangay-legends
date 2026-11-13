@@ -1,0 +1,16 @@
+{
+  "id": "lead-bloc",
+  "text": {
+    "en": "Form your own alliance bloc",
+    "fil": "Bumuo ng sariling alyansa"
+  },
+  "condition": {
+    "type": "leadBloc"
+  },
+  "reward": {
+    "resources": {
+      "gold": 20
+    }
+  },
+  "next": "bloc-four"
+}

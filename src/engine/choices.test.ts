@@ -24,8 +24,8 @@ const withStatus = (s: GameState, status: "ally" | "tributary" | "independent", 
 const only = (id: string, chance = 1): Content => ({ ...calm, choices: [def(id)], rules: { ...calm.rules, choices: { ...calm.rules.choices, chancePerSecond: chance } } });
 
 describe("choice event content", () => {
-  it("ships 8 events, each with 2–3 choices and a source", () => {
-    expect(content.choices).toHaveLength(8);
+  it("ships 10 events, each with 2–3 choices and a source", () => {
+    expect(content.choices).toHaveLength(10);
     for (const c of content.choices) {
       expect(c.choices.length).toBeGreaterThanOrEqual(2);
       expect(c.choices.length).toBeLessThanOrEqual(3);

@@ -1,0 +1,32 @@
+{
+  "id": "ally-raided",
+  "title": "Your ally is under attack",
+  "icon": "🛡️",
+  "story": "Runners reach the Bahay ng Datu: warriors from {enemy} are attacking {neighbor}. {datu} asks for defenders.",
+  "neighbor": "ally",
+  "conditions": {
+    "allyAtWar": true
+  },
+  "weight": 2,
+  "choices": [
+    {
+      "id": "send",
+      "label": "Send half your Mandirigma",
+      "result": "Your warriors set out to defend {neighbor}.",
+      "effects": {
+        "defendAlly": 50
+      }
+    },
+    {
+      "id": "decline",
+      "label": "Keep them home",
+      "result": "{neighbor} faces {enemy} alone. {datu} will not forget it.",
+      "effects": {
+        "trust": -12
+      }
+    }
+  ],
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+  ]
+}

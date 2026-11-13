@@ -1,0 +1,24 @@
+{
+  "id": "lunday",
+  "name": "Barangay Lunday",
+  "datu": "Datu Kalasag",
+  "trait": "proud",
+  "description": "Boatbuilders who answer only to their own datu.",
+  "home": false,
+  "start": {
+    "villagers": 8,
+    "warriors": 2,
+    "resources": {
+      "rice": 60,
+      "wood": 40
+    },
+    "buildings": {
+      "bahay-kubo": 3,
+      "palayan": 2,
+      "woodcutter-camp": 2
+    }
+  },
+  "trust": 25,
+  "fictional": true,
+  "note": "Fictional barangay and datu, made up for the game; not a historical person or place."
+}

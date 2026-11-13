@@ -1,0 +1,33 @@
+{
+  "id": "ally-war-call",
+  "title": "An ally calls you to war",
+  "icon": "⚔️",
+  "story": "A messenger from {neighbor} comes to the Bahay ng Datu. {datu}'s alliance is at war with {enemy}, and {datu} asks you to stand with them.",
+  "neighbor": "ally",
+  "conditions": {
+    "allyAtWar": true
+  },
+  "weight": 2,
+  "choices": [
+    {
+      "id": "join",
+      "label": "Stand with {datu}",
+      "result": "You send word that {neighbor} does not fight alone. {datu} is grateful; {enemy} will remember.",
+      "effects": {
+        "trust": 12,
+        "joinWar": true
+      }
+    },
+    {
+      "id": "decline",
+      "label": "Stay out of it",
+      "result": "You keep your warriors home. {datu} says little, but the messenger leaves cold.",
+      "effects": {
+        "trust": -8
+      }
+    }
+  ],
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+  ]
+}

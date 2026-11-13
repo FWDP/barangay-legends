@@ -27,7 +27,7 @@ export function formatBreakdown(rates: Rates, r: Resource): string {
   return `${parts.join(" · ")} = ${formatRate(rates.net[r])}`;
 }
 
-const TERRAIN_NAME: Record<string, string> = { river: "the river", forest: "the forest" };
+const TERRAIN_NAME: Record<string, string> = { river: "the river", forest: "the forest", sea: "the sea" };
 
 /** e.g. "+10% next to the river or Palayan", built from the building's JSON. */
 export function bonusRuleText(def: BuildingDef, content: Content): string | null {

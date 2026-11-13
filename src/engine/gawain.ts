@@ -54,6 +54,16 @@ export function taskProgress(state: GameState, content: Content, q: QuestDef): {
       return { have: state.stats.permittedClears, need: c.count };
     case "datuLevel":
       return { have: state.datuLevel, need: c.count };
+    case "voyages":
+      return { have: state.stats.voyages, need: c.count };
+    case "leadBloc":
+      return { have: state.region?.politics.blocs.some((b) => b.leader === state.barangay.id) ? 1 : 0, need: 1 };
+    case "blocMembers": {
+      const mine = state.region?.politics.blocs.find((b) => b.leader === state.barangay.id);
+      return { have: mine ? mine.members.length - 1 : 0, need: c.count };
+    }
+    case "paramount":
+      return { have: state.region?.victory ? 1 : 0, need: 1 };
   }
 }
 

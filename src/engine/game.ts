@@ -26,6 +26,7 @@ import {
   acceptOffer,
   createRegion,
   declineOffer,
+  blocAction,
   guard,
   marry,
   raid,
@@ -45,6 +46,7 @@ import { happinessMultiplier, nextHappiness } from "./happiness";
 import { reconcilePeople, type HistoryEntry, type NamedVillager, type Stats } from "./people";
 import { capGrowth, riceCap, storageCap } from "./storage";
 import { checkAklat } from "./aklat";
+import { needsBoat, setSail, trainBalangay, updateVoyages } from "./sea";
 import { datuProductionBonus, upgradeDatu } from "./datu";
 import { updateDeaths, type Remembered } from "./death";
 import { advanceReplanting, afterClearing, cancelReplant, isPranked, newForest, replant, updateForest, updatePranks, type ForestState, type Prank, type ReplantJob } from "./forest";
@@ -65,7 +67,7 @@ import {
   type TikbalangTrick,
 } from "./worship";
 
-export const STATE_VERSION = 19;
+export const STATE_VERSION = 20;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -198,6 +200,8 @@ export interface GameState {
   sickFor: number;
   /** The named villagers who died, remembered at the Libingan. */
   remembered: Remembered[];
+  /** Balangay boats the barangay owns (at the dock or at sea). */
+  balangays: number;
 }
 
 export type { ClearingJob } from "./clearing";
@@ -244,7 +248,7 @@ export function newGame(
     gawainDone: [],
     named: [],
     history: [],
-    stats: { raidsDefended: 0, rolls: 0, named: 0, replanted: 0, permittedClears: 0, deaths: 0 },
+    stats: { raidsDefended: 0, rolls: 0, named: 0, replanted: 0, permittedClears: 0, deaths: 0, voyages: 0 },
     favor: 0,
     tradition: null,
     lastRitualAt: null,
@@ -261,8 +265,9 @@ export function newGame(
     mourning: 0,
     sickFor: 0,
     remembered: [],
+    balangays: 0,
   };
-  if (withRegion && content.neighbors.length > 0) state.region = createRegion(content, 0, seed);
+  if (withRegion && content.neighbors.length > 0) state.region = createRegion(content, 0, seed, state.barangay.id);
   for (const def of content.buildings) {
     for (let i = 0; i < (start.buildings[def.id] ?? 0); i++) state = placeAuto(state, content, def.id);
   }
@@ -780,10 +785,14 @@ export type Command =
   | { type: "answerRiddle"; option: number }
   | { type: "replant"; x: number; y: number }
   | { type: "cancelReplant"; x: number; y: number }
-  | { type: "upgradeDatu" };
+  | { type: "upgradeDatu" }
+  | { type: "trainBalangay" }
+  | { type: "bloc"; action: "form" | "invite" | "join" | "leave" | "expel"; target?: string };
 
 export function apply(state: GameState, content: Content, command: Command): GameState {
-  const next = reconcilePeople(state, applyCommand(state, content, command), content);
+  // An action aimed at another island sets sail instead; it happens when the boat arrives.
+  const done = needsBoat(state, command) ? setSail(state, content, command) : applyCommand(state, content, command);
+  const next = reconcilePeople(state, done, content);
   // An old save keeps its old staffing rule until the player changes the map.
   return next.legacyReach && mapChanged(state, next) ? { ...next, legacyReach: false } : next;
 }
@@ -864,6 +873,10 @@ function applyCommand(state: GameState, content: Content, command: Command): Gam
       return cancelReplant(state, content, command.x, command.y);
     case "upgradeDatu":
       return upgradeDatu(state, content);
+    case "trainBalangay":
+      return trainBalangay(state, content);
+    case "bloc":
+      return blocAction(state, content, command.action, command.target);
   }
 }
 
@@ -979,6 +992,8 @@ function step(state: GameState, content: Content, dt: number): GameState {
   next = updateEvents(next, content, dt);
   if (next.region) next = updateRegion(next, content, state.time, dt);
   next = updateChoices(next, content, state.time, dt);
+  // Balangay at sea arrive (an action on arrival runs as if on the same island).
+  if (next.region?.voyages.length) next = updateVoyages(next, content, next.time, (s, c) => applyCommand(s, content, c));
   if (!content.ai) {
     // The spirits and visitors: only the player's barangay, only while playing.
     next = updateVisitors(next, content, state.time, next.time);

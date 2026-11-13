@@ -48,6 +48,13 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
    healer, hunger after families have left, battle). It is shown gently: a small candle where
    they were, a line from the adviser, their name remembered at the Libingan.
 
+10. **The Bahay ng Datu drawing**: the Tagalog and Visayan house is a large raised wooden house
+    on thick posts with a steep thatched roof. The Maranao house is torogan-inspired: round posts
+    on stones, an upswept roof, and green and gold flared beam ends with okir-like scrolls. The
+    torogan belongs to a living Maranao tradition. Is a simplified, game-style version
+    respectful, and are the colors and motifs reasonable? Would a Maranao artist or educator be
+    willing to review or redraw it?
+
 ### Entries
 
 | File | Kind | Tradition | Sources given |
@@ -79,6 +86,8 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 | content/blessings/mourning-rite.json | Ritual (rite for the departed) | Widespread | Scott; Plasencia |
 | content/lore/burial-jars.json | Aklat entry (Manunggul and Maitum jars) | Archaeological (Palawan; Sarangani) | Fox 1970; Dizon and Santiago 1996; Wikipedia |
 | content/lore/longon.json | Aklat entry (longon coffins) | Visayan | Scott; Boxer Codex |
+| content/lore/datu-houses.json | Lore note (datu houses, torogan) | Visayan, Tagalog; Maranao | Scott 1994; Perez, Encarnacion and Dacanay 1989; Wikipedia: Torogan, Okir |
+| content/traditions/*.json "houseStyle" and src/ui/datuHouseArt.ts | How the Bahay ng Datu is drawn | Lowland (Tagalog, Visayan); torogan-inspired (Maranao) | see question 10 |
 | content/traditions/*.json "burialLook" | How each tradition's Libingan looks | Tagalog: jars, Visayan: longon, Maranao: jars | see questions 7–8 |
 
 ## Reviewed

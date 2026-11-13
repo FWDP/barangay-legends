@@ -1,5 +1,6 @@
 // Changing your mind about a building: the menu on a placed building (Move, Demolish), the
 // demolish confirmation with its warnings, and the short-lived Undo button after building.
+import { boatCap, boatCost } from "../engine/sea";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Content } from "../engine/content";
 import { workforce } from "../engine/clearing";
@@ -31,8 +32,10 @@ export function BuildingMenu(props: {
   onShrine?: () => void;
   /** The Libingan's list of the remembered. */
   onRemembered?: () => void;
+  /** A Balangay dock: train a boat. */
+  onTrainBoat?: () => void;
 }) {
-  const { state, content, target, onClose, onMove, onDemolish, onPause, onShrine, onRemembered } = props;
+  const { state, content, target, onClose, onMove, onDemolish, onPause, onShrine, onRemembered, onTrainBoat } = props;
   const box = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
   const building = target ? buildingAt(state, target.x, target.y) : undefined;
@@ -120,6 +123,20 @@ export function BuildingMenu(props: {
         </p>
       )}
       <div className="flex flex-col gap-1.5">
+        {def.balangayDock && onTrainBoat && (
+          <button
+            type="button"
+            role="menuitem"
+            disabled={state.balangays >= boatCap(state, content) || !canAfford(state, boatCost(content))}
+            onClick={onTrainBoat}
+            className="game-btn flex items-center justify-between border-2 border-sky-950 bg-sky-700 px-3 py-1.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span>⛵ Train a Balangay</span>
+            <span className="text-xs font-normal">
+              {state.balangays}/{boatCap(state, content)} · {costText(boatCost(content))}
+            </span>
+          </button>
+        )}
         {def.burial && onRemembered && (
           <button
             type="button"

@@ -57,7 +57,8 @@ export function ChoiceDialog(props: { state: GameState; content: Content; open: 
   const pending = state.choice;
   const def = pending && choiceDef(content, pending.id);
   const who = pending?.neighbor ? neighborDef(content, pending.neighbor) : undefined;
-  const vars = { neighbor: who?.name ?? "a neighbor", datu: who?.datu ?? "their datu" };
+  const enemy = pending?.enemy ? neighborDef(content, pending.enemy) : undefined;
+  const vars = { neighbor: who?.name ?? "a neighbor", datu: who?.datu ?? "their datu", enemy: enemy?.name ?? "their enemies" };
   // After choosing, the event is gone from the state; keep the outcome to show it.
   const [outcome, setOutcome] = useState<{ title: string; icon: string; text: string } | null>(null);
   const dialog = useModal(open && (!!def || !!outcome));

@@ -10,6 +10,23 @@ import { Rng } from "./rng";
 import { proposeTrade, type CounterOffer, type Proposal } from "./trading";
 import { borderDefense, chooseLanding } from "./border";
 import type { Point } from "./map";
+import { generateArchipelago, islandDistance, sameIsland, travelSeconds, type Island, type Place } from "./archipelago";
+import {
+  absorbed,
+  atWarMembers,
+  blocOf,
+  blocStrength,
+  expel as expelFor,
+  formBloc as formBlocFor,
+  generateBlocs,
+  joinBloc as joinBlocFor,
+  leaderDefeated,
+  leaveBloc as leaveBlocFor,
+  scriptedEvent,
+  type Politics,
+} from "./politics";
+import { hasDatuUnlock } from "./datu";
+import { rollAt } from "./rng";
 
 export type NeighborStatus = "independent" | "tributary" | "ally";
 /** The four ways to bring a neighbor in. */
@@ -36,6 +53,36 @@ export interface NeighborState {
   grudge: number;
   /** Why they last turned a trade (or alliance) down, and when, for the diplomacy panel. */
   lastRefusal: { reason: RefusalReason; at: number } | null;
+  /** Their tradition (content/traditions). */
+  tradition: string;
+}
+
+/** A line of political news (the Balita feed): a scripted event or something a barangay did. */
+export interface NewsItem {
+  id: number;
+  time: number;
+  /** A politics event id (content/events/politics), or an action: formed, joined, left, expelled, absorbed, defeated, war-loss, ally-defended, ally-lost, war-joined. */
+  key: string;
+  /** Barangay or bloc ids named in it. */
+  barangay?: string;
+  bloc?: string;
+  other?: string;
+}
+
+/** A Balangay at sea: carrying an action to another island, or coming home. */
+export interface Voyage {
+  id: number;
+  /** "out": carrying `command` to `target`; "home": coming back (with any warriors). */
+  leg: "out" | "home";
+  target: string;
+  /** The action it carries (trade, marriage, sandugo, raid), done on arrival. */
+  command: { type: string; [key: string]: unknown } | null;
+  departAt: number;
+  arriveAt: number;
+  /** Warriors aboard (a raid out, the survivors home). */
+  warriors: number;
+  /** Waiting offshore (a trade arriving during a raid on the barangay). */
+  waiting?: boolean;
 }
 
 export interface TradeOffer {
@@ -76,6 +123,8 @@ export interface Report {
   landing?: Point;
   late?: number;
   covered?: boolean;
+  /** Allies whose warriors came in time to fight at the landing. */
+  allies?: string[];
 }
 
 export interface RegionState {
@@ -96,10 +145,22 @@ export interface RegionState {
   victory: { time: number; paths: Path[] } | null;
   /** A neighbor's counter-offer to the player's last proposal, waiting for an answer. */
   counter: CounterOffer | null;
+  /** The archipelago: islands and where each barangay (the player too, by its barangay id) sits. */
+  islands: Island[];
+  places: Record<string, Place>;
+  /** Alliance blocs and wars (see politics.ts). */
+  politics: Politics;
+  /** The Balita feed, newest last. */
+  news: NewsItem[];
+  nextNewsId: number;
+  /** The player's Balangay at sea. */
+  voyages: Voyage[];
+  nextVoyageId: number;
 }
 
 const EPSILON = 1e-9;
 const MAX_REPORTS = 12;
+export const MAX_NEWS = 30;
 const clamp100 = (v: number) => Math.min(100, Math.max(0, v));
 
 // ---------- Setup ----------
@@ -137,24 +198,64 @@ export function newNeighborState(content: Content, def: NeighborDef, seed: numbe
   };
 }
 
-export function createRegion(content: Content, time: number, seed: number): RegionState {
+/** A neighbor's tradition: from its file, or picked from the seed. */
+function traditionFor(content: Content, def: NeighborDef, seed: number, i: number): string {
+  if (def.tradition) return def.tradition;
+  const t = content.traditions;
+  return t.length ? t[Math.floor(rollAt(seed >>> 0, i, 5900) * t.length) % t.length].id : "";
+}
+
+/** How strong a barangay is: its attack and its defense. */
+export const strengthOfState = (s: GameState, content: Content) => attackOf(s.warriors, content) + defenseOf(s, content);
+
+/** Strength by barangay id: the player's own id or a neighbor's. */
+export function strengthFn(state: GameState, content: Content): (id: string) => number {
+  return (id) => {
+    if (id === state.barangay.id) return strengthOfState(state, content);
+    const n = state.region?.neighbors.find((x) => x.id === id);
+    return n ? strengthOfState(n.state, content) : 0;
+  };
+}
+
+/** A new neighbor as it starts (also used to add neighbors to an older save). */
+export function newNeighbor(content: Content, def: NeighborDef, i: number, time: number, seed: number): NeighborState {
   const d = content.rules.diplomacy;
   return {
-    neighbors: content.neighbors.map((def, i) => ({
-      id: def.id,
-      state: newNeighborState(content, def, seed),
-      trust: def.trust,
-      influence: d.startInfluence,
-      status: "independent",
-      marriage: false,
-      loyalty: 0,
-      guard: null,
-      raidCooldownUntil: 0,
-      grudge: 0,
-      lastRefusal: null,
-      // Stagger AI decisions so the neighbors don't all act on the same second.
-      nextDecisionAt: Math.floor(time) + d.aiDecisionSeconds + i * 3,
-    })),
+    id: def.id,
+    state: newNeighborState(content, def, seed),
+    trust: def.trust,
+    influence: d.startInfluence,
+    status: "independent",
+    marriage: false,
+    loyalty: 0,
+    guard: null,
+    raidCooldownUntil: 0,
+    grudge: 0,
+    lastRefusal: null,
+    // Stagger AI decisions so the neighbors don't all act on the same second.
+    nextDecisionAt: Math.floor(time) + d.aiDecisionSeconds + i * 3,
+    tradition: traditionFor(content, def, seed, i),
+  };
+}
+
+export function createRegion(content: Content, time: number, seed: number, playerId = "barangay-1"): RegionState {
+  const d = content.rules.diplomacy;
+  const neighbors = content.neighbors.map((def, i) => newNeighbor(content, def, i, time, seed));
+  const { islands, places } = generateArchipelago(content, seed, playerId);
+  const strength = (id: string) => {
+    const n = neighbors.find((x) => x.id === id);
+    return n ? strengthOfState(n.state, content) : 0;
+  };
+  const politics = { ...generateBlocs(content, neighbors.map((n) => n.id), strength, seed), nextWarTickAt: Math.floor(time) + content.rules.politics.warTickSeconds };
+  return {
+    islands,
+    places,
+    politics,
+    news: [],
+    nextNewsId: 1,
+    voyages: [],
+    nextVoyageId: 1,
+    neighbors,
     renown: 0,
     truceUntil: Math.floor(time) + d.truceSeconds,
     incomingRaid: null,
@@ -185,8 +286,10 @@ export const traitOf = (content: Content, id: string): TraitDef =>
 
 /** Warriors at home: all of them, minus any guarding a tributary. */
 export function homeWarriors(state: GameState): number {
-  const away = state.region?.neighbors.reduce((n, nb) => n + (nb.guard?.warriors ?? 0), 0) ?? 0;
-  return Math.max(0, state.warriors - away);
+  const guarding = state.region?.neighbors.reduce((n, nb) => n + (nb.guard?.warriors ?? 0), 0) ?? 0;
+  // Warriors at sea (on a raid by Balangay, or coming home) are away too.
+  const atSea = state.region?.voyages?.reduce((n, v) => n + v.warriors, 0) ?? 0;
+  return Math.max(0, state.warriors - guarding - atSea);
 }
 
 /** Defense against a raid: a base, warriors at home, and every standing defensive building (Kuta). */
@@ -288,6 +391,11 @@ function addPath(region: RegionState, path: Path): RegionState {
   return region.paths.includes(path) ? region : { ...region, paths: [...region.paths, path] };
 }
 
+export function addNews(region: RegionState, item: Omit<NewsItem, "id">): RegionState {
+  const news = [...region.news, { ...item, id: region.nextNewsId }].slice(-MAX_NEWS);
+  return { ...region, news, nextNewsId: region.nextNewsId + 1 };
+}
+
 function addReport(region: RegionState, report: Omit<Report, "id">): RegionState {
   const reports = [...region.reports, { ...report, id: region.nextReportId }].slice(-MAX_REPORTS);
   return { ...region, reports, nextReportId: region.nextReportId + 1 };
@@ -300,7 +408,13 @@ function addInfluence(region: RegionState, n: NeighborState, amount: number, con
   const influence = clamp100(n.influence + (amount * trait.influenceGainPercent) / 100);
   if (influence < 100 - EPSILON) return [region, { ...n, influence }];
   const tributary: NeighborState = { ...n, influence: 100, status: "tributary", loyalty: content.rules.diplomacy.loyalty.start };
-  return [addReport(region, { time, kind: "tributary", neighbor: n.id }), tributary];
+  // Absorbed: it leaves its bloc.
+  let r = addReport(region, { time, kind: "tributary", neighbor: n.id });
+  if (blocOf(r.politics, n.id)) {
+    const strength = (id: string) => strengthOfState(r.neighbors.find((x) => x.id === id)?.state ?? tributary.state, content);
+    r = addNews({ ...r, politics: absorbed(r.politics, n.id, strength) }, { time, key: "absorbed", barangay: n.id });
+  }
+  return [r, tributary];
 }
 
 /**
@@ -435,6 +549,16 @@ export function raid(state: GameState, content: Content, id: string, warriors: n
     // They won't forget it soon, less so if it worked.
     grudge: clamp100(target.grudge + (battle.attackerWins ? d.grudge.raidWon : d.grudge.raidLost)),
   };
+  // Bloc solidarity: the target's bloc mates resent it too, a little less.
+  const bloc = blocOf(region.politics, id);
+  if (bloc) {
+    const raised = (battle.attackerWins ? d.grudge.raidWon : d.grudge.raidLost) * (content.rules.politics.solidarityPercent / 100);
+    region = { ...region, neighbors: region.neighbors.map((n) => (n.id !== id && bloc.members.includes(n.id) ? { ...n, grudge: clamp100(n.grudge + raised) } : n)) };
+  }
+  if (battle.attackerWins && bloc?.leader === id) {
+    // A bloc leader beaten in battle loses the lead.
+    region = addNews({ ...region, politics: leaderDefeated(region.politics, id, strengthFn({ ...player, region }, content)) }, { time: state.time, key: "defeated", barangay: id, bloc: bloc.id });
+  }
   if (battle.attackerWins) {
     // Every neighbor hears of it.
     region = {
@@ -497,10 +621,28 @@ export function declineOffer(state: GameState): GameState {
   return state.region?.offer ? { ...state, region: { ...state.region, offer: null } } : state;
 }
 
+/**
+ * Paramount Datu: the player leads a bloc, and every barangay on every island is the player's
+ * ally (sandugo) or tributary, a member of the player's bloc, or in the same bloc as one of the
+ * player's allies.
+ */
+export function isParamount(state: GameState): boolean {
+  const region = state.region;
+  if (!region || region.neighbors.length === 0) return false;
+  const me = state.barangay.id;
+  const mine = region.politics.blocs.find((b) => b.leader === me);
+  if (!mine) return false;
+  const allies = new Set(region.neighbors.filter((n) => n.status === "ally" || n.status === "tributary").map((n) => n.id));
+  return region.neighbors.every((n) => {
+    if (allies.has(n.id) || mine.members.includes(n.id)) return true;
+    const theirs = blocOf(region.politics, n.id);
+    return !!theirs && theirs.members.some((m) => allies.has(m));
+  });
+}
+
 function checkVictory(state: GameState): GameState {
   const region = state.region;
-  if (!region || region.victory || region.neighbors.length === 0) return state;
-  if (!region.neighbors.every((n) => n.status === "tributary" || n.status === "ally")) return state;
+  if (!region || region.victory || !isParamount(state)) return state;
   return { ...state, region: { ...region, victory: { time: state.time, paths: [...region.paths] } } };
 }
 
@@ -589,7 +731,7 @@ export function updateRegion(state: GameState, content: Content, t0: number, dt:
   for (let second = Math.floor(t0 + EPSILON) + 1; second <= Math.floor(t1 + EPSILON); second++) {
     s = onRegionSecond(s, content, second, rng);
   }
-  return checkVictory({ ...s, rng: rng.seed });
+  return checkVictory(updatePolitics({ ...s, rng: rng.seed }, content, t0, t1));
 }
 
 function onRegionSecond(state: GameState, content: Content, second: number, rng: Rng): GameState {
@@ -683,9 +825,8 @@ function aiRaidStrikes(state: GameState, content: Content, second: number, rng: 
   // Called off if they're no longer hostile or have no warriors left.
   if (!attacker || attacker.status !== "independent" || attacker.state.warriors < 1) return { ...state, region: base };
 
-  const allies = region.neighbors
-    .filter((n) => n.status === "ally" && n.id !== attacker.id)
-    .reduce((sum, n) => sum + (n.state.warriors * m.warrior.defense * d.sandugo.allyDefensePercent) / 100, 0);
+  const helpers = alliedDefenders(state, content).filter((a) => a.arrives && a.id !== attacker.id);
+  const allies = helpers.reduce((sum, a) => sum + (a.warriors * m.warrior.defense * d.sandugo.allyDefensePercent) / 100, 0);
   const attack = attackOf(attacker.state.warriors, content);
   // The battle is at the landing: only warriors who get there in time fight, and each Kuta
   // counts in full only if the landing is within its radius. Allies come too (by boat).
@@ -720,7 +861,226 @@ function aiRaidStrikes(state: GameState, content: Content, second: number, rng: 
     lost,
     renown: battle.attackerWins ? 0 : d.aiRaid.defendRenown,
     ...(landing && border ? { landing, late: border.muster.late, covered: border.muster.covered } : {}),
+    ...(helpers.length ? { allies: helpers.map((a) => a.id) } : {}),
   });
   if (!battle.attackerWins) player = { ...player, stats: { ...player.stats, raidsDefended: player.stats.raidsDefended + 1 } };
+  return { ...player, region: next };
+}
+
+// ---------- Allies at the border ----------
+
+/** An ally who could come to defend the player, and whether they arrive within the raid warning. */
+export interface AllyDefender {
+  id: string;
+  warriors: number;
+  /** Seconds to reach the landing, or null if they can't come at all (another island, no boats). */
+  eta: number | null;
+  arrives: boolean;
+  by: "land" | "sea";
+}
+
+/**
+ * Who comes when the player is raided: sandugo allies and members of the player's bloc, with
+ * warriors. On the same island they walk (landSeconds plus distance); from another island only
+ * those big enough to have boats (balangayMinVillagers) sail, at Balangay speed. Like the
+ * player's own warriors, they fight only if they arrive within the raid warning.
+ */
+export function alliedDefenders(state: GameState, content: Content): AllyDefender[] {
+  const region = state.region;
+  if (!region) return [];
+  const a = content.rules.allyDefense;
+  const warning = content.rules.diplomacy.aiRaid.warningSeconds;
+  const me = state.barangay.id;
+  const myBloc = blocOf(region.politics, me);
+  return region.neighbors
+    .filter((n) => (n.status === "ally" || myBloc?.members.includes(n.id)) && n.state.warriors > 0)
+    .map((n) => {
+      const land = sameIsland(region.places, me, n.id);
+      const eta = land
+        ? Math.round(a.landSeconds + islandDistanceWithin(region, me, n.id) * a.landSecondsPerUnit)
+        : n.state.villagers >= a.balangayMinVillagers
+          ? travelSeconds(content, region.islands, region.places, n.id, me)
+          : null;
+      return { id: n.id, warriors: n.state.warriors, eta, arrives: eta !== null && eta <= warning, by: land ? ("land" as const) : ("sea" as const) };
+    });
+}
+
+/** Straight-line distance between two barangays' spots on the regional map. */
+function islandDistanceWithin(region: RegionState, a: string, b: string): number {
+  const pa = region.places[a];
+  const pb = region.places[b];
+  return pa && pb ? Math.hypot(pa.x - pb.x, pa.y - pb.y) : 0;
+}
+
+/** How far apart two barangays' islands are (0 on the same island). */
+export const seaDistance = (region: RegionState, a: string, b: string) => islandDistance(region.islands, region.places, a, b);
+
+// ---------- Blocs: what the player can do (Bahay ng Datu level 4) ----------
+
+export type BlocBlocker = "level" | "in-bloc" | "not-in-bloc" | "not-leader" | "unknown" | "tributary" | "trust" | "grudge" | "taken";
+
+const politicsRules = (content: Content) => content.rules.politics;
+
+/** Would this neighbor accept the player's invitation (or welcome the player into its bloc)? */
+function wouldAccept(n: NeighborState, content: Content): BlocBlocker | null {
+  const p = politicsRules(content);
+  if (n.status === "tributary") return "tributary";
+  if (n.grudge > p.maxGrudge) return "grudge";
+  if (n.trust < p.joinTrust) return "trust";
+  return null;
+}
+
+/**
+ * Why a bloc action can't happen now, or null. Actions: form a bloc, invite a neighbor into the
+ * player's bloc, ask to join a neighbor's bloc, leave, or expel a member.
+ */
+export function blocBlocker(state: GameState, content: Content, action: "form" | "invite" | "join" | "leave" | "expel", target?: string): BlocBlocker | null {
+  const region = state.region;
+  if (!region) return "unknown";
+  if (!hasDatuUnlock(state, content, "alliances")) return "level";
+  const me = state.barangay.id;
+  const mine = blocOf(region.politics, me);
+  switch (action) {
+    case "form":
+      return mine ? "in-bloc" : null;
+    case "leave":
+      return mine ? null : "not-in-bloc";
+    case "invite": {
+      if (!mine) return "not-in-bloc";
+      if (mine.leader !== me) return "not-leader";
+      const n = region.neighbors.find((x) => x.id === target);
+      if (!n) return "unknown";
+      if (blocOf(region.politics, n.id)) return "taken";
+      return wouldAccept(n, content);
+    }
+    case "join": {
+      if (mine) return "in-bloc";
+      const bloc = region.politics.blocs.find((b) => b.id === target);
+      const leader = region.neighbors.find((x) => x.id === bloc?.leader);
+      if (!bloc || !leader) return "unknown";
+      return wouldAccept(leader, content);
+    }
+    case "expel": {
+      if (!mine) return "not-in-bloc";
+      if (mine.leader !== me) return "not-leader";
+      return target && target !== me && mine.members.includes(target) ? null : "unknown";
+    }
+  }
+}
+
+/** Applies a bloc action for the player, if allowed. Leaving and expelling cost trust. */
+export function blocAction(state: GameState, content: Content, action: "form" | "invite" | "join" | "leave" | "expel", target?: string): GameState {
+  if (blocBlocker(state, content, action, target) !== null) return state;
+  const region = state.region!;
+  const me = state.barangay.id;
+  const p = politicsRules(content);
+  const strength = strengthFn(state, content);
+  let politics = region.politics;
+  let neighbors = region.neighbors;
+  let news: Omit<NewsItem, "id"> | null = null;
+  const mine = blocOf(politics, me);
+  switch (action) {
+    case "form":
+      politics = formBlocFor(politics, me);
+      news = { time: state.time, key: "formed", barangay: me };
+      break;
+    case "invite":
+      politics = joinBlocFor(politics, mine!.id, target!);
+      news = { time: state.time, key: "joined", barangay: target, bloc: mine!.id };
+      break;
+    case "join":
+      politics = joinBlocFor(politics, target!, me);
+      news = { time: state.time, key: "joined", barangay: me, bloc: target };
+      break;
+    case "leave":
+      neighbors = neighbors.map((n) => (mine!.members.includes(n.id) ? { ...n, trust: clamp100(n.trust - p.leaveTrustLoss) } : n));
+      politics = leaveBlocFor(politics, me, strength);
+      news = { time: state.time, key: "left", barangay: me, bloc: mine!.id };
+      break;
+    case "expel":
+      neighbors = neighbors.map((n) => (n.id === target ? { ...n, trust: clamp100(n.trust - p.expelTrustLoss) } : n));
+      politics = expelFor(politics, me, target!, strength);
+      news = { time: state.time, key: "expelled", barangay: target, bloc: mine!.id };
+      break;
+  }
+  let next: RegionState = { ...region, politics, neighbors };
+  if (news) next = addNews(next, news);
+  return checkVictory({ ...state, region: next });
+}
+
+// ---------- Politics over time ----------
+
+/**
+ * Scripted political events and the cost of war, once per whole game second crossed. At most
+ * one event per minGapSeconds; the player's bloc is never changed by a script.
+ */
+export function updatePolitics(state: GameState, content: Content, t0: number, t1: number, maxEvents = Infinity): GameState {
+  const region = state.region;
+  if (!region || content.ai) return state;
+  const p = politicsRules(content);
+  let s = state;
+  let r = region;
+  let fired = 0;
+  for (let second = Math.floor(t0 + EPSILON) + 1; second <= Math.floor(t1 + EPSILON); second++) {
+    // Wars wear both sides down.
+    if (r.politics.wars.length && second >= r.politics.nextWarTickAt) {
+      const hurt = new Set(atWarMembers(r.politics));
+      r = {
+        ...r,
+        politics: { ...r.politics, nextWarTickAt: second + p.warTickSeconds },
+        neighbors: r.neighbors.map((n) => (hurt.has(n.id) && n.state.warriors > 0 ? { ...n, state: loseWarriors(n.state, Math.max(1, Math.floor((n.state.warriors * p.warLossPercent) / 100))) } : n)),
+      };
+    } else if (!r.politics.wars.length && second >= r.politics.nextWarTickAt) {
+      r = { ...r, politics: { ...r.politics, nextWarTickAt: second + p.warTickSeconds } };
+    }
+    if (fired >= maxEvents || second < p.startsAfterSeconds) continue;
+    if (r.politics.lastEventAt !== null && second - r.politics.lastEventAt < p.minGapSeconds) continue;
+    if (rollAt(s.map.seed, second, 7800) >= p.chancePerSecond) continue;
+    const me = s.barangay.id;
+    const mine = blocOf(r.politics, me);
+    const sNow = { ...s, region: r };
+    const change = scriptedEvent(r.politics, content.politics, r.neighbors.map((n) => n.id), strengthFn(sNow, content), mine ? [mine.id] : [], s.map.seed, second);
+    if (!change) continue;
+    fired++;
+    r = addNews({ ...r, politics: { ...change.politics, lastEventAt: second } }, { time: second, key: change.event.id, barangay: change.barangay, bloc: change.bloc, other: change.other });
+  }
+  return { ...s, region: r };
+}
+
+/** Total strength of the bloc a barangay belongs to (its own strength if none). */
+export function blocPower(state: GameState, content: Content, id: string): number {
+  const region = state.region;
+  const strength = strengthFn(state, content);
+  const bloc = region ? blocOf(region.politics, id) : undefined;
+  return bloc ? blocStrength(bloc, strength) : strength(id);
+}
+
+/**
+ * The player sends `percent` of the warriors at home to defend an ally attacked by `enemy`:
+ * the enemy's warriors against the ally's own defense plus the warriors sent. Same battle
+ * engine as any raid; losses on every side; trust with the ally and a grudge from the enemy.
+ */
+export function alliedBattle(state: GameState, content: Content, ally: string, enemy: string, percent: number): GameState {
+  const region = state.region;
+  const a = region?.neighbors.find((n) => n.id === ally);
+  const e = region?.neighbors.find((n) => n.id === enemy);
+  if (!region || !a || !e) return state;
+  const m = content.rules.military;
+  const d = content.rules.diplomacy;
+  const sent = Math.floor((homeWarriors(state) * percent) / 100);
+  if (sent < 1) return state;
+  const attack = attackOf(e.state.warriors, content);
+  const defense = defenseOf(a.state, content) + sent * m.warrior.defense;
+  const battle = resolveBattle(attack, defense, rollAt(state.map.seed, Math.floor(state.time), 8800), content);
+  const ourLosses = casualties(sent, battle.defenderLossPercent, battle.attackerWins);
+  const allyLosses = casualties(a.state.warriors, battle.defenderLossPercent, battle.attackerWins);
+  const enemyLosses = casualties(e.state.warriors, battle.attackerLossPercent, !battle.attackerWins);
+  const player = loseWarriors(state, ourLosses);
+  const neighbors = region.neighbors.map((n) => {
+    if (n.id === ally) return { ...n, state: loseWarriors(n.state, allyLosses), trust: clamp100(n.trust + d.sandugo.trust) };
+    if (n.id === enemy) return { ...n, state: loseWarriors(n.state, enemyLosses), grudge: clamp100(n.grudge + d.grudge.raidLost) };
+    return n;
+  });
+  const next = addNews({ ...region, neighbors }, { time: state.time, key: battle.attackerWins ? "ally-lost" : "ally-defended", barangay: ally, other: enemy });
   return { ...player, region: next };
 }

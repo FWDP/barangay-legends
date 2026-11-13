@@ -1,0 +1,17 @@
+{
+  "id": "first-voyage",
+  "text": {
+    "en": "Sail a Balangay to another island",
+    "fil": "Maglayag ng Balangay sa ibang pulo"
+  },
+  "condition": {
+    "type": "voyages",
+    "count": 1
+  },
+  "reward": {
+    "resources": {
+      "wood": 40
+    }
+  },
+  "next": "lead-bloc"
+}

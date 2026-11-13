@@ -6,6 +6,7 @@ import { currentTask, datuTitle } from "../engine/gawain";
 import { storyText, type HistoryEntry, type NamedVillager } from "../engine/people";
 import type { Report } from "../engine/region";
 import { costText } from "./format";
+import { newsLine } from "./politicsText";
 import type { Lang } from "./settings";
 import { fill, type GameText } from "./uiContent";
 
@@ -115,5 +116,8 @@ export function awayPeopleLines(before: GameState, after: GameState, content: Co
     if (h.at <= before.time || h.at > after.time || h.kind === "task") continue;
     lines.push(historyLine(h, content, game, lang));
   }
+  // The Balita: political news while away.
+  const seen = Math.max(0, ...(before.region?.news ?? []).map((n) => n.id));
+  for (const n of after.region?.news ?? []) if (n.id > seen) lines.push(`📣 ${newsLine(n, after, content, game, lang)}`);
   return lines;
 }

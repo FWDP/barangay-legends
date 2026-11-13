@@ -772,7 +772,7 @@ export function App() {
 
       <main className="relative flex min-h-0 flex-1 flex-col">
         {view === "rehiyon" ? (
-          <RegionView state={state} content={content} dispatch={dispatch} onLore={setLoreNote} />
+          <RegionView state={state} content={content} dispatch={dispatch} onLore={setLoreNote} game={ui.game} lang={lang} />
         ) : (
         <BarangayMap
           state={state}
@@ -824,16 +824,21 @@ export function App() {
         />
         )}
         <LoreToast loreId={loreNote} onClose={closeLore} />
-        <MapSeasonBadge state={state} content={content}>
+        {view === "barangay" && <MapSeasonBadge state={state} content={content}>
           <span className="rounded-lg bg-stone-900/50">
             <ForestChip state={state} content={content} game={ui.game} lang={lang} />
           </span>
           <AklatButton state={state} content={content} game={ui.game} lang={lang} onOpen={() => setAklatOpen(true)} compact />
-        </MapSeasonBadge>
+        </MapSeasonBadge>}
         {/* On phones the banners keep clear of the season, leaf and book on the right, and the task joins them. */}
         <div
           data-map-overlay
-          className="pointer-events-none absolute top-2 right-14 left-2 z-10 flex flex-col items-center gap-1.5 sm:right-auto sm:left-1/2 sm:w-max sm:max-w-[calc(100%-1rem)] sm:-translate-x-1/2"
+          className={
+            view === "rehiyon"
+              ? // Over the Rehiyon the banners sit above the panel (on phones there is no map under them).
+                "pointer-events-none order-first z-10 flex flex-col items-center gap-1.5 bg-sky-950/40 px-2 py-1.5 empty:hidden sm:absolute sm:top-2 sm:left-1/2 sm:w-max sm:max-w-[calc(100%-1rem)] sm:-translate-x-1/2 sm:bg-transparent sm:p-0"
+              : "pointer-events-none absolute top-2 right-14 left-2 z-10 flex flex-col items-center gap-1.5 sm:right-auto sm:left-1/2 sm:w-max sm:max-w-[calc(100%-1rem)] sm:-translate-x-1/2"
+          }
         >
           {view === "barangay" && !placing && !roadMode && (
             <div className="sm:hidden">
@@ -1044,6 +1049,10 @@ export function App() {
         onRemembered={() => {
           setMenu(null);
           setRememberedOpen(true);
+        }}
+        onTrainBoat={() => {
+          dispatch({ type: "trainBalangay" });
+          sfx.build();
         }}
       />
       <DatuDialog open={datuOpen} state={state} content={content} game={ui.game} lang={lang} onUpgrade={upgradeDatu} onClose={() => setDatuOpen(false)} />

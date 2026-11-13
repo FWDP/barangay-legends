@@ -1,0 +1,17 @@
+{
+  "id": "paramount",
+  "text": {
+    "en": "Become Paramount Datu of the islands",
+    "fil": "Maging Pinakamataas na Datu ng mga pulo"
+  },
+  "condition": {
+    "type": "paramount"
+  },
+  "reward": {
+    "title": {
+      "en": "Paramount Datu",
+      "fil": "Pinakamataas na Datu"
+    }
+  },
+  "next": null
+}

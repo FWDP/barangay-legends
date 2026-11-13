@@ -4,6 +4,7 @@
   "datu": "Datu Bagwis",
   "trait": "trader",
   "description": "Traders who paddle salt and jars up and down the river.",
+  "home": true,
   "river": {
     "position": 0.12,
     "bank": "left"

@@ -17,15 +17,18 @@ const isLand = (map: MapState, x: number, y: number) => {
 
 /**
  * Where a boat can put raiders ashore: land next to open river (bridges aren't landing spots),
- * on ground the barangay's own people can walk to. Coast tiles can join this list once the map
- * has a coast.
+ * or next to the sea (a beach), on ground the barangay's own people can walk to.
  */
 export function landingCandidates(map: MapState): Point[] {
   const out: Point[] = [];
   for (let y = 0; y < map.height; y++) {
     for (let x = 0; x < map.width; x++) {
       if (!isLand(map, x, y) || !isReachable(map, x, y)) continue;
-      if (NEIGHBOURS.some(([dx, dy]) => tileAt(map, x + dx, y + dy) === "river")) out.push({ x, y });
+      // River banks and the beach along the sea.
+      if (NEIGHBOURS.some(([dx, dy]) => {
+        const t = tileAt(map, x + dx, y + dy);
+        return t === "river" || t === "sea";
+      })) out.push({ x, y });
     }
   }
   return out;

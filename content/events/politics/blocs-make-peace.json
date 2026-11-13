@@ -1,0 +1,9 @@
+{
+  "id": "blocs-make-peace",
+  "type": "peace",
+  "text": {
+    "en": "{bloc} and {other} make peace after a long war.",
+    "fil": "Nakipagkasundo ang {bloc} at ang {other} matapos ang mahabang digmaan."
+  },
+  "weight": 2
+}

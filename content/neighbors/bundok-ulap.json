@@ -1,0 +1,25 @@
+{
+  "id": "bundok-ulap",
+  "name": "Barangay Bundok-Ulap",
+  "datu": "Datu Banayad",
+  "trait": "proud",
+  "description": "A hill settlement above the clouds, slow to trust outsiders.",
+  "home": false,
+  "start": {
+    "villagers": 8,
+    "warriors": 3,
+    "resources": {
+      "rice": 60,
+      "wood": 40
+    },
+    "buildings": {
+      "bahay-kubo": 3,
+      "palayan": 2,
+      "woodcutter-camp": 1,
+      "kuta": 1
+    }
+  },
+  "trust": 20,
+  "fictional": true,
+  "note": "Fictional barangay and datu, made up for the game; not a historical person or place."
+}

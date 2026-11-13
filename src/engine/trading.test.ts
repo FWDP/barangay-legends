@@ -51,7 +51,7 @@ describe("grudge", () => {
   it("fades slowly over time, and while the player is away", () => {
     const s = setNb(world(), "malinaw", { grudge: 50 });
     expect(nb(tick(s, calm, 60), "malinaw").grudge).toBeCloseTo(50 - g.decayPerMinute, 5);
-    expect(nb(tick(s, calm, 60 * 60), "malinaw").grudge).toBe(0);
+    expect(nb(tick(s, calm, Math.ceil(50 / g.decayPerMinute + 1) * 60), "malinaw").grudge).toBe(0);
     expect(nb(offlineProgress(s, content, 600).state, "malinaw").grudge).toBeCloseTo(50 - g.decayPerMinute * 10, 5);
   });
 });

@@ -65,7 +65,7 @@ export function dockPoint(path: Point[], plaza: Point): Point {
 }
 
 /** Neighbors upstream (top half of the regional river) come from the top of the map. */
-export const fromTop = (content: Content, neighborId: string) => (content.neighbors.find((n) => n.id === neighborId)?.river.position ?? 0) < 0.5;
+export const fromTop = (content: Content, neighborId: string) => (content.neighbors.find((n) => n.id === neighborId)?.river?.position ?? 1) < 0.5;
 
 /** The stretch of river from the map edge (top or bottom) to path index `to`. */
 export function reach(path: Point[], to: number, top: boolean): Point[] {

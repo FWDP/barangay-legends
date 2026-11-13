@@ -1,0 +1,17 @@
+{
+  "id": "datu-four",
+  "text": {
+    "en": "Raise the Bahay ng Datu to level 4",
+    "fil": "Itaas sa ikaapat na antas ang Bahay ng Datu"
+  },
+  "condition": {
+    "type": "datuLevel",
+    "count": 4
+  },
+  "reward": {
+    "resources": {
+      "gold": 20
+    }
+  },
+  "next": "first-voyage"
+}

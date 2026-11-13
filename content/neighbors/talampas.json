@@ -4,6 +4,7 @@
   "datu": "Datu Tikas",
   "trait": "proud",
   "description": "Highland people proud of their old lineage.",
+  "home": true,
   "river": {
     "position": 0.72,
     "bank": "left"

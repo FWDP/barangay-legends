@@ -1,0 +1,9 @@
+{
+  "id": "blocs-at-war",
+  "type": "war",
+  "text": {
+    "en": "War! {bloc} and {other} go to war.",
+    "fil": "Digmaan! Naglaban ang {bloc} at ang {other}."
+  },
+  "weight": 1
+}

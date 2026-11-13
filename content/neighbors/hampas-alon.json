@@ -1,0 +1,24 @@
+{
+  "id": "hampas-alon",
+  "name": "Barangay Hampas-Alon",
+  "datu": "Dayang Masigla",
+  "trait": "trader",
+  "description": "A busy harbor where the waves meet the market.",
+  "home": false,
+  "start": {
+    "villagers": 9,
+    "warriors": 1,
+    "resources": {
+      "rice": 60,
+      "wood": 40
+    },
+    "buildings": {
+      "bahay-kubo": 4,
+      "palayan": 2,
+      "woodcutter-camp": 2
+    }
+  },
+  "trust": 40,
+  "fictional": true,
+  "note": "Fictional barangay and datu, made up for the game; not a historical person or place."
+}

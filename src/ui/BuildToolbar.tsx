@@ -7,6 +7,7 @@ import { RESOURCES, type BuildingDef, type Content } from "../engine/content";
 import { asCost, buildingCost, canAfford, owned, roadCost, staffedBuildings, unreachableWorkplaces, type GameState } from "../engine/game";
 import { isUnlocked } from "../engine/map";
 import { maxDatuLevel, nextDatuLevel } from "../engine/datu";
+import { datuHouseUrl, houseStyleFor } from "./datuHouseArt";
 import { DAAN, DATU, itemsIn, missingFor, tabOfItem, tabsWithNew, unlockedIds, visibleTabs, type BuildTab } from "./buildMenu";
 import { bonusRuleText, costText, groveRuleText, RESOURCE_ICON } from "./format";
 import type { Lang } from "./settings";
@@ -71,6 +72,8 @@ interface Item {
   status: string[];
   recommended: boolean;
   selected: boolean;
+  /** A drawn picture in place of the icon (the Bahay ng Datu). */
+  iconUrl?: string;
   /** The Bahay ng Datu card: its level, and the upgrade button's label (none at the top). */
   datuLevel?: number;
   upgradeLabel?: string;
@@ -148,11 +151,13 @@ export function BuildToolbar(props: {
       return {
         id,
         icon: content.datuHouse.icon,
+        iconUrl: datuHouseUrl(state.datuLevel, houseStyleFor(state, content)),
         name: content.datuHouse.name,
         count: null,
         unlocked: true,
         lockText: "",
-        affordable: ok,
+        // At the top level the card shows the finished house, not a dimmed one.
+        affordable: ok || !next,
         costLine: next ? <CostLine cost={cost} have={state.resources} /> : <span>{fill(d.level[lang], { level: state.datuLevel, max: maxDatuLevel(content) })}</span>,
         missing: next && !ok ? costText(Object.fromEntries(RESOURCES.filter((r) => state.resources[r] < cost[r]).map((r) => [r, Math.ceil(cost[r] - state.resources[r])]))) : "",
         details: [
@@ -200,7 +205,7 @@ export function BuildToolbar(props: {
       name: b.name,
       count,
       unlocked: open,
-      lockText: fill(t.locked[lang], { villagers: b.unlock.villagers ?? 0 }),
+      lockText: b.unlock.datuLevel !== undefined ? fill(t.lockedDatu[lang], { level: b.unlock.datuLevel }) : fill(t.locked[lang], { villagers: b.unlock.villagers ?? 0 }),
       affordable: open && canAfford(state, cost),
       costLine: <CostLine cost={cost} have={state.resources} />,
       missing: Object.keys(missing).length ? costText(missing) : "",
@@ -371,7 +376,7 @@ export function BuildToolbar(props: {
                   </span>
                 )}
                 <span className={`text-3xl leading-none sm:text-4xl ${it.affordable || it.selected ? "" : "opacity-50 grayscale"}`} aria-hidden>
-                  {it.icon}
+                  {it.iconUrl ? <img src={it.iconUrl} alt="" draggable={false} className="size-[1.25em]" /> : it.icon}
                 </span>
                 <span className="text-center font-display text-[12px] leading-tight text-amber-950 sm:text-sm">{it.name}</span>
                 {it.count !== null && <span className="text-[10px] leading-tight text-stone-600 sm:text-xs">× {it.count}</span>}
@@ -420,7 +425,7 @@ export function BuildToolbar(props: {
         >
           <div className="flex items-center gap-2">
             <span aria-hidden className="text-3xl">
-              {shown.icon}
+              {shown.iconUrl ? <img src={shown.iconUrl} alt="" className="size-[1.4em]" /> : shown.icon}
             </span>
             <div className="min-w-0">
               <h3 className="font-display text-base leading-tight text-amber-900">{shown.name}</h3>
@@ -442,7 +447,7 @@ export function BuildToolbar(props: {
             <span className="text-xs font-semibold">{shown.unlocked ? shown.costLine : shown.lockText}</span>
             <button
               type="button"
-              disabled={!shown.affordable}
+              disabled={!shown.affordable || (shown.id === DATU && !shown.upgradeLabel)}
               onClick={() => {
                 setDetails(null);
                 if (!shown.selected) pick(shown);

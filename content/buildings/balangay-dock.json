@@ -1,0 +1,33 @@
+{
+  "id": "balangay-dock",
+  "name": "Balangay Dock",
+  "category": "pagkain",
+  "order": 7.5,
+  "description": "A landing for balangay, the plank boats that carry the barangay's people across the sea to other islands.",
+  "icon": "⛵",
+  "cost": {
+    "wood": 80,
+    "rice": 30
+  },
+  "repairCost": {
+    "wood": 20
+  },
+  "placeNextTo": [
+    "river",
+    "sea"
+  ],
+  "balangayDock": {
+    "boats": 2,
+    "boatCost": {
+      "wood": 40,
+      "rice": 20
+    }
+  },
+  "unlock": {
+    "datuLevel": 3
+  },
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "https://en.wikipedia.org/wiki/Balangay"
+  ]
+}

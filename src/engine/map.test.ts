@@ -52,7 +52,12 @@ describe("map generation", () => {
       seen.add(key);
       for (const [dx, dy] of NEIGHBOURS) queue.push([x + dx, y + dy]);
     }
-    expect([...seen].some((k) => k.endsWith(`,${height - 1}`))).toBe(true);
+    // It runs out into the sea along the bottom edge.
+    const sea = (x: number, y: number) => tileAt(map, x, y) === "sea";
+    expect([...seen].some((k) => {
+      const [x, y] = k.split(",").map(Number);
+      return NEIGHBOURS.some(([dx, dy]) => sea(x + dx, y + dy));
+    })).toBe(true);
   });
 
   it.each(seeds)("seed %i: forest grows on both banks", (seed) => {
@@ -61,6 +66,8 @@ describe("map generation", () => {
       const row = Array.from({ length: width }, (_, x) => tileAt(map, x, y));
       const first = row.indexOf("river");
       const last = row.lastIndexOf("river");
+      // Rows along the coast are sea.
+      if (first < 0) continue;
       expect(row.slice(0, first)).toContain("forest");
       expect(row.slice(last + 1)).toContain("forest");
     }

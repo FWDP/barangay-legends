@@ -4,7 +4,8 @@
 import { RESOURCES, type ChoiceEffects, type ChoiceEventDef, type ChoiceOption, type Content } from "./content";
 import { seasonAt } from "./events";
 import { housing, type GameState } from "./game";
-import { adjustRelations, type NeighborStatus } from "./region";
+import { addNews, adjustRelations, alliedBattle, strengthFn, type NeighborStatus } from "./region";
+import { blocById, blocOf, enemiesOf } from "./politics";
 import { rollAt } from "./rng";
 
 /** Choice events roll with rollAt (see rng.ts), so they never disturb the shared RNG. */
@@ -17,6 +18,8 @@ export interface PendingChoice {
   neighbor: string | null;
   /** Game time it came up. */
   at: number;
+  /** For an ally-at-war event: the enemy barangay in the story ({enemy}). */
+  enemy?: string;
 }
 
 /** How many recent events are kept out of the draw, so the same story doesn't come back at once. */
@@ -25,8 +28,30 @@ const EPSILON = 1e-9;
 /** The key in GameState.nextEventAt for the earliest next choice event. */
 export const CHOICE_KEY = "choice";
 
+/**
+ * Allies at war: sandugo allies and members of the player's bloc whose bloc is at war, each with
+ * the strongest barangay on the other side.
+ */
+export function alliesAtWar(state: GameState, content: Content): { ally: string; enemy: string }[] {
+  const region = state.region;
+  if (!region) return [];
+  const p = region.politics;
+  const mine = blocOf(p, state.barangay.id);
+  const strength = strengthFn(state, content);
+  const out: { ally: string; enemy: string }[] = [];
+  for (const n of region.neighbors) {
+    if (n.status !== "ally" && !mine?.members.includes(n.id)) continue;
+    const bloc = blocOf(p, n.id);
+    if (!bloc) continue;
+    const foes = enemiesOf(p, bloc.id).flatMap((b) => blocById(p, b)?.members ?? []).filter((m) => m !== state.barangay.id);
+    if (foes.length) out.push({ ally: n.id, enemy: foes.reduce((a, b) => (strength(b) > strength(a) ? b : a)) });
+  }
+  return out;
+}
+
 /** Neighbors an event could be about. */
-function candidates(state: GameState, def: ChoiceEventDef): string[] {
+function candidates(state: GameState, def: ChoiceEventDef, content?: Content): string[] {
+  if (def.conditions.allyAtWar) return content ? alliesAtWar(state, content).map((a) => a.ally) : [];
   const want: NeighborStatus | "any" | null = def.conditions.allied ? "ally" : (def.neighbor ?? null);
   if (!want) return [];
   return (state.region?.neighbors ?? []).filter((n) => want === "any" || n.status === want).map((n) => n.id);
@@ -39,7 +64,7 @@ export function isEligible(state: GameState, content: Content, def: ChoiceEventD
   if (c.hasBuilding && !state.buildings.some((b) => b.type === c.hasBuilding && !b.damaged)) return false;
   if (c.lacksBuilding && state.buildings.some((b) => b.type === c.lacksBuilding)) return false;
   if (c.minVillagers !== undefined && state.villagers < c.minVillagers) return false;
-  if ((c.allied || def.neighbor) && candidates(state, def).length === 0) return false;
+  if ((c.allied || def.neighbor || c.allyAtWar) && candidates(state, def, content).length === 0) return false;
   return true;
 }
 
@@ -65,10 +90,12 @@ export function updateChoices(state: GameState, content: Content, t0: number, dt
     const total = pool.reduce((sum, d) => sum + d.weight, 0);
     let roll = choiceRoll(seed, second, 1) * total;
     const def = pool.find((d) => (roll -= d.weight) < 0) ?? pool[pool.length - 1];
-    const who = candidates(s, def);
+    const who = candidates(s, def, content);
+    const neighbor = who.length ? who[Math.floor(choiceRoll(seed, second, 2) * who.length)] : null;
+    const enemy = def.conditions.allyAtWar ? alliesAtWar(s, content).find((a) => a.ally === neighbor)?.enemy : undefined;
     s = {
       ...s,
-      choice: { id: def.id, neighbor: who.length ? who[Math.floor(choiceRoll(seed, second, 2) * who.length)] : null, at: second },
+      choice: { id: def.id, neighbor, at: second, ...(enemy ? { enemy } : {}) },
       nextEventAt: { ...s.nextEventAt, [CHOICE_KEY]: second + rules.minGapSeconds },
     };
     break;
@@ -123,6 +150,24 @@ export function choose(state: GameState, content: Content, optionId: string): Ga
   const def = pending && choiceDef(content, pending.id);
   const option = def?.choices.find((o) => o.id === optionId);
   if (!pending || !def || !option || optionBlocker(state, option)) return state;
-  const s = applyEffects(state, content, option.effects, pending.neighbor);
+  let s = applyEffects(state, content, option.effects, pending.neighbor);
+  if (pending.enemy && pending.neighbor) s = allyWarEffects(s, content, option.effects, pending.neighbor, pending.enemy);
   return { ...s, choice: null, recentChoices: [...state.recentChoices, def.id].slice(-RECENT) };
+}
+
+/**
+ * An ally at war: standing with them (their enemies' bloc resents the player), or sending
+ * defenders (a battle at the ally's barangay, fought with the same engine as any raid).
+ */
+function allyWarEffects(state: GameState, content: Content, effects: ChoiceEffects, ally: string, enemy: string): GameState {
+  let s = state;
+  const region = s.region;
+  if (!region) return s;
+  if (effects.joinWar) {
+    const foes = blocOf(region.politics, enemy)?.members ?? [enemy];
+    const grudge = content.rules.diplomacy.grudge.raidLost;
+    s = { ...s, region: addNews({ ...region, neighbors: region.neighbors.map((n) => (foes.includes(n.id) ? { ...n, grudge: Math.min(100, n.grudge + grudge) } : n)) }, { time: s.time, key: "war-joined", barangay: ally, other: blocOf(region.politics, enemy)?.id }) };
+  }
+  if (effects.defendAlly) s = alliedBattle(s, content, ally, enemy, effects.defendAlly);
+  return s;
 }

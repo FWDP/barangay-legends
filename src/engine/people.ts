@@ -63,6 +63,8 @@ export interface Stats {
   permittedClears: number;
   /** Villagers who died (any cause). */
   deaths: number;
+  /** Balangay voyages that reached another island. */
+  voyages: number;
 }
 
 export const MAX_HISTORY = 60;

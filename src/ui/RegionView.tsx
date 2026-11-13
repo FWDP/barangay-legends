@@ -13,27 +13,15 @@ import {
   type NeighborState,
  tradingPaused } from "../engine/region";
 import { clock } from "./EventBanners";
+import { sameIsland } from "../engine/archipelago";
+import { hasDatuUnlock } from "../engine/datu";
+import { blocOf, blocStrength } from "../engine/politics";
+import { blocBlocker, strengthFn } from "../engine/region";
+import { boatCap, boatCost, boatsFree, sailBlocker, voyageSeconds } from "../engine/sea";
+import { barangayName, blocColor, blocName, newsLine, warLine } from "./politicsText";
+import type { Lang } from "./settings";
+import { fill, type GameText } from "./uiContent";
 import { RESOURCE_ICON } from "./format";
-
-/** The regional river, drawn left to right in a 200 × 100 box. */
-const RIVER: [number, number][] = [
-  [0, 52],
-  [30, 40],
-  [60, 58],
-  [95, 46],
-  [130, 60],
-  [165, 42],
-  [200, 54],
-];
-const PLAYER_POSITION = 0.5;
-
-function riverPoint(t: number): [number, number] {
-  const seg = Math.min(RIVER.length - 2, Math.floor(t * (RIVER.length - 1)));
-  const local = t * (RIVER.length - 1) - seg;
-  const [x0, y0] = RIVER[seg];
-  const [x1, y1] = RIVER[seg + 1];
-  return [x0 + (x1 - x0) * local, y0 + (y1 - y0) * local];
-}
 
 const STATUS = {
   independent: { label: "Independent", ring: "#a8a29e", chip: "bg-stone-200 text-stone-700" },
@@ -51,104 +39,283 @@ export function RegionView(props: {
   content: Content;
   dispatch: (c: Command) => void;
   onLore: (id: string) => void;
+  game: GameText;
+  lang: Lang;
 }) {
-  const { state, content, dispatch, onLore } = props;
+  const { state, content, dispatch, onLore, game, lang } = props;
   const region = state.region;
   const [selected, setSelected] = useState<string>(content.neighbors[0]?.id ?? "");
   if (!region) {
     return <div className="flex flex-1 items-center justify-center bg-green-900 text-amber-50">No neighbors yet.</div>;
   }
   const chosen = region.neighbors.find((n) => n.id === selected) ?? region.neighbors[0];
+  const pick = (id: string) => {
+    setSelected(id);
+    // On phones the panel is below the list: bring it into view.
+    if (typeof window !== "undefined" && window.matchMedia?.("(max-width: 639px)").matches) {
+      requestAnimationFrame(() => document.getElementById("neighbor-panel")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+    }
+  };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-green-900 lg:flex-row">
-      <div className="relative shrink-0 lg:min-w-0 lg:flex-1">
-        <RiverMap state={state} content={content} selected={chosen?.id} onSelect={setSelected} />
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-sky-900 sm:overflow-hidden lg:flex-row">
+      <div className="relative hidden shrink-0 sm:block lg:min-w-0 lg:flex-1">
+        <ArchipelagoMap state={state} content={content} game={game} lang={lang} selected={chosen?.id} onSelect={setSelected} />
       </div>
-      <aside className="mat-card min-h-0 flex-1 overflow-y-auto border-t-4 border-amber-900/60 p-3 text-stone-800 lg:w-[26rem] lg:flex-none lg:border-t-0 lg:border-l-4">
+      <aside className="mat-card flex-1 border-t-4 border-amber-900/60 p-3 text-stone-800 sm:min-h-0 sm:overflow-y-auto lg:w-[26rem] lg:flex-none lg:border-t-0 lg:border-l-4">
         <OurForces state={state} content={content} dispatch={dispatch} />
-        {chosen && <NeighborPanel key={chosen.id} n={chosen} state={state} content={content} dispatch={dispatch} onLore={onLore} />}
+        <AlliancePanel state={state} content={content} game={game} lang={lang} dispatch={dispatch} />
+        <BlocList state={state} content={content} game={game} lang={lang} selected={chosen?.id} onSelect={pick} />
+        <Balita state={state} content={content} game={game} lang={lang} />
+        <div id="neighbor-panel" className="scroll-mt-2">
+          {chosen && <NeighborPanel key={chosen.id} n={chosen} state={state} content={content} dispatch={dispatch} onLore={onLore} game={game} lang={lang} />}
+        </div>
       </aside>
     </div>
   );
 }
 
-function RiverMap(props: { state: GameState; content: Content; selected?: string; onSelect: (id: string) => void }) {
-  const { state, content, selected, onSelect } = props;
+/**
+ * The political map of the islands: barangays as nodes on their islands, colored by alliance,
+ * with lines from each alliance's leader to its members, green ties for sandugo allies, amber
+ * arrows for tributaries, and the player's Balangay sailing between islands.
+ */
+function ArchipelagoMap(props: { state: GameState; content: Content; game: GameText; lang: Lang; selected?: string; onSelect: (id: string) => void }) {
+  const { state, content, game, lang, selected, onSelect } = props;
   const region = state.region!;
-  // The river, continued well past both edges of the view box.
-  const riverBeyond = `M-300,52 ${RIVER.map(([x, y]) => `L${x},${y}`).join(" ")} L500,54`;
-  const [px, py] = riverPoint(PLAYER_POSITION);
+  const me = state.barangay.id;
+  const P = (id: string) => {
+    const p = region.places[id];
+    return p ? { x: p.x * 100, y: p.y * 100 } : { x: 50, y: 50 };
+  };
+  const mePos = P(me);
   return (
-    <svg viewBox="0 0 200 100" className="block h-auto max-h-[42dvh] w-full overflow-hidden lg:absolute lg:inset-0 lg:h-full lg:max-h-none" role="group" aria-label="Rehiyon: barangays along the river">
-      {/* Land, trees and river run past the edges, so a tall or wide panel shows more country, not bars. */}
-      <rect x="-300" y="-300" width="800" height="700" fill="#166534" />
-      {Array.from({ length: 140 }, (_, i) => (
-        <text key={i} x={-150 + ((i * 37) % 500)} y={-150 + ((i * 53) % 400)} fontSize="6" opacity="0.5" aria-hidden>
-          {i % 3 ? "🌳" : "🌴"}
-        </text>
+    <svg viewBox="0 0 100 100" preserveAspectRatio="xMidYMid meet" className="block h-[42dvh] w-full lg:absolute lg:inset-0 lg:h-full" role="group" aria-label="Rehiyon: the islands and their barangays">
+      <defs>
+        <marker id="arrow-tribute" viewBox="0 0 6 6" refX="5" refY="3" markerWidth="4" markerHeight="4" orient="auto">
+          <path d="M0,0 L6,3 L0,6 z" fill="#f59e0b" />
+        </marker>
+      </defs>
+      <rect x="-50" y="-50" width="200" height="200" fill="#0c4a6e" />
+      {Array.from({ length: 40 }, (_, i) => (
+        <path key={i} d={`M${(i * 23) % 100},${(i * 37) % 100} q2,-1 4,0`} stroke="#38bdf8" strokeWidth="0.3" fill="none" opacity="0.4" aria-hidden />
       ))}
-      <path d={riverBeyond} stroke="#0284c7" strokeWidth="9" fill="none" strokeLinecap="round" />
-      <path d={riverBeyond} stroke="#7dd3fc" strokeWidth="2" fill="none" strokeDasharray="3 6" opacity="0.7" />
-      {/* Our barangay. */}
-      <g transform={`translate(${px}, ${py - 14})`}>
-        <circle r="9" fill="#fef3c7" stroke="#b45309" strokeWidth="1.5" />
-        <text textAnchor="middle" dy="3" fontSize="9" aria-hidden>
+      {region.islands.map((i, k) => (
+        <g key={i.id} aria-hidden>
+          <ellipse cx={i.x * 100} cy={i.y * 100} rx={i.r * 100 * 1.2} ry={i.r * 100} fill="#fde68a" opacity="0.85" />
+          <ellipse cx={i.x * 100} cy={i.y * 100} rx={i.r * 100 * 1.05} ry={i.r * 100 * 0.86} fill="#15803d" />
+          {k === 0 && (
+            <path d={`M${i.x * 100 - 1},${(i.y - i.r) * 100} q4,${i.r * 50} 0,${i.r * 100} t0,${i.r * 100}`} stroke="#38bdf8" strokeWidth="1.4" fill="none" />
+          )}
+          <text x={i.x * 100} y={(i.y + i.r) * 100 + 4} textAnchor="middle" fontSize="2.6" fill="#e0f2fe" fontStyle="italic">
+            {i.name}
+          </text>
+        </g>
+      ))}
+      {/* Alliance lines: from each leader to its members. */}
+      {region.politics.blocs.flatMap((b) =>
+        b.members
+          .filter((m) => m !== b.leader)
+          .map((m) => {
+            const a = P(b.leader);
+            const c = P(m);
+            return <line key={`${b.id}-${m}`} x1={a.x} y1={a.y} x2={c.x} y2={c.y} stroke={blocColor(state, b.id)} strokeWidth="0.5" strokeDasharray="1.5 1" opacity="0.85" />;
+          }),
+      )}
+      {/* Sandugo ties and tributary arrows to the player. */}
+      {region.neighbors.map((n) => {
+        if (n.status === "independent") return null;
+        const a = P(n.id);
+        return n.status === "ally" ? (
+          <line key={`tie-${n.id}`} x1={a.x} y1={a.y} x2={mePos.x} y2={mePos.y} stroke="#16a34a" strokeWidth="0.7" />
+        ) : (
+          <line key={`tie-${n.id}`} x1={a.x} y1={a.y} x2={mePos.x} y2={mePos.y} stroke="#f59e0b" strokeWidth="0.5" markerEnd="url(#arrow-tribute)" />
+        );
+      })}
+      {/* The player's barangay. */}
+      <g transform={`translate(${mePos.x}, ${mePos.y})`}>
+        <circle r="3" fill="#fef3c7" stroke={blocColor(state, blocOf(region.politics, me)?.id)} strokeWidth="0.9" />
+        <text textAnchor="middle" dy="1.1" fontSize="3" aria-hidden>
           🔥
         </text>
-        <text textAnchor="middle" y="-12" fontSize="5" fill="#fffbeb" fontWeight="bold">
-          Your barangay
+        <text textAnchor="middle" y="-4" fontSize="2.2" fill="#fffbeb" fontWeight="bold" stroke="#0c4a6e" strokeWidth="0.35" paintOrder="stroke">
+          {state.barangay.name || game.balita.you[lang]}
         </text>
       </g>
       {region.neighbors.map((n) => {
         const def = neighborDef(content, n.id)!;
-        const [x, y] = riverPoint(def.river.position);
-        const dy = def.river.bank === "left" ? -15 : 15;
+        const { x, y } = P(n.id);
+        const bloc = blocOf(region.politics, n.id);
+        const leader = bloc?.leader === n.id;
         const raiding = region.incomingRaid?.from === n.id;
         const isSel = n.id === selected;
-        const circumference = 2 * Math.PI * 9;
         return (
           <g
             key={n.id}
-            transform={`translate(${x}, ${y + dy})`}
+            transform={`translate(${x}, ${y})`}
             role="button"
             tabIndex={0}
-            aria-label={`${def.name}, ${STATUS[n.status].label}, influence ${Math.round(n.influence)}${isEmbargo(n, content) ? ", embargo: no trade" : ""}`}
+            aria-label={`${def.name}, ${STATUS[n.status].label}${bloc ? `, ${blocName(state, content, bloc.id, game, lang)}` : ""}`}
             aria-pressed={isSel}
             onClick={() => onSelect(n.id)}
             onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onSelect(n.id)}
             className="cursor-pointer outline-none"
           >
-            {isSel && <circle r="13" fill="none" stroke="#fde68a" strokeWidth="1.2" strokeDasharray="2 2" />}
-            <circle r="9" fill="#fffbeb" stroke={STATUS[n.status].ring} strokeWidth="2" />
-            {/* Influence, as a ring filling up to 100. */}
-            <circle
-              r="9"
-              fill="none"
-              stroke="#f59e0b"
-              strokeWidth="2"
-              strokeDasharray={`${(circumference * n.influence) / 100} ${circumference}`}
-              transform="rotate(-90)"
-              opacity={n.status === "independent" ? 1 : 0}
-            />
-            <text textAnchor="middle" dy="3" fontSize="8" aria-hidden>
+            {isSel && <circle r="3.8" fill="none" stroke="#fde68a" strokeWidth="0.5" strokeDasharray="1 0.8" />}
+            <circle r="2.5" fill="#fffbeb" stroke={bloc ? blocColor(state, bloc.id) : STATUS[n.status].ring} strokeWidth={leader ? 1.1 : 0.7} />
+            <text textAnchor="middle" dy="0.9" fontSize="2.5" aria-hidden>
               {n.status === "ally" ? "🤝" : n.status === "tributary" ? "🏵️" : "🛖"}
             </text>
-            {raiding && (
-              <circle r="11" fill="none" stroke="#dc2626" strokeWidth="1.5" className="motion-safe:animate-pulse" />
-            )}
-            <text textAnchor="middle" y={dy < 0 ? -12 : 17} fontSize="4.6" fill="#fffbeb" fontWeight="bold">
-              {def.name.replace("Barangay ", "")}
-            </text>
-            {isEmbargo(n, content) && (
-              <text textAnchor="middle" y={dy < 0 ? -18 : 23} fontSize="4" fill="#fecaca" fontWeight="bold">
-                ⛔ Embargo
+            {leader && (
+              <text textAnchor="middle" y="-2.9" fontSize="2.3" aria-hidden>
+                👑
               </text>
             )}
+            {raiding && <circle r="4" fill="none" stroke="#dc2626" strokeWidth="0.6" className="motion-safe:animate-pulse" />}
+            <text textAnchor="middle" y="4.9" fontSize="1.9" fill="#fffbeb" fontWeight="bold" stroke="#0c4a6e" strokeWidth="0.35" paintOrder="stroke">
+              {def.name.replace("Barangay ", "")}
+            </text>
           </g>
         );
       })}
+      {/* Balangay at sea. */}
+      {region.voyages.map((v) => {
+        const there = P(v.target);
+        const span = Math.max(1, v.arriveAt - v.departAt);
+        const f = Math.min(1, Math.max(0, (state.time - v.departAt) / span));
+        const [from, to] = v.leg === "out" ? [mePos, there] : [there, mePos];
+        const x = v.waiting ? there.x - 4 : from.x + (to.x - from.x) * f;
+        const y = v.waiting ? there.y + 3 : from.y + (to.y - from.y) * f;
+        return (
+          <text key={v.id} x={x} y={y} textAnchor="middle" fontSize="3.6" style={{ transition: "x 0.2s linear, y 0.2s linear" }} aria-label={`Balangay ${v.leg === "out" ? "sailing to" : "coming home from"} ${neighborDef(content, v.target)?.name}${v.waiting ? ", waiting offshore" : ""}`}>
+            ⛵
+          </text>
+        );
+      })}
     </svg>
+  );
+}
+
+/** Barangays grouped by alliance: the list on phones, a quick index everywhere. */
+function BlocList(props: { state: GameState; content: Content; game: GameText; lang: Lang; selected?: string; onSelect: (id: string) => void }) {
+  const { state, content, game, lang, selected, onSelect } = props;
+  const region = state.region!;
+  const groups = [
+    ...region.politics.blocs.map((b) => ({ id: b.id, title: blocName(state, content, b.id, game, lang), color: blocColor(state, b.id), members: b.members, leader: b.leader })),
+    { id: "", title: game.balita.independent[lang], color: "#a8a29e", members: region.neighbors.filter((n) => !blocOf(region.politics, n.id)).map((n) => n.id), leader: "" },
+  ].filter((g) => g.members.length > 0);
+  const islandOf = (id: string) => region.islands.find((i) => i.id === region.places[id]?.island)?.name ?? "";
+  return (
+    <section className="mb-3 space-y-2 sm:hidden" aria-label={game.alliance.list[lang]}>
+      <h2 className="font-display text-lg text-amber-900">{game.alliance.list[lang]}</h2>
+      {groups.map((g) => (
+        <div key={g.id || "free"} className="rounded-xl border-2 bg-white/60 p-2" style={{ borderColor: g.color }}>
+          <h3 className="flex items-baseline justify-between gap-2 text-sm font-semibold" style={{ color: g.color }}>
+            <span>{g.title}</span>
+            {g.id && <span className="text-[11px] font-normal text-stone-600">{warLine(state, content, g.leader, game, lang)}</span>}
+          </h3>
+          <ul className="mt-1 space-y-1">
+            {g.members.map((id) => {
+              if (id === state.barangay.id) {
+                return (
+                  <li key={id} className="px-2 py-1 text-sm font-semibold">
+                    🔥 {state.barangay.name || game.balita.you[lang]} {g.leader === id && "👑"}
+                  </li>
+                );
+              }
+              const n = region.neighbors.find((x) => x.id === id);
+              const def = neighborDef(content, id);
+              if (!n || !def) return null;
+              return (
+                <li key={id}>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(id)}
+                    aria-pressed={selected === id}
+                    className={`flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1 text-left text-sm ${selected === id ? "bg-amber-200" : "bg-amber-50"}`}
+                  >
+                    <span>
+                      {g.leader === id && "👑 "}
+                      {def.name.replace("Barangay ", "")} <span className="text-[11px] text-stone-500">· {islandOf(id)}</span>
+                    </span>
+                    <span className={`rounded-full px-1.5 text-[10px] font-semibold ${STATUS[n.status].chip}`}>{STATUS[n.status].label}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+    </section>
+  );
+}
+
+/** The player's alliance: form, leave, the members (expel), and the Paramount Datu goal. */
+function AlliancePanel(props: { state: GameState; content: Content; game: GameText; lang: Lang; dispatch: (c: Command) => void }) {
+  const { state, content, game, lang, dispatch } = props;
+  const region = state.region!;
+  const t = game.alliance;
+  const me = state.barangay.id;
+  const mine = blocOf(region.politics, me);
+  const unlocked = hasDatuUnlock(state, content, "alliances");
+  const strength = strengthFn(state, content);
+  return (
+    <section className="mb-3 space-y-2 rounded-xl border-2 border-amber-900/30 bg-amber-50/70 p-2.5">
+      <h2 className="font-display text-lg text-amber-900">🤝 {t.title[lang]}</h2>
+      {!unlocked ? (
+        <p className="text-xs text-stone-600">{t.level[lang]}</p>
+      ) : mine ? (
+        <>
+          <p className="text-sm">{fill(mine.leader === me ? t.yours[lang] : t.member[lang], { bloc: blocName(state, content, mine.id, game, lang) })}</p>
+          <p className="text-xs text-stone-500">{fill(t.members[lang], { n: mine.members.length, strength: Math.round(blocStrength(mine, strength)) })}</p>
+          <ul className="space-y-1">
+            {mine.members
+              .filter((m) => m !== me)
+              .map((m) => (
+                <li key={m} className="flex items-center justify-between gap-2 rounded bg-white/60 px-2 py-1 text-sm">
+                  <span>
+                    {mine.leader === m && "👑 "}
+                    {barangayName(state, content, m, game, lang)}
+                  </span>
+                  {mine.leader === me && (
+                    <button type="button" onClick={() => dispatch({ type: "bloc", action: "expel", target: m })} className="text-xs font-semibold text-red-800 underline">
+                      {t.expel[lang]}
+                    </button>
+                  )}
+                </li>
+              ))}
+          </ul>
+          <button type="button" onClick={() => dispatch({ type: "bloc", action: "leave" })} className="text-xs font-semibold text-red-800 underline">
+            {t.leave[lang]}
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="text-sm">{t.none[lang]}</p>
+          <ActionButton onClick={() => dispatch({ type: "bloc", action: "form" })}>👑 {t.form[lang]}</ActionButton>
+        </>
+      )}
+      <p className="text-[11px] text-stone-500">{t.paramount[lang]}</p>
+    </section>
+  );
+}
+
+/** The Balita: political news, newest first. */
+function Balita(props: { state: GameState; content: Content; game: GameText; lang: Lang }) {
+  const { state, content, game, lang } = props;
+  const news = [...(state.region?.news ?? [])].reverse().slice(0, 8);
+  return (
+    <section className="mb-3 space-y-1 rounded-xl border-2 border-amber-900/30 bg-amber-50/70 p-2.5">
+      <h2 className="font-display text-lg text-amber-900">📣 {game.balita.title[lang]}</h2>
+      {news.length === 0 && <p className="text-xs text-stone-500">{game.balita.none[lang]}</p>}
+      <ul className="space-y-0.5 text-xs">
+        {news.map((n) => (
+          <li key={n.id} className="border-b border-amber-900/10 pb-0.5">
+            <span className="text-stone-400 tabular-nums">{clock(n.time)}</span> {newsLine(n, state, content, game, lang)}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -220,6 +387,21 @@ function OurForces(props: { state: GameState; content: Content; dispatch: (c: Co
       <p className="text-[11px] text-stone-500">
         A Mandirigma is a villager with warrior training: they farm and fish like anyone else, and take up arms when raiders come or when sent to guard.
       </p>
+      {boatCap(state, content) > 0 && (
+        <div className="space-y-1 rounded-lg bg-sky-50 p-2 text-xs text-sky-900">
+          <p>
+            ⛵ {boatsFree(state)} / {state.balangays} Balangay in port{region.voyages.length ? ` · ${region.voyages.length} at sea` : ""}
+            {region.voyages.some((v) => v.waiting) && " (one waiting offshore)"}
+          </p>
+          <ActionButton
+            onClick={() => dispatch({ type: "trainBalangay" })}
+            disabled={state.balangays >= boatCap(state, content) || !canAfford(state, boatCost(content))}
+            why={state.balangays >= boatCap(state, content) ? "The docks are full: build another Balangay Dock." : `Needs ${fmt(boatCost(content))}.`}
+          >
+            ⛵ Train a Balangay · {fmt(boatCost(content))}
+          </ActionButton>
+        </div>
+      )}
       {truceLeft > 0 && <p className="text-xs text-green-800">🕊️ Truce: no raids for {clock(truceLeft)}.</p>}
       {region.incomingRaid && (
         <p className="rounded bg-red-100 px-2 py-1 text-xs font-semibold text-red-900">
@@ -247,14 +429,33 @@ function NeighborPanel(props: {
   content: Content;
   dispatch: (c: Command) => void;
   onLore: (id: string) => void;
+  game: GameText;
+  lang: Lang;
 }) {
-  const { n, state, content, dispatch, onLore } = props;
+  const { n, state, content, dispatch, onLore, game, lang } = props;
+  const region = state.region!;
+  const t = game.alliance;
+  const me = state.barangay.id;
+  // Another island: actions sail by Balangay (and need a free boat).
+  const far = !sameIsland(region.places, me, n.id);
+  const seaWhy = far && boatsFree(state) < 1 ? t.noBoat[lang] : null;
+  const island = region.islands.find((i) => i.id === region.places[n.id]?.island)?.name ?? "";
+  const tradition = content.traditions.find((x) => x.id === n.tradition)?.name[lang] ?? "";
+  const theirBloc = blocOf(region.politics, n.id);
+  const mine = blocOf(region.politics, me);
+  const war = warLine(state, content, n.id, game, lang);
+  const blocWhy = (b: ReturnType<typeof blocBlocker>) =>
+    b === "trust" ? fill(t.trust[lang], { trust: content.rules.politics.joinTrust }) : b === "grudge" ? t.grudge[lang] : b === "tributary" ? t.tributary[lang] : b === "taken" ? t.taken[lang] : b === "level" ? t.level[lang] : null;
+  const canInvite = mine?.leader === me && !theirBloc;
+  const canJoin = !mine && theirBloc?.leader === n.id && hasDatuUnlock(state, content, "alliances");
   const def = neighborDef(content, n.id)!;
   const trait = traitOf(content, n.id);
   const d = content.rules.diplomacy;
   const home = homeWarriors(state);
   const [warriors, setWarriors] = useState(Math.min(home, 5));
-  const send = Math.max(1, Math.min(warriors, home));
+  // A raid by sea carries at most one boat's worth of warriors.
+  const raidMax = far ? Math.min(home, content.rules.sea.raidWarriorsPerBoat) : home;
+  const send = Math.max(1, Math.min(warriors, raidMax));
   const attack = attackOf(send, content);
   const theirDefense = defenseOf(n.state, content);
   const chance = attack / (attack + theirDefense);
@@ -276,7 +477,46 @@ function NeighborPanel(props: {
           {def.datu} · <span className="font-semibold">{trait.label}</span>
         </p>
         <p className="text-xs text-stone-600">{def.description}</p>
+        <p className="mt-1 text-xs text-stone-600">
+          🏝️ {fill(t.island[lang], { island })} · {fill(t.tradition[lang], { tradition })}
+        </p>
+        <p className="text-xs text-stone-600">
+          {theirBloc ? (
+            <>
+              <span style={{ color: blocColor(state, theirBloc.id) }}>●</span> {fill(t.bloc[lang], { bloc: blocName(state, content, theirBloc.id, game, lang) })}
+              {theirBloc.leader === n.id && ` (${t.leader[lang]})`}
+            </>
+          ) : (
+            t.noBloc[lang]
+          )}
+          {war && <span className="font-semibold text-red-800"> · {war}</span>}
+        </p>
+        {far && (
+          <p className="mt-1 rounded bg-sky-100 px-2 py-1 text-xs text-sky-900">
+            ⛵ {fill(t.byBoat[lang], { time: clock(voyageSeconds(state, content, n.id)) })}
+            {seaWhy && <span className="block font-semibold">{seaWhy}</span>}
+          </p>
+        )}
       </header>
+      {(canInvite || canJoin || (mine?.leader === me && mine.members.includes(n.id))) && (
+        <div className="space-y-1">
+          {canInvite && (
+            <ActionButton onClick={() => dispatch({ type: "bloc", action: "invite", target: n.id })} disabled={blocBlocker(state, content, "invite", n.id) !== null} why={blocWhy(blocBlocker(state, content, "invite", n.id))}>
+              🤝 {t.invite[lang]}
+            </ActionButton>
+          )}
+          {canJoin && theirBloc && (
+            <ActionButton onClick={() => dispatch({ type: "bloc", action: "join", target: theirBloc.id })} disabled={blocBlocker(state, content, "join", theirBloc.id) !== null} why={blocWhy(blocBlocker(state, content, "join", theirBloc.id))}>
+              🤝 {t.join[lang]}: {blocName(state, content, theirBloc.id, game, lang)}
+            </ActionButton>
+          )}
+          {mine?.leader === me && mine.members.includes(n.id) && (
+            <button type="button" onClick={() => dispatch({ type: "bloc", action: "expel", target: n.id })} className="text-xs font-semibold text-red-800 underline">
+              {t.expel[lang]}
+            </button>
+          )}
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
         <Stat label="Size" value={`👥 ${n.state.villagers}`} note={`${n.state.buildings.length} buildings`} />
         <Stat label="Strength" value={`⚔️ ${attackOf(n.state.warriors, content)}`} note={`${n.state.warriors} warriors`} />
@@ -312,7 +552,7 @@ function NeighborPanel(props: {
       <div className="space-y-2">
         <h3 className="font-display text-base text-amber-900">Trade</h3>
         {tradingPaused(state) && <p className="rounded bg-red-100 px-2 py-1 text-xs font-semibold text-red-900">⏸ Trade paused — raid in progress</p>}
-        <TradeForm n={n} state={state} content={content} dispatch={dispatch} />
+        <TradeForm n={n} state={state} content={content} dispatch={dispatch} seaWhy={seaWhy} />
       </div>
 
       <HandogForm n={n} state={state} content={content} dispatch={dispatch} />
@@ -323,9 +563,11 @@ function NeighborPanel(props: {
           {!n.marriage && (
             <ActionButton
               onClick={() => dispatch({ type: "marry", neighbor: n.id })}
-              disabled={marry !== null}
+              disabled={marry !== null || !!seaWhy}
               why={
-                marry === "grudge"
+                seaWhy
+                  ? seaWhy
+                  : marry === "grudge"
                   ? refusalText("alliance", content, def.datu)
                   : marry === "trust"
                   ? `Needs trust above ${d.marriage.trustNeeded} (now ${Math.round(n.trust)}).`
@@ -339,8 +581,8 @@ function NeighborPanel(props: {
           )}
           <ActionButton
             onClick={() => dispatch({ type: "sandugo", neighbor: n.id })}
-            disabled={!n.marriage || n.grudge > d.grudge.noAlliancesAbove || !canAfford(state, asCost(d.sandugo.cost))}
-            why={!n.marriage ? "Needs a marriage alliance first." : n.grudge > d.grudge.noAlliancesAbove ? refusalText("alliance", content, def.datu) : `Needs ${fmt(d.sandugo.cost)}.`}
+            disabled={!n.marriage || n.grudge > d.grudge.noAlliancesAbove || !canAfford(state, asCost(d.sandugo.cost)) || !!seaWhy}
+            why={seaWhy ? seaWhy : !n.marriage ? "Needs a marriage alliance first." : n.grudge > d.grudge.noAlliancesAbove ? refusalText("alliance", content, def.datu) : `Needs ${fmt(d.sandugo.cost)}.`}
           >
             🩸 Sandugo (blood compact) · {fmt(d.sandugo.cost)}
           </ActionButton>
@@ -353,7 +595,7 @@ function NeighborPanel(props: {
       {n.status === "independent" && (
         <div className="space-y-2">
           <h3 className="font-display text-base text-amber-900">Mangayaw (raid)</h3>
-          <Stepper value={send} max={home} onChange={setWarriors} label="Warriors to send" />
+          <Stepper value={send} max={raidMax} onChange={setWarriors} label="Warriors to send" />
           <p className="text-xs text-stone-600">
             Attack {attack} vs their defense {Math.round(theirDefense)} · <strong>{Math.round(chance * 100)}% chance</strong> to win. A win brings goods and renown
             but every neighbor will trust you less.
@@ -361,8 +603,8 @@ function NeighborPanel(props: {
           <ActionButton
             tone="war"
             onClick={() => dispatch({ type: "raid", neighbor: n.id, warriors: send })}
-            disabled={home < 1 || raidCooldown > 0}
-            why={home < 1 ? "Train Mandirigma first." : `Your warriors are resting: ${clock(raidCooldown)}.`}
+            disabled={home < 1 || raidCooldown > 0 || !!seaWhy || (far && sailBlocker(state, content, { type: "raid", neighbor: n.id, warriors: send }) !== null)}
+            why={seaWhy ? seaWhy : home < 1 ? "Train Mandirigma first." : `Your warriors are resting: ${clock(raidCooldown)}.`}
           >
             🔥 Raid with {send} warrior{send === 1 ? "" : "s"}
           </ActionButton>
@@ -391,7 +633,7 @@ function NeighborPanel(props: {
 }
 
 /** Propose a trade: what you give, what you ask for. Shows their counter-offer when they make one. */
-function TradeForm({ n, state, content, dispatch }: { n: NeighborState; state: GameState; content: Content; dispatch: (c: Command) => void }) {
+function TradeForm({ n, state, content, dispatch, seaWhy = null }: { n: NeighborState; state: GameState; content: Content; dispatch: (c: Command) => void; seaWhy?: string | null }) {
   const td = content.rules.diplomacy.tradeDecision;
   const def = neighborDef(content, n.id)!;
   const std = standardProposal(content, n.id, "rice");
@@ -410,7 +652,9 @@ function TradeForm({ n, state, content, dispatch }: { n: NeighborState; state: G
   const counter = state.region?.counter?.neighbor === n.id && state.time <= state.region.counter.expiresAt ? state.region.counter : null;
   const margin = fairness({ give: { resource: give, amount: giveAmount }, want: { resource: want, amount: wantAmount } }, content) - fairnessNeeded(n, content);
   const step = (v: number, by: number) => Math.min(td.maxAmount, Math.max(td.minAmount, v + by));
-  const why = paused
+  const why = seaWhy
+    ? seaWhy
+    : paused
     ? "Trade paused — raid in progress."
     : embargo
       ? refusalText("embargo", content, def.datu)

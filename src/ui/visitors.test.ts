@@ -39,7 +39,7 @@ describe("boats on the river", () => {
   });
 
   it("comes from upstream neighbors at the top", () => {
-    const up = [...content.neighbors].sort((a, b) => a.river.position - b.river.position)[0];
+    const up = content.neighbors.filter((n) => n.river).sort((a, b) => a.river!.position - b.river!.position)[0];
     expect(fromTop(content, up.id)).toBe(true);
   });
 });

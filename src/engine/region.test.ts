@@ -47,8 +47,8 @@ function setNb(s: GameState, id: string, patch: Partial<NeighborState>): GameSta
 const setNbState = (s: GameState, id: string, patch: Partial<GameState>) => setNb(s, id, { state: { ...nb(s, id).state, ...patch } });
 
 describe("neighbors", () => {
-  it("come from content/neighbors: four barangays along the river, each with a datu and a trait", () => {
-    expect(content.neighbors.map((n) => [n.id, n.trait])).toEqual([
+  it("come from content/neighbors: four barangays along the home island's river, each with a datu and a trait", () => {
+    expect(content.neighbors.filter((n) => n.home).map((n) => [n.id, n.trait])).toEqual([
       ["pulang-lupa", "trader"],
       ["malinaw", "peaceful"],
       ["talampas", "proud"],
@@ -436,14 +436,19 @@ describe("no trading during a raid", () => {
 });
 
 describe("Paramount Datu", () => {
-  it("is won when every neighbor is a tributary or an ally, with the time and paths used", () => {
+  it("is won by leading a bloc while every barangay is an ally, a tributary or in that bloc, with the time and paths used", () => {
     let s = world();
-    for (const id of ["pulang-lupa", "malinaw", "talampas"]) s = setNb(s, id, { status: "tributary", loyalty: 90, influence: 100 });
-    s = { ...s, time: 1234, region: { ...s.region!, paths: ["trade", "marriage"] } };
+    const all = s.region!.neighbors.map((n) => n.id);
+    // Every barangay but one a tributary, and the player leading a bloc.
+    for (const id of all.filter((id) => id !== "batong-buhay")) s = setNb(s, id, { status: "tributary", loyalty: 90, influence: 100 });
+    s = { ...s, time: 1234, datuLevel: 4, region: { ...s.region!, paths: ["trade", "marriage"], politics: { ...s.region!.politics, blocs: [] } } };
     s = setNb(s, "batong-buhay", { trust: 80 });
     expect(s.region!.victory).toBeNull();
     s = apply(s, calm, { type: "marry", neighbor: "batong-buhay" });
     s = apply(s, calm, { type: "sandugo", neighbor: "batong-buhay" });
+    // Allies and tributaries everywhere are not enough without leading a bloc.
+    expect(s.region!.victory).toBeNull();
+    s = apply(s, calm, { type: "bloc", action: "form" });
     expect(s.region!.victory).toEqual({ time: 1234, paths: ["trade", "marriage", "sandugo"] });
   });
 });

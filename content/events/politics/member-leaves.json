@@ -1,0 +1,9 @@
+{
+  "id": "member-leaves",
+  "type": "leave",
+  "text": {
+    "en": "{datu} of {barangay} leaves {bloc}.",
+    "fil": "Umalis si {datu} ng {barangay} sa {bloc}."
+  },
+  "weight": 2
+}

@@ -58,6 +58,7 @@ import { isClear, labelSize, placeLabel, type Rect } from "./labels";
 import { dayPhaseAt } from "../engine/daynight";
 import { isPranked } from "../engine/forest";
 import { sarimanokAt } from "../engine/worship";
+import { datuHouseUrl, houseStyleFor, type HouseStyle } from "./datuHouseArt";
 
 const INCOME_EVERY_MS = 3000;
 const WAITING_TEXT = "⏸ Trade paused — raid in progress";
@@ -667,6 +668,7 @@ export function BarangayMap(props: {
             tile={tile}
             plaza={isPlaza(map, x, y)}
             datuLevel={isPlaza(map, x, y) ? state.datuLevel : undefined}
+            houseStyle={isPlaza(map, x, y) ? houseStyleFor(state, content) : undefined}
             building={building}
             fresh={building ? fresh.has(building.key) : false}
             lifted={moveFrom?.x === x && moveFrom?.y === y}
@@ -966,11 +968,13 @@ const GROUND: Record<Tile, string> = {
   balete: "bg-emerald-950/60",
   river: "river-tile",
   bridge: "river-tile",
+  sea: "sea-tile",
 };
 
 const Cell = memo(function Cell(props: {
-  /** The Bahay ng Datu's level (drawn on the plaza). */
+  /** The Bahay ng Datu's level and style (drawn on the plaza). */
   datuLevel?: number;
+  houseStyle?: HouseStyle;
   x: number;
   y: number;
   tile: Tile;
@@ -1006,7 +1010,7 @@ const Cell = memo(function Cell(props: {
   /** Placing a Tulay over this river tile can't work. */
   cantCross?: boolean;
 }) {
-  const { x, y, tile, plaza, datuLevel, building, fresh, lifted, target, ghost, glow, spirit, onSpiritKey, clearable, hint, progress, onActivate, pathPreview, waiting, picked, guard, deck, deckPreview, cantCross } = props;
+  const { x, y, tile, plaza, datuLevel, houseStyle, building, fresh, lifted, target, ghost, glow, spirit, onSpiritKey, clearable, hint, progress, onActivate, pathPreview, waiting, picked, guard, deck, deckPreview, cantCross } = props;
   const h = hash(x, y);
   const valid = typeof target === "number";
   const paddy = building?.def.produces?.rice;
@@ -1014,7 +1018,8 @@ const Cell = memo(function Cell(props: {
   return (
     <div
       data-tile={`${x},${y}`}
-      className={`absolute flex items-center justify-center ${GROUND[tile]} ${target === "blocked" ? "brightness-75" : ""}`}
+      // The plaza draws over its neighbors: the Bahay ng Datu is bigger than its tile.
+      className={`absolute flex items-center justify-center ${GROUND[tile]} ${target === "blocked" ? "brightness-75" : ""} ${plaza ? "z-[1]" : ""}`}
       style={{ left: `calc(${x} * var(--tile))`, top: `calc(${y} * var(--tile))`, width: "var(--tile)", height: "var(--tile)" }}
     >
       {deck && <Deck deck={deck} />}
@@ -1046,7 +1051,7 @@ const Cell = memo(function Cell(props: {
           🌱
         </span>
       )}
-      {plaza && <DatuHouse level={datuLevel ?? 1} />}
+      {plaza && <DatuHouse level={datuLevel ?? 1} style={houseStyle ?? "lowland"} />}
       {clearable && progress === null && (
         <div aria-hidden className="pointer-events-none absolute inset-[4%] rounded-md border border-dashed border-lime-200/40" />
       )}
@@ -1138,24 +1143,28 @@ function ClearingProgress({ progress, waiting }: { progress: number; waiting: bo
  * The plaza: the Bahay ng Datu, a larger raised house at its center (bigger with each level),
  * with the fire pit beside it, where the barangay gathers. Tap it for the house.
  */
-function DatuHouse({ level }: { level: number }) {
+function DatuHouse({ level, style }: { level: number; style: HouseStyle }) {
+  // Bigger with each level; its ground line sits on the tile's bottom edge.
+  const size = 105 + level * 11;
   return (
     <div title={`Bahay ng Datu (level ${level}) and the plaza's fire`} className="pointer-events-none absolute inset-0">
-      <span
-        aria-hidden
-        className="absolute left-1/2 -translate-x-1/2 leading-none drop-shadow-[0_2px_1px_rgb(0_0_0_/_0.4)]"
-        style={{ top: "-6%", fontSize: `${0.9 + level * 0.06}em` }}
-      >
-        🏠
-      </span>
+      <img
+        src={datuHouseUrl(level, style)}
+        alt=""
+        draggable={false}
+        className="absolute left-1/2 max-w-none -translate-x-1/2 drop-shadow-[0_2px_1px_rgb(0_0_0_/_0.35)]"
+        style={{ width: `${size}%`, height: `${size}%`, bottom: "-4%" }}
+      />
+      {/* The level, on the ground below the house (never over it). */}
       {level > 1 && (
-        <span aria-hidden className="absolute top-[-18%] right-[-6%] rounded-full bg-amber-300 px-[0.15em] text-[0.22em] leading-tight font-bold text-amber-950 shadow">
-          {level}
+        <span aria-hidden className="absolute bottom-[-24%] left-1/2 -translate-x-1/2 rounded-full border-[0.03em] border-amber-900 bg-amber-300 px-[0.2em] text-[0.2em] leading-tight font-bold text-amber-950 shadow">
+          Lv {level}
         </span>
       )}
       <span
         aria-hidden
-        className="absolute right-[-12%] bottom-[-8%] flex size-[0.42em] items-center justify-center rounded-full border-[0.05em] border-dotted border-stone-500 bg-amber-200/80 shadow-inner"
+        className="absolute bottom-[-8%] flex size-[0.42em] items-center justify-center rounded-full border-[0.05em] border-dotted border-stone-500 bg-amber-200/80 shadow-inner"
+        style={{ right: `${-14 - level * 6}%` }}
       >
         <span className="text-[0.26em] leading-none">🔥</span>
       </span>

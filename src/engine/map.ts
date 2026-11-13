@@ -3,12 +3,12 @@
 // forest and bridging the river. Pure and deterministic, like the rest of the engine.
 import type { BuildingDef, Content, GroveBlessing, Resource } from "./content";
 import type { GameState, PlacedBuilding } from "./game";
-import { Rng } from "./rng";
+import { rollAt, Rng } from "./rng";
 
-export type Tile = "forest" | "cleared" | "river" | "bridge" | "balete" | "daan";
+export type Tile = "forest" | "cleared" | "river" | "bridge" | "balete" | "daan" | "sea";
 
 /** Tiles are stored as one character each, row by row, to keep saves small. */
-export const TILE_CODE: Record<Tile, string> = { forest: "f", cleared: "c", river: "r", bridge: "b", balete: "t", daan: "d" };
+export const TILE_CODE: Record<Tile, string> = { forest: "f", cleared: "c", river: "r", bridge: "b", balete: "t", daan: "d", sea: "s" };
 const CODE_TILE: Record<string, Tile> = Object.fromEntries(Object.entries(TILE_CODE).map(([t, c]) => [c, t as Tile]));
 export const isTileCode = (c: string) => c in CODE_TILE;
 
@@ -56,10 +56,37 @@ export function setTiles(map: MapState, changes: { x: number; y: number; tile: T
 export const isPlaza = (map: MapState, x: number, y: number) => map.plaza.x === x && map.plaza.y === y;
 
 /** What a tile counts as for adjacency bonuses: balete trees are forest, bridges stand on the river. */
-export function terrainFeature(tile: Tile | null): "river" | "forest" | null {
+export function terrainFeature(tile: Tile | null): "river" | "forest" | "sea" | null {
   if (tile === "forest" || tile === "balete") return "forest";
   if (tile === "river" || tile === "bridge") return "river";
+  if (tile === "sea") return "sea";
   return null;
+}
+
+/** How many rows of sea at column x: `depth`, give or take one, so the shore isn't a ruler line. */
+export function coastDepthAt(seed: number, x: number, depth: number): number {
+  if (depth <= 0) return 0;
+  return Math.max(1, depth + (rollAt(seed, x, 4242) < 0.3 ? -1 : rollAt(seed, x, 4243) < 0.3 ? 1 : 0));
+}
+
+/**
+ * The coast: open sea along one edge of the map (the river runs into it), `depth` rows deep
+ * with a slightly ragged shore. Only forest, river and balete become sea, never cleared land,
+ * paths, bridges or anything built on; so an older barangay keeps every tile it has worked.
+ */
+export function addCoast(map: MapState, edge: "top" | "bottom", depth: number, built: Point[] = []): MapState {
+  if (depth <= 0) return map;
+  const taken = new Set(built.map((p) => `${p.x},${p.y}`));
+  const changes: { x: number; y: number; tile: Tile }[] = [];
+  for (let x = 0; x < map.width; x++) {
+    const ragged = coastDepthAt(map.seed, x, depth);
+    for (let k = 0; k < ragged; k++) {
+      const y = edge === "bottom" ? map.height - 1 - k : k;
+      const t = tileAt(map, x, y);
+      if ((t === "forest" || t === "river" || t === "balete") && !taken.has(`${x},${y}`)) changes.push({ x, y, tile: "sea" });
+    }
+  }
+  return setTiles(map, changes);
 }
 
 export function countTiles(map: MapState, tile: Tile): number {
@@ -106,6 +133,15 @@ export function generateMap(content: Content, seed: number): MapState {
     for (let x = plaza.x - R; x <= plaza.x + R; x++) if (grid[y][x] === "forest") grid[y][x] = "cleared";
   }
 
+  // The coast: sea along the bottom edge, where the river runs out (before the balete, so none grows in the sea).
+  const seaDepth = content.rules.map.seaDepth ?? 0;
+  for (let x = 0; x < W; x++) {
+    for (let k = 0; k < coastDepthAt(seed >>> 0, x, seaDepth); k++) {
+      const y = H - 1 - k;
+      if (grid[y][x] === "forest" || grid[y][x] === "river") grid[y][x] = "sea";
+    }
+  }
+
   // Balete trees: on forest, away from the plaza and from each other. The first one grows
   // fairly close, so players meet it early.
   const placed: Point[] = [];
@@ -120,13 +156,14 @@ export function generateMap(content: Content, seed: number): MapState {
     placed.push({ x, y });
   }
 
-  return {
+  const map: MapState = {
     width: W,
     height: H,
     seed: seed >>> 0,
     tiles: grid.map((row) => row.map((t) => TILE_CODE[t]).join("")).join(""),
     plaza,
   };
+  return map;
 }
 
 // ---------- Buildings on the map ----------
@@ -284,6 +321,7 @@ export function canPlaceRoad(state: GameState, x: number, y: number): boolean {
 
 /** Is this building available yet (from the start, or at a villager count)? */
 export function isUnlocked(state: GameState, def: BuildingDef): boolean {
+  if (def.unlock.datuLevel !== undefined) return (state.datuLevel ?? 1) >= def.unlock.datuLevel && (def.unlock.villagers === undefined || state.villagers >= def.unlock.villagers);
   if (def.unlock.start) return true;
   return def.unlock.villagers !== undefined && state.villagers >= def.unlock.villagers;
 }
@@ -416,9 +454,12 @@ export function validTiles(
 ): Point[] {
   const tiles: Point[] = [];
   const taken = occupancy(state);
+  // Only cleared land (or open river, for a bridge) can take a building: skip the rest cheaply.
+  const want = def.placeOn === "river" ? TILE_CODE.river : TILE_CODE.cleared;
+  const { width, tiles: codes } = state.map;
   for (let y = Math.max(0, area.y0); y <= Math.min(state.map.height - 1, area.y1); y++) {
     for (let x = Math.max(0, area.x0); x <= Math.min(state.map.width - 1, area.x1); x++) {
-      if (taken.has(tileKey(x, y))) continue;
+      if (codes[y * width + x] !== want || taken.has(tileKey(x, y))) continue;
       if (canPlace(state, content, def, x, y)) tiles.push({ x, y });
     }
   }
@@ -515,9 +556,19 @@ export function buildingGroveBonuses(state: GameState, content: Content): Partia
  */
 export function autoPlaceTile(state: GameState, content: Content, def: BuildingDef): Point | null {
   const { plaza } = state.map;
+  // Look near the plaza first (where a barangay builds anyway); the whole map only if nothing fits there.
+  const near = { x0: plaza.x - AUTO_PLACE_RADIUS, y0: plaza.y - AUTO_PLACE_RADIUS, x1: plaza.x + AUTO_PLACE_RADIUS, y1: plaza.y + AUTO_PLACE_RADIUS };
+  return bestTile(state, content, def, near) ?? bestTile(state, content, def);
+}
+
+/** How far from the plaza autoPlaceTile looks first. */
+const AUTO_PLACE_RADIUS = 9;
+
+function bestTile(state: GameState, content: Content, def: BuildingDef, area?: { x0: number; y0: number; x1: number; y1: number }): Point | null {
+  const { plaza } = state.map;
   const taken = occupancy(state);
   let best: { t: Point; bonus: number; dist: number } | null = null;
-  for (const t of validTiles(state, content, def)) {
+  for (const t of validTiles(state, content, def, area)) {
     const bonus = adjacencyBonusAt(state.map, taken, def, t.x, t.y);
     const dist = (t.x - plaza.x) ** 2 + (t.y - plaza.y) ** 2;
     if (!best || bonus > best.bonus || (bonus === best.bonus && dist < best.dist)) best = { t, bonus, dist };

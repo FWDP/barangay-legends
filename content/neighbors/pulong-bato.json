@@ -1,0 +1,25 @@
+{
+  "id": "pulong-bato",
+  "name": "Barangay Pulong-Bato",
+  "datu": "Datu Matapang",
+  "trait": "aggressive",
+  "description": "A rocky island stronghold whose warriors sail far.",
+  "home": false,
+  "start": {
+    "villagers": 10,
+    "warriors": 5,
+    "resources": {
+      "rice": 60,
+      "wood": 40
+    },
+    "buildings": {
+      "bahay-kubo": 4,
+      "palayan": 2,
+      "woodcutter-camp": 1,
+      "kuta": 1
+    }
+  },
+  "trust": 10,
+  "fictional": true,
+  "note": "Fictional barangay and datu, made up for the game; not a historical person or place."
+}

@@ -14,7 +14,7 @@ const upTo = (id: string) => content.quests.slice(0, content.quests.findIndex((q
 describe("the task chain (content/quests)", () => {
   it("has about 15 tasks in teaching order, starting with the first Palayan", () => {
     expect(content.quests.length).toBeGreaterThanOrEqual(12);
-    expect(content.quests.length).toBeLessThanOrEqual(25);
+    expect(content.quests.length).toBeLessThanOrEqual(30);
     const ids = content.quests.map((q) => q.id);
     expect(ids[0]).toBe("first-palayan");
     // The tasks the design asks for, in this order.

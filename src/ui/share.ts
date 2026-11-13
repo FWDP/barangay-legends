@@ -6,6 +6,16 @@ import type { GameState } from "../engine/game";
 import { tileAt, type Point } from "../engine/map";
 import type { Lang } from "./settings";
 import { datuWithTitle } from "./stories";
+import { datuHouseUrl, houseStyleFor } from "./datuHouseArt";
+
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((ok, fail) => {
+    const img = new Image();
+    img.onload = () => ok(img);
+    img.onerror = fail;
+    img.src = src;
+  });
+}
 import { fill, type GameText } from "./uiContent";
 
 export const SHARE_URL = "barangaylegends.fwdp.org";
@@ -54,11 +64,12 @@ const TILE_COLOR: Record<string, string> = {
   cleared: "#c9b27a",
   daan: "#e3cc98",
   river: "#3f86c6",
+  sea: "#1e5f8f",
   bridge: "#8b5a2b",
 };
 
 /** Draws the card. Pure drawing: no clock, no network. */
-export function drawShareCard(state: GameState, content: Content, game: GameText, lang: Lang, size = SHARE_SIZE): HTMLCanvasElement {
+export function drawShareCard(state: GameState, content: Content, game: GameText, lang: Lang, size = SHARE_SIZE, house?: CanvasImageSource): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -97,7 +108,7 @@ export function drawShareCard(state: GameState, content: Content, game: GameText
   g.font = `${tile * 0.9}px serif`;
   g.textAlign = "center";
   g.textBaseline = "middle";
-  g.fillText("🔥", px, py);
+  if (!house) g.fillText("🔥", px, py);
   // Buildings as their icons.
   const icons = new Map(content.buildings.map((d) => [d.id, d.icon]));
   g.font = `${tile * 0.82}px serif`;
@@ -109,6 +120,15 @@ export function drawShareCard(state: GameState, content: Content, game: GameText
     g.fillText(icons.get(bl.type) ?? "🏠", x, y + tile * 0.04);
   }
   g.globalAlpha = 1;
+  if (house) {
+    // The Bahay ng Datu at the plaza (the same drawing as on the map), over its neighbors, the fire beside it.
+    const hs = tile * (1.05 + state.datuLevel * 0.11) * 1.4;
+    g.drawImage(house, px - hs / 2, py + tile * 0.5 - hs * 0.93, hs, hs);
+    g.font = `${tile * 0.6}px serif`;
+    g.textAlign = "center";
+    g.textBaseline = "middle";
+    g.fillText("🔥", px + hs * 0.45, py + tile * 0.35);
+  }
   g.strokeStyle = "#f5deb3";
   g.lineWidth = size * 0.006;
   g.strokeRect(ox, oy, tile * b.size, tile * b.size);
@@ -144,7 +164,8 @@ export function shareFileName(state: GameState): string {
  * Returns "shared", "saved" or "cancelled".
  */
 export async function shareBarangay(state: GameState, content: Content, game: GameText, lang: Lang): Promise<"shared" | "saved" | "cancelled"> {
-  const canvas = drawShareCard(state, content, game, lang);
+  const house = await loadImage(datuHouseUrl(state.datuLevel, houseStyleFor(state, content))).catch(() => undefined);
+  const canvas = drawShareCard(state, content, game, lang, SHARE_SIZE, house);
   const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, "image/png"));
   if (!blob) throw new Error("no image");
   const name = shareFileName(state);
