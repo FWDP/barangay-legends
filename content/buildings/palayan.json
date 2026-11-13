@@ -4,6 +4,7 @@
   "description": "A terraced rice field worked by two villagers.",
   "icon": "🌾",
   "order": 2,
+  "category": "pagkain",
   "cost": {
     "wood": 15
   },

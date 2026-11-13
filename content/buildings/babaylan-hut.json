@@ -4,6 +4,7 @@
   "description": "Home of the babaylan, the community's healer and ritual specialist. Sick villagers recover faster.",
   "icon": "🌿",
   "order": 4,
+  "category": "pananampalataya",
   "cost": {
     "wood": 40,
     "rice": 20

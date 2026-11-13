@@ -4,6 +4,7 @@
   "description": "A small shrine where the babaylan leads offerings to the anito. It must stand near a Babaylan's Hut.",
   "icon": "🕯️",
   "order": 4.2,
+  "category": "pananampalataya",
   "cost": {
     "wood": 30,
     "rice": 20

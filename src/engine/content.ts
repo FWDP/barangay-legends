@@ -24,6 +24,8 @@ export interface BuildingDef {
   icon: string;
   /** Position in the build menu (lower first). Files without one go last, by file name. */
   order?: number;
+  /** The build menu tab it appears under (presentation only); unknown or missing goes under "Iba pa". */
+  category?: string;
   cost: ResourceAmounts;
   /** What it costs to fix after a fire or typhoon damages it. */
   repairCost: ResourceAmounts;
@@ -714,6 +716,7 @@ export function validateBuilding(raw: unknown, file = "building"): BuildingDef {
     throw new Error(`${file}: "id" may only use a-z, 0-9 and "-"`);
   }
   if (raw.order !== undefined && !Number.isFinite(raw.order)) throw new Error(`${file}: "order" must be a number`);
+  if (raw.category !== undefined && (typeof raw.category !== "string" || raw.category === "")) throw new Error(`${file}: "category" must be a non-empty string`);
   checkAmounts(raw.cost, `${file}: cost`);
   checkAmounts(raw.repairCost, `${file}: repairCost`);
   if (raw.heals !== undefined && (!isObject(raw.heals) || !isNonNegNumber(raw.heals.percentFaster))) {

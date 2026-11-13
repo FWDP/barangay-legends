@@ -4,6 +4,7 @@
   "description": "A raised house of bamboo and nipa that shelters a family.",
   "icon": "🛖",
   "order": 1,
+  "category": "tirahan",
   "cost": {
     "wood": 10
   },

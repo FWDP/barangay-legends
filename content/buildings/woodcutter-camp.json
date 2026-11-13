@@ -4,6 +4,7 @@
   "description": "A forest clearing where two villagers cut timber and bamboo.",
   "icon": "🪓",
   "order": 3,
+  "category": "pagkain",
   "cost": {
     "rice": 10
   },

@@ -4,6 +4,7 @@
   "description": "A bamboo landing on the riverbank. Three villagers fish, and the catch is traded at market for gold.",
   "icon": "🎣",
   "order": 7,
+  "category": "pagkain",
   "cost": {
     "wood": 40,
     "rice": 20

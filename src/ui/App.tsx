@@ -6,6 +6,7 @@ import { activeJobs, affordableTiles, borrowedWorkers, canSelect, clearingCrews,
 import { BarangayMap } from "./BarangayMap";
 import { BuildingMenu, DemolishDialog, UndoBar, type MenuTarget } from "./BuildingActions";
 import { BuildToolbar } from "./BuildToolbar";
+import { recommended } from "./buildMenu";
 import { latestReportId, OfferBar, ReportDialog, unseenReport, VictoryDialog } from "./RegionOverlays";
 import { RegionView } from "./RegionView";
 import { activeBanners, EventBanner } from "./EventBanners";
@@ -979,6 +980,9 @@ export function App() {
         <BuildToolbar
           state={state}
           content={content}
+          game={ui.game}
+          lang={lang}
+          recommend={recommended(state, content, advisor.message?.kind === "tip" ? advisor.message.trigger : null)}
           selected={selected}
           roadActive={roadMode}
           onRoad={() => {

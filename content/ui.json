@@ -339,5 +339,87 @@
       "en": "The Sarimanok gave you {gift}!",
       "fil": "Binigyan ka ng Sarimanok ng {gift}!"
     }
+  },
+  "build": {
+    "tirahan": {
+      "en": "Tirahan (homes)",
+      "fil": "Tirahan"
+    },
+    "pagkain": {
+      "en": "Pagkain at Yaman (food & resources)",
+      "fil": "Pagkain at Yaman"
+    },
+    "depensa": {
+      "en": "Depensa (defense)",
+      "fil": "Depensa"
+    },
+    "pananampalataya": {
+      "en": "Pananampalataya (belief)",
+      "fil": "Pananampalataya"
+    },
+    "daan": {
+      "en": "Daan at Tulay (paths & bridges)",
+      "fil": "Daan at Tulay"
+    },
+    "iba": {
+      "en": "Iba pa (other)",
+      "fil": "Iba pa"
+    },
+    "build": {
+      "en": "Build",
+      "fil": "Itayo"
+    },
+    "cancel": {
+      "en": "Cancel",
+      "fil": "Huwag"
+    },
+    "locked": {
+      "en": "🔒 {villagers} villagers",
+      "fil": "🔒 {villagers} taga-barangay"
+    },
+    "need": {
+      "en": "Need more: {missing}",
+      "fil": "Kulang pa: {missing}"
+    },
+    "recommended": {
+      "en": "Suggested now",
+      "fil": "Iminumungkahi ngayon"
+    },
+    "more": {
+      "en": "More buildings",
+      "fil": "Iba pang gusali"
+    },
+    "new": {
+      "en": "New",
+      "fil": "Bago"
+    },
+    "details": {
+      "en": "Hold or hover for details",
+      "fil": "Pindutin nang matagal para sa detalye"
+    },
+    "staffed": {
+      "en": "{staffed} staffed",
+      "fil": "{staffed} may tauhan"
+    },
+    "noPath": {
+      "en": "🚫 {n} with no path: build a Tulay or move it",
+      "fil": "🚫 {n} walang daanan"
+    },
+    "perTile": {
+      "en": "per tile",
+      "fil": "bawat bahagi"
+    },
+    "daanName": {
+      "en": "Daan",
+      "fil": "Daan"
+    },
+    "daanText": {
+      "en": "A dirt footpath on cleared land. Villagers walk faster on it, and buildings joined to the plaza by an unbroken Daan get +{percent}% output. Taking one up is free.",
+      "fil": "Isang daang lupa sa nalinis na lupa. Mas mabilis lumakad dito ang mga tao, at may +{percent}% ang mga gusaling konektado sa plasa. Libre ang pag-alis nito."
+    },
+    "layDaan": {
+      "en": "Lay Daan",
+      "fil": "Maglatag ng Daan"
+    }
   }
 }

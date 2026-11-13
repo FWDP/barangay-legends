@@ -4,6 +4,7 @@
   "description": "A bamboo footbridge across the river. Opens the far bank for clearing.",
   "icon": "🎋",
   "order": 5,
+  "category": "daan",
   "cost": {
     "wood": 60
   },

@@ -113,6 +113,10 @@ export const GAME_TEXT = {
     active: ["time"], permission: ["cost"], permissionActive: ["tiles"], needTradition: [], needFavor: [], close: [], burial: ["style"], healer: ["name"],
   },
   forest: { label: ["balance"], tip: [], stage1: [], stage2: ["percent"], replant: ["cost"], replanting: ["time"], prank: ["building", "time"] },
+  build: {
+    tirahan: [], pagkain: [], depensa: [], pananampalataya: [], daan: [], iba: [], build: [], cancel: [], locked: ["villagers"], need: ["missing"],
+    recommended: [], more: [], new: [], details: [], staffed: ["staffed"], noPath: ["n"], perTile: [], daanName: [], daanText: ["percent"], layDaan: [],
+  },
   events: { eclipse: [], gong: [], gongs: ["taps", "needed"], eclipseWon: ["favor", "gold"], eclipseLost: ["rice"], tikbalang: ["n"], right: [], wrong: ["time"], sarimanok: ["gift"] },
 } as const satisfies Record<string, Record<string, readonly string[]>>;
 

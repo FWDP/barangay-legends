@@ -4,6 +4,7 @@
   "description": "A palisade of sharpened bamboo and timber around part of the barangay.",
   "icon": "🛡️",
   "order": 6,
+  "category": "depensa",
   "cost": {
     "wood": 40,
     "rice": 10

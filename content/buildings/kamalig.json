@@ -4,6 +4,7 @@
   "description": "A raised granary of bamboo and thatch. Each one stores more rice.",
   "icon": "🧺",
   "order": 4.5,
+  "category": "pagkain",
   "cost": {
     "wood": 30
   },
