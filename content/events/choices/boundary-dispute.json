@@ -2,7 +2,7 @@
   "id": "boundary-dispute",
   "title": "Two families and one field",
   "icon": "⚖️",
-  "story": "Two families stand before you, each claiming the same strip of land by the paddies. The elders have gathered to hear how the datu will judge.",
+  "story": "Two families stand before you at the Bahay ng Datu, each claiming the same strip of land by the paddies. The elders have gathered to hear how the datu will judge.",
   "conditions": { "minVillagers": 8 },
   "choices": [
     {

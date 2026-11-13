@@ -94,6 +94,8 @@ interface BuildingInfo {
   damaged: boolean;
   burning: boolean;
   repairText: string;
+  /** A Libingan's look, from the barangay's tradition. */
+  burialLook: "jars" | "longon";
 }
 
 export function BarangayMap(props: {
@@ -212,6 +214,7 @@ export function BarangayMap(props: {
     const lentOut = workforce(state, content).borrowed;
     const defs = new Map(content.buildings.map((d) => [d.id, d]));
     const byTile = new Map<string, BuildingInfo>();
+    const look = content.traditions.find((t) => t.id === state.tradition)?.burialLook ?? "jars";
     state.buildings.forEach((b, i) => {
       const def = defs.get(b.type);
       if (!def) return;
@@ -227,10 +230,11 @@ export function BarangayMap(props: {
         damaged: b.damaged === true,
         burning: b.burningSince !== undefined,
         repairText: repair || "free",
+        burialLook: look,
       });
     });
     return byTile;
-  }, [state.buildings, map, content, state.legacyReach, state.clearing, state.villagers, state.sick.length, state.resources.rice > 0]);
+  }, [state.buildings, map, content, state.legacyReach, state.clearing, state.villagers, state.sick.length, state.resources.rice > 0, state.tradition]);
 
   // The scenic drift moves the view up to SCENIC_DRIFT tiles, so draw that much more around it.
   // Bridge decks: which way each bridge tile runs and where its banks are, so the whole bridge
@@ -662,6 +666,7 @@ export function BarangayMap(props: {
             y={y}
             tile={tile}
             plaza={isPlaza(map, x, y)}
+            datuLevel={isPlaza(map, x, y) ? state.datuLevel : undefined}
             building={building}
             fresh={building ? fresh.has(building.key) : false}
             lifted={moveFrom?.x === x && moveFrom?.y === y}
@@ -964,6 +969,8 @@ const GROUND: Record<Tile, string> = {
 };
 
 const Cell = memo(function Cell(props: {
+  /** The Bahay ng Datu's level (drawn on the plaza). */
+  datuLevel?: number;
   x: number;
   y: number;
   tile: Tile;
@@ -999,7 +1006,7 @@ const Cell = memo(function Cell(props: {
   /** Placing a Tulay over this river tile can't work. */
   cantCross?: boolean;
 }) {
-  const { x, y, tile, plaza, building, fresh, lifted, target, ghost, glow, spirit, onSpiritKey, clearable, hint, progress, onActivate, pathPreview, waiting, picked, guard, deck, deckPreview, cantCross } = props;
+  const { x, y, tile, plaza, datuLevel, building, fresh, lifted, target, ghost, glow, spirit, onSpiritKey, clearable, hint, progress, onActivate, pathPreview, waiting, picked, guard, deck, deckPreview, cantCross } = props;
   const h = hash(x, y);
   const valid = typeof target === "number";
   const paddy = building?.def.produces?.rice;
@@ -1039,7 +1046,7 @@ const Cell = memo(function Cell(props: {
           🌱
         </span>
       )}
-      {plaza && <FirePit />}
+      {plaza && <DatuHouse level={datuLevel ?? 1} />}
       {clearable && progress === null && (
         <div aria-hidden className="pointer-events-none absolute inset-[4%] rounded-md border border-dashed border-lime-200/40" />
       )}
@@ -1127,15 +1134,30 @@ function ClearingProgress({ progress, waiting }: { progress: number; waiting: bo
   );
 }
 
-/** The plaza: a ring of stones around a small fire, where the barangay gathers. */
-function FirePit() {
+/**
+ * The plaza: the Bahay ng Datu, a larger raised house at its center (bigger with each level),
+ * with the fire pit beside it, where the barangay gathers. Tap it for the house.
+ */
+function DatuHouse({ level }: { level: number }) {
   return (
-    <div
-      title="Plaza: the gathering spot"
-      className="pointer-events-none absolute inset-[14%] flex items-center justify-center rounded-full border-[0.12em] border-dotted border-stone-500 bg-amber-200/70 shadow-inner"
-    >
-      <span aria-hidden className="text-[0.45em] leading-none">
-        🔥
+    <div title={`Bahay ng Datu (level ${level}) and the plaza's fire`} className="pointer-events-none absolute inset-0">
+      <span
+        aria-hidden
+        className="absolute left-1/2 -translate-x-1/2 leading-none drop-shadow-[0_2px_1px_rgb(0_0_0_/_0.4)]"
+        style={{ top: "-6%", fontSize: `${0.9 + level * 0.06}em` }}
+      >
+        🏠
+      </span>
+      {level > 1 && (
+        <span aria-hidden className="absolute top-[-18%] right-[-6%] rounded-full bg-amber-300 px-[0.15em] text-[0.22em] leading-tight font-bold text-amber-950 shadow">
+          {level}
+        </span>
+      )}
+      <span
+        aria-hidden
+        className="absolute right-[-12%] bottom-[-8%] flex size-[0.42em] items-center justify-center rounded-full border-[0.05em] border-dotted border-stone-500 bg-amber-200/80 shadow-inner"
+      >
+        <span className="text-[0.26em] leading-none">🔥</span>
       </span>
     </div>
   );
@@ -1242,7 +1264,7 @@ function Building(props: {
   onActivate: (x: number, y: number, el: Element) => void;
 }) {
   const { x, y, info, fresh, lifted, onActivate } = props;
-  const { def, bonus, damaged, burning, repairText, connected, noPath, paused, lent } = info;
+  const { def, bonus, damaged, burning, repairText, connected, noPath, paused, lent, burialLook } = info;
   // Decided once, at mount: only buildings that were just built bounce in.
   const [bounce] = useState(fresh);
   const label = burning
@@ -1279,7 +1301,7 @@ function Building(props: {
         } ${lifted ? "opacity-40" : ""} cursor-pointer`}
       >
         {/* A bridge is drawn as its deck; the button over it is just the tap target. */}
-        {def.bridge ? <span className="inline-block size-[0.9em]" /> : def.icon}
+        {def.bridge ? <span className="inline-block size-[0.9em]" /> : def.burial && burialLook === "longon" ? "⚰️" : def.icon}
       </span>
       {burning && (
         <span

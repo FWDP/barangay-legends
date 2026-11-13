@@ -1,0 +1,37 @@
+{
+  "id": "burial-jars",
+  "name": "Burial jars",
+  "description": "Earthenware jars for the bones of the dead, found in caves such as Tabon in Palawan and Ayub in Sarangani.",
+  "tradition": "Archaeological (Palawan; Sarangani, Mindanao)",
+  "sources": [
+    "Robert B. Fox, The Tabon Caves (National Museum of the Philippines, 1970)",
+    "Eusebio Z. Dizon and Rey A. Santiago, Faces from Maitum: The Archaeological Excavation of Ayub Cave (National Museum of the Philippines, 1996)",
+    "https://en.wikipedia.org/wiki/Manunggul_Jar",
+    "https://en.wikipedia.org/wiki/Maitum_jars"
+  ],
+  "aklat": {
+    "order": 14,
+    "icon": "⚱️",
+    "name": {
+      "en": "Burial jars",
+      "fil": "Mga banga ng libing"
+    },
+    "lore": {
+      "en": "Long before the barangays of this game, people in the islands laid the bones of their dead in earthenware jars in caves. The Manunggul Jar from the Tabon Caves of Palawan has two figures rowing a boat of souls on its lid. The Maitum jars from Ayub Cave in Sarangani have lids shaped like human faces. Both are national treasures, kept by the National Museum of the Philippines.",
+      "fil": "Matagal bago ang mga barangay sa larong ito, inilalagay ng mga tao sa mga pulo ang buto ng kanilang patay sa mga bangang luwad sa loob ng kuweba. Ang Banga ng Manunggul mula sa Kuweba ng Tabon sa Palawan ay may dalawang pigurang nagsasagwan ng bangka ng kaluluwa sa takip nito. Ang mga banga ng Maitum mula sa Kuweba ng Ayub sa Sarangani ay may takip na hugis mukha ng tao. Pambansang yaman ang dalawa, na iniingatan ng Pambansang Museo ng Pilipinas."
+    },
+    "inGame": {
+      "en": "A Libingan built with jars (the default) looks like a burial cave facing the water. It speeds the barangay's recovery from mourning.",
+      "fil": "Ang Libingan na may mga banga (ang karaniwan) ay mukhang kuweba ng libingan na nakaharap sa tubig. Pinabibilis nito ang paggaling ng barangay mula sa pagluluksa."
+    },
+    "hint": {
+      "en": "Build a resting place for the dead.",
+      "fil": "Magtayo ng pahingahan ng mga yumao."
+    },
+    "unlock": {
+      "type": "burial",
+      "look": "jars"
+    }
+  },
+  "reviewed": false
+}

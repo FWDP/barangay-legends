@@ -2,7 +2,7 @@
   "id": "envoy-betel",
   "title": "An envoy brings betel",
   "icon": "🌰",
-  "story": "An envoy from {neighbor} arrives with a gift of betel nut and lime, sent by {datu} as a greeting between datus. How will you receive them?",
+  "story": "An envoy from {neighbor} arrives at the Bahay ng Datu with a gift of betel nut and lime, sent by {datu} as a greeting between datus. How will you receive them?",
   "neighbor": "any",
   "conditions": {},
   "choices": [

@@ -1,0 +1,35 @@
+{
+  "id": "longon",
+  "name": "Longon",
+  "description": "A coffin carved from a single log, recorded among sixteenth-century Visayans.",
+  "tradition": "Visayan",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Boxer Codex (c. 1590), Lilly Library, Indiana University"
+  ],
+  "aklat": {
+    "order": 15,
+    "icon": "⚰️",
+    "name": {
+      "en": "Longon",
+      "fil": "Longon"
+    },
+    "lore": {
+      "en": "Scott describes how sixteenth-century Visayans laid their honored dead in a longon, a coffin hollowed from a single tree trunk with a fitted lid. Some were carved and some were boat-shaped. The dead were dressed and given belongings, and the coffin was kept near the house or placed in a cave. Spanish writers recorded these customs in the years after contact.",
+      "fil": "Inilalarawan ni Scott kung paano inihihimlay ng mga Bisaya noong ika-16 na siglo ang kanilang pinarangalang patay sa longon, isang kabaong na inukit mula sa iisang puno na may takip. May mga inukitan at may hugis-bangka. Binibihisan ang patay at binibigyan ng mga gamit, at iniingatan ang kabaong malapit sa bahay o inilalagay sa kuweba. Naitala ng mga manunulat na Espanyol ang mga kaugaliang ito pagkaraan ng pagdating nila."
+    },
+    "inGame": {
+      "en": "With the Visayan tradition, the Libingan keeps longon coffins. It speeds the barangay's recovery from mourning.",
+      "fil": "Sa tradisyong Bisaya, mga longon ang nasa Libingan. Pinabibilis nito ang paggaling ng barangay mula sa pagluluksa."
+    },
+    "hint": {
+      "en": "A resting place in the Visayan way.",
+      "fil": "Isang pahingahan sa paraang Bisaya."
+    },
+    "unlock": {
+      "type": "burial",
+      "look": "longon"
+    }
+  },
+  "reviewed": false
+}

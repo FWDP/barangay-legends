@@ -1,0 +1,28 @@
+{
+  "id": "libingan",
+  "name": "Libingan",
+  "category": "pananampalataya",
+  "order": 4.3,
+  "description": "A resting place for the barangay's dead, kept in the way of its tradition. The barangay mourns its losses faster with one, and it keeps the names of the remembered.",
+  "icon": "⚱️",
+  "cost": {
+    "wood": 40,
+    "rice": 20
+  },
+  "repairCost": {
+    "wood": 10
+  },
+  "burial": {
+    "mourningPercentFaster": 100
+  },
+  "unlock": {
+    "villagers": 12
+  },
+  "tradition": "Widespread in the precolonial Philippines",
+  "reviewed": false,
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Robert B. Fox, The Tabon Caves (National Museum of the Philippines, 1970)",
+    "https://en.wikipedia.org/wiki/Manunggul_Jar"
+  ]
+}

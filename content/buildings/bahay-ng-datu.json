@@ -1,0 +1,59 @@
+{
+  "id": "bahay-ng-datu",
+  "name": "Bahay ng Datu",
+  "category": "tirahan",
+  "description": "The datu's larger raised house at the plaza, where disputes are judged and envoys received. It stands from the start and can be raised to level 5.",
+  "icon": "🏠",
+  "cost": {},
+  "repairCost": {},
+  "datuHouse": {
+    "productionPercentPerLevel": 5,
+    "influencePercentPerLevel": 10,
+    "levels": [
+      {
+        "level": 1
+      },
+      {
+        "level": 2,
+        "cost": {
+          "rice": 60,
+          "wood": 80,
+          "gold": 15
+        },
+        "unlocks": "envoys"
+      },
+      {
+        "level": 3,
+        "cost": {
+          "rice": 120,
+          "wood": 150,
+          "gold": 40
+        },
+        "unlocks": "balangay"
+      },
+      {
+        "level": 4,
+        "cost": {
+          "rice": 200,
+          "wood": 250,
+          "gold": 80
+        },
+        "unlocks": "alliances"
+      },
+      {
+        "level": 5,
+        "cost": {
+          "rice": 300,
+          "wood": 400,
+          "gold": 150
+        }
+      }
+    ]
+  },
+  "unlock": {
+    "start": true
+  },
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+  ]
+}

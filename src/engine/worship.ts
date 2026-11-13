@@ -114,12 +114,13 @@ export const ritualDef = (content: Content, id: string): RitualDef | undefined =
 export const isActive = (state: GameState, id: string) => (state.blessings[id]?.until ?? -Infinity) > state.time;
 
 /** Why a ritual can't be performed now, or null. */
-export function ritualBlocker(state: GameState, content: Content, id: string): "no-shrine" | "no-tradition" | "favor" | "cooldown" | "active" | "unknown" | null {
+export function ritualBlocker(state: GameState, content: Content, id: string): "no-shrine" | "no-tradition" | "favor" | "cooldown" | "active" | "no-mourning" | "unknown" | null {
   const def = ritualDef(content, id);
   if (!def) return "unknown";
   const w = worshipBlocker(state, content);
   if (w) return w;
   if (isActive(state, id)) return "active";
+  if (def.mourningShortenPercent && state.mourning <= 0) return "no-mourning";
   if ((state.blessings[id]?.readyAt ?? -Infinity) > state.time) return "cooldown";
   if (state.favor < def.favorCost) return "favor";
   return null;
@@ -141,6 +142,7 @@ export function perform(state: GameState, content: Content, id: string): GameSta
     const gain = rates(state, content).produced.rice * 60 * def.riceMinutes;
     s = { ...s, resources: { ...s.resources, rice: capGrowth(s.resources.rice, s.resources.rice + gain, riceCap(s, content)) } };
   }
+  if (def.mourningShortenPercent) s = { ...s, mourning: s.mourning * (1 - def.mourningShortenPercent / 100) };
   if (def.forestRestore > 0) s = { ...s, forest: { ...s.forest, balance: clamp(s.forest.balance + def.forestRestore, 100) } };
   if (def.lore) s = addFlag(s, def.lore);
   return s;

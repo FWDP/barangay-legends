@@ -45,6 +45,8 @@ import { happinessMultiplier, nextHappiness } from "./happiness";
 import { reconcilePeople, type HistoryEntry, type NamedVillager, type Stats } from "./people";
 import { capGrowth, riceCap, storageCap } from "./storage";
 import { checkAklat } from "./aklat";
+import { datuProductionBonus, upgradeDatu } from "./datu";
+import { updateDeaths, type Remembered } from "./death";
 import { advanceReplanting, afterClearing, cancelReplant, isPranked, newForest, replant, updateForest, updatePranks, type ForestState, type Prank, type ReplantJob } from "./forest";
 import {
   answerRiddle,
@@ -63,7 +65,7 @@ import {
   type TikbalangTrick,
 } from "./worship";
 
-export const STATE_VERSION = 18;
+export const STATE_VERSION = 19;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -188,6 +190,14 @@ export interface GameState {
   aklat: string[];
   /** Beings and events the barangay has met (for the Aklat). */
   flags: string[];
+  /** The Bahay ng Datu's level (1 from the start). */
+  datuLevel: number;
+  /** Seconds of mourning left (0 when none): happiness is lower meanwhile. */
+  mourning: number;
+  /** Seconds the barangay has had sickness without a break (a long sickness can take a life). */
+  sickFor: number;
+  /** The named villagers who died, remembered at the Libingan. */
+  remembered: Remembered[];
 }
 
 export type { ClearingJob } from "./clearing";
@@ -234,7 +244,7 @@ export function newGame(
     gawainDone: [],
     named: [],
     history: [],
-    stats: { raidsDefended: 0, rolls: 0, named: 0, replanted: 0, permittedClears: 0 },
+    stats: { raidsDefended: 0, rolls: 0, named: 0, replanted: 0, permittedClears: 0, deaths: 0 },
     favor: 0,
     tradition: null,
     lastRitualAt: null,
@@ -247,6 +257,10 @@ export function newGame(
     replanting: [],
     aklat: [],
     flags: [],
+    datuLevel: 1,
+    mourning: 0,
+    sickFor: 0,
+    remembered: [],
   };
   if (withRegion && content.neighbors.length > 0) state.region = createRegion(content, 0, seed);
   for (const def of content.buildings) {
@@ -481,7 +495,7 @@ export function rates(state: GameState, content: Content, opts: { offline?: bool
       produced[r] += workers[i] * (def?.produces?.[r] ?? 0) * (1 + bonuses[i] + roads[i] + (groves[i][r] ?? 0));
     }
   });
-  const mood = happinessMultiplier(state, content) * (1 + ritualProductionBonus(state, content));
+  const mood = happinessMultiplier(state, content) * (1 + ritualProductionBonus(state, content) + datuProductionBonus(state, content));
   for (const r of RESOURCES) produced[r] *= seasonMultiplier(content, state.time, r) * mood;
   // The diwata withhold part of the harvest while the forest spirits are angry.
   if (!opts.offline && !content.ai && state.forest.stage >= 2) produced.rice *= 1 - content.rules.forest.riceWithheldPercent / 100;
@@ -765,7 +779,8 @@ export type Command =
   | { type: "gong" }
   | { type: "answerRiddle"; option: number }
   | { type: "replant"; x: number; y: number }
-  | { type: "cancelReplant"; x: number; y: number };
+  | { type: "cancelReplant"; x: number; y: number }
+  | { type: "upgradeDatu" };
 
 export function apply(state: GameState, content: Content, command: Command): GameState {
   const next = reconcilePeople(state, applyCommand(state, content, command), content);
@@ -847,6 +862,8 @@ function applyCommand(state: GameState, content: Content, command: Command): Gam
       return replant(state, content, command.x, command.y);
     case "cancelReplant":
       return cancelReplant(state, content, command.x, command.y);
+    case "upgradeDatu":
+      return upgradeDatu(state, content);
   }
 }
 
@@ -967,6 +984,8 @@ function step(state: GameState, content: Content, dt: number): GameState {
     next = updateVisitors(next, content, state.time, next.time);
     next = updatePranks(next, content, state.time, next.time);
     next = updateForest(next, content, dt, true);
+    // Deaths come only with warning, and only while playing.
+    next = updateDeaths(state, next, content, dt);
   }
   next = reconcilePeople(state, next, content, crowded ? "crowded" : "other");
   next = checkTasks(next, content);

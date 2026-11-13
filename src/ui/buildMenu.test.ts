@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { at, content, withState } from "../engine/testUtils";
-import { BUILD_TABS, DAAN, itemsIn, missingFor, OTHER_TAB, recommended, tabOf, tabsWithNew, visibleTabs } from "./buildMenu";
+import { BUILD_TABS, DAAN, DATU, itemsIn, missingFor, OTHER_TAB, recommended, tabOf, tabsWithNew, visibleTabs } from "./buildMenu";
 
 const def = (id: string) => content.buildings.find((b) => b.id === id)!;
 
@@ -24,8 +24,13 @@ describe("build tabs", () => {
     expect(visibleTabs(more).at(-1)).toBe(OTHER_TAB);
     expect(itemsIn(more, OTHER_TAB)).toEqual(["watchtower"]);
     // Every building appears in exactly one tab.
-    const all = visibleTabs(more).flatMap((t) => itemsIn(more, t)).filter((id) => id !== DAAN);
+    const all = visibleTabs(more).flatMap((t) => itemsIn(more, t)).filter((id) => id !== DAAN && id !== DATU);
     expect(all.sort()).toEqual(more.buildings.map((b) => b.id).sort());
+  });
+
+  it("puts the Bahay ng Datu's upgrades first under Tirahan, and the Libingan under belief", () => {
+    expect(itemsIn(content, "tirahan")[0]).toBe(DATU);
+    expect(tabOf(def("libingan"))).toBe("pananampalataya");
   });
 
   it("keeps the Daan tool in the paths tab", () => {

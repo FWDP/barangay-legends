@@ -6,6 +6,7 @@
 import type { Content, VillagerRole, VillagerStory } from "./content";
 import type { GameState } from "./game";
 import { rollAt } from "./rng";
+import { addMourning, remember } from "./death";
 
 export interface NamedVillager {
   id: number;
@@ -17,9 +18,11 @@ export interface NamedVillager {
   since: number;
   /** One of the sick villagers right now. */
   sick?: boolean;
+  /** Grown old: they may die of old age now (the warning comes first). */
+  frail?: boolean;
 }
 
-export type HistoryKind = "named" | "left" | "fell" | "task" | "spirits" | "aklat" | "event";
+export type HistoryKind = "named" | "left" | "fell" | "task" | "spirits" | "aklat" | "event" | "died" | "frail" | "datu";
 
 /** One line of the barangay's history. Text is made by the UI, so it follows the language setting. */
 export interface HistoryEntry {
@@ -28,8 +31,12 @@ export interface HistoryEntry {
   /** The villager (named, left, fell). */
   name?: string;
   story?: string;
-  /** Why they left: "hunger", "crowded" (no house) or "other". */
-  cause?: "hunger" | "crowded" | "other";
+  /** Why they left ("hunger", "crowded": no house, "other"), or what they died of (died). */
+  cause?: "hunger" | "crowded" | "other" | "age" | "sickness" | "raid";
+  /** How many died together (died, unnamed). */
+  count?: number;
+  /** The level the Bahay ng Datu reached (datu). */
+  level?: number;
   /** The task (task). */
   task?: string;
   /** The forest spirits' stage (spirits): 1 restless, 2 angry. */
@@ -54,6 +61,8 @@ export interface Stats {
   replanted: number;
   /** Tiles cleared with the spirits' permission. */
   permittedClears: number;
+  /** Villagers who died (any cause). */
+  deaths: number;
 }
 
 export const MAX_HISTORY = 60;
@@ -159,7 +168,8 @@ function trim(state: GameState, warriorsLeft: number, othersLeft: number, cause:
  * new sickness may strike a named villager. Returns `next` itself if nothing changed.
  */
 export function reconcilePeople(prev: GameState, next: GameState, content: Content, leftBecause: HistoryEntry["cause"] = "other"): GameState {
-  const fewer = prev.villagers - next.villagers;
+  // Deaths already handled (death.ts) aren't departures.
+  const fewer = prev.villagers - next.villagers - (next.stats.deaths - prev.stats.deaths);
   const warriorLoss = Math.max(0, prev.warriors - next.warriors);
   const newWarriors = Math.max(0, next.warriors - prev.warriors);
   const sickChange = next.sick.length - prev.sick.length;
@@ -171,9 +181,17 @@ export function reconcilePeople(prev: GameState, next: GameState, content: Conte
   const cause: HistoryEntry["cause"] = hungry ? "hunger" : leftBecause;
   // Fallen warriors (or warriors who left with their families).
   if (warriorLoss > 0) {
+    const before = s.named;
     let pool = prev.warriors;
     for (let i = 0; i < warriorLoss; i++, pool--) {
       s = maybeLose(s, s.named.filter(isWarrior), pool, hungry ? { kind: "left", cause } : { kind: "fell" });
+    }
+    if (!hungry) {
+      // Fallen in battle: deaths, remembered by name, and mourned.
+      const fallen = before.filter((v) => isWarrior(v) && !s.named.includes(v));
+      for (const v of fallen) s = remember(s, v, "raid", s.time);
+      if (warriorLoss > fallen.length) s = addHistory(s, { at: s.time, kind: "died", cause: "raid", count: warriorLoss - fallen.length });
+      s = addMourning({ ...s, stats: { ...s.stats, deaths: s.stats.deaths + warriorLoss } }, content, warriorLoss);
     }
   }
   // Other villagers who left.

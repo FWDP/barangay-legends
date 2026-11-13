@@ -1,8 +1,8 @@
 {
   "id": "daan-three",
   "text": {
-    "en": "Connect 3 buildings to the plaza with a Daan",
-    "fil": "Ikonekta ang 3 gusali sa plasa gamit ang Daan"
+    "en": "Connect 3 buildings to the Bahay ng Datu with a Daan",
+    "fil": "Ikonekta ang 3 gusali sa Bahay ng Datu gamit ang Daan"
   },
   "condition": {
     "type": "connected",

@@ -117,6 +117,11 @@ export const GAME_TEXT = {
     tirahan: [], pagkain: [], depensa: [], pananampalataya: [], daan: [], iba: [], build: [], cancel: [], locked: ["villagers"], need: ["missing"],
     recommended: [], more: [], new: [], details: [], staffed: ["staffed"], noPath: ["n"], perTile: [], daanName: [], daanText: ["percent"], layDaan: [],
   },
+  death: {
+    died: ["cause"], diedNamed: ["name", "cause"], diedRaid: ["count"], frail: ["name"], age: [], sickness: [], hunger: [], raid: [], mourning: ["time"],
+    sickWarning: [], hungerWarning: [], remembered: [], none: [], others: ["count"], jars: [], longon: [],
+  },
+  datu: { title: [], level: ["level", "max"], bonus: ["production", "influence"], upgrade: ["level"], max: [], envoys: [], balangay: [], alliances: [], unlocks: ["what"], news: ["level", "what"], close: [] },
   events: { eclipse: [], gong: [], gongs: ["taps", "needed"], eclipseWon: ["favor", "gold"], eclipseLost: ["rice"], tikbalang: ["n"], right: [], wrong: ["time"], sarimanok: ["gift"] },
 } as const satisfies Record<string, Record<string, readonly string[]>>;
 

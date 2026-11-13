@@ -1,0 +1,18 @@
+{
+  "id": "datu-three",
+  "text": {
+    "en": "Raise the Bahay ng Datu to level 3",
+    "fil": "Itaas sa ikatlong antas ang Bahay ng Datu"
+  },
+  "condition": {
+    "type": "datuLevel",
+    "count": 3
+  },
+  "reward": {
+    "title": {
+      "en": "Datu of the Great House",
+      "fil": "Datu ng Malaking Bahay"
+    }
+  },
+  "next": "first-tulay"
+}

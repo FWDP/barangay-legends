@@ -1,0 +1,17 @@
+{
+  "id": "datu-two",
+  "text": {
+    "en": "Raise the Bahay ng Datu to level 2",
+    "fil": "Itaas sa ikalawang antas ang Bahay ng Datu"
+  },
+  "condition": {
+    "type": "datuLevel",
+    "count": 2
+  },
+  "reward": {
+    "resources": {
+      "wood": 30
+    }
+  },
+  "next": "first-kuta"
+}

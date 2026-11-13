@@ -4,6 +4,9 @@ import type { Content } from "../engine/content";
 import type { GameState } from "../engine/game";
 import { currentTask, earnedTitles, taskProgress } from "../engine/gawain";
 import type { NamedVillager } from "../engine/people";
+import { maxDatuLevel, nextDatuLevel } from "../engine/datu";
+import { asCost, canAfford } from "../engine/game";
+import { costText } from "./format";
 import type { Lang } from "./settings";
 import { useModal } from "./StoryDialogs";
 import { historyLine, rewardText, villagerCard } from "./stories";
@@ -164,6 +167,107 @@ export function HistoryDialog(props: { open: boolean; state: GameState; content:
                 {historyLine(h, content, game, lang)}
               </li>
             ))}
+          </ul>
+          <div className="flex justify-end">
+            <button type="button" autoFocus onClick={onClose} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-4 py-1.5 text-sm font-semibold text-amber-950">
+              {game.villager.close[lang]}
+            </button>
+          </div>
+        </div>
+      )}
+    </dialog>
+  );
+}
+
+/** The Bahay ng Datu: its level, what each level gives, and raising it. */
+export function DatuDialog(props: { open: boolean; state: GameState; content: Content; game: GameText; lang: Lang; onUpgrade: () => void; onClose: () => void }) {
+  const { open, state, content, game, lang, onUpgrade, onClose } = props;
+  const dialog = useModal(open);
+  const house = content.datuHouse;
+  const d = game.datu;
+  const next = nextDatuLevel(state, content);
+  const cost = asCost(next?.cost ?? {});
+  const def = house?.datuHouse;
+  return (
+    <dialog
+      ref={dialog}
+      aria-labelledby="datu-title"
+      onClose={onClose}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      className="m-auto w-[calc(100%-1.5rem)] max-w-sm rounded-2xl border-4 border-amber-950/70 p-0 text-stone-800 shadow-2xl backdrop:bg-stone-900/50"
+    >
+      {open && house && def && (
+        <div className="mat-card space-y-2 p-4 text-sm">
+          <h2 id="datu-title" className="font-display text-xl text-amber-900">
+            <span aria-hidden>{house.icon}</span> {d.title[lang]}
+          </h2>
+          <p className="text-xs text-stone-600">
+            {state.barangay.datu ? `Datu ${state.barangay.datu} · ` : ""}
+            {fill(d.level[lang], { level: state.datuLevel, max: maxDatuLevel(content) })}
+          </p>
+          <p>{fill(d.bonus[lang], { production: (state.datuLevel - 1) * def.productionPercentPerLevel, influence: (state.datuLevel - 1) * def.influencePercentPerLevel })}</p>
+          <ul className="space-y-0.5 text-xs">
+            {def.levels
+              .filter((l) => l.unlocks)
+              .map((l) => (
+                <li key={l.level} className={state.datuLevel >= l.level ? "font-semibold text-green-800" : "text-stone-500"}>
+                  {state.datuLevel >= l.level ? "✅" : "🔒"} {fill(d.level[lang], { level: l.level, max: maxDatuLevel(content) })}: {d[l.unlocks!][lang]}
+                </li>
+              ))}
+          </ul>
+          <div className="flex items-center justify-between gap-2 pt-1">
+            <span className="text-xs font-semibold">{next ? costText(cost) : d.max[lang]}</span>
+            {next && (
+              <button
+                type="button"
+                disabled={!canAfford(state, cost)}
+                onClick={onUpgrade}
+                className="game-btn border-2 border-green-950 bg-green-700 px-3 py-1.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {fill(d.upgrade[lang], { level: next.level })}
+              </button>
+            )}
+          </div>
+          <div className="flex justify-end">
+            <button type="button" autoFocus onClick={onClose} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-4 py-1.5 text-sm font-semibold text-amber-950">
+              {d.close[lang]}
+            </button>
+          </div>
+        </div>
+      )}
+    </dialog>
+  );
+}
+
+/** Tapping the Libingan: the names of the remembered, and how many others rest there. */
+export function RememberedDialog(props: { open: boolean; state: GameState; content: Content; game: GameText; lang: Lang; onClose: () => void }) {
+  const { open, state, content, game, lang, onClose } = props;
+  const dialog = useModal(open);
+  const t = game.death;
+  const look = content.traditions.find((x) => x.id === state.tradition)?.burialLook ?? "jars";
+  const others = Math.max(0, state.stats.deaths - state.remembered.length);
+  return (
+    <dialog
+      ref={dialog}
+      aria-labelledby="remembered-title"
+      onClose={onClose}
+      onClick={(e) => e.target === e.currentTarget && onClose()}
+      className="m-auto w-[calc(100%-1.5rem)] max-w-sm rounded-2xl border-4 border-amber-950/70 p-0 text-stone-800 shadow-2xl backdrop:bg-stone-900/50"
+    >
+      {open && (
+        <div className="mat-card flex max-h-[80dvh] flex-col gap-2 p-4 text-sm">
+          <h2 id="remembered-title" className="font-display text-xl text-amber-900">
+            <span aria-hidden>{look === "longon" ? "⚰️" : "⚱️"}</span> {t.remembered[lang]}
+          </h2>
+          <p className="text-xs text-stone-500">{t[look][lang]}</p>
+          <ul className="min-h-0 flex-1 space-y-1 overflow-y-auto">
+            {state.remembered.length === 0 && others === 0 && <li className="text-stone-500">{t.none[lang]}</li>}
+            {[...state.remembered].reverse().map((r, i) => (
+              <li key={`${r.name}-${r.at}-${i}`} className="border-b border-amber-900/10 pb-1">
+                🕯️ <b>{r.name}</b> <span className="text-xs text-stone-500">· {t[r.cause][lang]}</span>
+              </li>
+            ))}
+            {others > 0 && <li className="text-xs text-stone-500 italic">{fill(t.others[lang], { count: others })}</li>}
           </ul>
           <div className="flex justify-end">
             <button type="button" autoFocus onClick={onClose} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-4 py-1.5 text-sm font-semibold text-amber-950">

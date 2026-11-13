@@ -28,6 +28,7 @@ import {
 import { validProposal, type CounterOffer } from "./trading";
 import { MAX_HISTORY, type HistoryEntry, type HistoryKind, type NamedVillager } from "./people";
 import { forestStage } from "./forest";
+import { MAX_REMEMBERED, type Remembered } from "./death";
 
 export const SAVE_KEY = "barangay-legends/save";
 
@@ -196,6 +197,13 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
       aklat: [],
       flags: [],
     };
+  },
+  // v18 → v19: the Bahay ng Datu stands at the plaza in every barangay, at level 1; nobody has
+  // died yet and there is no mourning. Its tile is the plaza's, so paths and the Daan bonus
+  // work exactly as before.
+  18: (raw) => {
+    const st = isObject(raw.stats) ? raw.stats : {};
+    return { ...raw, version: 19, stats: { ...st, deaths: 0 }, datuLevel: 1, mourning: 0, sickFor: 0, remembered: [] };
   },
 };
 
@@ -466,6 +474,7 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean): GameSta
   if (finiteNonNeg(data.happiness)) state.happiness = Math.min(100, data.happiness);
   parsePeople(data, content, state, isPlayer);
   if (isPlayer) parseWorship(data, content, state);
+  if (isPlayer) parseDatuAndDeaths(data, content, state);
   if (isPlayer && content.neighbors.length > 0) state.region = parseRegion(data.region, content, state);
   // A waiting choice event: a known event, and a neighbor that still exists (or none).
   const ch = data.choice;
@@ -476,9 +485,24 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean): GameSta
   return state;
 }
 
-const HISTORY_KINDS: HistoryKind[] = ["named", "left", "fell", "task", "spirits", "aklat", "event"];
+const HISTORY_KINDS: HistoryKind[] = ["named", "left", "fell", "task", "spirits", "aklat", "event", "died", "frail", "datu"];
+const DEATH_CAUSES = ["age", "sickness", "hunger", "raid"];
 const EVENTS = ["eclipseWon", "eclipseLost", "sarimanok", "riddleRight"];
 const isPoint = (v: unknown): v is { x: number; y: number } => isObject(v) && Number.isFinite(v.x) && Number.isFinite(v.y);
+
+/** The Bahay ng Datu's level, mourning, the long-sickness clock and the remembered dead. */
+function parseDatuAndDeaths(data: RawSave, content: Content, state: GameState) {
+  const max = content.datuHouse?.datuHouse.levels.length ?? 1;
+  if (Number.isInteger(data.datuLevel)) state.datuLevel = Math.min(max, Math.max(1, data.datuLevel as number));
+  if (finiteNonNeg(data.mourning)) state.mourning = Math.min(content.rules.mourning.maxSeconds, data.mourning);
+  if (finiteNonNeg(data.sickFor) && state.sick.length > 0) state.sickFor = data.sickFor;
+  if (Array.isArray(data.remembered)) {
+    state.remembered = data.remembered
+      .filter((r): r is RawSave => isObject(r) && typeof r.name === "string" && r.name !== "" && r.name.length <= 30 && DEATH_CAUSES.includes(r.cause as string) && finiteNonNeg(r.at))
+      .slice(-MAX_REMEMBERED)
+      .map((r) => ({ name: r.name as string, cause: r.cause as Remembered["cause"], at: r.at as number }));
+  }
+}
 
 /** Favor, tradition, rituals, the visitors and the forest. Anything that doesn't fit is dropped. */
 function parseWorship(data: RawSave, content: Content, state: GameState) {
@@ -536,7 +560,7 @@ function parseWorship(data: RawSave, content: Content, state: GameState) {
   if (Array.isArray(data.aklat)) state.aklat = [...new Set(data.aklat.filter((id): id is string => typeof id === "string" && entries.has(id)))];
   if (Array.isArray(data.flags)) state.flags = [...new Set(data.flags.filter((x): x is string => typeof x === "string" && x.length <= 40))].slice(0, 100);
 }
-const CAUSES = ["hunger", "crowded", "other"];
+const CAUSES = ["hunger", "crowded", "other", "age", "sickness", "raid"];
 const count = (v: unknown) => (finiteNonNeg(v) ? Math.floor(v) : 0);
 
 /** Tasks done, named villagers, history and counters. Unknown tasks and stories are dropped. */
@@ -548,6 +572,7 @@ function parsePeople(data: RawSave, content: Content, state: GameState, isPlayer
     named: count(st.named),
     replanted: count(st.replanted),
     permittedClears: count(st.permittedClears),
+    deaths: count(st.deaths),
   };
   if (!isPlayer) return;
   const quests = new Set(content.quests.map((q) => q.id));
@@ -562,6 +587,7 @@ function parsePeople(data: RawSave, content: Content, state: GameState, isPlayer
     if (!story || !finiteNonNeg(v.since) || named.some((n) => n.id === v.id)) continue;
     const nv: NamedVillager = { id: v.id as number, name: v.name, story: story.id, role: story.role, since: v.since };
     if (v.sick === true) nv.sick = true;
+    if (v.frail === true) nv.frail = true;
     named.push(nv);
   }
   // No more named warriors than warriors, nor other named villagers than other villagers.
@@ -593,7 +619,22 @@ function parsePeople(data: RawSave, content: Content, state: GameState, isPlayer
     if (typeof h.event === "string" && EVENTS.includes(h.event)) e.event = h.event;
     if (isObject(h.amounts)) e.amounts = Object.fromEntries(RESOURCES.filter((r) => finiteNonNeg((h.amounts as RawSave)[r])).map((r) => [r, (h.amounts as RawSave)[r] as number]));
     if (finiteNonNeg(h.favor)) e.favor = h.favor;
-    const ok = e.kind === "task" ? !!e.task : e.kind === "spirits" ? e.stage !== undefined : e.kind === "aklat" ? !!e.entry : e.kind === "event" ? !!e.event : !!e.name;
+    if (Number.isInteger(h.count) && (h.count as number) > 0) e.count = h.count as number;
+    if (Number.isInteger(h.level) && (h.level as number) > 0) e.level = h.level as number;
+    const ok =
+      e.kind === "task"
+        ? !!e.task
+        : e.kind === "spirits"
+          ? e.stage !== undefined
+          : e.kind === "aklat"
+            ? !!e.entry
+            : e.kind === "event"
+              ? !!e.event
+              : e.kind === "datu"
+                ? e.level !== undefined
+                : e.kind === "died"
+                  ? DEATH_CAUSES.includes(e.cause ?? "")
+                  : !!e.name;
     if (!ok) continue;
     history.push(e);
   }

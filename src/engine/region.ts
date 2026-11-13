@@ -2,6 +2,7 @@
 // Pure and deterministic. Each neighbor is a full GameState run by the same engine rules as
 // the player (tick + commands), steered by a simple AI. All randomness comes from the seeded
 // RNG in the player's state, rolled once per whole game second.
+import { datuInfluenceMultiplier } from "./datu";
 import { RESOURCES, type Content, type NeighborDef, type RefusalReason, type Resource, type TraitDef } from "./content";
 import { apply, canAfford, asCost, buildingCost, housing, newGame, owned, placeAuto, rates, tick, warriorCap, type GameState } from "./game";
 import { autoPlaceTile } from "./map";
@@ -312,7 +313,7 @@ export function adjustRelations(state: GameState, content: Content, id: string, 
     let next: NeighborState = change.trust ? { ...n, trust: addTrust(n, change.trust, traitOf(content, id)) } : n;
     let r = region;
     if (change.influence) {
-      if (change.influence > 0) [r, next] = addInfluence(r, next, change.influence, content, state.time);
+      if (change.influence > 0) [r, next] = addInfluence(r, next, change.influence * datuInfluenceMultiplier(state, content), content, state.time);
       else if (next.status === "independent") next = { ...next, influence: clamp100(next.influence + change.influence) };
     }
     return [{ ...state, region: r }, next];
@@ -354,7 +355,7 @@ export function executeTrade(state: GameState, content: Content, id: string, p: 
     let next: NeighborState = { ...n, state: them, trust: addTrust(n, t.trust, traitOf(content, id)) };
     if (next.status === "tributary") next = { ...next, loyalty: clamp100(next.loyalty + t.loyalty) };
     let r = addPath(region, "trade");
-    [r, next] = addInfluence(r, next, t.influence, content, state.time);
+    [r, next] = addInfluence(r, next, t.influence * datuInfluenceMultiplier(state, content), content, state.time);
     return [{ ...player, region: r }, next];
   });
 }
@@ -380,7 +381,7 @@ export function marry(state: GameState, content: Content, id: string): GameState
     const [player, them] = moveGoods(state, n.state, asCost(m.cost));
     let next: NeighborState = { ...n, state: them, marriage: true, trust: addTrust(n, m.trust, traitOf(content, id)) };
     let r = addPath(region, "marriage");
-    [r, next] = addInfluence(r, next, m.influence, content, state.time);
+    [r, next] = addInfluence(r, next, m.influence * datuInfluenceMultiplier(state, content), content, state.time);
     return [{ ...player, region: r }, next];
   });
 }
@@ -442,7 +443,7 @@ export function raid(state: GameState, content: Content, id: string, warriors: n
       neighbors: region.neighbors.map((n) => (n.id === id ? n : { ...n, trust: clamp100(n.trust - d.raid.trustLossAll) })),
     };
     region = addPath(region, "mangayaw");
-    [region, next] = addInfluence(region, next, d.raid.influence, content, state.time);
+    [region, next] = addInfluence(region, next, d.raid.influence * datuInfluenceMultiplier(state, content), content, state.time);
   }
   region = addReport(region, {
     time: state.time,
@@ -487,7 +488,7 @@ export function acceptOffer(state: GameState, content: Content): GameState {
     let next: NeighborState = { ...n, state: them, trust: addTrust(n, t.trust, traitOf(content, n.id)) };
     if (next.status === "tributary") next = { ...next, loyalty: clamp100(next.loyalty + t.loyalty) };
     let r = addPath(region, "trade");
-    [r, next] = addInfluence(r, next, t.influence, content, state.time);
+    [r, next] = addInfluence(r, next, t.influence * datuInfluenceMultiplier(state, content), content, state.time);
     return [{ ...player, region: r }, next];
   });
 }

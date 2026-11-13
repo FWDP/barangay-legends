@@ -40,6 +40,11 @@ export function unlockMet(state: GameState, content: Content, u: AklatUnlock): b
       return state.tradition === u.tradition;
     case "report":
       return state.region?.reports.some((r) => r.kind === u.kind) ?? false;
+    case "burial": {
+      // A Libingan in the tradition's style (jars until a tradition is chosen).
+      const look = content.traditions.find((t) => t.id === state.tradition)?.burialLook ?? "jars";
+      return look === u.look && state.buildings.some((b) => content.buildings.find((d) => d.id === b.type)?.burial);
+    }
     case "any":
       return u.of.some((x) => unlockMet(state, content, x));
   }

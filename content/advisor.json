@@ -201,8 +201,8 @@
       "id": "roads-1",
       "trigger": "roads",
       "text": {
-        "en": "Lay a Daan, Datu. Our people walk faster on a footpath, and a building joined to the plaza by an unbroken path works {percent}% better.",
-        "fil": "Maglatag ng Daan, Datu. Mas mabilis maglakad ang ating mga tao sa landas, at {percent}% na mas mahusay ang gusaling nakadugtong sa plasa sa tuloy-tuloy na daan."
+        "en": "Lay a Daan, Datu. Our people walk faster on a footpath, and a building joined to the Bahay ng Datu by an unbroken path works {percent}% better.",
+        "fil": "Maglatag ng Daan, Datu. Mas mabilis maglakad ang ating mga tao sa landas, at {percent}% na mas mahusay ang gusaling nakadugtong sa Bahay ng Datu sa tuloy-tuloy na daan."
       }
     },
     {

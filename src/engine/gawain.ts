@@ -52,6 +52,8 @@ export function taskProgress(state: GameState, content: Content, q: QuestDef): {
       return { have: state.stats.replanted, need: c.count };
     case "permittedClears":
       return { have: state.stats.permittedClears, need: c.count };
+    case "datuLevel":
+      return { have: state.datuLevel, need: c.count };
   }
 }
 

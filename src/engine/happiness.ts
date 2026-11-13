@@ -22,6 +22,8 @@ export interface HappinessParts {
   sickness: number;
   /** A Dambana left without offerings for a long time (0 or below). */
   neglect: number;
+  /** Mourning the dead (0 or below). */
+  mourning: number;
   target: number;
 }
 
@@ -32,8 +34,9 @@ export function happinessTarget(state: GameState, content: Content): HappinessPa
   const hunger = isHungry(state) ? h.hungry : 0;
   const sickness = Math.max(h.maxFromSick, state.sick.length * h.perSick);
   const neglect = neglectPenalty(state, content);
-  const target = Math.min(100, Math.max(0, h.start + houses + hunger + sickness + neglect));
-  return { base: h.start, houses, hunger, sickness, neglect, target };
+  const mourning = state.mourning > 0 ? content.rules.mourning.happiness : 0;
+  const target = Math.min(100, Math.max(0, h.start + houses + hunger + sickness + neglect + mourning));
+  return { base: h.start, houses, hunger, sickness, neglect, mourning, target };
 }
 
 /** Happiness after dt seconds: pointsPerSecond closer to its target. */

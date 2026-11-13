@@ -17,6 +17,7 @@ import { reconcilePeople } from "./people";
 import { capGrowth, riceCap } from "./storage";
 import { checkAklat } from "./aklat";
 import { advanceReplanting, afterClearing, updateForest } from "./forest";
+import { passMourning } from "./death";
 
 export interface OfflineReport {
   /** Seconds credited (after the cap). */
@@ -100,6 +101,8 @@ export function gentleStep(state: GameState, content: Content, dt: number): Step
   // The forest recovers (and replanting goes on) offline, but the spirits don't react: no
   // pranks, no tikbalang, no messages. Aklat entries met (e.g. a new building) are found.
   if (!content.ai) s = checkAklat(updateForest(fed > 0 ? advanceReplanting(s, content, dt * fed) : s, content, dt, false), content);
+  // Mourning passes while away; nobody dies offline.
+  s = passMourning(s, content, dt);
   s = checkTasks(reconcilePeople(state, s, content), content);
   return { state: s, produced, eaten, hungry: dt * (1 - fed), arrived, recovered, cleared };
 }

@@ -28,7 +28,7 @@ const shrine = (patch: Partial<GameState> = {}) =>
 describe("content for worship", () => {
   it("has the three traditions, the four blessings and the two events, each with a tradition, sources and reviewed: false", () => {
     expect(content.traditions.map((t) => t.id).sort()).toEqual(["maranao", "tagalog", "visayan"]);
-    expect(content.rituals.map((r) => r.id).sort()).toEqual(["anito-blessing", "diwata-favor"]);
+    expect(content.rituals.map((r) => r.id).sort()).toEqual(["anito-blessing", "diwata-favor", "mourning-rite"]);
     for (const x of [...content.traditions, ...content.rituals, content.visitor!, content.eclipse!, content.trickery!, ...content.aklat]) {
       expect(x.tradition).not.toBe("");
       expect(x.sources.length).toBeGreaterThan(0);

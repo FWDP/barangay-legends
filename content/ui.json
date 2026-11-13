@@ -414,12 +414,124 @@
       "fil": "Daan"
     },
     "daanText": {
-      "en": "A dirt footpath on cleared land. Villagers walk faster on it, and buildings joined to the plaza by an unbroken Daan get +{percent}% output. Taking one up is free.",
-      "fil": "Isang daang lupa sa nalinis na lupa. Mas mabilis lumakad dito ang mga tao, at may +{percent}% ang mga gusaling konektado sa plasa. Libre ang pag-alis nito."
+      "en": "A dirt footpath on cleared land. Villagers walk faster on it, and buildings joined to the Bahay ng Datu by an unbroken Daan get +{percent}% output. Taking one up is free.",
+      "fil": "Isang daang lupa sa nalinis na lupa. Mas mabilis lumakad dito ang mga tao, at may +{percent}% ang mga gusaling konektado sa Bahay ng Datu. Libre ang pag-alis nito."
     },
     "layDaan": {
       "en": "Lay Daan",
       "fil": "Maglatag ng Daan"
+    }
+  },
+  "death": {
+    "died": {
+      "en": "One of our people died of {cause}.",
+      "fil": "Isa sa ating mga tao ang namatay dahil sa {cause}."
+    },
+    "diedNamed": {
+      "en": "{name} died of {cause}. The barangay remembers them.",
+      "fil": "Pumanaw si {name} dahil sa {cause}. Inaalala siya ng barangay."
+    },
+    "diedRaid": {
+      "en": "{count} of our warriors fell in battle.",
+      "fil": "{count} sa ating mga mandirigma ang nasawi sa labanan."
+    },
+    "frail": {
+      "en": "{name} has grown old and frail.",
+      "fil": "Matanda at mahina na si {name}."
+    },
+    "age": {
+      "en": "old age",
+      "fil": "katandaan"
+    },
+    "sickness": {
+      "en": "a long sickness",
+      "fil": "matagal na sakit"
+    },
+    "hunger": {
+      "en": "hunger",
+      "fil": "gutom"
+    },
+    "raid": {
+      "en": "wounds from battle",
+      "fil": "sugat sa labanan"
+    },
+    "mourning": {
+      "en": "The barangay is mourning: {time} left.",
+      "fil": "Nagluluksa ang barangay: {time} pa."
+    },
+    "sickWarning": {
+      "en": "The sickness has lasted long. Without a healer, someone may die.",
+      "fil": "Matagal na ang sakit. Kung walang manggagamot, may maaaring mamatay."
+    },
+    "hungerWarning": {
+      "en": "Families have left. If the hunger goes on, people will die.",
+      "fil": "May mga pamilyang umalis na. Kapag nagpatuloy ang gutom, may mamamatay."
+    },
+    "remembered": {
+      "en": "The remembered",
+      "fil": "Ang mga inaalala"
+    },
+    "none": {
+      "en": "No one rests here yet.",
+      "fil": "Wala pang nakahimlay rito."
+    },
+    "others": {
+      "en": "and {count} more whose names were not recorded",
+      "fil": "at {count} pang iba na hindi naitala ang pangalan"
+    },
+    "jars": {
+      "en": "A burial cave facing the water, with jars",
+      "fil": "Kuweba ng libingan na nakaharap sa tubig, may mga banga"
+    },
+    "longon": {
+      "en": "A resting place with longon coffins",
+      "fil": "Pahingahan na may mga longon"
+    }
+  },
+  "datu": {
+    "title": {
+      "en": "Bahay ng Datu",
+      "fil": "Bahay ng Datu"
+    },
+    "level": {
+      "en": "Level {level} of {max}",
+      "fil": "Antas {level} sa {max}"
+    },
+    "bonus": {
+      "en": "+{production}% all production, +{influence}% influence with neighbors",
+      "fil": "+{production}% sa lahat ng produksyon, +{influence}% impluwensiya sa kapitbahay"
+    },
+    "upgrade": {
+      "en": "Raise to level {level}",
+      "fil": "Itaas sa antas {level}"
+    },
+    "max": {
+      "en": "The house stands at its greatest.",
+      "fil": "Nasa pinakamataas na antas na ang bahay."
+    },
+    "envoys": {
+      "en": "Trade envoys walk to the Bahay ng Datu",
+      "fil": "Lumalakad ang mga sugo ng kalakalan sa Bahay ng Datu"
+    },
+    "balangay": {
+      "en": "The Balangay dock (coming soon)",
+      "fil": "Ang daungan ng Balangay (malapit na)"
+    },
+    "alliances": {
+      "en": "Forming and joining alliances (coming soon)",
+      "fil": "Pagbuo at pagsali sa mga alyansa (malapit na)"
+    },
+    "unlocks": {
+      "en": "Unlocks: {what}",
+      "fil": "Nagbubukas: {what}"
+    },
+    "news": {
+      "en": "The Bahay ng Datu now stands at level {level}. {what}",
+      "fil": "Nasa antas {level} na ang Bahay ng Datu. {what}"
+    },
+    "close": {
+      "en": "Close",
+      "fil": "Isara"
     }
   }
 }

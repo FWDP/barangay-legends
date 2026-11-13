@@ -30,6 +30,19 @@ export function historyLine(h: HistoryEntry, content: Content, game: GameText, l
       const means = h.stage === 2 ? fill(game.forest.stage2[lang], { percent: content.rules.forest.riceWithheldPercent }) : game.forest.stage1[lang];
       return said ? `${said} ${means}` : means;
     }
+    case "died": {
+      const d = game.death;
+      if (h.cause === "raid" && !h.name) return fill(d.diedRaid[lang], { count: h.count ?? 1 });
+      const cause = h.cause === "age" || h.cause === "sickness" || h.cause === "hunger" || h.cause === "raid" ? d[h.cause][lang] : "";
+      return h.name ? fill(d.diedNamed[lang], { name: h.name, cause }) : fill(d.died[lang], { cause });
+    }
+    case "frail":
+      return fill(game.death.frail[lang], { name: h.name ?? "" });
+    case "datu": {
+      const lv = content.datuHouse?.datuHouse.levels.find((l) => l.level === h.level);
+      const what = lv?.unlocks ? fill(game.datu.unlocks[lang], { what: game.datu[lv.unlocks][lang] }) : "";
+      return fill(game.datu.news[lang], { level: h.level ?? 1, what }).trim();
+    }
     case "aklat":
       return fill(game.aklat.found[lang], { name: content.aklat.find((e) => e.id === h.entry)?.aklat.name[lang] ?? h.entry ?? "" });
     case "event": {

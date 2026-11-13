@@ -4,9 +4,10 @@
 // overflows. Tabs badge newly unlocked buildings; the adviser's or task's pick glows.
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { RESOURCES, type BuildingDef, type Content } from "../engine/content";
-import { buildingCost, canAfford, owned, roadCost, staffedBuildings, unreachableWorkplaces, type GameState } from "../engine/game";
+import { asCost, buildingCost, canAfford, owned, roadCost, staffedBuildings, unreachableWorkplaces, type GameState } from "../engine/game";
 import { isUnlocked } from "../engine/map";
-import { DAAN, itemsIn, missingFor, tabOfItem, tabsWithNew, unlockedIds, visibleTabs, type BuildTab } from "./buildMenu";
+import { maxDatuLevel, nextDatuLevel } from "../engine/datu";
+import { DAAN, DATU, itemsIn, missingFor, tabOfItem, tabsWithNew, unlockedIds, visibleTabs, type BuildTab } from "./buildMenu";
 import { bonusRuleText, costText, groveRuleText, RESOURCE_ICON } from "./format";
 import type { Lang } from "./settings";
 import { fill, type GameText } from "./uiContent";
@@ -70,20 +71,24 @@ interface Item {
   status: string[];
   recommended: boolean;
   selected: boolean;
+  /** The Bahay ng Datu card: its level, and the upgrade button's label (none at the top). */
+  datuLevel?: number;
+  upgradeLabel?: string;
 }
 
 /** Cost as icons, with any resource the barangay is short of in red. */
 function CostLine({ cost, have, suffix }: { cost: Record<string, number>; have: Record<string, number>; suffix?: string }) {
   const parts = RESOURCES.filter((r) => cost[r] > 0);
+  // Wraps onto two lines in a narrow card rather than spilling out of it.
   return (
-    <>
+    <span className="inline-flex flex-wrap justify-center gap-x-1">
       {parts.map((r) => (
         <span key={r} className={`whitespace-nowrap ${have[r] < cost[r] ? "text-red-700" : ""}`}>
-          {RESOURCE_ICON[r]} {cost[r]}{" "}
+          {RESOURCE_ICON[r]} {cost[r]}
         </span>
       ))}
       {suffix && <span className="font-normal">{suffix}</span>}
-    </>
+    </span>
   );
 }
 
@@ -99,8 +104,10 @@ export function BuildToolbar(props: {
   onRoad: () => void;
   /** Ids to glow (see buildMenu.recommended). */
   recommend: Set<string>;
+  /** Raise the Bahay ng Datu a level. */
+  onUpgradeDatu: () => void;
 }) {
-  const { state, content, game, lang, selected, onSelect, roadActive, onRoad, recommend } = props;
+  const { state, content, game, lang, selected, onSelect, roadActive, onRoad, recommend, onUpgradeDatu } = props;
   const t = game.build;
   const tabs = visibleTabs(content);
   const [tab, setTabState] = useState<BuildTab>(() => {
@@ -132,6 +139,35 @@ export function BuildToolbar(props: {
   const noPath = unreachableWorkplaces(state, content).reduce<Record<string, number>>((m, b) => ({ ...m, [b.type]: (m[b.type] ?? 0) + 1 }), {});
 
   const itemFor = (id: string): Item => {
+    if (id === DATU && content.datuHouse) {
+      const d = game.datu;
+      const next = nextDatuLevel(state, content);
+      const cost = asCost(next?.cost ?? {});
+      const ok = !!next && canAfford(state, cost);
+      const def = content.datuHouse.datuHouse;
+      return {
+        id,
+        icon: content.datuHouse.icon,
+        name: content.datuHouse.name,
+        count: null,
+        unlocked: true,
+        lockText: "",
+        affordable: ok,
+        costLine: next ? <CostLine cost={cost} have={state.resources} /> : <span>{fill(d.level[lang], { level: state.datuLevel, max: maxDatuLevel(content) })}</span>,
+        missing: next && !ok ? costText(Object.fromEntries(RESOURCES.filter((r) => state.resources[r] < cost[r]).map((r) => [r, Math.ceil(cost[r] - state.resources[r])]))) : "",
+        details: [
+          content.datuHouse.description,
+          fill(d.level[lang], { level: state.datuLevel, max: maxDatuLevel(content) }),
+          fill(d.bonus[lang], { production: (state.datuLevel - 1) * def.productionPercentPerLevel, influence: (state.datuLevel - 1) * def.influencePercentPerLevel }),
+          next ? `${fill(d.upgrade[lang], { level: next.level })}${next.unlocks ? ` · ${fill(d.unlocks[lang], { what: d[next.unlocks][lang] })}` : ""}` : d.max[lang],
+        ],
+        status: [],
+        recommended: recommend.has(id),
+        selected: false,
+        datuLevel: state.datuLevel,
+        upgradeLabel: next ? fill(d.upgrade[lang], { level: next.level }) : undefined,
+      };
+    }
     if (id === DAAN) {
       const cost = roadCost(content);
       const ok = canAfford(state, cost);
@@ -176,7 +212,8 @@ export function BuildToolbar(props: {
   };
 
   const pick = (it: Item) => {
-    if (it.id === DAAN) onRoad();
+    if (it.id === DATU) onUpgradeDatu();
+    else if (it.id === DAAN) onRoad();
     else onSelect(it.selected ? null : it.id);
   };
 
@@ -275,7 +312,7 @@ export function BuildToolbar(props: {
               <button
                 type="button"
                 data-build-card
-                disabled={!it.affordable && !it.selected}
+                disabled={!it.affordable && !it.selected && it.id !== DATU}
                 draggable={it.affordable && it.id !== DAAN}
                 aria-pressed={it.selected}
                 aria-label={
@@ -283,13 +320,17 @@ export function BuildToolbar(props: {
                     ? `${it.name}: ${it.lockText}`
                     : `${it.selected ? "Placing" : "Build"} ${it.name}${it.count !== null ? `, you have ${it.count}` : ""}${it.missing ? `. ${fill(t.need[lang], { missing: it.missing })}` : ""}`
                 }
-                onClick={() => {
+                onClick={(e) => {
                   if (pressed.current) {
                     pressed.current = false;
                     return;
                   }
-                  setDetails(null);
-                  pick(it);
+                  // The house is raised from its details, never by a stray tap.
+                  if (it.id === DATU) openDetails(it.id, e.currentTarget);
+                  else {
+                    setDetails(null);
+                    pick(it);
+                  }
                 }}
                 onPointerDown={(e) => {
                   if (e.pointerType !== "touch") return;
@@ -334,6 +375,7 @@ export function BuildToolbar(props: {
                 </span>
                 <span className="text-center font-display text-[12px] leading-tight text-amber-950 sm:text-sm">{it.name}</span>
                 {it.count !== null && <span className="text-[10px] leading-tight text-stone-600 sm:text-xs">× {it.count}</span>}
+                {it.datuLevel !== undefined && <span className="text-[10px] leading-tight text-stone-600 sm:text-xs">Lv {it.datuLevel}</span>}
                 <span
                   className={`mt-auto w-full rounded-md px-1 py-0.5 text-center text-[11px] leading-tight font-semibold sm:text-xs ${
                     !it.unlocked ? "bg-stone-700 text-stone-100" : it.affordable ? "bg-green-700 text-white [&_.text-red-700]:text-white" : "bg-stone-200 text-stone-600"
@@ -407,7 +449,7 @@ export function BuildToolbar(props: {
               }}
               className="game-btn border-2 border-green-950 bg-green-700 px-3 py-1 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {shown.id === DAAN ? t.layDaan[lang] : t.build[lang]}
+              {shown.id === DATU ? (shown.upgradeLabel ?? game.datu.max[lang]) : shown.id === DAAN ? t.layDaan[lang] : t.build[lang]}
             </button>
           </div>
           {shown.unlocked && shown.missing && <p className="mt-1 text-xs text-red-700">{fill(t.need[lang], { missing: shown.missing })}</p>}

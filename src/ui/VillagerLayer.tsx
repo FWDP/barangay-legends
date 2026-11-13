@@ -42,7 +42,9 @@ import {
   lootTarget,
   lootWalk,
   sailToLanding,
+  dockPoint,
 } from "./visitors";
+import { hasDatuUnlock } from "../engine/datu";
 import { raidLanding } from "../engine/border";
 
 /** A battle at the Kuta being shown right now (see App): who won, and when it ends (ms). */
@@ -115,7 +117,27 @@ export function useReducedMotion(): boolean {
   return reduced;
 }
 
-type Look = Role | "leaving" | "raider" | "looter";
+type Look = Role | "leaving" | "raider" | "looter" | "datu" | "envoy";
+
+/** How long a mourning marker stays where someone died. */
+const MARKER_MS = 12000;
+
+/** A mourning marker: a small candle on a mat of flowers. Gentle, never more. */
+function drawMarker(g: CanvasRenderingContext2D, x: number, y: number, tile: number) {
+  const s = Math.max(7, tile * 0.32);
+  g.globalAlpha = 0.9;
+  g.fillStyle = "#fef3c7";
+  g.beginPath();
+  g.ellipse(x, y, s * 0.28, s * 0.1, 0, 0, Math.PI * 2);
+  g.fill();
+  g.fillStyle = "#f5f5f4";
+  g.fillRect(x - s * 0.05, y - s * 0.4, s * 0.1, s * 0.36);
+  g.fillStyle = "#f59e0b";
+  g.beginPath();
+  g.ellipse(x, y - s * 0.48, s * 0.05, s * 0.09, 0, 0, Math.PI * 2);
+  g.fill();
+  g.globalAlpha = 1;
+}
 
 /** A small gold star over a named villager's head: tap them to hear their story. */
 function drawStar(g: CanvasRenderingContext2D, x: number, y: number, tile: number) {
@@ -163,7 +185,7 @@ function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, tile: num
 
   const top = y - s * 0.72 - bob;
   const raider = role === "raider" || role === "looter";
-  g.fillStyle = sick ? "#7c9a5a" : raider ? "#3b0a0a" : CLOTH[id % CLOTH.length];
+  g.fillStyle = sick ? "#7c9a5a" : raider ? "#3b0a0a" : role === "datu" ? "#7f1d1d" : role === "envoy" ? "#e7e5e4" : CLOTH[id % CLOTH.length];
   g.beginPath();
   g.roundRect(x - s * 0.17, top, s * 0.34, s * 0.44, s * 0.08);
   g.fill();
@@ -177,7 +199,22 @@ function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, tile: num
   g.arc(x, top - s * 0.15, s * 0.13, Math.PI, Math.PI * 2);
   g.fill();
 
-  if (role === "warrior") {
+  if (role === "datu") {
+    // The datu: a gold-trimmed putong and a gold sash, a little taller in the crowd.
+    g.fillStyle = "#facc15";
+    g.fillRect(x - s * 0.16, top - s * 0.24, s * 0.32, s * 0.09);
+    g.fillRect(x - s * 0.17, top + s * 0.14, s * 0.34, s * 0.06);
+    g.fillStyle = "#b91c1c";
+    g.beginPath();
+    g.moveTo(x + s * 0.12, top - s * 0.24);
+    g.lineTo(x + s * 0.26, top - s * 0.34);
+    g.lineTo(x + s * 0.16, top - s * 0.15);
+    g.fill();
+  } else if (role === "envoy") {
+    // An envoy carries a gift bundle.
+    g.fillStyle = "#a16207";
+    g.fillRect(x + s * 0.14, top + s * 0.08, s * 0.14, s * 0.14);
+  } else if (role === "warrior") {
     // A red putong (head cloth) and a spear.
     g.fillStyle = "#b91c1c";
     g.fillRect(x - s * 0.14, top - s * 0.2, s * 0.28, s * 0.06);
@@ -366,6 +403,10 @@ export function VillagerLayer(props: {
   const river = useRef<{ map: GameState["map"] | null; path: Point[] }>({ map: null, path: [] });
   const sprites = useRef(new Map<number, Villager>());
   const leavers = useRef<Leaver[]>([]);
+  // The datu walking their rounds, envoys coming to the Bahay ng Datu, and mourning markers.
+  const datu = useRef<Villager | null>(null);
+  const envoys = useRef<{ key: string; walkers: Villager[] } | null>(null);
+  const markers = useRef<{ p: Point; until: number }[]>([]);
   const before = useRef<GameState | null>(null);
   const started = useRef(false);
   const planned = useRef<{ state: GameState | null; rally: string; plans: VillagerPlan[]; named: Map<number, NamedVillager> }>({ state: null, rally: "", plans: [], named: new Map() });
@@ -379,17 +420,24 @@ export function VillagerLayer(props: {
     const now = presentVillagers(state);
     if (now >= was || reducedMotion) return;
     const goingAway = isHungry(prev) || state.hunger > 0 || overcrowded(prev, content) > 0;
+    // Those who died: the sprite stops, and a small mourning marker stays a while. No one walks off.
+    let died = Math.max(0, state.stats.deaths - prev.stats.deaths);
     for (let k = now; k < was; k++) {
       const id = Math.min(k, MAX_SPRITES - 1);
       const from = sprites.current.get(id);
       if (k < MAX_SPRITES) sprites.current.delete(id);
+      if (died > 0) {
+        died--;
+        markers.current.push({ p: from ? { ...from.p } : { x: state.map.plaza.x + 0.5, y: state.map.plaza.y + 0.8 }, until: performance.now() + MARKER_MS });
+        continue;
+      }
       if (!goingAway || !from || leavers.current.length > 12) continue;
       // Off the map by the nearest walkable edge, never across the river.
       const edge = edgeTile(state.map, from.p);
       const off = exitPoint({ x: edge.x + 0.5, y: edge.y + 0.5 }, state.map);
       leavers.current.push({ id: id + 1000 + leavers.current.length, p: { ...from.p }, moving: true, stride: 0, to: off, walker: { ...newWalker(from.p), route: [] } });
     }
-  }, [state.villagers, state.warriors, reducedMotion]);
+  }, [state.villagers, state.warriors, state.stats.deaths, reducedMotion]);
 
   useEffect(() => {
     const el = canvas.current;
@@ -642,6 +690,62 @@ export function VillagerLayer(props: {
         if (at) drawn.push({ x: at.x, y: at.y, f: () => drawPerson(g, at.x, at.y, T, l.id, "leaving", l, t) });
         return step.moving;
       });
+
+      // ---- The datu: from the plaza to the fields, the Dambana and back; at the plaza by night ----
+      {
+        const fields = s.buildings.filter((b) => (content.buildings.find((d) => d.id === b.type)?.produces?.rice ?? 0) > 0);
+        const shrine = s.buildings.find((b) => content.buildings.find((d) => d.id === b.type)?.shrine);
+        const stops: Point[] = [plaza, ...(fields.length ? [fields[0]] : []), ...(shrine ? [shrine] : []), plaza];
+        const leg = Math.floor(t / 25) % stops.length;
+        const stop = night ? plaza : stops[leg];
+        const to = { x: stop.x + 0.5, y: stop.y + (stop === plaza ? 0.95 : 0.7) };
+        const d0 = datu.current ?? { p: to, moving: false, stride: 0, walker: newWalker(to) };
+        if (reducedMotion) {
+          d0.p = to;
+          d0.moving = false;
+        } else {
+          d0.walker = stepWalker({ ...d0.walker, p: d0.p }, to, s.map, SPEED.idle, dt, roadSpeed);
+          d0.p = d0.walker.p;
+          d0.moving = d0.walker.moving;
+          if (d0.moving) {
+            d0.stride += dt * 9;
+            animating = true;
+          }
+        }
+        datu.current = d0;
+        const at = visible(d0.p);
+        if (at) drawn.push({ x: at.x, y: at.y, f: () => drawPerson(g, at.x, at.y, T, 9000, "datu", d0, t) });
+      }
+      // ---- Envoys (Bahay ng Datu level 2+): from the docked bangka to the house, visual only ----
+      const offerNow = s.region?.offer ?? null;
+      const docked = offerNow && boat.current && !boat.current.leftAt && !boat.current.hold && hasDatuUnlock(s, content, "envoys");
+      if (docked && path.length > 2) {
+        const key = `${offerNow.from}@${offerNow.expiresAt}`;
+        const start = dockPoint(path, plaza);
+        if (envoys.current?.key !== key) envoys.current = { key, walkers: [0, 1].map((i) => ({ p: { x: start.x + i * 0.2, y: start.y }, moving: true, stride: i, walker: newWalker({ x: start.x + i * 0.2, y: start.y }) })) };
+        envoys.current.walkers.forEach((w, i) => {
+          const to = { x: plaza.x + 0.25 + i * 0.5, y: plaza.y + 1.1 };
+          if (reducedMotion) w.p = to;
+          else {
+            w.walker = stepWalker({ ...w.walker, p: w.p }, to, s.map, SPEED.work, dt, roadSpeed);
+            w.p = w.walker.p;
+            w.moving = w.walker.moving;
+            if (w.moving) {
+              w.stride += dt * 9;
+              animating = true;
+            }
+          }
+          const at = visible(w.p);
+          if (at) drawn.push({ x: at.x, y: at.y, f: () => drawPerson(g, at.x, at.y, T, 9100 + i, "envoy", w, t) });
+        });
+      } else envoys.current = null;
+      // ---- Mourning markers where someone died ----
+      markers.current = markers.current.filter((m) => m.until > now);
+      for (const m of markers.current) {
+        const at = visible(m.p);
+        if (at) drawn.push({ x: at.x, y: at.y, f: () => drawMarker(g, at.x, at.y, T) });
+      }
+      if (markers.current.length) animating = true;
 
       started.current = true;
       const scene = `${o.x},${o.y},${T},${v.w},${v.h},${night},${drawn.length}`;

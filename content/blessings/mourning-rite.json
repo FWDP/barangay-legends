@@ -1,0 +1,23 @@
+{
+  "id": "mourning-rite",
+  "type": "ritual",
+  "name": {
+    "en": "Rite for the departed",
+    "fil": "Ritwal para sa yumao"
+  },
+  "description": {
+    "en": "The babaylan leads a rite for those who have died. The barangay's mourning eases sooner.",
+    "fil": "Pinangungunahan ng babaylan ang ritwal para sa mga yumao. Mas maagang gumagaan ang pagluluksa ng barangay."
+  },
+  "favorCost": 15,
+  "cooldownSeconds": 0,
+  "mourningShortenPercent": 50,
+  "forestRestore": 0,
+  "lore": "babaylan",
+  "tradition": "Widespread in the precolonial Philippines",
+  "reviewed": false,
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Juan de Plasencia, Customs of the Tagalogs (1589), in Blair and Robertson, The Philippine Islands 1493–1898, vol. 7"
+  ]
+}

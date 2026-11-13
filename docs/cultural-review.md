@@ -36,6 +36,18 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 6. **Game mechanics on sacred themes**: blessings are bought with Favor earned by offerings. Is
    this framing respectful enough? (Bathala is never part of it.)
 
+7. **Libingan looks**: the Tagalog tradition shows burial jars and the Visayan one longon
+   coffins. Is jar burial a fair default for the Tagalog barangay, or should it be wooden
+   coffins after Plasencia? The Maranao tradition shows jars only because the game must not
+   depict the living community's burial practice; please advise. The game never uses the
+   hanging coffins of Sagada or any living community's current practices.
+8. **Archaeology in a game**: the Manunggul and Maitum jars are national treasures from far
+   older times than the game's barangays. They appear only in the Aklat and as the look of the
+   Libingan. Is that respectful, and is the dating in the lore text right?
+9. **Death and mourning**: villagers can die (old age after a warning, long sickness without a
+   healer, hunger after families have left, battle). It is shown gently: a small candle where
+   they were, a line from the adviser, their name remembered at the Libingan.
+
 ### Entries
 
 | File | Kind | Tradition | Sources given |
@@ -63,6 +75,11 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 | content/lore/bakunawa.json | Aklat entry | Visayan | Scott; Eugenio 1993 |
 | content/lore/karakoa.json | Aklat entry | Visayan | Scott |
 | content/blessings/kapres-grove.json | Passive blessing | Tagalog and lowland | Ramos 1971 |
+| content/buildings/libingan.json | Building (resting place) | Widespread | Scott; Fox 1970; Wikipedia: Manunggul Jar |
+| content/blessings/mourning-rite.json | Ritual (rite for the departed) | Widespread | Scott; Plasencia |
+| content/lore/burial-jars.json | Aklat entry (Manunggul and Maitum jars) | Archaeological (Palawan; Sarangani) | Fox 1970; Dizon and Santiago 1996; Wikipedia |
+| content/lore/longon.json | Aklat entry (longon coffins) | Visayan | Scott; Boxer Codex |
+| content/traditions/*.json "burialLook" | How each tradition's Libingan looks | Tagalog: jars, Visayan: longon, Maranao: jars | see questions 7–8 |
 
 ## Reviewed
 

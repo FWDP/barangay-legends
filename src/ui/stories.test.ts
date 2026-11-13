@@ -232,3 +232,20 @@ describe("worship and the spirits in words", () => {
     expect(m.message).toMatchObject({ kind: "news", text: "New in the Aklat ng Alamat: Babaylan" });
   });
 });
+
+describe("deaths and the Bahay ng Datu in words", () => {
+  it("tells deaths gently, frailty as a warning, and each new level with its unlock", () => {
+    expect(historyLine({ at: 1, kind: "died", cause: "age", name: "Diwa" }, content, game, "en")).toBe("Diwa died of old age. The barangay remembers them.");
+    expect(historyLine({ at: 1, kind: "died", cause: "hunger" }, content, game, "en")).toBe("One of our people died of hunger.");
+    expect(historyLine({ at: 1, kind: "died", cause: "raid", count: 2 }, content, game, "en")).toBe("2 of our warriors fell in battle.");
+    expect(historyLine({ at: 1, kind: "frail", name: "Diwa" }, content, game, "en")).toBe("Diwa has grown old and frail.");
+    expect(historyLine({ at: 1, kind: "datu", level: 3 }, content, game, "en")).toContain("Balangay dock (coming soon)");
+    expect(historyLine({ at: 1, kind: "datu", level: 5 }, content, game, "en")).toBe("The Bahay ng Datu now stands at level 5.");
+  });
+
+  it("lists the dead by name in the away story", () => {
+    const before = fresh({ time: 100 });
+    const after = { ...before, time: 300, history: [{ at: 200, kind: "died" as const, cause: "sickness" as const, name: "Ulan" }] };
+    expect(awayPeopleLines(before, after, content, game, "en")).toEqual(["Ulan died of a long sickness. The barangay remembers them."]);
+  });
+});

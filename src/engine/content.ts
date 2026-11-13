@@ -52,6 +52,10 @@ export interface BuildingDef {
   shrine?: boolean;
   /** It must stand within `radius` tiles (straight line) of a standing building of this type. */
   requiresNear?: { building: string; radius: number };
+  /** The Bahay ng Datu: one house at the plaza, raised level by level (never placed like others). */
+  datuHouse?: DatuHouseDef;
+  /** A resting place for the dead (the Libingan): mourning passes this much faster with one. */
+  burial?: { mourningPercentFaster: number };
   /** Available from the start, or once the barangay has this many villagers. */
   unlock: { start?: boolean; villagers?: number };
   sources: string[];
@@ -84,6 +88,8 @@ export interface Rules {
   dayNight: { daySeconds: number; nightFrom: number; nightTo: number };
   worship: WorshipRules;
   forest: ForestRules;
+  death: DeathRules;
+  mourning: { seconds: number; maxSeconds: number; happiness: number };
   /** Rice the barangay holds with no Kamalig. */
   storage: { baseRice: number };
   happiness: HappinessRules;
@@ -100,6 +106,25 @@ export interface HappinessRules {
   hungry: number;
   perSick: number;
   maxFromSick: number;
+}
+
+/** What raising the Bahay ng Datu to a level unlocks. */
+export const DATU_UNLOCKS = ["envoys", "balangay", "alliances"] as const;
+export type DatuUnlock = (typeof DATU_UNLOCKS)[number];
+
+export interface DatuHouseDef {
+  /** All production +percent for each level above 1. */
+  productionPercentPerLevel: number;
+  /** Influence gained with neighbors +percent for each level above 1. */
+  influencePercentPerLevel: number;
+  /** Level 1 first (it stands from the start); each later level has the cost of raising it. */
+  levels: { level: number; cost?: ResourceAmounts; unlocks?: DatuUnlock }[];
+}
+
+export interface DeathRules {
+  oldAge: { frailAfterSeconds: number; chancePerSecond: number };
+  sickness: { warnAfterSeconds: number; afterSeconds: number; chancePerSecond: number };
+  hunger: { afterSeconds: number; everySeconds: number };
 }
 
 export interface WorshipRules {
@@ -151,6 +176,8 @@ export interface TraditionDef extends Heritage {
   beings: string[];
   rituals: { offering: Text; permission: Text; healer: Text };
   burial: Text;
+  /** How its Libingan looks: a burial cave with jars, or longon coffins. */
+  burialLook: "jars" | "longon";
   forestSpirit: { name: Text; stage1: Text; stage2: Text; sources: string[] };
   /** How much more often the Sarimanok visits (1 = the base rate). */
   sarimanokChance: number;
@@ -171,6 +198,8 @@ export interface RitualDef extends Heritage {
   riceMinutes?: number;
   /** Forest Balance restored. */
   forestRestore: number;
+  /** Mourning: this share of what's left of it passes at once. */
+  mourningShortenPercent?: number;
   lore?: string;
 }
 
@@ -237,6 +266,7 @@ export type AklatUnlock =
   | { type: "flag"; flag: string }
   | { type: "tradition"; tradition: string }
   | { type: "report"; kind: string }
+  | { type: "burial"; look: "jars" | "longon" }
   | { type: "any"; of: AklatUnlock[] };
 
 export interface AklatDef {
@@ -278,9 +308,10 @@ export type QuestCondition =
   | { type: "tributaries"; count: number }
   | { type: "aklat"; count: number }
   | { type: "replanted"; count: number }
-  | { type: "permittedClears"; count: number };
+  | { type: "permittedClears"; count: number }
+  | { type: "datuLevel"; count: number };
 
-export const QUEST_CONDITIONS = ["built", "villagers", "tilesCleared", "connected", "survivedSeason", "traded", "warriors", "raidsDefended", "tributaries", "aklat", "replanted", "permittedClears"] as const;
+export const QUEST_CONDITIONS = ["built", "villagers", "tilesCleared", "connected", "survivedSeason", "traded", "warriors", "raidsDefended", "tributaries", "aklat", "replanted", "permittedClears", "datuLevel"] as const;
 
 /** One of the Mga Gawain: a task in a chain, with a reward (resources and/or a title for the datu). */
 export interface QuestDef {
@@ -683,6 +714,8 @@ export interface Content {
   trickery: TrickeryDef | null;
   /** Aklat ng Alamat entries, in book order. */
   aklat: AklatEntry[];
+  /** The Bahay ng Datu (from content/buildings, kept out of `buildings`: it is never placed). */
+  datuHouse: (BuildingDef & { datuHouse: DatuHouseDef }) | null;
   /** Set for AI barangays' content: no Forest Balance, Aklat or visitors for them. */
   ai?: boolean;
 }
@@ -755,6 +788,17 @@ export function validateBuilding(raw: unknown, file = "building"): BuildingDef {
     throw new Error(`${file}: "placeNextTo" must list terrains (${TERRAINS.join(", ")})`);
   }
   if (raw.storage !== undefined) checkAmounts(raw.storage, `${file}: storage`);
+  if (raw.burial !== undefined && (!isObject(raw.burial) || !isNonNegNumber(raw.burial.mourningPercentFaster))) throw new Error(`${file}: "burial.mourningPercentFaster" must be a number >= 0`);
+  if (raw.datuHouse !== undefined) {
+    const d = raw.datuHouse;
+    if (!isObject(d) || !Array.isArray(d.levels) || d.levels.length === 0) throw new Error(`${file}: "datuHouse.levels" must list the levels`);
+    checkNumbers(d, ["productionPercentPerLevel", "influencePercentPerLevel"], `${file}: datuHouse`);
+    d.levels.forEach((l, i) => {
+      if (!isObject(l) || l.level !== i + 1) throw new Error(`${file}: datuHouse.levels must run 1, 2, 3… in order`);
+      if (i > 0) checkAmounts(l.cost, `${file}: datuHouse level ${i + 1} cost`);
+      if (l.unlocks !== undefined && !(DATU_UNLOCKS as readonly unknown[]).includes(l.unlocks)) throw new Error(`${file}: unknown unlock "${String(l.unlocks)}"`);
+    });
+  }
   if (!isObject(raw.unlock)) throw new Error(`${file}: "unlock" must be an object`);
   if (raw.unlock.villagers !== undefined && !isNonNegNumber(raw.unlock.villagers)) {
     throw new Error(`${file}: "unlock.villagers" must be a number >= 0`);
@@ -911,6 +955,15 @@ export function validateRules(raw: unknown): Rules {
     ["start", "perTile", "perTileNearBalete", "baleteRadius", "baleteFelled", "quietSeconds", "recoveryPerMinute", "recoveryPerForestShare", "recoveryPerBalete", "stage1Below", "stage2Below", "prankChancePerSecond", "prankSeconds", "riceWithheldPercent", "sicknessPercent"],
     "rules: forest",
   );
+  const dt = raw.death;
+  if (!isObject(dt) || !isObject(dt.oldAge) || !isObject(dt.sickness) || !isObject(dt.hunger)) throw new Error('rules: "death" needs oldAge, sickness and hunger');
+  checkNumbers(dt.oldAge, ["frailAfterSeconds", "chancePerSecond"], "rules: death.oldAge");
+  checkNumbers(dt.sickness, ["warnAfterSeconds", "afterSeconds", "chancePerSecond"], "rules: death.sickness");
+  checkNumbers(dt.hunger, ["afterSeconds", "everySeconds"], "rules: death.hunger", true);
+  const mo = raw.mourning;
+  if (!isObject(mo)) throw new Error('rules: missing "mourning"');
+  checkNumbers(mo, ["seconds", "maxSeconds"], "rules: mourning");
+  if (typeof mo.happiness !== "number" || mo.happiness > 0) throw new Error('rules: "mourning.happiness" must be 0 or below');
   if (!isObject(f.replant)) throw new Error('rules: missing "forest.replant"');
   checkAmounts(f.replant.cost, "rules: forest.replant.cost");
   checkNumbers(f.replant, ["seconds", "balance"], "rules: forest.replant", true);
@@ -1203,6 +1256,7 @@ export function validateTradition(raw: unknown, file = "tradition"): TraditionDe
   for (const k of ["name", "stage1", "stage2"]) checkText(fs[k], `${file}: forestSpirit.${k}`);
   if (!Array.isArray(fs.sources) || fs.sources.length === 0) throw new Error(`${file}: forestSpirit needs a source`);
   checkNumbers(raw, ["sarimanokChance"], file);
+  if (raw.burialLook !== "jars" && raw.burialLook !== "longon") throw new Error(`${file}: "burialLook" must be "jars" or "longon"`);
   return raw as unknown as TraditionDef;
 }
 
@@ -1225,7 +1279,10 @@ export function validateBlessing(raw: unknown, file = "blessing"): Blessing {
       checkNumbers(raw, ["favorCost", "cooldownSeconds", "forestRestore"], file);
       if (raw.productionPercent !== undefined) checkNumbers(raw, ["productionPercent", "durationSeconds"], file, true);
       if (raw.riceMinutes !== undefined) checkNumbers(raw, ["riceMinutes"], file, true);
-      if (raw.productionPercent === undefined && raw.riceMinutes === undefined) throw new Error(`${file}: a ritual needs "productionPercent" or "riceMinutes"`);
+      if (raw.mourningShortenPercent !== undefined && (!isNonNegNumber(raw.mourningShortenPercent) || raw.mourningShortenPercent > 100)) throw new Error(`${file}: "mourningShortenPercent" must be 0–100`);
+      if (raw.productionPercent === undefined && raw.riceMinutes === undefined && raw.mourningShortenPercent === undefined) {
+        throw new Error(`${file}: a ritual needs "productionPercent", "riceMinutes" or "mourningShortenPercent"`);
+      }
       return raw as unknown as RitualDef;
     case "visitor": {
       checkNumbers(raw, ["chancePerSecond", "minVillagers", "visibleSeconds", "cooldownSeconds"], file);
@@ -1263,7 +1320,7 @@ export function validateBlessing(raw: unknown, file = "blessing"): Blessing {
   }
 }
 
-const UNLOCK_TYPES = ["built", "near", "grove", "path", "flag", "tradition", "report", "any"];
+const UNLOCK_TYPES = ["built", "near", "grove", "path", "flag", "tradition", "report", "burial", "any"];
 
 function checkUnlock(u: unknown, where: string, ctx: { buildings: Set<string> }): void {
   if (!isObject(u) || !UNLOCK_TYPES.includes(u.type as string)) throw new Error(`${where}: "unlock.type" must be one of ${UNLOCK_TYPES.join(", ")}`);
@@ -1272,6 +1329,7 @@ function checkUnlock(u: unknown, where: string, ctx: { buildings: Set<string> })
   for (const k of ["path", "flag", "tradition", "kind"] as const) {
     if (u.type === (k === "kind" ? "report" : k) && (typeof u[k] !== "string" || u[k] === "")) throw new Error(`${where}: "${u.type}" needs "${k}"`);
   }
+  if (u.type === "burial" && u.look !== "jars" && u.look !== "longon") throw new Error(`${where}: "burial" needs look "jars" or "longon"`);
   if (u.type === "any") {
     if (!Array.isArray(u.of) || u.of.length === 0) throw new Error(`${where}: "any" needs a list in "of"`);
     for (const x of u.of) checkUnlock(x, where, ctx);
@@ -1301,10 +1359,15 @@ export function buildContent(
   choiceFiles: Record<string, unknown> = {},
   extra: { quests?: Record<string, unknown>; villagers?: unknown; names?: unknown; traditions?: Record<string, unknown> } = {},
 ): Content {
-  const buildings = Object.entries(buildingFiles)
+  const all = Object.entries(buildingFiles)
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([file, raw]) => validateBuilding(raw, file))
     .sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
+  // The Bahay ng Datu is one house at the plaza, raised by level: kept apart from what can be placed.
+  const houses = all.filter((b) => b.datuHouse);
+  if (houses.length > 1) throw new Error("Only one building may be the Bahay ng Datu");
+  const datuHouse = (houses[0] as (BuildingDef & { datuHouse: DatuHouseDef }) | undefined) ?? null;
+  const buildings = all.filter((b) => !b.datuHouse);
   const ids = new Set<string>();
   for (const b of buildings) {
     if (ids.has(b.id)) throw new Error(`Duplicate building id "${b.id}"`);
@@ -1409,7 +1472,7 @@ export function buildContent(
     seasonIds,
   );
   const villagers = validateVillagers(extra.villagers, extra.names, ids);
-  return { buildings, rules, events, lore, groves, neighbors, choices, quests, villagers, traditions, rituals, visitor, eclipse, trickery, aklat };
+  return { buildings, rules, events, lore, groves, neighbors, choices, quests, villagers, traditions, rituals, visitor, eclipse, trickery, aklat, datuHouse };
 }
 
 /** Loads every JSON file in content/ at build time (Vite bundles them). */

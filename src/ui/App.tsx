@@ -30,7 +30,7 @@ import { BOAT_RETURN_MS, CLASH_MS, SAIL_SECONDS } from "./visitors";
 import { tradingPaused } from "../engine/region";
 import type { GameState } from "../engine/game";
 import type { NamedVillager } from "../engine/people";
-import { GawainPanel, HistoryDialog, VillagerDialog } from "./Gawain";
+import { DatuDialog, GawainPanel, HistoryDialog, RememberedDialog, VillagerDialog } from "./Gawain";
 import { shareBarangay } from "./share";
 import { awayPeopleLines, battleNames } from "./stories";
 import { AklatButton, AklatDialog, DambanaDialog, EclipseBar, ForestChip, PrankBar, ReplantBar, TikbalangBar } from "./Spirits";
@@ -369,6 +369,13 @@ export function App() {
   const [aklatOpen, setAklatOpen] = useState(false);
   const [ritual, setRitual] = useState<{ x: number; y: number; icon: string } | null>(null);
   const [replantAsk, setReplantAsk] = useState<{ x: number; y: number } | null>(null);
+  // The Bahay ng Datu, and the Libingan's list of the remembered.
+  const [datuOpen, setDatuOpen] = useState(false);
+  const [rememberedOpen, setRememberedOpen] = useState(false);
+  const upgradeDatu = () => {
+    dispatch({ type: "upgradeDatu" });
+    sfx.build();
+  };
   const ritualTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playRitual = (icon: string) => {
     const at = standingShrine(state, content);
@@ -474,6 +481,8 @@ export function App() {
       historyOpen ||
       dambanaOpen ||
       aklatOpen ||
+      datuOpen ||
+      rememberedOpen ||
       // The eclipse and the tikbalang's riddle need the player's taps: no talking over them.
       state.eclipse !== null ||
       (state.tikbalang !== null && !state.tikbalang.wrong),
@@ -598,6 +607,12 @@ export function App() {
       return;
     }
     const tile = tileAt(state.map, x, y);
+    // The plaza: the Bahay ng Datu.
+    if (isPlaza(state.map, x, y)) {
+      sfx.click();
+      setDatuOpen(true);
+      return;
+    }
     // Empty cleared land (or land growing back): offer to replant it.
     if (tile === "cleared" && !isPlaza(state.map, x, y) && (canReplant(state, x, y) || state.replanting.some((j) => j.x === x && j.y === y))) {
       sfx.click();
@@ -983,6 +998,7 @@ export function App() {
           game={ui.game}
           lang={lang}
           recommend={recommended(state, content, advisor.message?.kind === "tip" ? advisor.message.trigger : null)}
+          onUpgradeDatu={upgradeDatu}
           selected={selected}
           roadActive={roadMode}
           onRoad={() => {
@@ -1025,7 +1041,13 @@ export function App() {
           setMenu(null);
           setDambanaOpen(true);
         }}
+        onRemembered={() => {
+          setMenu(null);
+          setRememberedOpen(true);
+        }}
       />
+      <DatuDialog open={datuOpen} state={state} content={content} game={ui.game} lang={lang} onUpgrade={upgradeDatu} onClose={() => setDatuOpen(false)} />
+      <RememberedDialog open={rememberedOpen} state={state} content={content} game={ui.game} lang={lang} onClose={() => setRememberedOpen(false)} />
       <DambanaDialog
         open={dambanaOpen}
         state={state}

@@ -11,6 +11,8 @@ export const OTHER_TAB = "iba";
 export type BuildTab = (typeof BUILD_TABS)[number] | typeof OTHER_TAB;
 /** The Daan footpath tool is not a building, but it sits in the paths tab. */
 export const DAAN = "daan-tool";
+/** The Bahay ng Datu's upgrade card: under its own category (Tirahan). */
+export const DATU = "datu-house";
 export const DAAN_TAB: BuildTab = "daan";
 
 export function tabOf(def: BuildingDef): BuildTab {
@@ -25,11 +27,13 @@ export function visibleTabs(content: Content): BuildTab[] {
 /** Card ids in a tab, in menu order (the Daan tool last in its tab). */
 export function itemsIn(content: Content, tab: BuildTab): string[] {
   const ids = content.buildings.filter((b) => tabOf(b) === tab).map((b) => b.id);
-  return tab === DAAN_TAB ? [...ids, DAAN] : ids;
+  const house = content.datuHouse && tabOf(content.datuHouse) === tab ? [DATU] : [];
+  return tab === DAAN_TAB ? [...house, ...ids, DAAN] : [...house, ...ids];
 }
 
 export const tabOfItem = (content: Content, id: string): BuildTab => {
   if (id === DAAN) return DAAN_TAB;
+  if (id === DATU && content.datuHouse) return tabOf(content.datuHouse);
   const def = content.buildings.find((b) => b.id === id);
   return def ? tabOf(def) : OTHER_TAB;
 };
@@ -43,6 +47,7 @@ export function recommended(state: GameState, content: Content, adviserTrigger: 
   const task = currentTask(state, content);
   if (task?.condition.type === "built") out.add(task.condition.building);
   if (task?.condition.type === "connected") out.add(DAAN);
+  if (task?.condition.type === "datuLevel" && state.datuLevel < task.condition.count) out.add(DATU);
   const rice = content.buildings.filter((b) => (b.produces?.rice ?? 0) > 0).map((b) => b.id);
   switch (adviserTrigger) {
     case "dambana":

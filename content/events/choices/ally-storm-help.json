@@ -2,7 +2,7 @@
   "id": "ally-storm-help",
   "title": "Your sandugo ally asks for help",
   "icon": "🩸",
-  "story": "A messenger from {neighbor} arrives soaked from the river. A storm has torn the roofs from their houses, and {datu} asks for timber, as one bound to you by blood.",
+  "story": "A messenger from {neighbor} arrives at the Bahay ng Datu, soaked from the river. A storm has torn the roofs from their houses, and {datu} asks for timber, as one bound to you by blood.",
   "conditions": { "allied": true },
   "choices": [
     {

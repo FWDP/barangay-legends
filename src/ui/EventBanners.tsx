@@ -2,6 +2,7 @@ import { directionFrom, raidLanding } from "../engine/border";
 import type { Content } from "../engine/content";
 import { barangayCenter } from "../engine/map";
 import { healRate, isBurning, seasonAt, secondsUntilLeaving } from "../engine/events";
+import { hungerDeathAt, sicknessWarning } from "../engine/death";
 import { overcrowded, type GameState } from "../engine/game";
 
 export interface Banner {
@@ -68,7 +69,9 @@ export function activeBanners(state: GameState, content: Content): Banner[] {
       text:
         leaving > 0
           ? `Nobody can work. Gather rice! Families leave in ${Math.ceil(leaving)}s.`
-          : `A family leaves every ${hunger.secondsPerVillagerLeaving}s. Gather rice!`,
+          : state.hunger < hungerDeathAt(content)
+            ? `A family leaves every ${hunger.secondsPerVillagerLeaving}s. If the hunger goes on, people will die in ${Math.ceil(hungerDeathAt(content) - state.hunger)}s. Gather rice!`
+            : `Families have left and people are dying. Gather rice!`,
       tone: "danger",
     });
   }
@@ -87,11 +90,14 @@ export function activeBanners(state: GameState, content: Content): Banner[] {
     const healer = content.buildings.find((b) => b.heals);
     const longest = Math.max(...state.sick) / healRate(state, content);
     const sickName = state.named.find((v) => v.sick)?.name;
+    const lingering = sicknessWarning(state, content);
     banners.push({
       id: "sickness",
       icon: sickness.icon,
       title: `${sickness.name}: ${state.sick.length} sick`,
-      text: `${sickName ? `${sickName} is among them: they` : "They"} can't work. All well in ${clock(longest)}.${healer ? ` A ${healer.name} heals faster.` : ""}`,
+      text: lingering
+        ? `It has lasted long: without a healer, someone may die.${healer ? ` Build a ${healer.name}.` : ""}`
+        : `${sickName ? `${sickName} is among them: they` : "They"} can't work. All well in ${clock(longest)}.${healer ? ` A ${healer.name} heals faster.` : ""}`,
       tone: "warning",
     });
   }
@@ -112,6 +118,16 @@ export function activeBanners(state: GameState, content: Content): Banner[] {
       icon: season.season.icon,
       title: season.season.name,
       text: season.season.description,
+      tone: "info",
+    });
+  }
+  // Mourning: gentle, and only while nothing more urgent is showing.
+  if (state.mourning > 0 && banners.length === 0) {
+    banners.push({
+      id: "mourning",
+      icon: "🕯️",
+      title: "Mourning",
+      text: `The barangay mourns its dead: ${clock(state.mourning)} left.${state.buildings.some((b) => content.buildings.find((d) => d.id === b.type)?.burial) ? "" : " A Libingan helps it pass."} A rite at the Dambana eases it.`,
       tone: "info",
     });
   }
