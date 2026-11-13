@@ -6,13 +6,13 @@
 // server can run it for real players later.
 import type { Content } from "./content";
 import type { GameState } from "./game";
-import { borderDefense, chooseLanding, type Muster } from "./border";
+import { borderDefense, chooseLanding, closestLandings, kutaCovers, type Muster } from "./border";
 import type { Point } from "./map";
 import { dayAt } from "./daynight";
 import { blocOf } from "./politics";
 import { sameIsland, travelSeconds } from "./archipelago";
 import { attackOf, defenseOf, homeWarriors, neighborDef, resolveBattle, type AllyDefender, type BattleResult, type NeighborState, type RegionState } from "./region";
-import { generateVillage } from "./village";
+import { cachedVillage } from "./village";
 
 export interface BorderBattle {
   landing: Point | null;
@@ -91,9 +91,33 @@ export function raidSetup(state: GameState, content: Content, id: string): { vil
   const target = region?.neighbors.find((n) => n.id === id);
   const def = neighborDef(content, id);
   if (!region || !target || !def) return null;
-  const village = { ...generateVillage(content, target, def, state.time), warriors: target.state.warriors };
+  // The cached village (the same one a visit shows), at the current time.
+  const village = { ...cachedVillage(content, target, def), time: state.time, warriors: target.state.warriors };
   const landing = playerRaidLanding(village, content, raidKey(state, content));
   const bloc = blocOf(region.politics, id);
   const mates = bloc ? region.neighbors.filter((n) => bloc.members.includes(n.id) && n.id !== state.barangay.id) : [];
   return { village, landing, allies: alliesComing(region, content, id, mates) };
+}
+
+/** What the diplomacy panel shows about raiding a neighbor, from the same rules as the raid. */
+export interface RaidOutlook {
+  /** Where a raid today would land (the visit preview's landing), or null. */
+  landing: Point | null;
+  /** The defense there: the base, defenders who'd get there in time, the Kutas after their radius, allies in time. */
+  defense: number;
+  /** Of the landing points a raid can pick from, how many a standing Kuta covers in full. */
+  covered: number;
+  points: number;
+}
+
+/** The defense a raid on neighbor `id` would meet today, and how much of their shore their Kutas cover. */
+export function raidOutlook(state: GameState, content: Content, id: string): RaidOutlook | null {
+  const setup = raidSetup(state, content, id);
+  if (!setup) return null;
+  // The battle function itself, with no attackers: only its defense is read.
+  const fight = borderBattle(setup.village, content, setup.landing, 0, setup.allies, 0);
+  const points = closestLandings(setup.village.map, content.rules.diplomacy.aiRaid.landingChoices);
+  const forts = setup.village.buildings.filter((b) => (content.buildings.find((d) => d.id === b.type)?.defense ?? 0) > 0 && !b.damaged);
+  const covered = points.filter((p) => forts.some((k) => kutaCovers(content, k, p))).length;
+  return { landing: setup.landing, defense: fight.defense, covered, points: points.length };
 }

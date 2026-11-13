@@ -157,16 +157,12 @@ export interface KabantuganRules {
 export interface VillageBand {
   minLevel: number;
   datuLevel: number;
-  clearRadius: number;
-  maxBuildings: number;
-  kuta: number;
   kamalig: number;
   fishingDocks: number;
   shrine: boolean;
   libingan: boolean;
   balangayDock: boolean;
   roads: boolean;
-  plazaRing: boolean;
   housePaths: number;
 }
 
@@ -1106,8 +1102,8 @@ export function validateRules(raw: unknown): Rules {
   if (!Array.isArray(vb) || vb.length === 0) throw new Error('rules: "villages.bands" must list village bands');
   vb.forEach((b, i) => {
     if (!isObject(b)) throw new Error(`rules: villages.bands[${i}] must be an object`);
-    checkNumbers(b, ["minLevel", "datuLevel", "clearRadius", "maxBuildings", "kuta", "kamalig", "fishingDocks", "housePaths"], `rules: villages.bands[${i}]`);
-    for (const k of ["shrine", "libingan", "balangayDock", "roads", "plazaRing"]) if (typeof b[k] !== "boolean") throw new Error(`rules: villages.bands[${i}].${k} must be true or false`);
+    checkNumbers(b, ["minLevel", "datuLevel", "kamalig", "fishingDocks", "housePaths"], `rules: villages.bands[${i}]`);
+    for (const k of ["shrine", "libingan", "balangayDock", "roads"]) if (typeof b[k] !== "boolean") throw new Error(`rules: villages.bands[${i}].${k} must be true or false`);
     if ((b.datuLevel as number) < 1 || (b.datuLevel as number) > 5) throw new Error(`rules: villages.bands[${i}].datuLevel must be 1..5`);
     if (i === 0 ? b.minLevel !== 1 : (b.minLevel as number) <= ((vb[i - 1] as Record<string, number>).minLevel)) throw new Error("rules: villages.bands must start at level 1 and rise");
   });

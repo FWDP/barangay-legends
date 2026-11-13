@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { datuLevelNeeded } from "./datu";
 import { apply, STATE_VERSION, tick, type GameState } from "./game";
-import { aiLevel, applyRenown, barangayLevel, levelForRenown, levelTitle, maxLevel, renownBetween, renownForLevel } from "./kabantugan";
+import { applyRenown, barangayLevel, levelForRenown, levelTitle, maxLevel, renownBetween, renownForLevel } from "./kabantugan";
 import { closestLandings } from "./border";
 import { offlineProgress } from "./offline";
 import { createRegion, type NeighborState } from "./region";
 import { parseSave, parseSnapshot } from "./save";
 import { at, calm, content, withState } from "./testUtils";
-import { generateVillage, raidPreview, villageKey, villagePlan, villageSnapshot } from "./village";
+import { generateVillage, raidPreview, villageKey, villageLevel, villagePlan, villageSnapshot } from "./village";
 import { tileAt, NEIGHBOURS } from "./map";
 import { unreachableWorkplaces, warriorCap } from "./game";
 import { sameIsland } from "./archipelago";
@@ -119,12 +119,18 @@ describe("Bahay ng Datu upgrades need a barangay level", () => {
 });
 
 describe("AI levels", () => {
-  it("come from size and strength on the same thresholds, and change as they do", () => {
+  it("come from their tracked renown on the player's thresholds, not from size", () => {
     const s = world();
     const n = nb(s, "batong-buhay");
-    const lvl = aiLevel(content, n.state);
-    expect(lvl).toBeGreaterThanOrEqual(1);
-    expect(aiLevel(content, { ...n.state, villagers: 60, warriors: 30 })).toBeGreaterThan(lvl);
+    for (const renown of [0, 50, 400, 5000, 100000]) {
+      const at = { ...n, fame: { ...n.fame, renown } };
+      expect(villageLevel(content, at)).toBe(levelForRenown(content, renown));
+      // The player with the same renown is the same level.
+      expect(barangayLevel({ ...s, kabantugan: renown }, content)).toBe(levelForRenown(content, renown));
+    }
+    // A bigger barangay with the same renown is the same level.
+    const big = { ...n, state: { ...n.state, villagers: 200, warriors: 60 } };
+    expect(villageLevel(content, big)).toBe(villageLevel(content, n));
   });
 });
 
@@ -157,14 +163,13 @@ describe("generated villages for AI barangays", () => {
   it("are the same for the same seed, size and strength", () => {
     const t = pick("trader");
     const def = t.def;
-    // Sizes are bucketed, so start in the middle of a bucket.
-    const n = { ...t.n, state: { ...t.n.state, villagers: 3 * Math.round(t.n.state.villagers / 3) } };
+    const n = t.n;
     expect(generateVillage(content, n, def, 0)).toEqual(generateVillage(content, n, def, 0));
     expect(villageSnapshot(content, n, def, 50)).toBe(villageSnapshot(content, n, def, 50));
-    // A noticeable change makes a new one; a tiny one doesn't.
-    const grown = { ...n, state: { ...n.state, villagers: n.state.villagers + 9 } };
-    expect(villageKey(content, grown)).not.toBe(villageKey(content, n));
-    expect(villageKey(content, { ...n, state: { ...n.state, villagers: n.state.villagers + 1 } })).toBe(villageKey(content, n));
+    // Any change to their people or buildings makes a new one; their goods don't.
+    expect(villageKey(content, { ...n, state: { ...n.state, villagers: n.state.villagers + 1 } })).not.toBe(villageKey(content, n));
+    expect(villageKey(content, { ...n, state: { ...n.state, buildings: [...n.state.buildings, { type: "palayan", x: 0, y: 0 }] } })).not.toBe(villageKey(content, n));
+    expect(villageKey(content, { ...n, state: { ...n.state, resources: { rice: 1, wood: 2, gold: 3 } } })).toBe(villageKey(content, n));
   });
 
   it("follow the trait: traders more fields and docks, aggressive more Kuta", () => {
@@ -176,7 +181,8 @@ describe("generated villages for AI barangays", () => {
     const pp = villagePlan(content, p.n, p.def, 8);
     expect(tp["fishing-dock"]).toBeGreaterThan(pp["fishing-dock"]);
     expect(tp["balangay-dock"]).toBe(1);
-    expect(ap.kuta).toBeGreaterThan(pp.kuta);
+    // Kuta are only the ones they really built (the battle counts those).
+    expect(ap.kuta ?? 0).toBe(a.n.state.buildings.filter((b) => b.type === "kuta").length);
   });
 
   it("follow the player's rules: a coast, docks by the water, warriors within the Kuta cap, a Bahay ng Datu and tradition", () => {

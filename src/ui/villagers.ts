@@ -142,9 +142,11 @@ export function goal(plan: VillagerPlan, t: number, night: boolean, plaza: Point
       return { p: destinationAt(plan.place!, o, 0.3), inside: false };
     case "work":
       if (hungry) return { p: square(plaza, o), inside: false };
-      return { p: cycle < 0.8 ? at(plan.place!, plan.placeDoor) : square(plaza, o), inside: false };
+      // Most of the day at work, a short break at the plaza.
+      return { p: cycle < 0.9 ? at(plan.place!, plan.placeDoor) : square(plaza, o), inside: false };
     case "idle":
-      return { p: cycle < 0.45 ? at(plan.home, plan.homeDoor, 0.3) : square(plaza, o), inside: false };
+      // Mostly about their home, some time at the plaza.
+      return { p: cycle < 0.7 ? at(plan.home, plan.homeDoor, 0.3) : square(plaza, o), inside: false };
   }
 }
 

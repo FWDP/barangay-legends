@@ -3,7 +3,8 @@ import type { Content } from "./content";
 import { apply, tick, type GameState } from "./game";
 import { sameIsland } from "./archipelago";
 import { createRegion, neighborDef, type NeighborState } from "./region";
-import { borderBattle, raidKey, raidSetup } from "./battle";
+import { borderBattle, raidKey, raidOutlook, raidSetup } from "./battle";
+import { closestLandings, kutaCovers } from "./border";
 import { parseSnapshot } from "./save";
 import { raidPreview, villageSnapshot } from "./village";
 import { nextRandom } from "./rng";
@@ -110,3 +111,31 @@ describe("one battle function for both directions", () => {
 function seedWhere(pred: (roll: number) => boolean): number {
   for (let seed = 1; ; seed++) if (pred(nextRandom(seed)[0])) return seed;
 }
+
+describe("the diplomacy panel's raid outlook", () => {
+  it("shows the defense the battle function uses at the previewed landing, and how much shore the Kuta cover", () => {
+    for (const seed of [1, 7, 42]) {
+      let s = world({ rng: seed }, seed);
+      s = { ...s, time: 1500 + seed * 613 };
+      for (const id of homeTargets(s)) {
+        const outlook = raidOutlook(s, calm, id)!;
+        // The preview exactly as the visit screen makes it.
+        const village = parseSnapshot(villageSnapshot(calm, nb(s, id), neighborDef(calm, id)!, s.time), calm)!;
+        const preview = raidPreview(village, calm, raidKey(s, calm));
+        expect(outlook.landing).toEqual(preview.landing);
+        // The battle function at that landing, with their warriors and allies, gives the same defense…
+        const setup = raidSetup(s, calm, id)!;
+        expect(outlook.defense).toBe(borderBattle(setup.village, calm, preview.landing, 5, setup.allies, 0.5).defense);
+        // …and so does a real raid.
+        const report = apply(s, calm, { type: "raid", neighbor: id, warriors: 5 }).region!.reports.at(-1)!;
+        expect(report.defense).toBe(outlook.defense);
+        // Shoreline: of the landing points a raid picks from, those a standing Kuta covers.
+        const points = closestLandings(village.map, d.aiRaid.landingChoices);
+        const forts = village.buildings.filter((b) => b.type === "kuta" && !b.damaged);
+        expect(outlook.points).toBe(points.length);
+        expect(outlook.covered).toBe(points.filter((p) => forts.some((k) => kutaCovers(calm, k, p))).length);
+        expect(outlook.covered).toBeLessThanOrEqual(outlook.points);
+      }
+    }
+  });
+});

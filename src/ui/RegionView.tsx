@@ -21,6 +21,8 @@ import { blocOf, blocStrength } from "../engine/politics";
 import { blocBlocker, strengthFn } from "../engine/region";
 import { boatCap, boatCost, boatsFree, sailBlocker, voyageSeconds } from "../engine/sea";
 import { expeditionTitle } from "./ReplayView";
+import { villageBuildingCount } from "../engine/village";
+import { raidOutlook } from "../engine/battle";
 import { barangayName, blocColor, blocName, newsLine, warLine } from "./politicsText";
 import type { Lang } from "./settings";
 import { fill, type GameText } from "./uiContent";
@@ -458,9 +460,9 @@ function OurForces(props: { state: GameState; content: Content; dispatch: (c: Co
   );
 }
 
-function Stat({ label, value, note }: { label: string; value: string; note: string }) {
+function Stat({ label, value, note, tip }: { label: string; value: string; note: string; tip?: string }) {
   return (
-    <div className="rounded-lg bg-white/70 p-1.5">
+    <div className="rounded-lg bg-white/70 p-1.5" title={tip}>
       <div className="text-[10px] tracking-wide text-stone-500 uppercase">{label}</div>
       <div className="font-display text-base">{value}</div>
       <div className="text-[10px] text-stone-500">{note}</div>
@@ -511,7 +513,10 @@ export function NeighborPanel(props: {
   const raidMax = far ? Math.min(home, content.rules.sea.raidWarriorsPerBoat) : home;
   const send = Math.max(1, Math.min(warriors, raidMax));
   const attack = attackOf(send, content);
-  const theirDefense = defenseOf(n.state, content);
+  // The defense a raid today would meet: at the landing the visit preview shows, with the same
+  // muster, Kuta radius and allies as the raid itself (engine/battle.ts).
+  const outlook = raidOutlook(state, content, n.id);
+  const theirDefense = outlook?.defense ?? defenseOf(n.state, content);
   const chance = attack / (attack + theirDefense);
   const embargo = isEmbargo(n, content);
   const marry = marriageBlocker(state, content, n.id);
@@ -587,9 +592,14 @@ export function NeighborPanel(props: {
         </div>
       )}
       <div className="grid grid-cols-3 gap-2 text-center text-xs">
-        <Stat label="Size" value={`👥 ${n.state.villagers}`} note={`${n.state.buildings.length} buildings`} />
+        <Stat label="Size" value={`👥 ${n.state.villagers}`} note={`${villageBuildingCount(content, n, neighborDef(content, n.id)!)} buildings`} />
         <Stat label="Strength" value={`⚔️ ${attackOf(n.state.warriors, content)}`} note={`${n.state.warriors} warriors`} />
-        <Stat label="Defense" value={`🛡️ ${Math.round(theirDefense)}`} note="against raids" />
+        <Stat
+          label={game.visit.defenseLabel[lang]}
+          value={`🛡️ ${Math.round(theirDefense)}`}
+          note={outlook ? fill(game.visit.shoreline[lang], { covered: outlook.covered, points: outlook.points }) : ""}
+          tip={game.visit.defenseTip[lang]}
+        />
       </div>
       <div className="space-y-1.5">
         {n.status === "independent" && <Bar label="Influence" value={n.influence} color="bg-amber-500" />}

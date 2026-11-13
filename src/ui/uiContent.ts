@@ -135,7 +135,7 @@ export const GAME_TEXT = {
   level: { badge: ["level"], title: ["level"], renown: ["renown"], next: ["left", "level"], max: [], up: ["level"], reward: ["reward"], needs: ["level"], advisor: ["barangay"], news: ["barangay", "level"] },
   visit: {
     button: [], back: [], title: ["barangay"], relation: ["trust", "grudge", "influence"], actions: [], raidPreview: ["direction", "cover"], covered: [], uncovered: [],
-    confirm: [], preview: [], cancel: [], readOnly: [], north: [], south: [], east: [], west: [], ai: [],
+    confirm: [], preview: [], cancel: [], readOnly: [], north: [], south: [], east: [], west: [], ai: [], defenseLabel: [], shoreline: ["covered", "points"], defenseTip: [],
   },
   rank: {
     title: [], open: [], renown: [], defended: [], aklat: [], renownHint: [], defendedHint: [], aklatHint: [], you: [], toPass: ["n", "datu"], top: [], up: ["rank"],

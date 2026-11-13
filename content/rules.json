@@ -415,81 +415,61 @@
     "sandugoMinDays": 8
   },
   "villages": {
-    "_comment": "Generated villages of AI barangays (engine/village.ts), by barangay level: each band applies from minLevel. datuLevel: the Bahay ng Datu drawn; clearRadius: cleared land around the plaza; maxBuildings: at most this many buildings; the counts are the least of each kind (size and trait can add more: traders get an extra field and dock, aggressive barangays an extra Kuta). roads: Daan from the plaza to the workplaces; plazaRing: a paved Daan ring around the plaza; housePaths: houses that get their own Daan. Playtest guesses.",
+    "_comment": "Generated villages of AI barangays (engine/village.ts), by barangay level (from the barangay's renown, on the player's thresholds): each band applies from minLevel. A village shows every building the barangay really has, plus at least the civic buildings its band names (kamalig, fishingDocks, balangayDock, shrine = the babaylan's hut and Dambana, libingan; traders get an extra dock). datuLevel: the Bahay ng Datu drawn; roads: Daan from the plaza to the workplaces; housePaths: houses that get their own Daan. Forest is cleared only as far as the buildings need. Playtest guesses.",
     "bands": [
       {
         "minLevel": 1,
         "datuLevel": 1,
-        "clearRadius": 3,
-        "maxBuildings": 8,
-        "kuta": 0,
         "kamalig": 0,
         "fishingDocks": 0,
         "shrine": false,
         "libingan": false,
         "balangayDock": false,
         "roads": false,
-        "plazaRing": false,
         "housePaths": 0
       },
       {
         "minLevel": 4,
         "datuLevel": 2,
-        "clearRadius": 5,
-        "maxBuildings": 15,
-        "kuta": 0,
         "kamalig": 1,
         "fishingDocks": 0,
         "shrine": true,
         "libingan": false,
         "balangayDock": false,
         "roads": true,
-        "plazaRing": false,
         "housePaths": 1
       },
       {
         "minLevel": 8,
         "datuLevel": 3,
-        "clearRadius": 7,
-        "maxBuildings": 22,
-        "kuta": 1,
         "kamalig": 1,
         "fishingDocks": 1,
         "shrine": true,
         "libingan": true,
         "balangayDock": false,
         "roads": true,
-        "plazaRing": true,
         "housePaths": 3
       },
       {
         "minLevel": 12,
         "datuLevel": 4,
-        "clearRadius": 8,
-        "maxBuildings": 30,
-        "kuta": 2,
         "kamalig": 2,
         "fishingDocks": 1,
         "shrine": true,
         "libingan": true,
         "balangayDock": true,
         "roads": true,
-        "plazaRing": true,
         "housePaths": 5
       },
       {
         "minLevel": 16,
         "datuLevel": 5,
-        "clearRadius": 10,
-        "maxBuildings": 40,
-        "kuta": 3,
         "kamalig": 2,
         "fishingDocks": 2,
         "shrine": true,
         "libingan": true,
         "balangayDock": true,
         "roads": true,
-        "plazaRing": true,
         "housePaths": 8
       }
     ]

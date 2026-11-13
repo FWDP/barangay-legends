@@ -161,37 +161,46 @@ describe("generated villages follow the barangay's level", () => {
   const world = createRegion(calm, 0, 7, "barangay-1");
   const n0 = world.neighbors.find((x) => x.id === "pulang-lupa")!;
   const def = calm.neighbors.find((d) => d.id === n0.id)!;
-  const at = (renown: number, villagers = n0.state.villagers): NeighborState => ({ ...n0, fame: { ...n0.fame, renown }, state: { ...n0.state, villagers } });
+  /** Their real buildings, by kind (where they stand on their own map doesn't matter to the village). */
+  const built = (counts: Record<string, number>) => Object.entries(counts).flatMap(([type, k]) => Array.from({ length: k }, (_, i) => ({ type, x: i, y: 0 })));
+  const at = (renown: number, villagers = n0.state.villagers, counts: Record<string, number> = { "bahay-kubo": 3, palayan: 2, "woodcutter-camp": 1 }): NeighborState => ({
+    ...n0,
+    fame: { ...n0.fame, renown },
+    state: { ...n0.state, villagers, buildings: built(counts) },
+  });
+  const townCounts = { "bahay-kubo": 25, palayan: 12, "woodcutter-camp": 6, kuta: 4 };
   const renownFor = (level: number) => (level <= 1 ? 0 : calm.rules.kabantugan.levelAt[level - 2]);
 
   it("small at levels 1–3, towns at high levels, with the house to match", () => {
     const small = generateVillage(calm, at(renownFor(2), 8), def, 0);
-    const town = generateVillage(calm, at(renownFor(18), 60), def, 0);
+    const town = generateVillage(calm, at(renownFor(18), 60, townCounts), def, 0);
     expect(levelForRenown(calm, renownFor(18))).toBe(18);
     expect(small.datuLevel).toBe(villageBand(calm, 2).datuLevel);
     expect(town.datuLevel).toBeGreaterThanOrEqual(4);
     expect(town.buildings.length).toBeGreaterThan(small.buildings.length * 2);
     const count = (s: GameState, id: string) => s.buildings.filter((b) => b.type === id).length;
     expect(count(small, "kuta")).toBe(0);
-    expect(count(town, "kuta")).toBeGreaterThanOrEqual(3);
+    expect(count(town, "kuta")).toBe(4);
+    expect(count(town, "bahay-kubo")).toBe(25);
     expect(count(town, "libingan")).toBe(1);
     expect(count(town, "fishing-dock")).toBeGreaterThanOrEqual(1);
     const cleared = (s: GameState) => [...s.map.tiles].filter((c) => c !== "f" && c !== "b" && c !== "r" && c !== "s").length;
     expect(cleared(town)).toBeGreaterThan(cleared(small));
     expect(town.map.tiles.includes("d")).toBe(true);
-    expect(small.buildings.length).toBeLessThanOrEqual(villageBand(calm, 2).maxBuildings);
   });
 
   it("are the same for the same seed and level, and change with the level", () => {
     const a = generateVillage(calm, at(renownFor(9), 30), def, 0);
     expect(generateVillage(calm, at(renownFor(9), 30), def, 0)).toEqual(a);
     expect(generateVillage(calm, at(renownFor(13), 30), def, 0)).not.toEqual(a);
-    expect(villagePlan(calm, at(renownFor(13), 30), def, 13).kuta).toBeGreaterThan(villagePlan(calm, at(renownFor(3), 30), def, 3).kuta);
+    expect(villagePlan(calm, at(renownFor(13), 30), def, 13).libingan).toBe(1);
+    expect(villagePlan(calm, at(renownFor(3), 30), def, 3).libingan).toBeUndefined();
   });
 
   it("follow the player's rules: solid buildings with a way in, Mandirigma within the cap", () => {
     for (const level of [2, 6, 10, 14, 19]) {
-      const v = generateVillage(calm, { ...at(renownFor(level), 40), state: { ...at(renownFor(level), 40).state, warriors: 30 } }, def, 0);
+      const n = at(renownFor(level), 40, townCounts);
+      const v = generateVillage(calm, { ...n, state: { ...n.state, warriors: 30 } }, def, 0);
       expect(unreachableWorkplaces(v, calm)).toEqual([]);
       for (const b of v.buildings) if (calm.buildings.find((d) => d.id === b.type)?.workers) expect(b.door).toBeDefined();
       expect(v.warriors).toBeLessThanOrEqual(v.buildings.filter((b) => b.type === "kuta").length * calm.rules.military.warriorsPerKuta);

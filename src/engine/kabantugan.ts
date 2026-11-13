@@ -7,7 +7,7 @@
 import { RESOURCES, type Content, type Text } from "./content";
 import type { GameState } from "./game";
 import { addHistory } from "./people";
-import { addNews, strengthOfState } from "./region";
+import { addNews } from "./region";
 
 /** Barangay level from renown: 1, then one more for each threshold reached. */
 export function levelForRenown(content: Content, renown: number): number {
@@ -27,11 +27,6 @@ export function renownForLevel(content: Content, level: number): number | null {
   return level <= 1 ? 0 : (content.rules.kabantugan.levelAt[level - 2] ?? null);
 }
 
-/** An AI barangay's level, from its size and strength on the same thresholds (recalculated as it changes). */
-export function aiLevel(content: Content, s: GameState): number {
-  const k = content.rules.kabantugan;
-  return levelForRenown(content, s.villagers * k.aiPerVillager + strengthOfState(s, content) * k.aiPerStrength);
-}
 
 /** Renown earned between two states of the same barangay. */
 export function renownBetween(prev: GameState, next: GameState, content: Content): number {

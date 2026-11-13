@@ -880,6 +880,18 @@
     "ai": {
       "en": "Seen from the shore: a sketch of their village.",
       "fil": "Tanaw mula sa pampang: isang larawan ng kanilang nayon."
+    },
+    "defenseLabel": {
+      "en": "Defense at likely landing",
+      "fil": "Depensa sa malamang na daungan"
+    },
+    "shoreline": {
+      "en": "Shoreline covered: {covered} of {points} landing points",
+      "fil": "Bantay na baybayin: {covered} sa {points} daungan"
+    },
+    "defenseTip": {
+      "en": "Defense at likely landing: what a raid today would meet where it lands (the spot the visit preview shows): their warriors who reach it in time, their Kuta (in full only within reach of the landing) and allies who arrive in time. Shoreline covered: how many of the landing points a raid can choose are within a Kuta's reach.",
+      "fil": "Depensa sa malamang na daungan: ang haharapin ng pagsalakay ngayon kung saan ito dadaong (ang lugar na ipinapakita sa pagbisita): ang kanilang mga mandirigmang makararating sa oras, ang kanilang Kuta (buo lamang kung abot nito ang daungan) at mga kakamping darating sa oras. Bantay na baybayin: ilan sa mga daungang mapipili ng pagsalakay ang abot ng isang Kuta."
     }
   },
   "rank": {
