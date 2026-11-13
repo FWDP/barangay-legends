@@ -10,7 +10,7 @@ export function GatherButtons(props: {
 }) {
   const { amount, quiet, onGather } = props;
   return (
-    <div className={`absolute right-3 bottom-3 z-10 flex gap-2 ${quiet ? "flex-col" : "flex-row"}`}>
+    <div data-map-overlay className={`absolute right-3 bottom-3 z-10 flex gap-2 ${quiet ? "flex-col" : "flex-row"}`}>
       {(["rice", "wood"] as const).map((r) => (
         <button
           key={r}

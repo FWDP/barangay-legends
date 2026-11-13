@@ -50,9 +50,11 @@ import { activeJobs, jobCost, workforce } from "../engine/clearing";
 import { landingCandidates, raidLanding } from "../engine/border";
 import { useReducedMotion, VillagerLayer, type Clash } from "./VillagerLayer";
 import { dockPoint, riverPath, SAIL_SECONDS, waitIndex } from "./visitors";
+import { isClear, labelSize, placeLabel, type Rect } from "./labels";
 import { DAY_SECONDS } from "./villagers";
 
 const INCOME_EVERY_MS = 3000;
+const WAITING_TEXT = "⏸ Trade paused — raid in progress";
 /** How far (in tiles) the title screen's view drifts each way. */
 const SCENIC_DRIFT = 3;
 /** One full sway of the title screen's drift, in seconds. */
@@ -136,6 +138,26 @@ export function BarangayMap(props: {
   const [cam, setCamRaw] = useState<Camera | null>(null);
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
   const setCam = useCallback((c: Camera) => setCamRaw(clampCamera(c, map)), [map]);
+
+  // Where the controls drawn over the map are (Gather buttons, zoom buttons, banners, the
+  // adviser), so floating labels keep clear of them. Measured after each render; only a real
+  // change triggers another.
+  const [avoid, setAvoid] = useState<Rect[]>([]);
+  const avoidKey = useRef("");
+  useLayoutEffect(() => {
+    const el = area.current;
+    if (!el || scenic) return;
+    const base = el.getBoundingClientRect();
+    const rects = [...document.querySelectorAll("[data-map-overlay]")]
+      .map((e) => e.getBoundingClientRect())
+      .filter((r) => r.width > 0 && r.height > 0)
+      .map((r) => ({ left: r.left - base.left, top: r.top - base.top, right: r.right - base.left, bottom: r.bottom - base.top }));
+    const key = rects.map((r) => [r.left, r.top, r.right, r.bottom].map(Math.round).join(",")).join(";");
+    if (key !== avoidKey.current) {
+      avoidKey.current = key;
+      setAvoid(rects);
+    }
+  });
 
   useLayoutEffect(() => {
     const el = area.current!;
@@ -647,8 +669,16 @@ export function BarangayMap(props: {
   const offer = state.region?.offer ?? null;
   const docked = offer && !tradeHeld && !scenic && onBoat && path.length > 2 && (reducedMotion || state.time - (offer.expiresAt - content.rules.diplomacy.offers.expireSeconds) >= SAIL_SECONDS);
   const dock = docked ? { p: dockPoint(path, map.plaza), name: content.neighbors.find((n) => n.id === offer.from)?.name ?? offer.from } : null;
-  // While trade is paused, a label where the bangka waits offshore.
+  // While trade is paused, a label where the bangka waits offshore. If it can't sit clear of the
+  // controls it's left out: the offer bar at the top says the same thing.
   const waiting = offer && tradeHeld && !scenic && landing && path.length > 2 ? path[waitIndex(path, landing)] : null;
+  const waitingWant = cam && waiting ? { x: o.x + waiting.x * cam.tile, y: o.y + waiting.y * cam.tile + cam.tile * 0.7 } : null;
+  const waitingFit = cam && waitingWant ? placeLabel(waitingWant.x, waitingWant.y, labelSize(WAITING_TEXT), view, avoid) : null;
+  // A label pushed far from its boat no longer reads as the boat's: then leave it to the top bar.
+  const waitingAt = cam && waitingWant && waitingFit && Math.hypot(waitingFit.x - waitingWant.x, waitingFit.y - waitingWant.y) <= cam.tile * 1.5 ? waitingFit : null;
+  // The docked boat's tap target only where it can actually be tapped (not under a control).
+  const dockBox = cam && dock ? { left: o.x + dock.p.x * cam.tile - cam.tile * 0.65, top: o.y + dock.p.y * cam.tile - cam.tile * 0.65 - 18, right: o.x + dock.p.x * cam.tile + cam.tile * 0.65, bottom: o.y + dock.p.y * cam.tile + cam.tile * 0.65 } : null;
+  const dockClear = !!dockBox && isClear(dockBox, view, avoid);
 
   return (
     <div className="relative min-h-0 flex-1">
@@ -687,17 +717,17 @@ export function BarangayMap(props: {
           </div>
         )}
         {cam && view.w > 0 && <VillagerLayer state={state} content={content} cam={cam} view={view} reducedMotion={reducedMotion} clash={clash} />}
-        {cam && landing && <LandingMarker cam={cam} view={view} landing={landing} />}
-        {cam && waiting && (
+        {cam && landing && <LandingMarker cam={cam} view={view} landing={landing} avoid={avoid} />}
+        {waitingAt && (
           <span
             role="status"
             className="pointer-events-none absolute z-10 -translate-x-1/2 rounded-full border border-red-950 bg-stone-900/85 px-1.5 py-0.5 text-[11px] font-semibold whitespace-nowrap text-amber-50 shadow"
-            style={{ left: o.x + waiting.x * cam.tile, top: o.y + waiting.y * cam.tile + cam.tile * 0.7 }}
+            style={{ left: waitingAt.x, top: waitingAt.y }}
           >
-            ⏸ Trade paused — raid in progress
+            {WAITING_TEXT}
           </span>
         )}
-        {cam && dock && (
+        {cam && dock && dockClear && (
           <span
             data-boat
             role="button"
@@ -742,7 +772,7 @@ export function BarangayMap(props: {
       {/* Camera controls sit outside the gesture area, so tapping them never pans the map. Mid-right
           keeps them clear of the event banners (top) and the gather buttons (bottom). */}
       {!scenic && (
-      <div className="absolute top-1/2 right-2 z-10 flex -translate-y-1/2 flex-col gap-2">
+      <div data-map-overlay className="absolute top-1/2 right-2 z-10 flex -translate-y-1/2 flex-col gap-2">
         <CamButton label="Zoom in" onClick={() => zoomBy(1.25)}>
           +
         </CamButton>
@@ -762,30 +792,44 @@ export function BarangayMap(props: {
  * Where raiders will land: a pulsing marker on the tile, or, when it's off screen, an arrow at
  * the edge of the view pointing to it.
  */
-function LandingMarker({ cam, view, landing }: { cam: Camera; view: View; landing: Point }) {
+function LandingMarker({ cam, view, landing, avoid }: { cam: Camera; view: View; landing: Point; avoid: Rect[] }) {
   const p = tileCenter(cam, view, landing.x, landing.y);
   const inside = p.x >= 0 && p.y >= 0 && p.x <= view.w && p.y <= view.h;
   if (inside) {
+    // The ring stays on the tile; the "Landing" pill moves clear of any control over it.
+    const size = labelSize("⚔️ Landing", 12);
+    const at = placeLabel(p.x, p.y - size.h / 2, size, view, avoid);
     return (
-      <div aria-hidden className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-1/2" style={{ left: p.x, top: p.y }}>
-        <span className="absolute inset-0 rounded-full bg-red-500/40 motion-safe:animate-ping" style={{ width: cam.tile, height: cam.tile, marginLeft: -cam.tile / 2 + 0, marginTop: -cam.tile / 2 + 0, left: "50%", top: "50%" }} />
-        <span className="relative flex items-center gap-1 rounded-full border-2 border-red-950 bg-red-700 px-1.5 py-0.5 font-display text-xs whitespace-nowrap text-white shadow-lg">
-          ⚔️ Landing
-        </span>
-      </div>
+      <>
+        <span
+          aria-hidden
+          className="pointer-events-none absolute z-10 rounded-full bg-red-500/40 motion-safe:animate-ping"
+          style={{ left: p.x - cam.tile / 2, top: p.y - cam.tile / 2, width: cam.tile, height: cam.tile }}
+        />
+        {at && (
+          <span
+            aria-hidden
+            className="pointer-events-none absolute z-10 flex -translate-x-1/2 items-center gap-1 rounded-full border-2 border-red-950 bg-red-700 px-1.5 py-0.5 font-display text-xs whitespace-nowrap text-white shadow-lg"
+            style={{ left: at.x, top: at.y }}
+          >
+            ⚔️ Landing
+          </span>
+        )}
+      </>
     );
   }
-  // Clamp to the view's edge, pointing the way.
+  // Off screen: an arrow at the edge of the clear part of the view, pointing the way.
   const m = 28;
-  const x = Math.min(view.w - m, Math.max(m, p.x));
-  const y = Math.min(view.h - m, Math.max(m, p.y));
-  const angle = Math.atan2(p.y - y, p.x - x);
+  const size = { w: 44, h: 26 };
+  const at = placeLabel(Math.min(view.w - m, Math.max(m, p.x)), Math.min(view.h - m, Math.max(m, p.y)) - size.h / 2, size, view, avoid);
+  if (!at) return null;
+  const angle = Math.atan2(p.y - (at.y + size.h / 2), p.x - at.x);
   return (
     <div
       role="img"
       aria-label="Raiders will land off screen in this direction"
-      className="pointer-events-none absolute z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-full border-2 border-red-950 bg-red-700 px-1.5 py-0.5 font-display text-xs text-white shadow-lg"
-      style={{ left: x, top: y }}
+      className="pointer-events-none absolute z-10 flex -translate-x-1/2 items-center gap-1 rounded-full border-2 border-red-950 bg-red-700 px-1.5 py-0.5 font-display text-xs text-white shadow-lg"
+      style={{ left: at.x, top: at.y }}
     >
       ⚔️
       <span aria-hidden className="inline-block" style={{ transform: `rotate(${angle}rad)` }}>

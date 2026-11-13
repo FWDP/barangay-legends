@@ -723,7 +723,7 @@ export function App() {
         />
         )}
         <LoreToast loreId={loreNote} onClose={closeLore} />
-        <div className="pointer-events-none absolute top-2 left-1/2 z-10 flex w-max max-w-[calc(100%-1rem)] -translate-x-1/2 flex-col items-center gap-1.5">
+        <div data-map-overlay className="pointer-events-none absolute top-2 left-1/2 z-10 flex w-max max-w-[calc(100%-1rem)] -translate-x-1/2 flex-col items-center gap-1.5">
           {view === "barangay" && selection.length > 0 && !placing && !roadMode && (
             <ClearSelectionBar state={state} selection={selection} onClear={() => confirmClearing(false)} onCancel={() => setSelection([])} />
           )}

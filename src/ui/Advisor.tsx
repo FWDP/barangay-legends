@@ -71,6 +71,7 @@ export function AdvisorBubble(props: { message: Message | null; advisor: Advisor
     <div
       role="status"
       aria-live="polite"
+      data-map-overlay
       className="pointer-events-auto absolute bottom-[4.5rem] left-2 z-20 flex max-w-[min(22rem,calc(100%-4.5rem))] items-end gap-1.5 motion-safe:animate-bounce-in"
     >
       <Portrait src={advisor.portrait} name={advisor.name} />
