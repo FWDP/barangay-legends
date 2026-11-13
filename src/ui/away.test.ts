@@ -4,7 +4,7 @@ import { at, content, withState } from "../engine/testUtils";
 import { offlineProgress } from "../engine/offline";
 import { awayStory, duration, offlineStory } from "./away";
 
-const before = withState({ time: 100, villagers: 5, resources: { rice: 50, wood: 10 } });
+const before = withState({ time: 100, villagers: 5, resources: { rice: 50, wood: 10, gold: 0 } });
 const later = (patch: Partial<GameState>) => ({ ...before, time: before.time + 600, ...patch });
 
 describe("while you were away", () => {
@@ -13,14 +13,14 @@ describe("while you were away", () => {
   });
 
   it("tells production and newcomers as sentences", () => {
-    const story = awayStory(before, later({ resources: { rice: 170, wood: 50 }, villagers: 7 }), content);
+    const story = awayStory(before, later({ resources: { rice: 170, wood: 50, gold: 0 }, villagers: 7 }), content);
     expect(story[0]).toBe("You were gone for about 10 minutes.");
     expect(story).toContain("Your people brought in 120 rice and 40 wood.");
     expect(story).toContain("2 newcomers settled in the barangay.");
   });
 
   it("explains hunger and damage", () => {
-    const story = awayStory(before, later({ resources: { rice: 0, wood: 10 }, villagers: 3, hunger: 40, buildings: [{ ...at("bahay-kubo", 5, 3), damaged: true }] }), content);
+    const story = awayStory(before, later({ resources: { rice: 0, wood: 10, gold: 0 }, villagers: 3, hunger: 40, buildings: [{ ...at("bahay-kubo", 5, 3), damaged: true }] }), content);
     expect(story).toContain("The barangay ate through 50 rice, and the granary is empty.");
     expect(story).toContain("2 villagers left. There was not enough rice.");
     expect(story).toContain("1 building was damaged by fire or storm. Tap it to repair.");
@@ -54,7 +54,7 @@ describe("while you were away", () => {
 describe("while you were away (game closed)", () => {
   const farm = withState({
     villagers: 3,
-    resources: { rice: 200, wood: 0 },
+    resources: { rice: 200, wood: 0, gold: 0 },
     buildings: [at("bahay-kubo", 5, 3), at("bahay-kubo", 6, 3), at("palayan", 1, 4), at("woodcutter-camp", 8, 4)],
   });
 
@@ -73,7 +73,7 @@ describe("while you were away (game closed)", () => {
   });
 
   it("tells of hunger gently, without anyone leaving", () => {
-    const hungry = { ...farm, villagers: 4, resources: { rice: 1, wood: 0 }, buildings: [at("bahay-kubo", 5, 3), at("woodcutter-camp", 8, 4)] };
+    const hungry = { ...farm, villagers: 4, resources: { rice: 1, wood: 0, gold: 0 }, buildings: [at("bahay-kubo", 5, 3), at("woodcutter-camp", 8, 4)] };
     const { state, report } = offlineProgress(hungry, content, 3600);
     const story = offlineStory(report, hungry, state, content).join(" ");
     expect(story).toMatch(/granary was empty/);

@@ -12,7 +12,7 @@ const timeIn = (id: string) => seasons.slice(0, seasons.findIndex((s) => s.id ==
 /** The player's state with a region, rich enough for any option. */
 const rich = (patch: Partial<GameState> = {}): GameState => ({
   ...newGame(calm, 11),
-  resources: { rice: 500, wood: 500 },
+  resources: { rice: 500, wood: 500, gold: 0 },
   villagers: 10,
   ...patch,
 });
@@ -127,7 +127,7 @@ describe("when choice events come up", () => {
 
   it("comes up during normal play through tick", () => {
     let s = rich();
-    for (let i = 0; i < 40 && !s.choice; i++) s = { ...tick(s, calm, 60), resources: { rice: 500, wood: 500 } };
+    for (let i = 0; i < 40 && !s.choice; i++) s = { ...tick(s, calm, 60), resources: { rice: 500, wood: 500, gold: 0 } };
     expect(s.choice).not.toBeNull();
   });
 });
@@ -136,12 +136,12 @@ describe("choice effects", () => {
   const pending = (s: GameState, id: string, neighbor: string | null = null): GameState => ({ ...s, choice: { id, neighbor, at: s.time } });
 
   it("changes resources, never below zero", () => {
-    const s = applyEffects(rich({ resources: { rice: 10, wood: 3 } }), content, { resources: { rice: -4, wood: -10 } }, null);
-    expect(s.resources).toEqual({ rice: 6, wood: 0 });
+    const s = applyEffects(rich({ resources: { rice: 10, wood: 3, gold: 0 } }), content, { resources: { rice: -4, wood: -10, gold: 0 } }, null);
+    expect(s.resources).toEqual({ rice: 6, wood: 0, gold: 0 });
   });
 
   it("refuses an option the barangay can't pay for", () => {
-    const s = pending(rich({ resources: { rice: 10, wood: 0 } }), "babaylan-ritual");
+    const s = pending(rich({ resources: { rice: 10, wood: 0, gold: 0 } }), "babaylan-ritual");
     const rite = def("babaylan-ritual").choices.find((o) => o.id === "full-rite")!;
     expect(optionBlocker(s, rite)).toMatch(/rice/);
     expect(choose(s, content, "full-rite")).toBe(s);

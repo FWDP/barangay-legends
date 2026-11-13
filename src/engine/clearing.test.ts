@@ -15,7 +15,7 @@ const small = mapFrom([
 ]);
 const { cost, secondsGrowth, baseSeconds, wood } = content.rules.clearing;
 const start = (patch: Partial<GameState> = {}) =>
-  withState({ map: small, buildings: [], resources: { rice: 500, wood: 0 }, villagers: 3, ...patch });
+  withState({ map: small, buildings: [], resources: { rice: 500, wood: 0, gold: 0 }, villagers: 3, ...patch });
 const run = (s: GameState, seconds: number) => tick(s, calm, seconds);
 const T = (x: number, y: number) => ({ x, y });
 
@@ -74,7 +74,7 @@ describe("total cost and partial affordability", () => {
   });
 
   it("clears just the tiles the barangay can afford", () => {
-    const s = start({ resources: { rice: selectionCost(start(), content, 2).rice + 1, wood: 0 } });
+    const s = start({ resources: { rice: selectionCost(start(), content, 2).rice + 1, wood: 0, gold: 0 } });
     expect(affordableTiles(s, content, 5)).toBe(2);
     const after = apply(s, calm, { type: "clearArea", tiles: [T(0, 1), T(0, 2), T(0, 3), T(6, 1), T(6, 2)] });
     expect(after.clearing).toHaveLength(2);

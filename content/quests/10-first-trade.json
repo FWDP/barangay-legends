@@ -1,0 +1,16 @@
+{
+  "id": "first-trade",
+  "text": {
+    "en": "Make your first trade with a neighbor",
+    "fil": "Makipagpalitan sa isang kapitbahay"
+  },
+  "condition": {
+    "type": "traded"
+  },
+  "reward": {
+    "resources": {
+      "gold": 5
+    }
+  },
+  "next": "first-kuta"
+}

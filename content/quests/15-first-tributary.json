@@ -1,0 +1,18 @@
+{
+  "id": "first-tributary",
+  "text": {
+    "en": "Make a neighbor your tributary",
+    "fil": "Gawing sakop ang isang kapitbahay"
+  },
+  "condition": {
+    "type": "tributaries",
+    "count": 1
+  },
+  "reward": {
+    "title": {
+      "en": "Great Datu",
+      "fil": "Dakilang Datu"
+    }
+  },
+  "next": null
+}

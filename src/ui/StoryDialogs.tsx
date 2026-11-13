@@ -7,7 +7,7 @@ import { neighborDef } from "../engine/region";
 import { RESOURCE_ICON } from "./format";
 import { fill } from "./uiContent";
 
-function useModal(open: boolean) {
+export function useModal(open: boolean) {
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const d = dialog.current;

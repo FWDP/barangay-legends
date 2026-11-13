@@ -1,0 +1,28 @@
+{
+  "id": "fishing-dock",
+  "name": "Fishing Dock",
+  "description": "A bamboo landing on the riverbank. Three villagers fish, and the catch is traded at market for gold.",
+  "icon": "🎣",
+  "order": 7,
+  "cost": {
+    "wood": 40,
+    "rice": 20
+  },
+  "repairCost": {
+    "wood": 12
+  },
+  "produces": {
+    "gold": 0.2
+  },
+  "workers": 3,
+  "placeNextTo": [
+    "river"
+  ],
+  "unlock": {
+    "villagers": 15
+  },
+  "sources": [
+    "docs/game-design.md (cost, +0.2 gold/s per worker, 3 workers, unlock at 15 villagers)",
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+  ]
+}

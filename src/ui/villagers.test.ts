@@ -4,7 +4,7 @@ import { tileAt } from "../engine/map";
 import { at, content, mapFrom, withState } from "../engine/testUtils";
 import { dayPhase, destination, edgeTile, exitPoint, isNight, MAX_SPRITES, newWalker, planVillagers, SPEED, stepWalker, walk } from "./villagers";
 
-const fed = { resources: { rice: 100, wood: 0 } };
+const fed = { resources: { rice: 100, wood: 0, gold: 0 } };
 
 describe("villager sprites", () => {
   it("has one sprite per villager, capped at 60", () => {

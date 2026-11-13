@@ -7,6 +7,7 @@ import { isHungry } from "../engine/events";
 import { tileAt, type MapState, type Point } from "../engine/map";
 import { cachedPath, isWalkable } from "../engine/paths";
 import { homeWarriors } from "../engine/region";
+import type { NamedVillager } from "../engine/people";
 
 /** Length of the day/night tint cycle (the CSS day-night animation), in real seconds. */
 export const DAY_SECONDS = 240;
@@ -231,4 +232,44 @@ export function edgeTile(map: MapState, from: Point): Point {
     consider(map.width - 1, y);
   }
   return best;
+}
+
+// ---------- Named villagers ----------
+
+/**
+ * Which sprite shows each named villager (sprite id → villager): one doing their kind of work
+ * if there is one (a farmer at a Palayan, a fisher at a Fishing Dock, the sick at the healer),
+ * otherwise any sprite left. Each villager starts looking at a spot of their own (by id), so
+ * the same villager tends to keep the same sprite as the barangay changes.
+ */
+export function namedSprites(plans: VillagerPlan[], state: GameState, content: Content): Map<number, NamedVillager> {
+  const out = new Map<number, NamedVillager>();
+  if (plans.length === 0 || state.named.length === 0) return out;
+  const typeAt = new Map(state.buildings.map((b) => [`${b.x},${b.y}`, b.type]));
+  const workplace = (p: VillagerPlan) => (p.place ? typeAt.get(`${p.place.x},${p.place.y}`) : undefined);
+  const roleBuilding = content.villagers.roleBuildings;
+  const fits = (p: VillagerPlan, v: NamedVillager) => {
+    if (v.sick) return p.role === "sick";
+    if (p.role === "sick") return false;
+    if (v.role === "warrior") return p.role === "warrior" || p.role === "work";
+    const b = roleBuilding[v.role];
+    if (b) return p.role === "work" && workplace(p) === b;
+    return p.role !== "warrior";
+  };
+  const used = new Set<number>();
+  for (const v of [...state.named].sort((a, b) => a.id - b.id)) {
+    const start = (Math.imul(v.id, 2654435761) >>> 0) % plans.length;
+    let pick: VillagerPlan | null = null;
+    for (const ok of [(p: VillagerPlan) => fits(p, v), () => true]) {
+      for (let k = 0; k < plans.length && !pick; k++) {
+        const p = plans[(start + k) % plans.length];
+        if (!used.has(p.id) && ok(p)) pick = p;
+      }
+      if (pick) break;
+    }
+    if (!pick) break;
+    used.add(pick.id);
+    out.set(pick.id, v);
+  }
+  return out;
 }

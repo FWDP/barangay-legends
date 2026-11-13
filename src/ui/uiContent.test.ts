@@ -38,7 +38,7 @@ describe("help and adviser content", () => {
   it("rejects a translation that drops a section", () => {
     const ui = loadUiContent(content);
     const fil = { ...ui.help.fil, sections: ui.help.fil.sections.slice(1) };
-    expect(() => buildUiContent({ en: ui.help.en, fil }, advisor(), content, ui.title, ui.names)).toThrow(/same sections/);
+    expect(() => buildUiContent({ en: ui.help.en, fil }, advisor(), content, ui.title, ui.names, ui.game)).toThrow(/same sections/);
   });
 
   it("rejects help with an unknown placeholder or missing body", () => {

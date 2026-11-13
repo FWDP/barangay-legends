@@ -78,6 +78,16 @@ describe("raiders at the border", () => {
     expect(lootTarget(withState({ map: m, buildings: [] }), content, { x: 3, y: 4 })).toEqual(m.plaza);
   });
 
+  it("now that the Kamalig exists, winners walk to the nearest Kamalig before any field", () => {
+    const s = withState({ map: m, buildings: [at("palayan", 2, 4), at("kamalig", 0, 0), at("kamalig", 3, 1)] });
+    // A field is closer to the landing, but the granary comes first: the nearer of the two.
+    expect(lootTarget(s, content, { x: 3, y: 4 })).toMatchObject({ type: "kamalig", x: 3, y: 1 });
+    expect(lootWalk(m, { x: 3, y: 4 }, { x: 3, y: 1 })).not.toBeNull();
+    // A damaged Kamalig is skipped; with none standing they go for the fields.
+    const burnt = withState({ map: m, buildings: [at("palayan", 2, 4), { ...at("kamalig", 3, 1), damaged: true }] });
+    expect(lootTarget(burnt, content, { x: 3, y: 4 })).toMatchObject({ type: "palayan" });
+  });
+
   it("draws a band of 3 to 8", () => {
     expect(raiderCount(1)).toBe(3);
     expect(raiderCount(5)).toBe(5);

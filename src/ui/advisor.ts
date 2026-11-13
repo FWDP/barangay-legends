@@ -9,8 +9,10 @@ import { buildingWorkers, owned, rates, unreachableWorkplaces, type GameState } 
 import { directionFrom, raidLanding } from "../engine/border";
 import { barangayCenter, isUnlocked, TILE_CODE } from "../engine/map";
 import { neighborDef } from "../engine/region";
+import { storyText, type HistoryEntry } from "../engine/people";
 import type { Lang } from "./settings";
-import { fill, TRIGGERS, TUTORIAL_EVENTS, type AdvisorDef, type TriggerId, type TutorialEvent, type TutorialStep } from "./uiContent";
+import { historyLine, taskNews } from "./stories";
+import { fill, TRIGGERS, TUTORIAL_EVENTS, type AdvisorDef, type GameText, type TriggerId, type TutorialEvent, type TutorialStep } from "./uiContent";
 
 /** Game seconds between two tips. */
 export const TIP_GAP_SECONDS = 90;
@@ -30,6 +32,9 @@ export const IDLE_SECONDS = 120;
 export const REFUSAL_FRESH_SECONDS = 30;
 /** Suggest Daan once the barangay has this many workplaces and no path yet. */
 export const ROADS_AFTER_WORKPLACES = 3;
+/** News (a task done, a named villager leaving) stays up this long, and at most this many wait. */
+export const NEWS_SECONDS = 30;
+export const MAX_NEWS = 4;
 
 /** Kept in localStorage: survives reloads, never part of the game save. */
 export interface AdvisorMemory {
@@ -53,11 +58,16 @@ export interface AdvisorSession {
   unlocked: string[];
   /** Buildings unlocked during play that the adviser hasn't announced yet. */
   pendingUnlocks: string[];
+  /** History entries already looked at: the latest time, and how many entries had that time. */
+  historyMark: { at: number; count: number };
+  /** News waiting to be told (it doesn't wait for the tip gap). */
+  news: HistoryEntry[];
 }
 
 export type Message =
   | { kind: "tutorial"; stepId: string; step: number; total: number; text: string }
-  | { kind: "tip"; lineId: string; trigger: TriggerId; text: string; at: number };
+  | { kind: "tip"; lineId: string; trigger: TriggerId; text: string; at: number }
+  | { kind: "news"; text: string; at: number };
 
 export interface AdvisorModel {
   memory: AdvisorMemory;
@@ -74,6 +84,8 @@ export interface AdvisorInput {
   tipsOn: boolean;
   /** Something must not be interrupted (a battle report is open): say nothing. */
   blocked: boolean;
+  /** In-game text (content/ui.json), for news. Without it the adviser tells no news. */
+  game?: GameText;
 }
 
 export const NEW_MEMORY: AdvisorMemory = { tutorial: "new", events: [], shown: {} };
@@ -107,7 +119,34 @@ export function startSession(state: GameState, content: Content): AdvisorSession
     unstaffedSince: null,
     unlocked: unlockedIds(state, content),
     pendingUnlocks: [],
+    historyMark: historyMark(state.history),
+    news: [],
   };
+}
+
+/** The mark after every entry in this history. */
+function historyMark(history: HistoryEntry[]): { at: number; count: number } {
+  const at = history.at(-1)?.at ?? -1;
+  return { at, count: history.filter((h) => h.at === at).length };
+}
+
+/** Entries added since the mark. */
+export function newEntries(history: HistoryEntry[], mark: { at: number; count: number }): HistoryEntry[] {
+  const same = history.filter((h) => h.at === mark.at);
+  return [...same.slice(mark.count), ...history.filter((h) => h.at > mark.at)];
+}
+
+/** Is this entry worth telling the player? Tasks done, villagers leaving or falling, and the first named villager. */
+function isNews(h: HistoryEntry, content: Content): boolean {
+  if (h.kind === "named") return content.villagers.stories.some((s) => s.id === h.story && s.first);
+  return true;
+}
+
+/** The adviser's words for a piece of news. */
+export function newsText(h: HistoryEntry, state: GameState, content: Content, game: GameText, lang: Lang): string {
+  if (h.kind === "task") return taskNews(h.task ?? "", state, content, game, lang);
+  if (h.kind === "named") return fill(game.news.firstNamed[lang], { story: storyText(content, { name: h.name ?? "", story: h.story ?? "" }, lang) });
+  return historyLine(h, content, game, lang);
 }
 
 export function newModel(memory: AdvisorMemory, state: GameState, content: Content): AdvisorModel {
@@ -203,6 +242,13 @@ export function observe(session: AdvisorSession, state: GameState, content: Cont
   }
   if (s.pendingUnlocks.length > 0) active.set("unlocked", { building: defs.get(s.pendingUnlocks[0])?.name ?? s.pendingUnlocks[0] });
 
+  // News from the history: tasks done, named villagers leaving.
+  const added = newEntries(state.history, s.historyMark);
+  if (added.length > 0) {
+    s.historyMark = historyMark(state.history);
+    s.news = [...s.news, ...added.filter((h) => isNews(h, content))].slice(-MAX_NEWS);
+  }
+
   return { session: s, active };
 }
 
@@ -248,9 +294,19 @@ export function advise(model: AdvisorModel, input: AdvisorInput): AdvisorModel {
     session = { ...session, lastShownAt: t };
   }
 
+  if (!tipsOn) session = { ...session, news: [] };
   if (!tipsOn || blocked) return { memory, session, message: null };
-  const current = model.message?.kind === "tip" && t - model.message.at < TIP_SECONDS ? model.message : null;
+  const m = model.message;
+  const current = m && m.kind !== "tutorial" && t - m.at < (m.kind === "news" ? NEWS_SECONDS : TIP_SECONDS) ? m : null;
   if (current) return { memory, session, message: current };
+  // News first, without waiting for the tip gap.
+  // News from long ago (credited while away, already told in "While you were away") is dropped.
+  if (session.news.some((h) => h.at < t - NEWS_SECONDS)) session = { ...session, news: session.news.filter((h) => h.at >= t - NEWS_SECONDS) };
+  if (session.news.length > 0 && input.game) {
+    const [h, ...rest] = session.news;
+    session = { ...session, news: rest, lastShownAt: t };
+    return { memory, session, message: { kind: "news", text: newsText(h, state, content, input.game, lang), at: t } };
+  }
   if (session.lastShownAt !== null && t - session.lastShownAt < TIP_GAP_SECONDS) return { memory, session, message: null };
 
   for (const trigger of TRIGGERS) {
@@ -272,7 +328,7 @@ export function advise(model: AdvisorModel, input: AdvisorInput): AdvisorModel {
 
 /** The player tapped the bubble. A tutorial step stays until it is done or skipped. */
 export function dismiss(model: AdvisorModel): AdvisorModel {
-  return model.message?.kind === "tip" ? { ...model, message: null } : model;
+  return model.message && model.message.kind !== "tutorial" ? { ...model, message: null } : model;
 }
 
 export function skipTutorial(model: AdvisorModel, time: number): AdvisorModel {

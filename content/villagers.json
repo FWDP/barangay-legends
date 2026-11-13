@@ -1,0 +1,116 @@
+{
+  "_comment": "Named villagers: about 1 in 5 arriving villagers (chance) gets a name from content/names.json and one of these one-line stories. {name} is replaced with the name. role: what they do; a 'farmer', 'woodcutter' or 'fisher' story is only given once the barangay has the building in roleBuildings, a 'warrior' story only while there are Mandirigma without a story. first: only for the first villager ever named. Filipino text needs a native speaker's review.",
+  "chance": 0.2,
+  "roleBuildings": {
+    "farmer": "palayan",
+    "woodcutter": "woodcutter-camp",
+    "fisher": "fishing-dock"
+  },
+  "stories": [
+    {
+      "id": "first-child",
+      "role": "villager",
+      "first": true,
+      "text": {
+        "en": "{name}, the first child born in your barangay",
+        "fil": "Si {name}, ang unang batang isinilang sa iyong barangay"
+      }
+    },
+    {
+      "id": "bravest",
+      "role": "warrior",
+      "text": {
+        "en": "{name}, your bravest warrior",
+        "fil": "Si {name}, ang pinakamatapang mong mandirigma"
+      }
+    },
+    {
+      "id": "spear",
+      "role": "warrior",
+      "text": {
+        "en": "{name}, who can throw a spear across the river",
+        "fil": "Si {name}, na kayang ihagis ang sibat sa kabila ng ilog"
+      }
+    },
+    {
+      "id": "rain-smell",
+      "role": "farmer",
+      "text": {
+        "en": "{name}, who can smell rain coming over the paddies",
+        "fil": "Si {name}, na naaamoy ang paparating na ulan sa palayan"
+      }
+    },
+    {
+      "id": "first-seedling",
+      "role": "farmer",
+      "text": {
+        "en": "{name}, who plants the first seedling every season",
+        "fil": "Si {name}, na nagtatanim ng unang punla tuwing panahon"
+      }
+    },
+    {
+      "id": "bamboo",
+      "role": "woodcutter",
+      "text": {
+        "en": "{name}, who knows when bamboo is ready to cut",
+        "fil": "Si {name}, na alam kung kailan handa nang putulin ang kawayan"
+      }
+    },
+    {
+      "id": "kapre-friend",
+      "role": "woodcutter",
+      "text": {
+        "en": "{name}, who leaves tobacco for the kapre before every cut",
+        "fil": "Si {name}, na nag-iiwan ng tabako para sa kapre bago pumutol"
+      }
+    },
+    {
+      "id": "dalag",
+      "role": "fisher",
+      "text": {
+        "en": "{name}, who once caught a dalag as long as an arm",
+        "fil": "Si {name}, na minsang nakahuli ng dalag na kasinghaba ng braso"
+      }
+    },
+    {
+      "id": "singer",
+      "role": "villager",
+      "text": {
+        "en": "{name}, the best singer at every harvest",
+        "fil": "Si {name}, ang pinakamahusay umawit tuwing anihan"
+      }
+    },
+    {
+      "id": "banig",
+      "role": "villager",
+      "text": {
+        "en": "{name}, who weaves the finest banig in the barangay",
+        "fil": "Si {name}, na naghahabi ng pinakamagandang banig sa barangay"
+      }
+    },
+    {
+      "id": "storyteller",
+      "role": "villager",
+      "text": {
+        "en": "{name}, who tells the children stories of the kapre",
+        "fil": "Si {name}, na nagkukuwento sa mga bata tungkol sa kapre"
+      }
+    },
+    {
+      "id": "flood",
+      "role": "villager",
+      "text": {
+        "en": "{name}, who still remembers the great flood",
+        "fil": "Si {name}, na naaalala pa ang malaking baha"
+      }
+    },
+    {
+      "id": "upriver",
+      "role": "villager",
+      "text": {
+        "en": "{name}, who came upriver by bangka looking for a new home",
+        "fil": "Si {name}, na dumating sakay ng bangka upang humanap ng bagong tahanan"
+      }
+    }
+  ]
+}

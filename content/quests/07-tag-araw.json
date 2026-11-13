@@ -1,0 +1,18 @@
+{
+  "id": "tag-araw",
+  "text": {
+    "en": "Survive your first Tag-araw",
+    "fil": "Malampasan ang unang Tag-araw"
+  },
+  "condition": {
+    "type": "survivedSeason",
+    "season": "tag-araw"
+  },
+  "reward": {
+    "title": {
+      "en": "Datu of the Dry Season",
+      "fil": "Datu ng Tag-araw"
+    }
+  },
+  "next": "fifteen-villagers"
+}

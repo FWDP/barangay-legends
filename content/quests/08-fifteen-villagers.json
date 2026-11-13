@@ -1,0 +1,17 @@
+{
+  "id": "fifteen-villagers",
+  "text": {
+    "en": "Reach 15 villagers",
+    "fil": "Umabot sa 15 taga-barangay"
+  },
+  "condition": {
+    "type": "villagers",
+    "count": 15
+  },
+  "reward": {
+    "resources": {
+      "wood": 20
+    }
+  },
+  "next": "first-dock"
+}

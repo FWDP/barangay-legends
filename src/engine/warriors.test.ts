@@ -14,7 +14,7 @@ const village = (patch: Partial<GameState> = {}) =>
   withState({
     villagers: 6,
     warriors: 4,
-    resources: { rice: 1000, wood: 1000 },
+    resources: { rice: 1000, wood: 1000, gold: 0 },
     buildings: [at("bahay-kubo", 5, 3), at("palayan", 1, 1), at("woodcutter-camp", 7, 1), at("kuta", 3, 6)],
     region: region(),
     ...patch,
@@ -89,10 +89,10 @@ describe("the Kuta cap", () => {
 describe("food first when rice is short", () => {
   it("fills the fields before other workplaces", () => {
     const fields = [at("palayan", 1, 1), at("palayan", 2, 1)];
-    const s = withState({ villagers: 4, resources: { rice: 1, wood: 0 }, buildings: [at("woodcutter-camp", 7, 1), ...fields] });
+    const s = withState({ villagers: 4, resources: { rice: 1, wood: 0, gold: 0 }, buildings: [at("woodcutter-camp", 7, 1), ...fields] });
     expect(riceIsLow(s, calm)).toBe(true);
     expect(assignWorkers(s, calm)).toMatchObject({ palayan: 4, "woodcutter-camp": 0 });
-    const plenty = { ...s, resources: { rice: 1000, wood: 0 } };
+    const plenty = { ...s, resources: { rice: 1000, wood: 0, gold: 0 } };
     expect(assignWorkers(plenty, calm)).toMatchObject({ palayan: 2, "woodcutter-camp": 2 });
   });
 });
@@ -111,7 +111,7 @@ describe("migrating an all-warrior save", () => {
     place("palayan", 6);
     place("woodcutter-camp", 3);
     place("kuta", 5);
-    const s = withState({ villagers: 29, warriors: 29, resources: { rice: 0, wood: 40 }, hunger: 80, buildings, region: region() });
+    const s = withState({ villagers: 29, warriors: 29, resources: { rice: 0, wood: 40, gold: 0 }, hunger: 80, buildings, region: region() });
     return { ...s, version: 13 };
   }
 

@@ -20,7 +20,7 @@ function memory() {
 const farm = (patch: Partial<GameState> = {}) =>
   withState({
     villagers: 4,
-    resources: { rice: 200, wood: 0 },
+    resources: { rice: 200, wood: 0, gold: 0 },
     buildings: [at("bahay-kubo", 5, 3), at("bahay-kubo", 6, 3), at("palayan", 1, 4), at("woodcutter-camp", 8, 4)],
     ...patch,
   });
@@ -67,7 +67,7 @@ describe("offline progress: gentle things happen", () => {
   });
 
   it("a clearing job finishes", () => {
-    const s = farm({ villagers: 5, clearing: [{ x: 9, y: 4, progress: 0, seconds: 30, paid: { rice: 3, wood: 0 } }] });
+    const s = farm({ villagers: 5, clearing: [{ x: 9, y: 4, progress: 0, seconds: 30, paid: { rice: 3, wood: 0, gold: 0 } }] });
     const { state, report } = offlineProgress(s, content, 600);
     expect(report.cleared).toBe(1);
     expect(state.clearing).toEqual([]);
@@ -82,7 +82,7 @@ describe("offline progress: gentle things happen", () => {
   it("tributaries send tribute and neighbors keep growing", () => {
     const g = newGame(content, 9);
     const region = { ...g.region!, neighbors: g.region!.neighbors.map((n, i) => (i === 0 ? { ...n, status: "tributary" as const, loyalty: 80 } : n)) };
-    const s = { ...g, region, resources: { rice: 500, wood: 0 } };
+    const s = { ...g, region, resources: { rice: 500, wood: 0, gold: 0 } };
     const { state, report } = offlineProgress(s, content, 2 * HOUR);
     expect(report.tribute.rice + report.tribute.wood).toBeGreaterThan(0);
     const grew = state.region!.neighbors.some((n, i) => n.state.buildings.length > s.region!.neighbors[i].state.buildings.length);
@@ -110,7 +110,7 @@ describe("offline progress: nothing harmful", () => {
       villagers: 9, // more than the one house shelters: online, families would leave
       warriors: 2,
       sick: [50],
-      resources: { rice: 3, wood: 5 }, // runs out almost at once
+      resources: { rice: 3, wood: 5, gold: 0 }, // runs out almost at once
       buildings: [
         { ...at("bahay-kubo", g.map.plaza.x + 1, g.map.plaza.y), burningSince: 990 },
         at("bahay-kubo", g.map.plaza.x - 1, g.map.plaza.y),

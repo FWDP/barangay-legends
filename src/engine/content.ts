@@ -1,8 +1,10 @@
 // Content schema and validation. Buildings, events and balance rules live in content/ as JSON.
 
-export const RESOURCES = ["rice", "wood"] as const;
+export const RESOURCES = ["rice", "wood", "gold"] as const;
 export type Resource = (typeof RESOURCES)[number];
 export type ResourceAmounts = Partial<Record<Resource, number>>;
+/** An amount of every resource. */
+export type Resources = Record<Resource, number>;
 
 /** Map features a building can be next to (besides other buildings). */
 export const TERRAINS = ["river", "forest"] as const;
@@ -40,6 +42,10 @@ export interface BuildingDef {
   placeOn?: "cleared" | "river";
   /** A bridge turns up to maxSpan river tiles into a crossing, opening the far bank. */
   bridge?: { maxSpan: number };
+  /** It must stand next to (side by side, not diagonally) one of these terrains, e.g. a Fishing Dock by the river. */
+  placeNextTo?: string[];
+  /** Storage added per copy (a Kamalig: +100 rice). */
+  storage?: ResourceAmounts;
   /** Available from the start, or once the barangay has this many villagers. */
   unlock: { start?: boolean; villagers?: number };
   sources: string[];
@@ -67,6 +73,79 @@ export interface Rules {
   offline: OfflineRules;
   roads: RoadRules;
   staffing: StaffingRules;
+  /** Resources the Gather buttons can give. */
+  gatherable: Resource[];
+  /** Rice the barangay holds with no Kamalig. */
+  storage: { baseRice: number };
+  happiness: HappinessRules;
+}
+
+/** Happiness (0–100): see the _comment in rules.json. */
+export interface HappinessRules {
+  start: number;
+  maxEffectPercent: number;
+  pointsPerSecond: number;
+  plazaRadius: number;
+  perHouseNearPlaza: number;
+  maxFromHouses: number;
+  hungry: number;
+  perSick: number;
+  maxFromSick: number;
+}
+
+/** Text in every language the game has. */
+export interface Text {
+  en: string;
+  fil: string;
+}
+
+/** What a task (gawain) asks for, checked from GameState. */
+export type QuestCondition =
+  | { type: "built"; building: string; count: number }
+  | { type: "villagers"; count: number }
+  | { type: "tilesCleared"; count: number }
+  | { type: "connected"; count: number }
+  | { type: "survivedSeason"; season: string }
+  | { type: "traded" }
+  | { type: "warriors"; count: number }
+  | { type: "raidsDefended"; count: number }
+  | { type: "tributaries"; count: number };
+
+export const QUEST_CONDITIONS = ["built", "villagers", "tilesCleared", "connected", "survivedSeason", "traded", "warriors", "raidsDefended", "tributaries"] as const;
+
+/** One of the Mga Gawain: a task in a chain, with a reward (resources and/or a title for the datu). */
+export interface QuestDef {
+  id: string;
+  /** The task the chain starts with (exactly one). */
+  first?: boolean;
+  text: Text;
+  condition: QuestCondition;
+  reward: { resources?: ResourceAmounts; title?: Text };
+  /** The task after this one, or null at the end of the chain. */
+  next: string | null;
+}
+
+/** A one-line story a named villager can get. `{name}` is replaced with their name. */
+export interface VillagerStory {
+  id: string;
+  /** What they do. "warrior" stories go only to a new Mandirigma; others need a workplace of that kind. */
+  role: VillagerRole;
+  text: Text;
+  /** Only for the first villager ever named. */
+  first?: boolean;
+}
+
+export const VILLAGER_ROLES = ["villager", "farmer", "woodcutter", "fisher", "warrior"] as const;
+export type VillagerRole = (typeof VILLAGER_ROLES)[number];
+
+/** Named villagers: content/villagers.json (chance and stories) and the names in content/names.json. */
+export interface VillagerContent {
+  /** Chance that an arriving villager gets a name (0.2 = about 1 in 5). */
+  chance: number;
+  names: string[];
+  stories: VillagerStory[];
+  /** Building that makes each role's work possible (no building: anyone). */
+  roleBuildings: Partial<Record<VillagerRole, string>>;
 }
 
 /** Daan: footpaths laid tile by tile on cleared land. */
@@ -425,6 +504,9 @@ export interface Content {
   groves: GroveBlessing[];
   neighbors: NeighborDef[];
   choices: ChoiceEventDef[];
+  /** Mga Gawain, in chain order (first task first). */
+  quests: QuestDef[];
+  villagers: VillagerContent;
 }
 
 const isObject = (v: unknown): v is Record<string, unknown> =>
@@ -490,6 +572,10 @@ export function validateBuilding(raw: unknown, file = "building"): BuildingDef {
     throw new Error(`${file}: "bridge.maxSpan" must be a whole number >= 1`);
   }
   if (raw.placeOn === "river" && raw.bridge === undefined) throw new Error(`${file}: a building on the river must be a "bridge"`);
+  if (raw.placeNextTo !== undefined && (!Array.isArray(raw.placeNextTo) || raw.placeNextTo.length === 0 || !raw.placeNextTo.every((t) => (TERRAINS as readonly unknown[]).includes(t)))) {
+    throw new Error(`${file}: "placeNextTo" must list terrains (${TERRAINS.join(", ")})`);
+  }
+  if (raw.storage !== undefined) checkAmounts(raw.storage, `${file}: storage`);
   if (!isObject(raw.unlock)) throw new Error(`${file}: "unlock" must be an object`);
   if (raw.unlock.villagers !== undefined && !isNonNegNumber(raw.unlock.villagers)) {
     throw new Error(`${file}: "unlock.villagers" must be a number >= 0`);
@@ -617,6 +703,16 @@ export function validateRules(raw: unknown): Rules {
     );
     if (typeof trait.tradeWillingness !== "number" || !Number.isFinite(trait.tradeWillingness)) throw new Error(`rules: trait ${name} needs "tradeWillingness"`);
   }
+  if (!Array.isArray(raw.gatherable) || !raw.gatherable.every((r) => (RESOURCES as readonly unknown[]).includes(r))) {
+    throw new Error('rules: "gatherable" must list resources');
+  }
+  if (!isObject(raw.storage) || !isNonNegNumber(raw.storage.baseRice)) throw new Error('rules: "storage.baseRice" must be a number >= 0');
+  if (!isObject(raw.happiness)) throw new Error('rules: missing "happiness"');
+  checkNumbers(raw.happiness, ["start", "maxEffectPercent", "pointsPerSecond", "plazaRadius", "perHouseNearPlaza", "maxFromHouses"], "rules: happiness");
+  for (const key of ["hungry", "perSick", "maxFromSick"]) {
+    if (typeof raw.happiness[key] !== "number" || !Number.isFinite(raw.happiness[key])) throw new Error(`rules: "happiness.${key}" must be a number`);
+  }
+  if ((raw.happiness.start as number) > 100) throw new Error('rules: "happiness.start" must be 0–100');
   return raw as unknown as Rules;
 }
 
@@ -800,6 +896,85 @@ export function validateChoice(raw: unknown, file = "choice"): ChoiceEventDef {
   return raw as unknown as ChoiceEventDef;
 }
 
+const isText = (v: unknown): v is Text => isObject(v) && typeof v.en === "string" && v.en !== "" && typeof v.fil === "string" && v.fil !== "";
+
+/** Checks one task file (content/quests). Building and season ids are checked in buildContent. */
+export function validateQuest(raw: unknown, file = "quest"): QuestDef {
+  if (!isObject(raw)) throw new Error(`${file}: must be a JSON object`);
+  if (typeof raw.id !== "string" || !/^[a-z0-9-]+$/.test(raw.id)) throw new Error(`${file}: "id" may only use a-z, 0-9 and "-"`);
+  if (!isText(raw.text)) throw new Error(`${file}: "text" needs "en" and "fil"`);
+  const c = raw.condition;
+  if (!isObject(c) || !(QUEST_CONDITIONS as readonly unknown[]).includes(c.type)) {
+    throw new Error(`${file}: "condition.type" must be one of ${QUEST_CONDITIONS.join(", ")}`);
+  }
+  if (c.type !== "traded" && c.type !== "survivedSeason" && (!Number.isInteger(c.count) || (c.count as number) < 1)) {
+    throw new Error(`${file}: "condition.count" must be a whole number >= 1`);
+  }
+  if (c.type === "built" && typeof c.building !== "string") throw new Error(`${file}: "condition.building" is missing`);
+  if (c.type === "survivedSeason" && typeof c.season !== "string") throw new Error(`${file}: "condition.season" is missing`);
+  const r = raw.reward;
+  if (!isObject(r) || (r.resources === undefined && r.title === undefined)) throw new Error(`${file}: "reward" needs "resources" or "title"`);
+  if (r.resources !== undefined) checkAmounts(r.resources, `${file}: reward.resources`);
+  if (r.title !== undefined && !isText(r.title)) throw new Error(`${file}: "reward.title" needs "en" and "fil"`);
+  if (raw.next !== null && typeof raw.next !== "string") throw new Error(`${file}: "next" must be a task id or null`);
+  if (raw.first !== undefined && typeof raw.first !== "boolean") throw new Error(`${file}: "first" must be true or false`);
+  return raw as unknown as QuestDef;
+}
+
+/** Puts the tasks in chain order and checks the chain: one first task, every next exists, no loops, nothing left out. */
+export function questChain(quests: QuestDef[], buildingIds: Set<string>, seasonIds: string[]): QuestDef[] {
+  if (quests.length === 0) return [];
+  const byId = new Map<string, QuestDef>();
+  for (const q of quests) {
+    if (byId.has(q.id)) throw new Error(`Two tasks share the id "${q.id}"`);
+    byId.set(q.id, q);
+    if (q.condition.type === "built" && !buildingIds.has(q.condition.building)) throw new Error(`quest ${q.id}: unknown building "${q.condition.building}"`);
+    if (q.condition.type === "survivedSeason" && !seasonIds.includes(q.condition.season)) throw new Error(`quest ${q.id}: unknown season "${q.condition.season}"`);
+  }
+  const firsts = quests.filter((q) => q.first);
+  if (firsts.length !== 1) throw new Error(`Exactly one task must be "first" (found ${firsts.length})`);
+  const chain: QuestDef[] = [];
+  for (let q: QuestDef | undefined = firsts[0]; q; q = q.next === null ? undefined : byId.get(q.next)) {
+    if (chain.includes(q)) throw new Error(`quest ${q.id}: the chain loops`);
+    chain.push(q);
+    if (q.next !== null && !byId.has(q.next)) throw new Error(`quest ${q.id}: "next" names unknown task "${q.next}"`);
+  }
+  const left = quests.filter((q) => !chain.includes(q));
+  if (left.length) throw new Error(`quest ${left[0].id}: not in the chain from the first task`);
+  return chain;
+}
+
+const NO_VILLAGERS: VillagerContent = { chance: 0, names: [], stories: [], roleBuildings: {} };
+
+/** Checks content/villagers.json and the villager names in content/names.json. */
+export function validateVillagers(raw: unknown, rawNames: unknown, buildingIds: Set<string>): VillagerContent {
+  if (raw === undefined) return NO_VILLAGERS;
+  const file = "villagers.json";
+  if (!isObject(raw)) throw new Error(`${file}: must be a JSON object`);
+  if (!isNonNegNumber(raw.chance) || raw.chance > 1) throw new Error(`${file}: "chance" must be 0–1`);
+  const names = isObject(rawNames) ? rawNames.villagers : undefined;
+  if (!Array.isArray(names) || names.length === 0 || !names.every((n) => typeof n === "string" && n !== "" && n.length <= 30)) {
+    throw new Error('names.json: "villagers" must list names (at most 30 characters each)');
+  }
+  if (!Array.isArray(raw.stories) || raw.stories.length === 0) throw new Error(`${file}: "stories" must list at least one story`);
+  const ids = new Set<string>();
+  for (const st of raw.stories) {
+    if (!isObject(st) || typeof st.id !== "string" || st.id === "") throw new Error(`${file}: every story needs an "id"`);
+    if (ids.has(st.id)) throw new Error(`${file}: two stories share the id "${st.id}"`);
+    ids.add(st.id);
+    if (!(VILLAGER_ROLES as readonly unknown[]).includes(st.role)) throw new Error(`${file}: story ${st.id}: "role" must be one of ${VILLAGER_ROLES.join(", ")}`);
+    if (!isText(st.text) || !st.text.en.includes("{name}") || !st.text.fil.includes("{name}")) throw new Error(`${file}: story ${st.id}: "text" needs "en" and "fil", each with {name}`);
+  }
+  const rb = raw.roleBuildings;
+  if (!isObject(rb)) throw new Error(`${file}: "roleBuildings" must be an object`);
+  for (const [role, id] of Object.entries(rb)) {
+    if (!(VILLAGER_ROLES as readonly string[]).includes(role) || typeof id !== "string" || !buildingIds.has(id)) {
+      throw new Error(`${file}: roleBuildings.${role} must name a building`);
+    }
+  }
+  return { chance: raw.chance, names: names as string[], stories: raw.stories as unknown as VillagerStory[], roleBuildings: rb as VillagerContent["roleBuildings"] };
+}
+
 export function buildContent(
   buildingFiles: Record<string, unknown>,
   rawRules: unknown,
@@ -808,6 +983,7 @@ export function buildContent(
   blessingFiles: Record<string, unknown> = {},
   neighborFiles: Record<string, unknown> = {},
   choiceFiles: Record<string, unknown> = {},
+  extra: { quests?: Record<string, unknown>; villagers?: unknown; names?: unknown } = {},
 ): Content {
   const buildings = Object.entries(buildingFiles)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -883,7 +1059,15 @@ export function buildContent(
       return c;
     });
   if (new Set(choices.map((c) => c.id)).size !== choices.length) throw new Error("Two choice events share an id");
-  return { buildings, rules, events, lore, groves, neighbors, choices };
+  const quests = questChain(
+    Object.entries(extra.quests ?? {})
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([file, raw]) => validateQuest(raw, file)),
+    ids,
+    seasonIds,
+  );
+  const villagers = validateVillagers(extra.villagers, extra.names, ids);
+  return { buildings, rules, events, lore, groves, neighbors, choices, quests, villagers };
 }
 
 /** Loads every JSON file in content/ at build time (Vite bundles them). */
@@ -898,5 +1082,12 @@ export function loadContent(): Content {
   const blessings = import.meta.glob("../../content/blessings/*.json", { eager: true, import: "default" });
   const neighbors = import.meta.glob("../../content/neighbors/*.json", { eager: true, import: "default" });
   const choices = import.meta.glob("../../content/events/choices/*.json", { eager: true, import: "default" });
-  return buildContent(files, Object.values(rules)[0], events, lore, blessings, neighbors, choices);
+  const quests = import.meta.glob("../../content/quests/*.json", { eager: true, import: "default" });
+  const villagers = import.meta.glob("../../content/villagers.json", { eager: true, import: "default" });
+  const names = import.meta.glob("../../content/names.json", { eager: true, import: "default" });
+  return buildContent(files, Object.values(rules)[0], events, lore, blessings, neighbors, choices, {
+    quests,
+    villagers: Object.values(villagers)[0],
+    names: Object.values(names)[0],
+  });
 }

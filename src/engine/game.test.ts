@@ -30,7 +30,7 @@ describe("new game", () => {
     expect(house.type).toBe("bahay-kubo");
     expect(Math.abs(house.x - s.map.plaza.x) + Math.abs(house.y - s.map.plaza.y)).toBe(1);
     expect(tileAt(s.map, house.x, house.y)).toBe("cleared");
-    expect(s.resources).toEqual({ rice: 10, wood: 0 });
+    expect(s.resources).toEqual({ rice: 10, wood: 0, gold: 0 });
     expect(housing(s, content)).toBe(5);
   });
 
@@ -57,7 +57,7 @@ describe("gather", () => {
     const s = newGame(content);
     expect(gather(s, content, "rice").resources.rice).toBe(11);
     expect(gather(s, content, "wood").resources.wood).toBe(1);
-    expect(s.resources).toEqual({ rice: 10, wood: 0 });
+    expect(s.resources).toEqual({ rice: 10, wood: 0, gold: 0 });
   });
 });
 
@@ -67,22 +67,22 @@ describe("costs", () => {
     expect(buildingCost(content, kubo, 0).wood).toBe(10);
     expect(buildingCost(content, kubo, 1).wood).toBe(12); // 11.5
     expect(buildingCost(content, kubo, 2).wood).toBe(14); // 13.225
-    expect(buildingCost(content, def("woodcutter-camp"), 0)).toEqual({ rice: 10, wood: 0 });
+    expect(buildingCost(content, def("woodcutter-camp"), 0)).toEqual({ rice: 10, wood: 0, gold: 0 });
   });
 });
 
 describe("build", () => {
-  const rich = withState({ resources: { rice: 100, wood: 100 } });
+  const rich = withState({ resources: { rice: 100, wood: 100, gold: 0 } });
 
   it("spends resources and places the building on the chosen tile", () => {
-    const s = build(withState({ resources: { rice: 0, wood: 20 } }), content, "palayan", 2, 5);
+    const s = build(withState({ resources: { rice: 0, wood: 20, gold: 0 } }), content, "palayan", 2, 5);
     expect(s.buildings).toContainEqual(at("palayan", 2, 5));
     expect(owned(s, "palayan")).toBe(1);
     expect(s.resources.wood).toBe(5);
   });
 
   it("does nothing when unaffordable, unknown, or the tile is not free land", () => {
-    const poor = withState({ resources: { rice: 0, wood: 14 } });
+    const poor = withState({ resources: { rice: 0, wood: 14, gold: 0 } });
     expect(build(poor, content, "palayan", 2, 5)).toBe(poor);
     expect(build(rich, content, "dambana", 2, 5)).toBe(rich);
     expect(build(rich, content, "palayan", 0, 5)).toBe(rich); // river
@@ -114,7 +114,7 @@ describe("commands", () => {
 
   it("are plain data that survive a JSON round trip", () => {
     const cmd: Command = { type: "build", building: "palayan", x: 1, y: 6 };
-    const s = withState({ resources: { rice: 0, wood: 15 } });
+    const s = withState({ resources: { rice: 0, wood: 15, gold: 0 } });
     expect(apply(s, content, JSON.parse(JSON.stringify(cmd)))).toEqual(apply(s, content, cmd));
   });
 });
@@ -127,9 +127,10 @@ describe("workers and production", () => {
     expect(assignWorkers(withState({ villagers: 5, buildings: plain }), content)).toEqual({
       palayan: 2,
       "woodcutter-camp": 2,
+      "fishing-dock": 0,
     });
     const few = withState({ villagers: 3, buildings: [...plain, at("palayan", 6, 6)] });
-    expect(assignWorkers(few, content)).toEqual({ palayan: 2, "woodcutter-camp": 1 });
+    expect(assignWorkers(few, content)).toEqual({ palayan: 2, "woodcutter-camp": 1, "fishing-dock": 0 });
   });
 
   it("produces 0.5 rice/s and 0.4 wood/s per worker, minus 0.1 rice/s per villager", () => {
@@ -164,12 +165,13 @@ describe("workers and production", () => {
   it("counts buildings with at least one worker as staffed", () => {
     const many = Array.from({ length: 8 }, (_, i) => at("palayan", 1 + i, 2));
     // Plenty of rice, so no food-first: plain round-robin.
-    const s = withState({ villagers: 5, resources: { rice: 1000, wood: 0 }, buildings: [...many, at("woodcutter-camp", 3, 2), at("bahay-kubo", 5, 3)] });
+    const s = withState({ villagers: 5, resources: { rice: 1000, wood: 0, gold: 0 }, buildings: [...many, at("woodcutter-camp", 3, 2), at("bahay-kubo", 5, 3)] });
     // Round-robin: the camp takes 2, the palayan fields take 3 (one full, one half).
-    expect(staffedBuildings(s, content)).toEqual({ palayan: 2, "woodcutter-camp": 1 });
+    expect(staffedBuildings(s, content)).toEqual({ palayan: 2, "woodcutter-camp": 1, "fishing-dock": 0 });
     expect(staffedBuildings(withState({ villagers: 0, buildings: many }), content)).toEqual({
       palayan: 0,
       "woodcutter-camp": 0,
+      "fishing-dock": 0,
     });
   });
 });
@@ -188,8 +190,10 @@ describe("tick", () => {
   it("gives the same result for one long tick and many short ones", () => {
     const start = withState({
       villagers: 3,
-      resources: { rice: 50, wood: 0 },
+      resources: { rice: 50, wood: 0, gold: 0 },
       buildings: [at("palayan", 1, 5), at("bahay-kubo", 5, 3), at("bahay-kubo", 4, 3)],
+      // Already as happy as two houses by the plaza make them, so production is steady.
+      happiness: content.rules.happiness.start + 2 * content.rules.happiness.perHouseNearPlaza,
     });
     let small = start;
     for (let i = 0; i < 300; i++) small = tick(small, content, 0.1);
@@ -199,12 +203,12 @@ describe("tick", () => {
   });
 
   it("never lets rice go negative", () => {
-    const s = tick(withState({ resources: { rice: 1, wood: 0 } }), content, 15);
+    const s = tick(withState({ resources: { rice: 1, wood: 0, gold: 0 } }), content, 15);
     expect(s.resources.rice).toBe(0);
   });
 
   it("brings new villagers when there is room and rice", () => {
-    const s = withState({ resources: { rice: 100, wood: 0 }, buildings: [at("bahay-kubo", 5, 3), at("bahay-kubo", 4, 3)] });
+    const s = withState({ resources: { rice: 100, wood: 0, gold: 0 }, buildings: [at("bahay-kubo", 5, 3), at("bahay-kubo", 4, 3)] });
     expect(housing(s, content)).toBe(7);
     expect(tick(s, content, 10).villagers).toBe(6);
     expect(tick(s, content, 100).villagers).toBe(7);

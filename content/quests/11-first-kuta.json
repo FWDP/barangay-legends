@@ -1,0 +1,18 @@
+{
+  "id": "first-kuta",
+  "text": {
+    "en": "Build a Kuta",
+    "fil": "Magtayo ng Kuta"
+  },
+  "condition": {
+    "type": "built",
+    "building": "kuta",
+    "count": 1
+  },
+  "reward": {
+    "resources": {
+      "wood": 20
+    }
+  },
+  "next": "three-warriors"
+}

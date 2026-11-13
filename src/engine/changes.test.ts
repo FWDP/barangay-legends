@@ -39,7 +39,7 @@ describe("placement rules come from content", () => {
 });
 
 describe("undo", () => {
-  const rich = () => withState({ resources: { rice: 100, wood: 100 } });
+  const rich = () => withState({ resources: { rice: 100, wood: 100, gold: 0 } });
 
   it("takes the building back and returns the full cost", () => {
     const before = rich();
@@ -91,7 +91,7 @@ describe("move", () => {
   const farm = () =>
     withState({
       buildings: [at("bahay-kubo", 5, 3), at("palayan", 1, 5), at("palayan", 3, 7)],
-      resources: { rice: 100, wood: 100 },
+      resources: { rice: 100, wood: 100, gold: 0 },
       villagers: 5,
     });
 
@@ -136,7 +136,7 @@ describe("move", () => {
   });
 
   it("needs the move cost and refuses a burning building", () => {
-    const poor = { ...farm(), resources: { rice: 100, wood: 1 } };
+    const poor = { ...farm(), resources: { rice: 100, wood: 1, gold: 0 } };
     expect(apply(poor, calm, { type: "move", x: 1, y: 5, toX: 1, toY: 6 })).toBe(poor);
     const burning = { ...farm(), buildings: [at("bahay-kubo", 5, 3), { ...at("palayan", 1, 5), burningSince: 0 }] };
     expect(apply(burning, calm, { type: "move", x: 1, y: 5, toX: 1, toY: 6 })).toBe(burning);
@@ -154,7 +154,7 @@ describe("demolish", () => {
   const camps = () =>
     withState({
       buildings: [at("bahay-kubo", 5, 3), at("palayan", 2, 5), at("palayan", 2, 6)],
-      resources: { rice: 100, wood: 0 },
+      resources: { rice: 100, wood: 0, gold: 0 },
       villagers: 5,
     });
 
@@ -193,7 +193,7 @@ describe("demolish", () => {
 
   it("doesn't bring felled balete trees back", () => {
     const map = mapFrom(["TTTTTTT", "T.....T", "T..P..T", "T.....T", "TTT.TTT"]); // a balete once stood at (3, 4)
-    const s = withState({ map, buildings: [at("bahay-kubo", 3, 4)], resources: { rice: 100, wood: 0 } });
+    const s = withState({ map, buildings: [at("bahay-kubo", 3, 4)], resources: { rice: 100, wood: 0, gold: 0 } });
     const after = apply(s, calm, { type: "demolish", x: 3, y: 4 });
     expect(tileAt(after.map, 3, 4)).toBe("cleared");
     expect(countTiles(run(after, 600).map, "balete")).toBe(0);
@@ -206,7 +206,7 @@ describe("demolishing a Bahay Kubo with too many villagers", () => {
     withState({
       buildings: [at("bahay-kubo", 5, 3), at("bahay-kubo", 6, 3)],
       villagers: 7,
-      resources: { rice: 1000, wood: 0 },
+      resources: { rice: 1000, wood: 0, gold: 0 },
     });
 
   it("warns how many villagers will have to leave", () => {
@@ -260,7 +260,7 @@ describe("demolishing a Tulay", () => {
       map: riverside,
       buildings: [at("bahay-kubo", 1, 1)],
       villagers: 20,
-      resources: { rice: 1000, wood: 500 },
+      resources: { rice: 1000, wood: 500, gold: 0 },
     });
     let b = apply(s, calm, { type: "build", building: "tulay", x: 4, y: 2 });
     b = apply(b, calm, { type: "build", building: "woodcutter-camp", x: 6, y: 2 });
@@ -317,7 +317,7 @@ describe("demolishing a Tulay", () => {
   });
 
   it("can be undone right after building, which removes the crossing", () => {
-    const s = withState({ map: riverside, buildings: [], villagers: 20, resources: { rice: 0, wood: 500 } });
+    const s = withState({ map: riverside, buildings: [], villagers: 20, resources: { rice: 0, wood: 500, gold: 0 } });
     const b = apply(s, calm, { type: "build", building: "tulay", x: 4, y: 2 });
     const undone = apply(b, calm, { type: "undo" });
     expect(undone.map).toEqual(s.map);
@@ -342,7 +342,7 @@ describe("saving", () => {
   it("keeps the undo window and bridge spans", () => {
     const riverside = mapFrom(["TTTTTTTT", "T...~~.T", "T.P.~~.T", "TTTTTTTT"]);
     const s = apply(
-      withState({ map: riverside, buildings: [], villagers: 20, resources: { rice: 0, wood: 500 } }),
+      withState({ map: riverside, buildings: [], villagers: 20, resources: { rice: 0, wood: 500, gold: 0 } }),
       calm,
       { type: "build", building: "tulay", x: 4, y: 2 },
     );

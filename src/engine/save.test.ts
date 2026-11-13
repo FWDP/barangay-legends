@@ -45,10 +45,10 @@ describe("save", () => {
   });
 
   it("drops unknown buildings, bad numbers and buildings on tiles that don't fit", () => {
-    const s = withState({ resources: { rice: 1, wood: 7 }, villagers: 3 });
+    const s = withState({ resources: { rice: 1, wood: 7, gold: 0 }, villagers: 3 });
     const saved = {
       ...s,
-      resources: { rice: -5, wood: 7 },
+      resources: { rice: -5, wood: 7, gold: 0 },
       buildings: [
         at("palayan", 1, 4),
         at("castle", 2, 4),
@@ -63,7 +63,7 @@ describe("save", () => {
     };
     const loaded = roundTrip(saved)!;
     expect(loaded.buildings).toEqual([at("palayan", 1, 4), at("bahay-kubo", 4, 5)]);
-    expect(loaded.resources).toEqual({ rice: newGame(content).resources.rice, wood: 7 });
+    expect(loaded.resources).toEqual({ rice: newGame(content).resources.rice, wood: 7, gold: 0 });
   });
 
   it("rejects a save whose map is broken", () => {
@@ -95,7 +95,7 @@ describe("migration from v3 (before the generated map)", () => {
   const v3Save = {
     version: 3,
     barangay: { id: "barangay-1", region: { x: 0, y: 0 } },
-    resources: { rice: 220, wood: 140 },
+    resources: { rice: 220, wood: 140, gold: 0 },
     villagers: 15,
     migration: 0,
     time: 120,
@@ -130,7 +130,7 @@ describe("migration from v3 (before the generated map)", () => {
     expect(owned(s, "palayan")).toBe(2);
     expect(owned(s, "woodcutter-camp")).toBe(1);
     expect(s.buildings.filter((b) => b.damaged)).toHaveLength(1);
-    expect(s).toMatchObject({ resources: { rice: 220, wood: 140 }, villagers: 15, time: 120, rng: 777 });
+    expect(s).toMatchObject({ resources: { rice: 220, wood: 140, gold: 0 }, villagers: 15, time: 120, rng: 777 });
   });
 
   it("keeps the layout around the plaza (mirrored if the river is on the other side)", () => {
@@ -168,7 +168,7 @@ describe("migration from v3 (before the generated map)", () => {
 describe("older saves still load through every migration", () => {
   const v1Save = {
     version: 1,
-    resources: { rice: 220, wood: 140 },
+    resources: { rice: 220, wood: 140, gold: 0 },
     villagers: 15,
     buildings: { "bahay-kubo": 6, palayan: 4, "woodcutter-camp": 3, castle: 2 },
     migration: 0.25,
@@ -177,7 +177,7 @@ describe("older saves still load through every migration", () => {
   it("v1 (building counts) → current", () => {
     const s = roundTrip(v1Save)!;
     expect(s.version).toBe(STATE_VERSION);
-    expect(s).toMatchObject({ resources: { rice: 220, wood: 140 }, villagers: 15, migration: 0.25 });
+    expect(s).toMatchObject({ resources: { rice: 220, wood: 140, gold: 0 }, villagers: 15, migration: 0.25 });
     expect([owned(s, "bahay-kubo"), owned(s, "palayan"), owned(s, "woodcutter-camp")]).toEqual([6, 4, 3]);
     expect(new Set(s.buildings.map((b) => `${b.x},${b.y}`)).size).toBe(13);
     for (const b of s.buildings) expect(tileAt(s.map, b.x, b.y)).toBe("cleared");
@@ -201,7 +201,7 @@ describe("older saves still load through every migration", () => {
     const v2Save = {
       version: 2,
       barangay: { id: "barangay-1", region: { x: 0, y: 0 } },
-      resources: { rice: 50, wood: 20 },
+      resources: { rice: 50, wood: 20, gold: 0 },
       villagers: 7,
       buildings: [at("bahay-kubo", 5, -1), at("palayan", 1, 0)],
       migration: 0,
@@ -235,5 +235,91 @@ describe("event state round trip", () => {
     saveGame(s, storage);
     // A player save always gets a region (rebuilt from content when missing).
     expect({ ...loadGame(content, storage), region: null }).toEqual(s);
+  });
+});
+
+describe("v16 → v17: gold, happiness, tasks and named villagers", () => {
+  /** A save as v16 wrote it: no gold, no happiness, no tasks or named villagers. */
+  function v16(): string {
+    const s = newGame(content, 9);
+    const raw = { ...s, version: 16, resources: { rice: 42, wood: 7 } } as Record<string, unknown>;
+    for (const key of ["happiness", "gawainDone", "named", "history", "stats"]) delete raw[key];
+    const region = s.region!;
+    raw.region = {
+      ...region,
+      neighbors: region.neighbors.map((n) => {
+        const st = { ...n.state, version: 16, resources: { rice: n.state.resources.rice, wood: n.state.resources.wood } } as Record<string, unknown>;
+        for (const key of ["happiness", "gawainDone", "named", "history", "stats"]) delete st[key];
+        return { ...n, state: st };
+      }),
+    };
+    return JSON.stringify(raw);
+  }
+
+  it("adds gold (0), happiness (60) and empty tasks, villagers and history", () => {
+    const s = parseSave(v16(), content)!;
+    expect(s.version).toBe(STATE_VERSION);
+    expect(s.resources).toEqual({ rice: 42, wood: 7, gold: 0 });
+    expect(s.happiness).toBe(60);
+    expect(s.gawainDone).toEqual([]);
+    expect(s.named).toEqual([]);
+    expect(s.history).toEqual([]);
+    expect(s.stats).toEqual({ raidsDefended: 0, rolls: 0, named: 0 });
+    expect(s.region!.neighbors.every((n) => n.state.resources.gold === 0)).toBe(true);
+  });
+
+  it("credits tasks an old save had already met on the first step", () => {
+    const s = parseSave(v16(), content)!;
+    // newGame starts with a Bahay Kubo only: nothing met yet, so the chain starts at the beginning.
+    expect(tick(s, calm, 1).gawainDone).toEqual([]);
+    const withField = { ...s, buildings: [...s.buildings, at("palayan", s.map.plaza.x + 1, s.map.plaza.y + 1)] };
+    expect(tick(withField, calm, 1).gawainDone).toEqual(["first-palayan"]);
+  });
+
+  it("round-trips the new fields", () => {
+    const storage = fakeStorage();
+    const s = withState({
+      villagers: 8,
+      warriors: 1,
+      sick: [20],
+      happiness: 71.5,
+      resources: { rice: 10, wood: 2, gold: 33 },
+      gawainDone: ["first-palayan", "first-camp"],
+      named: [
+        { id: 1, name: "Diwa", story: "first-child", role: "villager", since: 12, sick: true },
+        { id: 2, name: "Malakas", story: "bravest", role: "warrior", since: 40 },
+      ],
+      history: [
+        { at: 12, kind: "named", name: "Diwa", story: "first-child" },
+        { at: 30, kind: "task", task: "first-palayan" },
+        { at: 35, kind: "left", name: "Ulan", story: "singer", cause: "hunger" },
+      ],
+      stats: { raidsDefended: 2, rolls: 17, named: 3 },
+    });
+    saveGame(s, storage);
+    expect({ ...loadGame(content, storage), region: null }).toEqual(s);
+  });
+
+  it("drops what doesn't fit: unknown tasks and stories, more named villagers than villagers", () => {
+    const s = withState({ villagers: 1, warriors: 0 });
+    const raw = {
+      ...s,
+      happiness: 250,
+      gawainDone: ["first-palayan", "made-up", "first-palayan"],
+      named: [
+        { id: 1, name: "Diwa", story: "first-child", role: "villager", since: 0 },
+        { id: 2, name: "Ulan", story: "no-such-story", role: "villager", since: 0 },
+        { id: 3, name: "Sigla", story: "singer", role: "villager", since: 0 },
+        { id: 4, name: "Malakas", story: "bravest", role: "warrior", since: 0 },
+      ],
+      history: [{ at: 1, kind: "task", task: "made-up" }, { at: 2, kind: "fled", name: "x" }, { at: 3, kind: "left", name: "Ulan" }],
+    };
+    const back = roundTrip(raw)!;
+    expect(back.happiness).toBe(100);
+    expect(back.gawainDone).toEqual(["first-palayan"]);
+    // One villager, no warriors: only the newest non-warrior stays.
+    expect(back.named.map((v) => v.name)).toEqual(["Sigla"]);
+    expect(back.history).toEqual([{ at: 3, kind: "left", name: "Ulan" }]);
+    expect(back.stats.named).toBeGreaterThanOrEqual(3);
   });
 });

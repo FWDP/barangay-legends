@@ -160,7 +160,7 @@ const GONGS = [392, 440, 523, 587, 659];
 
 export const sfx = {
   /** Soft rustle for rice, hollow knock for wood. One per 250 ms, however fast the taps. */
-  gather(resource: "rice" | "wood") {
+  gather(resource: "rice" | "wood" | "gold") {
     once("gather", GATHER_GAP_MS, () => {
       if (resource === "wood") tone(420, 180, 0, 0.09, "triangle", 0.25);
       else tone(900, 600, 0, 0.07, "sine", 0.15);

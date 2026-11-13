@@ -117,7 +117,7 @@ describe("clearing land", () => {
 
   it("takes villagers' time, then turns the tile into cleared land and gives wood", () => {
     let s = apply(start(), calm, { type: "clear", x: 0, y: 2 });
-    expect(s.clearing).toEqual([{ x: 0, y: 2, progress: 0, seconds: 6, paid: { rice: content.rules.clearing.cost.rice, wood: 0 } }]);
+    expect(s.clearing).toEqual([{ x: 0, y: 2, progress: 0, seconds: 6, paid: { rice: content.rules.clearing.cost.rice, wood: 0, gold: 0 } }]);
     // Buildings come first; clearing uses villagers who aren't working anywhere.
     expect(availableWorkers(s, calm)).toBe(5);
     s = run(s, 5);
@@ -154,7 +154,7 @@ describe("clearing land", () => {
   });
 
   it("costs rice upfront, and waits for a free, healthy villager", () => {
-    const broke = { ...start(), resources: { rice: 0, wood: 0 } };
+    const broke = { ...start(), resources: { rice: 0, wood: 0, gold: 0 } };
     expect(clearBlocker(broke, content, 0, 2)).toBe("cost");
     expect(apply(broke, calm, { type: "clear", x: 0, y: 2 })).toBe(broke);
     // Everyone sick: the job is queued but nobody works on it.
@@ -165,7 +165,7 @@ describe("clearing land", () => {
 
   it("pauses while the barangay is hungry", () => {
     let s = apply(start(), calm, { type: "clear", x: 0, y: 2 });
-    s = run({ ...s, resources: { rice: 0, wood: 0 } }, 10);
+    s = run({ ...s, resources: { rice: 0, wood: 0, gold: 0 } }, 10);
     expect(s.clearing[0].progress).toBe(0);
     expect(tileAt(s.map, 0, 2)).toBe("forest");
   });
@@ -214,7 +214,7 @@ describe("Tulay (bridge)", () => {
   ]);
   const tulay = def("tulay");
   const town = (villagers: number) =>
-    withState({ map: riverside, buildings: [], villagers, resources: { rice: 1000, wood: 500 } });
+    withState({ map: riverside, buildings: [], villagers, resources: { rice: 1000, wood: 500, gold: 0 } });
 
   it("unlocks at 20 villagers", () => {
     expect(isUnlocked(town(19), tulay)).toBe(false);

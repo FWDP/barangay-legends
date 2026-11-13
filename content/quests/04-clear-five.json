@@ -1,0 +1,17 @@
+{
+  "id": "clear-five",
+  "text": {
+    "en": "Clear 5 forest tiles",
+    "fil": "Maglinis ng 5 bahagi ng gubat"
+  },
+  "condition": {
+    "type": "tilesCleared",
+    "count": 5
+  },
+  "reward": {
+    "resources": {
+      "wood": 15
+    }
+  },
+  "next": "daan-three"
+}

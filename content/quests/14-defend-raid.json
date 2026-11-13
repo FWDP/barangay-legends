@@ -1,0 +1,18 @@
+{
+  "id": "defend-raid",
+  "text": {
+    "en": "Defend your barangay from a raid",
+    "fil": "Ipagtanggol ang barangay sa isang pagsalakay"
+  },
+  "condition": {
+    "type": "raidsDefended",
+    "count": 1
+  },
+  "reward": {
+    "title": {
+      "en": "Brave Datu",
+      "fil": "Matapang na Datu"
+    }
+  },
+  "next": "first-tributary"
+}

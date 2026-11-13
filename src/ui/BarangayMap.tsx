@@ -51,7 +51,8 @@ import { spawnFloat } from "./floats";
 import { bonusPreviewText, RESOURCE_ICON } from "./format";
 import { activeJobs, jobCost, workforce } from "../engine/clearing";
 import { landingCandidates, raidLanding } from "../engine/border";
-import { useReducedMotion, VillagerLayer, type Clash } from "./VillagerLayer";
+import { useReducedMotion, VillagerLayer, type Clash, type NamedHit } from "./VillagerLayer";
+import type { NamedVillager } from "../engine/people";
 import { dockPoint, riverPath, SAIL_SECONDS, waitIndex } from "./visitors";
 import { isClear, labelSize, placeLabel, type Rect } from "./labels";
 import { DAY_SECONDS } from "./villagers";
@@ -108,6 +109,8 @@ export function BarangayMap(props: {
   onPlace: (x: number, y: number) => void;
   /** A tap on a tile outside placing mode: building menu, fire, repair, clear land. (sx, sy) is the screen point. */
   onTapTile: (x: number, y: number, sx: number, sy: number) => void;
+  /** A named villager was tapped. */
+  onVillager?: (v: NamedVillager) => void;
   /** Right-click on a building (desktop): open its menu. */
   onBuildingMenu: (x: number, y: number, sx: number, sy: number) => void;
   /** The player tapped a resting spirit (the kapre): show its lore note. */
@@ -129,7 +132,7 @@ export function BarangayMap(props: {
   /** Trade is paused for a raid: the bangka waits offshore and can't be tapped. */
   tradeHeld?: boolean;
 }) {
-  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null, selection = [], onSelectArea, focus = null, tradeHeld = false } = props;
+  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onVillager, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null, selection = [], onSelectArea, focus = null, tradeHeld = false } = props;
   // The rectangle being dragged over the forest (desktop), from its first tile to the current one.
   const [dragArea, setDragArea] = useState<{ from: Point; to: Point } | null>(null);
   // Tiles being painted with a mouse drag in road mode (laid on release).
@@ -355,6 +358,7 @@ export function BarangayMap(props: {
     return { dist: Math.hypot(a.x - b.x, a.y - b.y) || 1, mid: { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } };
   };
 
+  const namedHit = useRef<NamedHit | null>(null);
   const tapAt = (px: number, py: number, clientX: number, clientY: number) => {
     if (!cam) return;
     const t = screenToTile(cam, view, px, py);
@@ -371,7 +375,10 @@ export function BarangayMap(props: {
         if (tt === "river" || tt === "bridge") spawnFloat(clientX, clientY, "Can't cross here", "info");
       }
     } else {
-      onTapTile(t.x, t.y, clientX, clientY);
+      // A named villager (drawn with a star) comes before the tile under them.
+      const who = onVillager && namedHit.current?.(px, py);
+      if (who) onVillager(who);
+      else onTapTile(t.x, t.y, clientX, clientY);
     }
   };
 
@@ -743,7 +750,7 @@ export function BarangayMap(props: {
             {cells}
           </div>
         )}
-        {cam && view.w > 0 && <VillagerLayer state={state} content={content} cam={cam} view={view} reducedMotion={reducedMotion} clash={clash} />}
+        {cam && view.w > 0 && <VillagerLayer state={state} content={content} cam={cam} view={view} reducedMotion={reducedMotion} clash={clash} hitRef={scenic ? undefined : namedHit} />}
         {cam && landing && <LandingMarker cam={cam} view={view} landing={landing} avoid={avoid} />}
         {waitingAt && (
           <span

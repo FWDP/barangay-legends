@@ -6,7 +6,7 @@ export interface Float {
   x: number;
   y: number;
   text: string;
-  tone: "rice" | "wood" | "info";
+  tone: "rice" | "wood" | "gold" | "info";
 }
 
 let floats: Float[] = [];
@@ -35,7 +35,7 @@ const subscribe = (l: () => void) => {
   return () => listeners.delete(l);
 };
 
-const TONE = { rice: "text-amber-50", wood: "text-orange-200", info: "text-sky-100" } as const;
+const TONE = { rice: "text-amber-50", wood: "text-orange-200", gold: "text-yellow-200", info: "text-sky-100" } as const;
 
 export function FloatLayer() {
   const list = useSyncExternalStore(subscribe, () => floats);

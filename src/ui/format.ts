@@ -1,8 +1,8 @@
 import { RESOURCES, type BuildingDef, type Content, type Resource } from "../engine/content";
 import type { Rates } from "../engine/game";
 
-export const RESOURCE_ICON: Record<Resource, string> = { rice: "🍚", wood: "🪵" };
-const PRODUCED_LABEL: Record<Resource, string> = { rice: "farmed", wood: "chopped" };
+export const RESOURCE_ICON: Record<Resource, string> = { rice: "🍚", wood: "🪵", gold: "🪙" };
+const PRODUCED_LABEL: Record<Resource, string> = { rice: "farmed", wood: "chopped", gold: "earned" };
 
 /** A cost or refund as icons, e.g. "🪵 9" or "🍚 2 🪵 3"; "free" when it is all zero. */
 export function costText(amounts: Partial<Record<Resource, number>>): string {

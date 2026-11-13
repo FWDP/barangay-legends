@@ -6,6 +6,8 @@ import { bonusRuleText, groveRuleText, RESOURCE_ICON } from "./format";
 function effectText(b: BuildingDef): string {
   const parts: string[] = [];
   if (b.housing) parts.push(`+${b.housing} villager capacity`);
+  if (b.storage?.rice) parts.push(`+${b.storage.rice} rice storage`);
+  if (b.placeNextTo) parts.push(`next to the ${b.placeNextTo.join(" or ")}`);
   for (const r of RESOURCES) {
     const amount = b.produces?.[r];
     if (amount) parts.push(`+${amount} ${r}/s per worker`);

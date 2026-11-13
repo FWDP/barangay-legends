@@ -18,7 +18,7 @@ describe("content", () => {
   it("loads every building file in content/ and passes the schema check", () => {
     const content = loadContent();
     // In menu order ("order" in each file), not file-name order.
-    expect(content.buildings.map((b) => b.id)).toEqual(["bahay-kubo", "palayan", "woodcutter-camp", "babaylan-hut", "tulay", "kuta"]);
+    expect(content.buildings.map((b) => b.id)).toEqual(["bahay-kubo", "palayan", "woodcutter-camp", "babaylan-hut", "kamalig", "tulay", "kuta", "fishing-dock"]);
   });
 
   it("matches the Week 1 numbers in docs/game-design.md", () => {
@@ -43,7 +43,7 @@ describe("content", () => {
   it.each([
     ["missing id", { ...good, id: undefined }, /"id"/],
     ["bad id", { ...good, id: "Rice Field" }, /a-z/],
-    ["unknown resource", { ...good, cost: { gold: 1 } }, /unknown resource "gold"/],
+    ["unknown resource", { ...good, cost: { silver: 1 } }, /unknown resource "silver"/],
     ["negative cost", { ...good, cost: { wood: -1 } }, />= 0/],
     ["producer without workers", { ...good, workers: undefined }, /needs "workers"/],
     ["no sources", { ...good, sources: [] }, /sources/],

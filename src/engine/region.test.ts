@@ -36,7 +36,7 @@ function withDiplomacy(patch: Partial<typeof d> & Record<string, unknown>, base:
 
 /** A player with a region, plenty of goods and 20 villagers. */
 function world(patch: Partial<GameState> = {}): GameState {
-  const s = withState({ resources: { rice: 2000, wood: 2000 }, villagers: 20, buildings: [], ...patch });
+  const s = withState({ resources: { rice: 2000, wood: 2000, gold: 0 }, villagers: 20, buildings: [], ...patch });
   return { ...s, region: patch.region ?? createRegion(calm, s.time, 7) };
 }
 
@@ -99,7 +99,7 @@ describe("Mandirigma and Kuta", () => {
   it("needs a villager who isn't already a warrior, and the goods", () => {
     const full = world({ villagers: 2, warriors: 2 });
     expect(apply(full, calm, { type: "train" })).toBe(full);
-    const poor = world({ resources: { rice: 0, wood: 0 } });
+    const poor = world({ resources: { rice: 0, wood: 0, gold: 0 } });
     expect(apply(poor, calm, { type: "train" })).toBe(poor);
   });
 
@@ -136,7 +136,7 @@ describe("Mangayaw (raids)", () => {
   const target = "talampas";
   const ready = (rngPred: (r: number) => boolean) => {
     let s = world({ warriors: 10, rng: seedWhere(rngPred) });
-    s = setNbState(s, target, { warriors: 2, resources: { rice: 400, wood: 200 } });
+    s = setNbState(s, target, { warriors: 2, resources: { rice: 400, wood: 200, gold: 0 } });
     return s;
   };
   // 10 warriors attack 30 vs talampas' defense (base + 2 warriors + walls).
@@ -217,7 +217,7 @@ describe("influence: trade, marriage alliance, sandugo", () => {
     expect(nb(wed, "malinaw").marriage).toBe(true);
     expect(nb(wed, "malinaw").influence).toBeCloseTo(d.marriage.influence);
     expect(wed.resources.rice).toBe(2000 - (d.marriage.cost.rice ?? 0));
-    expect(marriageBlocker(setNb(world({ resources: { rice: 0, wood: 0 } }), "malinaw", { trust: 80 }), calm, "malinaw")).toBe("cost");
+    expect(marriageBlocker(setNb(world({ resources: { rice: 0, wood: 0, gold: 0 } }), "malinaw", { trust: 80 }), calm, "malinaw")).toBe("cost");
   });
 
   it("sandugo needs a marriage alliance, and makes them an ally", () => {
@@ -243,7 +243,7 @@ describe("influence: trade, marriage alliance, sandugo", () => {
 
 describe("tributaries", () => {
   // A player with no people or buildings, so any goods gained are tribute.
-  const quiet = () => setNb(world({ villagers: 0, resources: { rice: 0, wood: 0 } }), "pulang-lupa", { status: "tributary", influence: 100, loyalty: 80 });
+  const quiet = () => setNb(world({ villagers: 0, resources: { rice: 0, wood: 0, gold: 0 } }), "pulang-lupa", { status: "tributary", influence: 100, loyalty: 80 });
 
   it("send 10% of a minute's production every minute", () => {
     let s = quiet();
@@ -258,11 +258,11 @@ describe("tributaries", () => {
   it("lose loyalty over time unless guarded or traded with", () => {
     const s = quiet();
     expect(nb(tick(s, calm, 60), "pulang-lupa").loyalty).toBeCloseTo(80 - d.loyalty.decayPerMinute);
-    const guarded = apply({ ...s, warriors: 0, villagers: 5, resources: { rice: 100, wood: 100 }, buildings: [...s.buildings, at("kuta", 2, 2)] }, calm, { type: "train" });
+    const guarded = apply({ ...s, warriors: 0, villagers: 5, resources: { rice: 100, wood: 100, gold: 0 }, buildings: [...s.buildings, at("kuta", 2, 2)] }, calm, { type: "train" });
     const g = apply(guarded, calm, { type: "guard", neighbor: "pulang-lupa", warriors: 1 });
     expect(homeWarriors(g)).toBe(0);
     expect(nb(tick(g, calm, 60), "pulang-lupa").loyalty).toBeCloseTo(80 + d.loyalty.guardPerMinute);
-    const traded = apply({ ...s, resources: { rice: 100, wood: 100 } }, calm, { type: "trade", neighbor: "pulang-lupa", give: "rice" });
+    const traded = apply({ ...s, resources: { rice: 100, wood: 100, gold: 0 } }, calm, { type: "trade", neighbor: "pulang-lupa", give: "rice" });
     expect(nb(traded, "pulang-lupa").loyalty).toBe(80 + d.trade.loyalty);
   });
 
@@ -287,7 +287,7 @@ describe("tributaries", () => {
 describe("raids on the player", () => {
   const surely = withDiplomacy({ aiRaid: { ...d.aiRaid, chancePerSecond: 1 } });
   const fed = (patch: Partial<GameState> = {}) =>
-    world({ resources: { rice: 1000, wood: 1000 }, buildings: [at("bahay-kubo", 5, 3), at("palayan", 3, 5)], ...patch });
+    world({ resources: { rice: 1000, wood: 1000, gold: 0 }, buildings: [at("bahay-kubo", 5, 3), at("palayan", 3, 5)], ...patch });
 
   it("never come during the 10-minute truce", () => {
     expect(d.truceSeconds).toBe(600);

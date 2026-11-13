@@ -4,7 +4,7 @@ import type { Content } from "../engine/content";
 import type { GameState } from "../engine/game";
 import { advise, dismiss, newModel, noteEvent, parseMemory, skipTutorial, type AdvisorModel, type Message } from "./advisor";
 import type { Lang } from "./settings";
-import type { AdvisorDef, TutorialEvent } from "./uiContent";
+import type { AdvisorDef, GameText, TutorialEvent } from "./uiContent";
 
 const MEMORY_KEY = "barangay-legends/advisor";
 
@@ -17,7 +17,7 @@ function loadMemory() {
 }
 
 /** Runs the adviser about once a second, and right away when something it watches changes. */
-export function useAdvisor(state: GameState, content: Content, advisor: AdvisorDef, opts: { lang: Lang; tipsOn: boolean; blocked: boolean }) {
+export function useAdvisor(state: GameState, content: Content, advisor: AdvisorDef, opts: { lang: Lang; tipsOn: boolean; blocked: boolean; game?: GameText }) {
   const [model, setModel] = useState<AdvisorModel>(() => newModel(loadMemory(), state, content));
   const latest = useRef({ state, ...opts });
   latest.current = { state, ...opts };
@@ -27,7 +27,7 @@ export function useAdvisor(state: GameState, content: Content, advisor: AdvisorD
     const id = setInterval(() => setModel(run), 1000);
     return () => clearInterval(id);
   }, [run]);
-  useEffect(() => setModel(run), [run, state.buildings, opts.lang, opts.tipsOn, opts.blocked]);
+  useEffect(() => setModel(run), [run, state.buildings, state.history, opts.lang, opts.tipsOn, opts.blocked]);
 
   useEffect(() => {
     try {
@@ -58,7 +58,7 @@ function Portrait({ src, name }: { src: string; name: string }) {
 export function AdvisorBubble(props: { message: Message | null; advisor: AdvisorDef; lang: Lang; onDismiss: () => void; onSkip: () => void }) {
   const { message, advisor, lang, onDismiss, onSkip } = props;
   if (!message) return null;
-  const tip = message.kind === "tip";
+  const tip = message.kind !== "tutorial";
   const body = (
     <>
       <span className="block font-display text-sm leading-tight text-amber-900">

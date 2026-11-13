@@ -1,0 +1,17 @@
+{
+  "id": "three-warriors",
+  "text": {
+    "en": "Train 3 Mandirigma",
+    "fil": "Magsanay ng 3 Mandirigma"
+  },
+  "condition": {
+    "type": "warriors",
+    "count": 3
+  },
+  "reward": {
+    "resources": {
+      "rice": 30
+    }
+  },
+  "next": "first-tulay"
+}

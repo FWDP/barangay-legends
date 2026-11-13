@@ -1,0 +1,17 @@
+{
+  "id": "ten-villagers",
+  "text": {
+    "en": "Reach 10 villagers",
+    "fil": "Umabot sa 10 taga-barangay"
+  },
+  "condition": {
+    "type": "villagers",
+    "count": 10
+  },
+  "reward": {
+    "resources": {
+      "rice": 20
+    }
+  },
+  "next": "clear-five"
+}

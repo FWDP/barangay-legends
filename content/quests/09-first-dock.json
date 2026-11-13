@@ -1,0 +1,19 @@
+{
+  "id": "first-dock",
+  "text": {
+    "en": "Build a Fishing Dock",
+    "fil": "Magtayo ng Fishing Dock"
+  },
+  "condition": {
+    "type": "built",
+    "building": "fishing-dock",
+    "count": 1
+  },
+  "reward": {
+    "title": {
+      "en": "Datu ng Ilog",
+      "fil": "Datu ng Ilog"
+    }
+  },
+  "next": "first-trade"
+}

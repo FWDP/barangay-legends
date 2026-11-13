@@ -1,0 +1,18 @@
+{
+  "id": "first-camp",
+  "text": {
+    "en": "Build a Woodcutter Camp",
+    "fil": "Magtayo ng Woodcutter Camp"
+  },
+  "condition": {
+    "type": "built",
+    "building": "woodcutter-camp",
+    "count": 1
+  },
+  "reward": {
+    "resources": {
+      "rice": 10
+    }
+  },
+  "next": "ten-villagers"
+}

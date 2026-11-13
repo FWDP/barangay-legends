@@ -1,0 +1,23 @@
+{
+  "id": "kamalig",
+  "name": "Kamalig",
+  "description": "A raised granary of bamboo and thatch. Each one stores more rice.",
+  "icon": "🧺",
+  "order": 4.5,
+  "cost": {
+    "wood": 30
+  },
+  "repairCost": {
+    "wood": 8
+  },
+  "storage": {
+    "rice": 100
+  },
+  "unlock": {
+    "villagers": 10
+  },
+  "sources": [
+    "docs/game-design.md (cost, +100 rice storage, unlock at 10 villagers)",
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+  ]
+}

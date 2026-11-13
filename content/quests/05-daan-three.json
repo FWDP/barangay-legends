@@ -1,0 +1,17 @@
+{
+  "id": "daan-three",
+  "text": {
+    "en": "Connect 3 buildings to the plaza with a Daan",
+    "fil": "Ikonekta ang 3 gusali sa plasa gamit ang Daan"
+  },
+  "condition": {
+    "type": "connected",
+    "count": 3
+  },
+  "reward": {
+    "resources": {
+      "wood": 20
+    }
+  },
+  "next": "first-kamalig"
+}

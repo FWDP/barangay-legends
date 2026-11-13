@@ -2,6 +2,8 @@ import { useState, type ReactNode } from "react";
 import type { Content, Resource } from "../engine/content";
 import { isHungry, seasonAt } from "../engine/events";
 import { freeVillagers } from "../engine/clearing";
+import { happinessMultiplier, happinessTarget } from "../engine/happiness";
+import { riceCap } from "../engine/storage";
 import { homeWarriors } from "../engine/region";
 import { buildingWorkers, housing, rates, warriorCap, type GameState, type Rates } from "../engine/game";
 import { clock } from "./EventBanners";
@@ -24,11 +26,27 @@ export function Hud(props: { state: GameState; content: Content; children: React
       >
         {state.barangay.name || "Barangay Legends"}
       </h1>
-      <ResourceChip resource="rice" amount={state.resources.rice} rates={r} note={notes(state, content).rice} />
+      <ResourceChip resource="rice" amount={state.resources.rice} rates={r} note={notes(state, content).rice} cap={riceCap(state, content)} />
       <ResourceChip resource="wood" amount={state.resources.wood} rates={r} note={notes(state, content).wood} />
+      {(state.resources.gold > 0 || r.net.gold !== 0) && <ResourceChip resource="gold" amount={state.resources.gold} rates={r} note={notes(state, content).gold} />}
       <Chip
-        icon="👥"
-        label={`${state.villagers} villagers (room for ${housing(state, content)}) · ${working} working · ${free} free · ${state.warriors} warriors${called ? ", called to arms" : ""}${state.sick.length ? ` · ${state.sick.length} sick` : ""}`}
+        icon={
+          <>
+            {/* On phones the mood face stands in for the people icon (no room for its own chip). */}
+            <span className="sm:hidden">{moodFace(state.happiness)}</span>
+            <span className="hidden sm:inline">👥</span>
+          </>
+        }
+        label={`${state.villagers} villagers (room for ${housing(state, content)}) · ${working} working · ${free} free · ${state.warriors} warriors${called ? ", called to arms" : ""}${state.sick.length ? ` · ${state.sick.length} sick` : ""} · ${happinessText(state, content)}`}
+        tip={
+          <>
+            {state.villagers} villagers, room for {housing(state, content)} · {working} working · {free} free
+            {state.sick.length > 0 && <> · {state.sick.length} sick</>}
+            <span className="mt-1 block text-amber-300 sm:hidden">
+              {moodFace(state.happiness)} {happinessText(state, content)}
+            </span>
+          </>
+        }
       >
         <span className="block font-display text-base leading-none tabular-nums sm:text-lg">
           {state.villagers}/{housing(state, content)}
@@ -55,7 +73,13 @@ export function Hud(props: { state: GameState; content: Content; children: React
           </span>
         </div>
       )}
-      <SeasonChip state={state} content={content} />
+      <span className="hidden sm:block">
+        <HappinessChip state={state} content={content} />
+      </span>
+      {/* On phones the season sits on the map instead (MapSeasonBadge): the bar has no room. */}
+      <span className="hidden sm:block">
+        <SeasonChip state={state} content={content} />
+      </span>
       <div className="ml-auto flex items-center gap-1 sm:gap-1.5">{children}</div>
     </header>
   );
@@ -65,12 +89,67 @@ export function Hud(props: { state: GameState; content: Content; children: React
 function notes(state: GameState, content: Content): Record<Resource, string | null> {
   if (isHungry(state)) {
     const n = `${content.events.hunger?.name ?? "Hunger"}: nobody is working`;
-    return { rice: n, wood: n };
+    return { rice: n, wood: n, gold: n };
   }
   const season = seasonAt(content, state.time)?.season;
   const pct = (r: Resource) => season?.productionPercent[r];
   const note = (r: Resource) => (pct(r) !== undefined ? `${season!.icon} ${season!.name}: ${r} ×${pct(r)! / 100}` : null);
-  return { rice: note("rice"), wood: note("wood") };
+  return { rice: note("rice"), wood: note("wood"), gold: note("gold") };
+}
+
+const moodFace = (h: number) => (h >= 75 ? "😄" : h >= 55 ? "🙂" : h >= 35 ? "😐" : "😟");
+
+/** e.g. "Happiness 72 of 100: production +3%. Heading to 64 (+4 houses near the plaza)." */
+function happinessText(state: GameState, content: Content): string {
+  const h = Math.round(state.happiness);
+  const parts = happinessTarget(state, content);
+  const effect = Math.round((happinessMultiplier(state, content) - 1) * 100);
+  const why = [
+    parts.houses > 0 && `+${parts.houses} houses near the plaza`,
+    parts.hunger < 0 && `${parts.hunger} hunger`,
+    parts.sickness < 0 && `${parts.sickness} sickness`,
+  ].filter(Boolean);
+  return `Happiness ${h} of 100: production ${effect >= 0 ? "+" : "−"}${Math.abs(effect)}%. Heading to ${Math.round(parts.target)}${why.length ? ` (${why.join(", ")})` : ""}.`;
+}
+
+/** Happiness: a face and the number; the tooltip says what raises or lowers it. */
+function HappinessChip({ state, content }: { state: GameState; content: Content }) {
+  const [open, setOpen] = useState(false);
+  const h = Math.round(state.happiness);
+  const face = moodFace(state.happiness);
+  const label = happinessText(state, content);
+  return (
+    <div className="group relative">
+      <button
+        type="button"
+        aria-label={label}
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        onBlur={() => setOpen(false)}
+        className="flex cursor-help flex-col items-center rounded-lg bg-black/25 px-1 py-0.5 text-amber-50 shadow-inner sm:flex-row sm:gap-1 sm:px-2 sm:py-1"
+      >
+        <span className="text-base leading-none sm:text-xl" aria-hidden>
+          {face}
+        </span>
+        <span className="text-[10px] leading-none tabular-nums sm:font-display sm:text-sm">{h}</span>
+      </button>
+      <div
+        role="tooltip"
+        className={`absolute top-full right-0 z-50 mt-2 w-56 rounded-lg border border-amber-950/50 bg-stone-900/95 px-2.5 py-1.5 text-xs text-amber-50 shadow-lg group-hover:block sm:left-0 sm:right-auto ${open ? "block" : "hidden"}`}
+      >
+        {label} Houses near the plaza lift spirits; hunger and sickness lower them.
+      </div>
+    </div>
+  );
+}
+
+/** The season on the map's top-right corner, for phones (the top bar shows it on wider screens). */
+export function MapSeasonBadge({ state, content }: { state: GameState; content: Content }) {
+  return (
+    <div data-map-overlay className="pointer-events-auto absolute top-2 right-2 z-10 rounded-lg bg-stone-900/50 sm:hidden">
+      <SeasonChip state={state} content={content} />
+    </div>
+  );
 }
 
 function SeasonChip({ state, content }: { state: GameState; content: Content }) {
@@ -93,26 +172,46 @@ function SeasonChip({ state, content }: { state: GameState; content: Content }) 
   );
 }
 
-function Chip(props: { icon: string; label: string; title?: string; children: ReactNode }) {
-  return (
-    <div
-      className="flex min-w-0 items-center gap-1 rounded-lg bg-black/25 px-1.5 py-1 text-amber-50 shadow-inner sm:gap-1.5 sm:px-2"
-      title={props.title ?? props.label}
-      aria-label={props.label}
-    >
+/** A HUD chip. With a `tip`, tapping it (or hovering, on desktop) shows the tip. */
+function Chip(props: { icon: ReactNode; label: string; title?: string; tip?: ReactNode; children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  const body = (
+    <>
       <span className="text-lg sm:text-xl" aria-hidden>
         {props.icon}
       </span>
       <span className="min-w-0 text-left">{props.children}</span>
+    </>
+  );
+  const look = "flex min-w-0 items-center gap-1 rounded-lg bg-black/25 px-1.5 py-1 text-amber-50 shadow-inner sm:gap-1.5 sm:px-2";
+  if (!props.tip) {
+    return (
+      <div className={look} title={props.title ?? props.label} aria-label={props.label}>
+        {body}
+      </div>
+    );
+  }
+  return (
+    <div className="group relative min-w-0">
+      <button type="button" className={`${look} cursor-help`} aria-label={props.label} aria-expanded={open} onClick={() => setOpen((o) => !o)} onBlur={() => setOpen(false)}>
+        {body}
+      </button>
+      <div
+        role="tooltip"
+        className={`absolute top-full left-0 z-50 mt-2 w-60 max-w-[calc(100vw-1rem)] rounded-lg border border-amber-950/50 bg-stone-900/95 px-2.5 py-1.5 text-xs text-amber-50 shadow-lg sm:group-hover:block ${open ? "block" : "hidden"}`}
+      >
+        {props.tip}
+      </div>
     </div>
   );
 }
 
-const RESOURCE_LABEL: Record<Resource, string> = { rice: "Rice", wood: "Wood" };
+const RESOURCE_LABEL: Record<Resource, string> = { rice: "Rice", wood: "Wood", gold: "Gold" };
 
 /** A resource chip that explains its rate on hover (desktop) or tap (phone). */
-function ResourceChip(props: { resource: Resource; amount: number; rates: Rates; note: string | null }) {
-  const { resource, amount, rates, note } = props;
+function ResourceChip(props: { resource: Resource; amount: number; rates: Rates; note: string | null; cap?: number }) {
+  const { resource, amount, rates, note, cap } = props;
+  const full = cap !== undefined && amount >= cap;
   const [open, setOpen] = useState(false);
   const net = rates.net[resource];
   const rateColor = net === 0 ? "text-amber-200/80" : net > 0 ? "text-lime-300" : "text-red-300";
@@ -122,8 +221,8 @@ function ResourceChip(props: { resource: Resource; amount: number; rates: Rates;
     <div className="group relative" data-resource={resource}>
       <button
         type="button"
-        className="flex min-w-[3.9rem] cursor-help items-center gap-1 rounded-lg bg-black/25 px-1.5 py-1 text-amber-50 shadow-inner sm:min-w-24 sm:gap-1.5 sm:px-2"
-        aria-label={`${RESOURCE_LABEL[resource]}: ${formatAmount(amount)}, ${formatRate(net)}`}
+        className="flex min-w-[3.4rem] cursor-help items-center gap-0.5 rounded-lg bg-black/25 px-1 py-1 text-amber-50 shadow-inner sm:min-w-24 sm:gap-1.5 sm:px-2"
+        aria-label={`${RESOURCE_LABEL[resource]}: ${formatAmount(amount)}${cap !== undefined ? ` of ${formatAmount(cap)}` : ""}, ${formatRate(net)}`}
         aria-expanded={open}
         aria-describedby={tipId}
         onClick={() => setOpen((o) => !o)}
@@ -133,8 +232,8 @@ function ResourceChip(props: { resource: Resource; amount: number; rates: Rates;
           {RESOURCE_ICON[resource]}
         </span>
         <span className="text-left">
-          <span className="block font-display text-base leading-none tabular-nums sm:text-lg">{formatAmount(amount)}</span>
-          <span className={`block text-[10px] leading-tight tabular-nums ${rateColor}`}>{formatRate(net)}</span>
+          <span className={`block font-display text-base leading-none tabular-nums sm:text-lg ${full ? "text-amber-300" : ""}`}>{formatAmount(amount)}</span>
+          <span className={`block text-[10px] leading-tight tabular-nums ${full ? "text-amber-300" : rateColor}`}>{full ? "full" : formatRate(net)}</span>
         </span>
       </button>
       <div
@@ -144,6 +243,12 @@ function ResourceChip(props: { resource: Resource; amount: number; rates: Rates;
       >
         {formatBreakdown(rates, resource)}
         {note && <span className="block text-amber-300">{note}</span>}
+        {cap !== undefined && (
+          <span className={`block ${full ? "text-amber-300" : "text-amber-100/80"}`}>
+            🧺 Storage {formatAmount(amount)}/{formatAmount(cap)}
+            {full ? ": full. Build a Kamalig to store more." : ""}
+          </span>
+        )}
       </div>
     </div>
   );

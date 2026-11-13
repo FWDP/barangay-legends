@@ -1,0 +1,19 @@
+{
+  "id": "first-palayan",
+  "first": true,
+  "text": {
+    "en": "Build your first Palayan",
+    "fil": "Magtayo ng unang Palayan"
+  },
+  "condition": {
+    "type": "built",
+    "building": "palayan",
+    "count": 1
+  },
+  "reward": {
+    "resources": {
+      "wood": 10
+    }
+  },
+  "next": "first-camp"
+}

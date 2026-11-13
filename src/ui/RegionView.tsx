@@ -396,7 +396,13 @@ function TradeForm({ n, state, content, dispatch }: { n: NeighborState; state: G
   const def = neighborDef(content, n.id)!;
   const std = standardProposal(content, n.id, "rice");
   const [give, setGive] = useState<Resource>("rice");
-  const want = RESOURCES.find((r) => r !== give)!;
+  const [wantPick, setWant] = useState<Resource>(std.want.resource);
+  const want = wantPick === give ? RESOURCES.find((r) => r !== give)! : wantPick;
+  /** The next resource after `r`, skipping `not` (tapping the icon cycles through them). */
+  const cycle = (r: Resource, not: Resource) => {
+    const others = RESOURCES.filter((x) => x !== not);
+    return others[(others.indexOf(r) + 1) % others.length];
+  };
   const [giveAmount, setGiveAmount] = useState(std.give.amount);
   const [wantAmount, setWantAmount] = useState(std.want.amount);
   const paused = tradingPaused(state);
@@ -433,12 +439,27 @@ function TradeForm({ n, state, content, dispatch }: { n: NeighborState; state: G
           <div className="flex flex-wrap items-center gap-1.5 text-sm">
             <span className="text-stone-600">Give</span>
             <AmountStepper value={giveAmount} onChange={(v) => setGiveAmount(step(v, 0))} by={5} />
-            <button type="button" className="game-btn border-2 border-amber-900/50 bg-amber-100 px-1.5 text-base" aria-label={`Give ${give}; tap to swap`} onClick={() => setGive(want)}>
-              {RESOURCE_ICON[give]} ⇄
+            <button
+              type="button"
+              className="game-btn border-2 border-amber-900/50 bg-amber-100 px-1.5 text-base"
+              aria-label={`Give ${give}; tap for another resource`}
+              onClick={() => {
+                const g = cycle(give, want);
+                setGive(g);
+              }}
+            >
+              {RESOURCE_ICON[give]} ▾
             </button>
             <span className="text-stone-600">for</span>
             <AmountStepper value={wantAmount} onChange={(v) => setWantAmount(step(v, 0))} by={5} />
-            <span className="text-base">{RESOURCE_ICON[want]}</span>
+            <button
+              type="button"
+              className="game-btn border-2 border-amber-900/50 bg-amber-100 px-1.5 text-base"
+              aria-label={`Ask for ${want}; tap for another resource`}
+              onClick={() => setWant(cycle(want, give))}
+            >
+              {RESOURCE_ICON[want]} ▾
+            </button>
           </div>
           <p className="text-[11px] text-stone-500">
             {embargo

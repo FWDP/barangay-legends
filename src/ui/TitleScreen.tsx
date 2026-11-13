@@ -216,14 +216,11 @@ export function TitleScreen(props: {
           <button type="button" onClick={() => setDialog("credits")} className={linkBtn}>
             📜 {t("credits")}
           </button>
-          {support ? (
+          {/* Hidden altogether until title.json has a support link. */}
+          {support && (
             <a href={support} target="_blank" rel="noreferrer" className={linkBtn}>
               💛 {t("support")}
             </a>
-          ) : (
-            <button type="button" disabled title={t("supportSoon")} className={`${linkBtn} disabled:opacity-70`}>
-              💛 {t("support")}
-            </button>
           )}
         </nav>
         <p className="text-outline text-center text-xs text-amber-100/90">{t("free")}</p>

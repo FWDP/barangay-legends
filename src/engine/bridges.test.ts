@@ -61,7 +61,7 @@ describe("migrating old bridges (v14 → v15)", () => {
       "T.P===~TT",
       "T...~~~~T",
     ]);
-    const old = withState({ map, buildings: [{ ...at("tulay", 3, 0), span: [{ x: 3, y: 0 }, { x: 4, y: 0 }, { x: 5, y: 0 }] }], villagers: 20, resources: { rice: 0, wood: 5 } });
+    const old = withState({ map, buildings: [{ ...at("tulay", 3, 0), span: [{ x: 3, y: 0 }, { x: 4, y: 0 }, { x: 5, y: 0 }] }], villagers: 20, resources: { rice: 0, wood: 5, gold: 0 } });
     const s = parseSave(v14(old), content)!;
     expect(s.buildings).toEqual([]);
     expect([3, 4, 5].every((x) => tileAt(s.map, x, 0) === "river")).toBe(true);
@@ -83,7 +83,7 @@ describe("bridges, paths and boats", () => {
       "T.P.~~..",
       "T...~~TT",
     ]);
-    const s = apply(withState({ map, buildings: [], villagers: 20, resources: { rice: 100, wood: 500 } }), calm, { type: "build", building: "tulay", x: 5, y: 1 });
+    const s = apply(withState({ map, buildings: [], villagers: 20, resources: { rice: 100, wood: 500, gold: 0 } }), calm, { type: "build", building: "tulay", x: 5, y: 1 });
     expect(s.buildings[0].span).toEqual([{ x: 4, y: 1 }, { x: 5, y: 1 }]);
     const path = findPath(s.map, { x: 2, y: 1 }, { x: 7, y: 1 })!;
     expect(path.map((p) => tileAt(s.map, p.x, p.y))).not.toContain("river");

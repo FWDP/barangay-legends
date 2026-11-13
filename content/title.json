@@ -1,5 +1,5 @@
 {
-  "_comment": "Title screen text in every language, and its links. 'support' is the Support FWDP donation page (GitHub Sponsors or Ko-fi, per docs/game-design.md); leave it empty until FWDP has one and the button says so. Text may use {datu} and {barangay}.",
+  "_comment": "Title screen text in every language, and its links. 'support' is the Support FWDP donation page (GitHub Sponsors or Ko-fi, per docs/game-design.md); leave it empty until FWDP has one: the button stays hidden until then. Text may use {datu} and {barangay}.",
   "links": {
     "source": "https://github.com/FWDP/barangay-legends",
     "contributors": "https://github.com/FWDP/barangay-legends/graphs/contributors",
@@ -27,7 +27,6 @@
     "settings": { "en": "Settings", "fil": "Mga setting" },
     "credits": { "en": "Credits", "fil": "Pagkilala" },
     "support": { "en": "Support FWDP", "fil": "Suportahan ang FWDP" },
-    "supportSoon": { "en": "Support link coming soon", "fil": "Malapit na ang link" },
     "close": { "en": "Close", "fil": "Isara" },
     "free": { "en": "Free and open source. Nothing is for sale.", "fil": "Libre at bukas ang code. Walang ibinebenta." }
   }

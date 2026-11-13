@@ -12,7 +12,7 @@ import { activeBanners, EventBanner } from "./EventBanners";
 import { FloatLayer, spawnFloat } from "./floats";
 import { baleteWarning, bonusRuleText, costText, groveRuleText, RESOURCE_ICON } from "./format";
 import { GatherButtons } from "./GatherButtons";
-import { Hud } from "./Hud";
+import { Hud, MapSeasonBadge } from "./Hud";
 import { SettingsMenu } from "./SettingsMenu";
 import { AdvisorBubble, useAdvisor } from "./Advisor";
 import { HelpPanel } from "./HelpPanel";
@@ -28,6 +28,10 @@ import { useReducedMotion, type Clash } from "./VillagerLayer";
 import { BOAT_RETURN_MS, CLASH_MS, SAIL_SECONDS } from "./visitors";
 import { tradingPaused } from "../engine/region";
 import type { GameState } from "../engine/game";
+import type { NamedVillager } from "../engine/people";
+import { GawainPanel, HistoryDialog, VillagerDialog } from "./Gawain";
+import { shareBarangay } from "./share";
+import { awayPeopleLines, battleNames } from "./stories";
 
 const ui = loadUiContent(content);
 
@@ -352,6 +356,9 @@ export function App() {
   const [helpOpen, setHelpOpen] = useState(false);
   // Laying Daan footpaths (a placing mode of its own).
   const [roadMode, setRoadMode] = useState(false);
+  // A named villager's card, and the barangay history.
+  const [villager, setVillager] = useState<NamedVillager | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const settings = useSettings();
   const lang = useLang();
   const closeLore = useCallback(() => setLoreNote(null), []);
@@ -399,6 +406,8 @@ export function App() {
   }, [raidComing]);
 
   // "While you were away": what happened while the tab was hidden (the game keeps running).
+  const langRef = useRef(lang);
+  langRef.current = lang;
   const latestState = useRef(state);
   latestState.current = state;
   useEffect(() => {
@@ -410,7 +419,7 @@ export function App() {
       }
       if (!before) return;
       const after = latestState.current;
-      const lines = awayStory(before, after, content);
+      const lines = awayStory(before, after, content, awayPeopleLines(before, after, content, ui.game, langRef.current));
       before = null;
       if (lines.length === 0) return;
       setAway(lines);
@@ -423,8 +432,18 @@ export function App() {
   // The adviser never talks over a battle report or a lore note.
   const advisor = useAdvisor(state, content, ui.advisor, {
     lang,
+    game: ui.game,
     tipsOn: settings.tips,
-    blocked: screen === "title" || clash !== null || choiceOpen || away !== null || state.notices.length > 0 || unseenReport(state, seenReport) !== undefined || loreNote !== null,
+    blocked:
+      screen === "title" ||
+      clash !== null ||
+      choiceOpen ||
+      away !== null ||
+      state.notices.length > 0 ||
+      unseenReport(state, seenReport) !== undefined ||
+      loreNote !== null ||
+      villager !== null ||
+      historyOpen,
   });
 
   // Moving uses the same placing mode as building, with the building picked up first.
@@ -612,7 +631,7 @@ export function App() {
             // Credit the time since the last save, then tell what happened.
             const away = continueGame();
             if (away) {
-              const lines = offlineStory(away.report, away.before, away.after, content);
+              const lines = offlineStory(away.report, away.before, away.after, content, awayPeopleLines(away.before, away.after, content, ui.game, lang));
               if (lines.length) setAway(lines);
             }
             setScreen("game");
@@ -671,11 +690,27 @@ export function App() {
           }}
           aria-label={ui.help[lang].ui.title}
           title={ui.help[lang].ui.title}
-          className="game-btn flex size-8 items-center justify-center border-2 border-amber-950/60 bg-amber-200 font-display text-lg text-amber-950 sm:size-9"
+          className="game-btn hidden size-9 items-center justify-center border-2 border-amber-950/60 bg-amber-200 font-display text-lg text-amber-950 sm:flex"
         >
           ?
         </button>
-        <SettingsMenu onReset={onReset} muted={muted} onToggleSound={toggleSound} />
+        <SettingsMenu
+          onReset={onReset}
+          muted={muted}
+          onToggleSound={toggleSound}
+          help={{
+            label: ui.help[lang].ui.title,
+            onHelp: () => setHelpOpen(true),
+          }}
+          share={{
+            label: ui.game.share.button[lang],
+            onShare: () => {
+              shareBarangay(state, content, ui.game, lang)
+                .then((how) => how === "saved" && spawnFloat(window.innerWidth / 2, 80, ui.game.share.saved[lang], "info"))
+                .catch(() => spawnFloat(window.innerWidth / 2, 80, ui.game.share.failed[lang], "info"));
+            },
+          }}
+        />
       </Hud>
 
       <main className="relative flex min-h-0 flex-1 flex-col">
@@ -690,6 +725,10 @@ export function App() {
           planState={planState}
           onPlace={place}
           onTapTile={tapTile}
+          onVillager={(v) => {
+            sfx.click();
+            setVillager(v);
+          }}
           onBuildingMenu={openMenu}
           onSpirit={(id) => {
             sfx.click();
@@ -723,6 +762,7 @@ export function App() {
         />
         )}
         <LoreToast loreId={loreNote} onClose={closeLore} />
+        <MapSeasonBadge state={state} content={content} />
         <div data-map-overlay className="pointer-events-none absolute top-2 left-1/2 z-10 flex w-max max-w-[calc(100%-1rem)] -translate-x-1/2 flex-col items-center gap-1.5">
           {view === "barangay" && selection.length > 0 && !placing && !roadMode && (
             <ClearSelectionBar state={state} selection={selection} onClear={() => confirmClearing(false)} onCancel={() => setSelection([])} />
@@ -773,6 +813,7 @@ export function App() {
                 </span>
                 <span className="block text-xs text-amber-100/90">
                   Tap a highlighted tile
+                  {placing.placeNextTo && <> · next to the {placing.placeNextTo.join(" or ")}</>}
                   {moveCostNow && <> · costs {costText(moveCostNow)}</>}
                   {bonusRuleText(placing, content) && <> · ✨ {bonusRuleText(placing, content)}</>}
                   {groveRuleText(placing, content) && <> · {groveRuleText(placing, content)}</>}
@@ -820,6 +861,18 @@ export function App() {
             <EventBanner key={b.id} banner={b} />
           ))}
         </div>
+        {view === "barangay" && !placing && !roadMode && (
+          <GawainPanel
+            state={state}
+            content={content}
+            game={ui.game}
+            lang={lang}
+            onHistory={() => {
+              sfx.click();
+              setHistoryOpen(true);
+            }}
+          />
+        )}
         <AdvisorBubble message={advisor.message} advisor={ui.advisor} lang={lang} onDismiss={advisor.dismiss} onSkip={advisor.skip} />
         {view === "barangay" && <GatherButtons amount={content.rules.gatherPerClick} quiet={hasAutomation} onGather={gather} />}
       </main>
@@ -889,7 +942,16 @@ export function App() {
           setDemolishing(null);
         }}
       />
-      <ReportDialog state={state} content={content} seen={seenReport} onSeen={setSeenReport} hold={clash !== null || away !== null} />
+      <ReportDialog
+        state={state}
+        content={content}
+        seen={seenReport}
+        onSeen={setSeenReport}
+        hold={clash !== null || away !== null}
+        names={(r) => battleNames(r, state, ui.game, lang)}
+      />
+      <VillagerDialog villager={villager} content={content} game={ui.game} lang={lang} onClose={() => setVillager(null)} />
+      <HistoryDialog open={historyOpen} state={state} content={content} game={ui.game} lang={lang} onClose={() => setHistoryOpen(false)} />
       <ChoiceDialog state={state} content={content} open={choiceOpen && !raidComing} onClose={() => setChoiceOpen(false)} dispatch={dispatch} />
       <AwayDialog lines={away} onClose={() => setAway(null)} />
       <NoticeDialog notice={away ? null : (state.notices[0] ?? null)} onDismiss={() => dispatch({ type: "dismissNotice" })} />

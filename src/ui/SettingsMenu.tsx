@@ -62,8 +62,15 @@ export function Preferences(props: { muted: boolean; onToggleSound: () => void }
 }
 
 /** Small gear menu holding the rarely used things: sound, tips, language, start over and the source link. */
-export function SettingsMenu(props: { onReset: () => void; muted: boolean; onToggleSound: () => void }) {
-  const { onReset, muted, onToggleSound } = props;
+export function SettingsMenu(props: {
+  onReset: () => void;
+  muted: boolean;
+  onToggleSound: () => void;
+  share?: { label: string; onShare: () => void };
+  /** How to play: in the menu on phones, where the top bar has no room for its button. */
+  help?: { label: string; onHelp: () => void };
+}) {
+  const { onReset, muted, onToggleSound, share, help } = props;
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -102,7 +109,31 @@ export function SettingsMenu(props: { onReset: () => void; muted: boolean; onTog
           className="wood-panel absolute top-full right-0 z-50 mt-2 max-h-[80dvh] w-60 space-y-2 overflow-y-auto rounded-xl border-2 border-amber-950/60 p-3 text-amber-50 shadow-xl"
         >
           <div className="text-outline font-display text-lg">Barangay Legends</div>
+          {help && (
+            <button
+              type="button"
+              className="game-btn w-full border-2 border-amber-950/60 bg-amber-100 px-3 py-2 text-left text-sm font-semibold text-amber-950 sm:hidden"
+              onClick={() => {
+                setOpen(false);
+                help.onHelp();
+              }}
+            >
+              ❓ {help.label}
+            </button>
+          )}
           <Preferences muted={muted} onToggleSound={onToggleSound} />
+          {share && (
+            <button
+              type="button"
+              className="game-btn w-full border-2 border-amber-950/60 bg-amber-100 px-3 py-2 text-left text-sm font-semibold text-amber-950"
+              onClick={() => {
+                setOpen(false);
+                share.onShare();
+              }}
+            >
+              📸 {share.label}
+            </button>
+          )}
           <button
             type="button"
             className="game-btn w-full border-2 border-red-950 bg-red-700 px-3 py-2 text-left text-sm font-semibold text-white"

@@ -11,7 +11,7 @@ const g = d.grudge;
 const td = d.tradeDecision;
 
 function world(patch: Partial<GameState> = {}): GameState {
-  const s = withState({ resources: { rice: 2000, wood: 2000 }, villagers: 20, buildings: [], ...patch });
+  const s = withState({ resources: { rice: 2000, wood: 2000, gold: 0 }, villagers: 20, buildings: [], ...patch });
   return { ...s, region: patch.region ?? createRegion(calm, s.time, 7) };
 }
 const nb = (s: GameState, id: string) => s.region!.neighbors.find((n) => n.id === id)!;
@@ -21,7 +21,7 @@ const setNb = (s: GameState, id: string, patch: Partial<NeighborState>): GameSta
 });
 /** A neighbor with plenty of goods to trade. */
 const rich = (s: GameState, id: string, patch: Partial<NeighborState> = {}) =>
-  setNb(s, id, { state: { ...nb(s, id).state, resources: { rice: 1000, wood: 1000 } }, ...patch });
+  setNb(s, id, { state: { ...nb(s, id).state, resources: { rice: 1000, wood: 1000, gold: 0 } }, ...patch });
 const deal = (give: number, want: number): Proposal => ({ give: { resource: "rice", amount: give }, want: { resource: "wood", amount: want } });
 
 describe("grudge", () => {
@@ -90,7 +90,7 @@ describe("trade decisions", () => {
   });
 
   it("refuses what they don't have", () => {
-    const poor = setNb(base(), "malinaw", { state: { ...nb(base(), "malinaw").state, resources: { rice: 0, wood: 3 } } });
+    const poor = setNb(base(), "malinaw", { state: { ...nb(base(), "malinaw").state, resources: { rice: 0, wood: 3, gold: 0 } } });
     expect(decideTrade(nb(poor, "malinaw"), content, deal(20, 10), 0.5)).toEqual({ outcome: "refuse", reason: "short" });
   });
 
@@ -173,19 +173,43 @@ describe("Handog", () => {
     expect(value).toBe(40 * d.handog.values.rice! + 10 * d.handog.values.wood!);
     expect(nb(after, "malinaw").grudge).toBeCloseTo(50 - value * d.handog.grudgePerValue, 5);
     expect(nb(after, "malinaw").trust).toBeCloseTo(20 + value * d.handog.trustPerValue, 5);
-    expect(after.resources).toEqual({ rice: 1960, wood: 1990 });
+    expect(after.resources).toEqual({ rice: 1960, wood: 1990, gold: 0 });
     expect(nb(after, "malinaw").state.resources.rice).toBe(nb(s, "malinaw").state.resources.rice + 40);
   });
 
   it("needs a worthwhile gift the barangay can pay for", () => {
-    const s = setNb(world({ resources: { rice: 30, wood: 0 } }), "malinaw", { grudge: 50 });
+    const s = setNb(world({ resources: { rice: 30, wood: 0, gold: 0 } }), "malinaw", { grudge: 50 });
     expect(apply(s, calm, { type: "handog", neighbor: "malinaw", gift: { rice: 2 } })).toBe(s);
     expect(apply(s, calm, { type: "handog", neighbor: "malinaw", gift: { rice: 100 } })).toBe(s);
   });
 
-  it("lists gold for later, but skips it until gold exists", () => {
-    expect(d.handog.values.gold).toBeGreaterThan(0);
-    expect(giftValue({ rice: 10, gold: 50 } as never, content)).toBe(10 * d.handog.values.rice!);
+  it("takes gold as a gift, at its handog value", () => {
+    expect(giftValue({ rice: 10, gold: 50 }, content)).toBe(10 * d.handog.values.rice! + 50 * d.handog.values.gold!);
+    const s = setNb(world({ resources: { rice: 0, wood: 0, gold: 20 } }), "malinaw", { grudge: 50, trust: 20 });
+    const after = apply(s, calm, { type: "handog", neighbor: "malinaw", gift: { gold: 10 } });
+    const value = 10 * d.handog.values.gold!;
+    expect(after.resources.gold).toBe(10);
+    expect(nb(after, "malinaw").state.resources.gold).toBe(nb(s, "malinaw").state.resources.gold + 10);
+    expect(nb(after, "malinaw").grudge).toBeCloseTo(50 - value * d.handog.grudgePerValue);
+    // Not more gold than the barangay has.
+    expect(apply(s, calm, { type: "handog", neighbor: "malinaw", gift: { gold: 21 } })).toBe(s);
+  });
+});
+
+describe("gold in trade proposals", () => {
+  it("can be given or asked for, valued at tradeDecision.values.gold", () => {
+    expect(td.values.gold).toBeGreaterThan(td.values.rice!);
+    // 10 gold for 40 rice: worth 50 against 40 to them, so a fair neighbor takes it.
+    const base = rich(world({ resources: { rice: 0, wood: 0, gold: 10 } }), "malinaw", { trust: 50 });
+    const give: Proposal = { give: { resource: "gold", amount: 10 }, want: { resource: "rice", amount: 40 } };
+    const s = apply(base, calm, { type: "proposeTrade", neighbor: "malinaw", ...give });
+    expect(s.resources).toEqual({ rice: 40, wood: 0, gold: 0 });
+    expect(nb(s, "malinaw").state.resources.gold).toBe(10);
+    // Asking for gold works the same way, when they have it.
+    const theirs = setNb(base, "malinaw", { state: { ...nb(base, "malinaw").state, resources: { rice: 0, wood: 0, gold: 50 } } });
+    const ask: Proposal = { give: { resource: "wood", amount: 60 }, want: { resource: "gold", amount: 10 } };
+    const t = apply({ ...theirs, resources: { rice: 0, wood: 60, gold: 0 } }, calm, { type: "proposeTrade", neighbor: "malinaw", ...ask });
+    expect(t.resources).toEqual({ rice: 0, wood: 0, gold: 10 });
   });
 });
 

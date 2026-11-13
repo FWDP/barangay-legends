@@ -20,7 +20,7 @@ const busy = (patch: Partial<GameState> = {}) =>
   withState({
     map: small,
     villagers: 4,
-    resources: { rice: 500, wood: 0 },
+    resources: { rice: 500, wood: 0, gold: 0 },
     buildings: [at("palayan", 1, 1), at("woodcutter-camp", 5, 1)],
     ...patch,
   });
@@ -72,12 +72,12 @@ describe("borrowing order", () => {
 describe("the rice safety rule", () => {
   const eaten = (s: GameState) => s.villagers * content.rules.riceEatenPerVillagerPerSecond;
   const fieldsOnly = (rice: number) =>
-    queue(busy({ villagers: 2, resources: { rice, wood: 0 }, buildings: [at("palayan", 1, 1)] }), [0, 2]);
+    queue(busy({ villagers: 2, resources: { rice, wood: 0, gold: 0 }, buildings: [at("palayan", 1, 1)] }), [0, 2]);
 
   it(`never borrows from a Palayan with under ${protectBelowRiceSeconds}s of rice`, () => {
     const s = fieldsOnly(500);
     const threshold = protectBelowRiceSeconds * eaten(s);
-    const low = queue(busy({ villagers: 2, resources: { rice: threshold + 1, wood: 0 }, buildings: [at("palayan", 1, 1)] }), [0, 2]);
+    const low = queue(busy({ villagers: 2, resources: { rice: threshold + 1, wood: 0, gold: 0 }, buildings: [at("palayan", 1, 1)] }), [0, 2]);
     expect(low.clearing).toHaveLength(1);
     // The job's own rice cost came off first: now below the line.
     expect(low.resources.rice).toBeLessThan(threshold);
@@ -89,7 +89,7 @@ describe("the rice safety rule", () => {
   });
 
   it("still borrows from a camp when rice is short", () => {
-    const s = queue(busy({ resources: { rice: 4, wood: 0 } }), [0, 2]);
+    const s = queue(busy({ resources: { rice: 4, wood: 0, gold: 0 } }), [0, 2]);
     expect(riceIsSafe(s, calm)).toBe(false);
     expect(workforce(s, calm).borrowed).toEqual([0, 1]);
   });
@@ -146,7 +146,7 @@ describe("pause and resume", () => {
   it("is saved, and a repair doesn't lose it", () => {
     const paused = apply(busy(), calm, { type: "pause", x: 5, y: 1, paused: true });
     expect(parseSave(JSON.stringify(paused), content)!.buildings[1].paused).toBe(true);
-    const damaged = { ...paused, resources: { rice: 500, wood: 500 }, buildings: paused.buildings.map((b, i) => (i === 1 ? { ...b, damaged: true } : b)) };
+    const damaged = { ...paused, resources: { rice: 500, wood: 500, gold: 0 }, buildings: paused.buildings.map((b, i) => (i === 1 ? { ...b, damaged: true } : b)) };
     const repaired = apply(damaged, calm, { type: "repair", x: 5, y: 1 });
     expect(repaired.buildings[1]).toEqual({ type: "woodcutter-camp", x: 5, y: 1, paused: true });
   });
@@ -168,7 +168,7 @@ describe("offline progress borrows the same way", () => {
 
   it("respects the rice safety rule while away", () => {
     // Just enough rice for the tile, leaving the granary low: the field won't lend its workers.
-    const s = queue(busy({ villagers: 2, resources: { rice: content.rules.clearing.cost.rice!, wood: 0 }, buildings: [at("palayan", 1, 1)] }), [0, 2]);
+    const s = queue(busy({ villagers: 2, resources: { rice: content.rules.clearing.cost.rice!, wood: 0, gold: 0 }, buildings: [at("palayan", 1, 1)] }), [0, 2]);
     expect(s.clearing).toHaveLength(1);
     const { report } = offlineProgress(s, content, 60);
     expect(report.cleared).toBe(0);

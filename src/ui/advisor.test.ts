@@ -32,7 +32,7 @@ const trigger = (m: AdvisorModel) => (m.message?.kind === "tip" ? m.message.trig
 const tipsModel = (state: GameState): AdvisorModel => newModel({ ...NEW_MEMORY, tutorial: "done" }, state, content);
 /** Plenty of rice and every worker building staffed: nothing to warn about. */
 const calmState = (patch: Partial<GameState> = {}) =>
-  withState({ resources: { rice: 1000, wood: 0 }, villagers: 2, time: 10, ...patch });
+  withState({ resources: { rice: 1000, wood: 0, gold: 0 }, villagers: 2, time: 10, ...patch });
 
 describe("adviser tutorial", () => {
   it("walks through the steps as the player completes them", () => {
@@ -79,7 +79,7 @@ describe("adviser tutorial", () => {
 
 describe("adviser tips", () => {
   it("warns when the rice will run out within a minute", () => {
-    const s = calmState({ resources: { rice: 5, wood: 0 }, villagers: 5 });
+    const s = calmState({ resources: { rice: 5, wood: 0, gold: 0 }, villagers: 5 });
     const m = advise(tipsModel(s), input(s));
     expect(m.message).toMatchObject({ kind: "tip", trigger: "rice-low" });
     expect(m.message!.text).toContain("10 seconds");
@@ -91,7 +91,7 @@ describe("adviser tips", () => {
   });
 
   it("speaks at most once every 90 seconds, and not twice about the same thing", () => {
-    let s = calmState({ resources: { rice: 5, wood: 0 }, villagers: 5 });
+    let s = calmState({ resources: { rice: 5, wood: 0, gold: 0 }, villagers: 5 });
     let m = advise(tipsModel(s), input(s));
     expect(trigger(m)).toBe("rice-low");
     m = dismiss(m);
@@ -109,7 +109,7 @@ describe("adviser tips", () => {
   });
 
   it("never repeats a line more than 3 times", () => {
-    let s = calmState({ resources: { rice: 5, wood: 0 }, villagers: 5 });
+    let s = calmState({ resources: { rice: 5, wood: 0, gold: 0 }, villagers: 5 });
     let m = tipsModel(s);
     const lines = advisor.lines.filter((l) => l.trigger === "rice-low").length;
     let spoken = 0;
@@ -118,7 +118,7 @@ describe("adviser tips", () => {
       if (trigger(m) === "rice-low") spoken++;
       m = dismiss(m);
       // Clear the condition, then bring it back after the gap.
-      m = advise(m, input({ ...s, resources: { rice: 1000, wood: 0 } }));
+      m = advise(m, input({ ...s, resources: { rice: 1000, wood: 0, gold: 0 } }));
       s = { ...s, time: s.time + TIP_GAP_SECONDS };
     }
     expect(spoken).toBe(lines * MAX_REPEATS);
@@ -126,7 +126,7 @@ describe("adviser tips", () => {
   });
 
   it("closes a tip after a while, and on a tap", () => {
-    const s = calmState({ resources: { rice: 5, wood: 0 }, villagers: 5 });
+    const s = calmState({ resources: { rice: 5, wood: 0, gold: 0 }, villagers: 5 });
     const m = advise(tipsModel(s), input(s));
     expect(advise(m, input({ ...s, time: s.time + 1 })).message).toBe(m.message);
     expect(advise(m, input({ ...s, time: s.time + TIP_SECONDS })).message).toBeNull();
@@ -134,7 +134,7 @@ describe("adviser tips", () => {
   });
 
   it("puts the most urgent trigger first", () => {
-    const base = calmState({ resources: { rice: 5, wood: 0 }, villagers: 5 });
+    const base = calmState({ resources: { rice: 5, wood: 0, gold: 0 }, villagers: 5 });
     const raid = { ...base, region: { ...newGame(content, 3).region!, incomingRaid: { from: "batong-buhay", strikeAt: base.time + 30 } } };
     const m = advise(tipsModel(raid), input(raid));
     expect(trigger(m)).toBe("raid-warning");
@@ -157,7 +157,8 @@ describe("adviser tips", () => {
     const grown = { ...s, villagers: kuta.unlock.villagers!, buildings: [...s.buildings, at("bahay-kubo", 6, 3), at("bahay-kubo", 7, 3), at("bahay-kubo", 6, 5)] };
     m = advise(m, input(grown));
     expect(trigger(m)).toBe("unlocked");
-    expect(m.message?.text).toContain("Kuta");
+    // Kamalig and Kuta both unlock at 10 villagers: the first in the menu is announced first.
+    expect(m.message?.text).toContain("Kamalig");
   });
 
   it("mentions an empty field only after it has been empty a while", () => {
@@ -176,7 +177,7 @@ describe("adviser tips", () => {
   });
 
   it("never changes the game state", () => {
-    const s = calmState({ resources: { rice: 5, wood: 0 }, villagers: 5 });
+    const s = calmState({ resources: { rice: 5, wood: 0, gold: 0 }, villagers: 5 });
     const before = JSON.stringify(s);
     advise(tipsModel(s), input(s));
     expect(JSON.stringify(s)).toBe(before);
@@ -203,7 +204,7 @@ describe("adviser and paths", () => {
     "....~....",
   ]);
   const stranded = (legacyReach: boolean) =>
-    withState({ map: riverMap, time: 10, villagers: 6, resources: { rice: 1000, wood: 0 }, buildings: [at("bahay-kubo", 0, 0), at("woodcutter-camp", 7, 2)], legacyReach });
+    withState({ map: riverMap, time: 10, villagers: 6, resources: { rice: 1000, wood: 0, gold: 0 }, buildings: [at("bahay-kubo", 0, 0), at("woodcutter-camp", 7, 2)], legacyReach });
 
   it("says when a workplace has no path", () => {
     const s = stranded(false);
@@ -228,7 +229,7 @@ describe("adviser and paths", () => {
   });
 
   it("suggests Daan once there are a few workplaces and no path", () => {
-    const s = withState({ time: 10, villagers: 2, resources: { rice: 1000, wood: 0 }, buildings: [at("bahay-kubo", 5, 3), at("palayan", 6, 3), at("palayan", 7, 3), at("woodcutter-camp", 8, 3)] });
+    const s = withState({ time: 10, villagers: 2, resources: { rice: 1000, wood: 0, gold: 0 }, buildings: [at("bahay-kubo", 5, 3), at("palayan", 6, 3), at("palayan", 7, 3), at("woodcutter-camp", 8, 3)] });
     const m = advise(tipsModel(s), input({ ...s, villagers: 6 }));
     expect(trigger(m)).toBe("roads");
     expect(m.message!.text).toContain(`${content.rules.roads.connectedBonusPercent}%`);
@@ -245,7 +246,7 @@ describe("adviser and borrowing", () => {
   ]);
   const lending = () =>
     apply(
-      withState({ map: busyMap, time: 10, villagers: 4, resources: { rice: 1000, wood: 0 }, buildings: [at("palayan", 1, 1), at("woodcutter-camp", 5, 1)] }),
+      withState({ map: busyMap, time: 10, villagers: 4, resources: { rice: 1000, wood: 0, gold: 0 }, buildings: [at("palayan", 1, 1), at("woodcutter-camp", 5, 1)] }),
       content,
       { type: "clearArea", tiles: [{ x: 0, y: 2 }] },
     );
@@ -271,7 +272,7 @@ describe("adviser and borrowing", () => {
 
 describe("adviser and raids at the shore", () => {
   it("the first raid warning explains the shore and the Kuta, once", () => {
-    const base = withState({ resources: { rice: 1000, wood: 0 }, villagers: 2, time: 10 });
+    const base = withState({ resources: { rice: 1000, wood: 0, gold: 0 }, villagers: 2, time: 10 });
     const g = newGame(content, 3);
     const raid = { ...base, map: g.map, region: { ...g.region!, incomingRaid: { from: "batong-buhay", strikeAt: 40, landing: { x: g.map.plaza.x, y: 0 } } } };
     const m = advise(tipsModel(raid), input(raid));
@@ -288,7 +289,7 @@ describe("adviser and refused trades", () => {
   it("suggests a Handog the first time a trade is refused for raids", () => {
     const g = newGame(content, 3);
     const s = {
-      ...withState({ resources: { rice: 1000, wood: 0 }, villagers: 2, time: 50 }),
+      ...withState({ resources: { rice: 1000, wood: 0, gold: 0 }, villagers: 2, time: 50 }),
       region: { ...g.region!, neighbors: g.region!.neighbors.map((n, i) => (i === 1 ? { ...n, lastRefusal: { reason: "raids" as const, at: 45 } } : n)) },
     };
     const m = advise(tipsModel(s), input(s));

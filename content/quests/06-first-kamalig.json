@@ -1,0 +1,18 @@
+{
+  "id": "first-kamalig",
+  "text": {
+    "en": "Build a Kamalig",
+    "fil": "Magtayo ng Kamalig"
+  },
+  "condition": {
+    "type": "built",
+    "building": "kamalig",
+    "count": 1
+  },
+  "reward": {
+    "resources": {
+      "rice": 30
+    }
+  },
+  "next": "tag-araw"
+}

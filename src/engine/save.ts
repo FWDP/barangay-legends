@@ -26,6 +26,7 @@ import {
   type TradeOffer,
 } from "./region";
 import { validProposal, type CounterOffer } from "./trading";
+import { MAX_HISTORY, type HistoryEntry, type HistoryKind, type NamedVillager } from "./people";
 
 export const SAVE_KEY = "barangay-legends/save";
 
@@ -155,6 +156,22 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
       return { ...n, grudge: Math.min(100, grudge), lastRefusal: null };
     });
     return { ...raw, version: 16, region: { ...region, neighbors, counter: null } };
+  },
+  // v16 → v17: gold (0 to start, for the player and every neighbor), happiness (60, the
+  // default), Mga Gawain (none done yet: tasks already met are credited on the next step),
+  // named villagers and the barangay history (none yet), and counters for them.
+  16: (raw) => {
+    const withGold = (s: RawSave): RawSave => ({ ...s, resources: { ...(isObject(s.resources) ? s.resources : {}), gold: 0 } });
+    const fresh = { happiness: 60, gawainDone: [], named: [], history: [], stats: { raidsDefended: 0, rolls: 0, named: 0 } };
+    const out: RawSave = { ...withGold(raw), ...fresh, version: 17 };
+    const region = raw.region;
+    if (isObject(region) && Array.isArray(region.neighbors)) {
+      out.region = {
+        ...region,
+        neighbors: region.neighbors.map((n) => (isObject(n) && isObject(n.state) ? { ...n, state: { ...withGold(n.state), ...fresh, version: 17 } } : n)),
+      };
+    }
+    return out;
   },
 };
 
@@ -422,6 +439,8 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean): GameSta
     state.lastBuild = { type: last.type, x: last.x as number, y: last.y as number, cost, at: last.at };
   }
   if (finiteNonNeg(data.warriors)) state.warriors = Math.min(Math.floor(data.warriors), state.villagers);
+  if (finiteNonNeg(data.happiness)) state.happiness = Math.min(100, data.happiness);
+  parsePeople(data, content, state, isPlayer);
   if (isPlayer && content.neighbors.length > 0) state.region = parseRegion(data.region, content, state);
   // A waiting choice event: a known event, and a neighbor that still exists (or none).
   const ch = data.choice;
@@ -430,6 +449,59 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean): GameSta
     state.choice = { id: ch.id, neighbor, at: ch.at };
   }
   return state;
+}
+
+const HISTORY_KINDS: HistoryKind[] = ["named", "left", "fell", "task"];
+const CAUSES = ["hunger", "crowded", "other"];
+const count = (v: unknown) => (finiteNonNeg(v) ? Math.floor(v) : 0);
+
+/** Tasks done, named villagers, history and counters. Unknown tasks and stories are dropped. */
+function parsePeople(data: RawSave, content: Content, state: GameState, isPlayer: boolean) {
+  const st = isObject(data.stats) ? data.stats : {};
+  state.stats = { raidsDefended: count(st.raidsDefended), rolls: count(st.rolls), named: count(st.named) };
+  if (!isPlayer) return;
+  const quests = new Set(content.quests.map((q) => q.id));
+  if (Array.isArray(data.gawainDone)) {
+    state.gawainDone = [...new Set(data.gawainDone.filter((id): id is string => typeof id === "string" && quests.has(id)))];
+  }
+  const stories = new Map(content.villagers.stories.map((s) => [s.id, s]));
+  const named: NamedVillager[] = [];
+  for (const v of Array.isArray(data.named) ? data.named.slice(0, 500) : []) {
+    if (!isObject(v) || !Number.isInteger(v.id) || typeof v.name !== "string" || v.name === "" || v.name.length > 30 || typeof v.story !== "string") continue;
+    const story = stories.get(v.story);
+    if (!story || !finiteNonNeg(v.since) || named.some((n) => n.id === v.id)) continue;
+    const nv: NamedVillager = { id: v.id as number, name: v.name, story: story.id, role: story.role, since: v.since };
+    if (v.sick === true) nv.sick = true;
+    named.push(nv);
+  }
+  // No more named warriors than warriors, nor other named villagers than other villagers.
+  const keep = (list: NamedVillager[], n: number) => (n > 0 ? list.slice(-n) : []);
+  const kept = new Set([
+    ...keep(named.filter((v) => v.role === "warrior"), state.warriors),
+    ...keep(named.filter((v) => v.role !== "warrior"), state.villagers - state.warriors),
+  ]);
+  state.named = named.filter((v) => kept.has(v));
+  let sick = 0;
+  state.named = state.named.map((v) => {
+    if (!v.sick) return v;
+    if (sick++ < state.sick.length) return v;
+    const out = { ...v };
+    delete out.sick;
+    return out;
+  });
+  state.stats.named = Math.max(state.stats.named, ...state.named.map((v) => v.id), 0);
+  const history: HistoryEntry[] = [];
+  for (const h of Array.isArray(data.history) ? data.history.slice(-MAX_HISTORY) : []) {
+    if (!isObject(h) || !finiteNonNeg(h.at) || !HISTORY_KINDS.includes(h.kind as HistoryKind)) continue;
+    const e: HistoryEntry = { at: h.at, kind: h.kind as HistoryKind };
+    if (typeof h.name === "string" && h.name.length <= 30) e.name = h.name;
+    if (typeof h.story === "string" && stories.has(h.story)) e.story = h.story;
+    if (typeof h.cause === "string" && CAUSES.includes(h.cause)) e.cause = h.cause as HistoryEntry["cause"];
+    if (typeof h.task === "string" && quests.has(h.task)) e.task = h.task;
+    if (e.kind === "task" ? !e.task : !e.name) continue;
+    history.push(e);
+  }
+  state.history = history;
 }
 
 /** A saved bridge span: bridge tiles in a straight line from the bridge's own tile. */

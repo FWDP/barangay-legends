@@ -97,7 +97,7 @@ describe("reachability from the barangay's center", () => {
   });
 
   it("only staffs workplaces with a path", () => {
-    const s = withState({ map: noBridge, villagers: 10, resources: { rice: 100, wood: 0 }, buildings: [at("bahay-kubo", 0, 0), at("palayan", 2, 4), at("woodcutter-camp", 7, 2)] });
+    const s = withState({ map: noBridge, villagers: 10, resources: { rice: 100, wood: 0, gold: 0 }, buildings: [at("bahay-kubo", 0, 0), at("palayan", 2, 4), at("woodcutter-camp", 7, 2)] });
     const workers = buildingWorkers(s, calm);
     expect(workers[1]).toBeGreaterThan(0);
     expect(workers[2]).toBe(0);
@@ -109,7 +109,7 @@ describe("reachability from the barangay's center", () => {
   });
 
   it("warns before a demolished Tulay strands workplaces", () => {
-    const s = withState({ map: riverMap, villagers: 10, resources: { rice: 100, wood: 0 }, buildings: [at("bahay-kubo", 0, 0), at("tulay", 4, 2), at("woodcutter-camp", 7, 2)] });
+    const s = withState({ map: riverMap, villagers: 10, resources: { rice: 100, wood: 0, gold: 0 }, buildings: [at("bahay-kubo", 0, 0), at("tulay", 4, 2), at("woodcutter-camp", 7, 2)] });
     expect(demolishPreview(s, calm, 4, 2)).toMatchObject({ stranded: 1 });
     expect(demolishPreview(s, calm, 0, 0)).toMatchObject({ stranded: 0 });
   });
@@ -117,7 +117,7 @@ describe("reachability from the barangay's center", () => {
 
 describe("old saves keep their old rule until the map changes", () => {
   const stranded = (): GameState =>
-    withState({ map: noBridge, villagers: 10, resources: { rice: 100, wood: 200 }, buildings: [at("bahay-kubo", 0, 0), at("woodcutter-camp", 7, 2)], legacyReach: true });
+    withState({ map: noBridge, villagers: 10, resources: { rice: 100, wood: 200, gold: 0 }, buildings: [at("bahay-kubo", 0, 0), at("woodcutter-camp", 7, 2)], legacyReach: true });
 
   it("v9 saves are migrated with the old rule", () => {
     const v9 = { ...stranded(), version: 9 } as Record<string, unknown>;
@@ -145,7 +145,7 @@ describe("old saves keep their old rule until the map changes", () => {
 });
 
 describe("Daan", () => {
-  const base = () => withState({ map: riverMap, villagers: 6, resources: { rice: 100, wood: 50 }, buildings: [at("bahay-kubo", 0, 0), at("palayan", 2, 4)] });
+  const base = () => withState({ map: riverMap, villagers: 6, resources: { rice: 100, wood: 50, gold: 0 }, buildings: [at("bahay-kubo", 0, 0), at("palayan", 2, 4)] });
   const wood = () => roadCost(calm).wood;
 
   it("is laid on cleared land only, paid per tile", () => {
@@ -161,7 +161,7 @@ describe("Daan", () => {
   });
 
   it("stops when the wood runs out", () => {
-    const s = { ...base(), resources: { rice: 100, wood: wood() * 2 } };
+    const s = { ...base(), resources: { rice: 100, wood: wood() * 2, gold: 0 } };
     const after = apply(s, calm, { type: "road", tiles: [{ x: 0, y: 1 }, { x: 1, y: 1 }, { x: 2, y: 1 }] });
     expect(tileAt(after.map, 2, 1)).toBe("cleared");
     expect(after.resources.wood).toBe(0);

@@ -108,7 +108,8 @@ const aiContents = new WeakMap<Content, Content>();
 export function aiContent(content: Content): Content {
   let c = aiContents.get(content);
   if (!c) {
-    c = { ...content, events: { hunger: content.events.hunger, seasons: content.events.seasons }, choices: [] };
+    // No tasks or named villagers for them either.
+    c = { ...content, events: { hunger: content.events.hunger, seasons: content.events.seasons }, choices: [], quests: [], villagers: { ...content.villagers, chance: 0 } };
     aiContents.set(content, c);
   }
   return c;
@@ -719,5 +720,6 @@ function aiRaidStrikes(state: GameState, content: Content, second: number, rng: 
     renown: battle.attackerWins ? 0 : d.aiRaid.defendRenown,
     ...(landing && border ? { landing, late: border.muster.late, covered: border.muster.covered } : {}),
   });
+  if (!battle.attackerWins) player = { ...player, stats: { ...player.stats, raidsDefended: player.stats.raidsDefended + 1 } };
   return { ...player, region: next };
 }

@@ -1,5 +1,5 @@
 // Helpers shared by engine tests.
-import { loadContent, type Content, type Events } from "./content";
+import { loadContent, RESOURCES, type Content, type Events, type ResourceAmounts, type Resources } from "./content";
 import { newGame, type GameState, type PlacedBuilding } from "./game";
 import { TILE_CODE, type MapState, type Point } from "./map";
 
@@ -38,16 +38,22 @@ export const TEST_MAP = mapFrom([
   "~........TT",
 ]);
 
-export function withState(patch: Partial<GameState> & { buildings?: PlacedBuilding[] }): GameState {
+/** A test state. `resources` may leave some out (they start at 0). */
+export function withState(patch: Omit<Partial<GameState>, "resources"> & { buildings?: PlacedBuilding[]; resources?: ResourceAmounts }): GameState {
+  const { resources, ...rest } = patch;
+  const base = newGame(content);
   return {
-    ...newGame(content),
+    ...base,
     map: TEST_MAP,
     buildings: [at("bahay-kubo", 5, 3)],
     clearing: [],
     tilesCleared: 0,
     // No region unless a test asks for one, so other tests aren't affected by neighbors.
     region: null,
-    ...patch,
+    // Every task already done, so task rewards don't change tests about something else.
+    gawainDone: content.quests.map((q) => q.id),
+    ...rest,
+    resources: resources ? { ...zero(), ...resources } : base.resources,
   };
 }
 
@@ -68,3 +74,6 @@ export const calm = withEvents({
   fire: { chancePerSecond: 0 },
   typhoon: { chancePerSecond: 0 },
 });
+
+/** Every resource at 0. */
+export const zero = (): Resources => Object.fromEntries(RESOURCES.map((r) => [r, 0])) as Resources;

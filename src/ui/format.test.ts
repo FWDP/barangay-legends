@@ -3,9 +3,9 @@ import { loadContent } from "../engine/content";
 import { costText, formatDuration, baleteWarning, bonusPreviewText, bonusRuleText, formatBreakdown, formatRate, groveRuleText } from "./format";
 
 const rates = {
-  produced: { rice: 5, wood: 0.8 },
-  eaten: { rice: 2, wood: 0 },
-  net: { rice: 3, wood: 0.8 },
+  produced: { rice: 5, wood: 0.8, gold: 0 },
+  eaten: { rice: 2, wood: 0, gold: 0 },
+  net: { rice: 3, wood: 0.8, gold: 0 },
 };
 
 describe("format", () => {

@@ -6,6 +6,7 @@ import type { Content } from "../engine/content";
 import { isHungry } from "../engine/events";
 import { overcrowded, type GameState } from "../engine/game";
 import { layOutSpan, tileAt, type BridgeTile, type Point } from "../engine/map";
+import type { NamedVillager } from "../engine/people";
 import { origin, type Camera, type View } from "./camera";
 import {
   dayPhase,
@@ -14,6 +15,7 @@ import {
   exitPoint,
   isNight,
   MAX_SPRITES,
+  namedSprites,
   newWalker,
   planVillagers,
   presentVillagers,
@@ -115,6 +117,27 @@ export function useReducedMotion(): boolean {
 }
 
 type Look = Role | "leaving" | "raider" | "looter";
+
+/** A small gold star over a named villager's head: tap them to hear their story. */
+function drawStar(g: CanvasRenderingContext2D, x: number, y: number, tile: number) {
+  const s = Math.max(7, tile * 0.32);
+  const cx = x;
+  const cy = y - s * 1.25;
+  const R = Math.max(3, s * 0.2);
+  g.globalAlpha = 1;
+  g.fillStyle = "#facc15";
+  g.strokeStyle = "#78350f";
+  g.lineWidth = Math.max(1, s * 0.05);
+  g.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = -Math.PI / 2 + (i * Math.PI) / 5;
+    const rr = i % 2 === 0 ? R : R * 0.45;
+    g.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+  }
+  g.closePath();
+  g.fill();
+  g.stroke();
+}
 
 function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, tile: number, id: number, role: Look, sprite: Sprite, t: number) {
   const s = Math.max(7, tile * 0.32);
@@ -311,8 +334,20 @@ function drawSparks(g: CanvasRenderingContext2D, x: number, y: number, tile: num
  * The villager canvas. Pointer events pass straight through to the map. With reduced motion,
  * villagers stand still at their spots and the canvas only redraws when the game changes.
  */
-export function VillagerLayer(props: { state: GameState; content: Content; cam: Camera; view: View; reducedMotion: boolean; clash?: Clash | null }) {
-  const { state, content, cam, view, reducedMotion, clash = null } = props;
+/** Finds the named villager drawn at a point of the map view (px), or null. */
+export type NamedHit = (x: number, y: number) => NamedVillager | null;
+
+export function VillagerLayer(props: {
+  state: GameState;
+  content: Content;
+  cam: Camera;
+  view: View;
+  reducedMotion: boolean;
+  clash?: Clash | null;
+  /** Set to a hit test for the named villagers as they're drawn. */
+  hitRef?: { current: NamedHit | null };
+}) {
+  const { state, content, cam, view, reducedMotion, clash = null, hitRef } = props;
   const canvas = useRef<HTMLCanvasElement>(null);
   const latest = useRef({ state, cam, view, clash });
   latest.current = { state, cam, view, clash };
@@ -334,7 +369,7 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
   const leavers = useRef<Leaver[]>([]);
   const before = useRef<GameState | null>(null);
   const started = useRef(false);
-  const planned = useRef<{ state: GameState | null; rally: string; plans: VillagerPlan[] }>({ state: null, rally: "", plans: [] });
+  const planned = useRef<{ state: GameState | null; rally: string; plans: VillagerPlan[]; named: Map<number, NamedVillager> }>({ state: null, rally: "", plans: [], named: new Map() });
 
   // Families leaving (hunger, or a demolished house) walk off the map with their bundles.
   useEffect(() => {
@@ -377,8 +412,12 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
       // Warriors go to the landing while a raid is coming and while the battle there plays out.
       const rally = s.region?.incomingRaid ? raidLanding(s, content) : raid.current && raid.current.retreatAt === undefined ? raid.current.landing : null;
       const rallyKey = rally ? `${rally.x},${rally.y}` : "";
-      if (planned.current.state !== s || planned.current.rally !== rallyKey) planned.current = { state: s, rally: rallyKey, plans: planVillagers(s, content, undefined, rally) };
-      const plans = planned.current.plans;
+      if (planned.current.state !== s || planned.current.rally !== rallyKey) {
+        const plans = planVillagers(s, content, undefined, rally);
+        planned.current = { state: s, rally: rallyKey, plans, named: namedSprites(plans, s, content) };
+      }
+      const { plans, named } = planned.current;
+      const spots: { x: number; y: number; v: NamedVillager }[] = [];
       // The tint only cycles with motion on, so with reduced motion it is always day.
       const night = !reducedMotion && isNight(dayPhase(Date.now()));
       const hungry = isHungry(s);
@@ -559,9 +598,30 @@ export function VillagerLayer(props: { state: GameState; content: Content; cam: 
         const sprite = sp;
         // Walking legs, or a worker bobbing at their post.
         if (!reducedMotion && (sp.moving || plan.role === "work")) animating = true;
-        drawn.push({ x: at.x, y: at.y, f: () => drawPerson(g, at.x, at.y, T, plan.id, plan.role, sprite, t) });
+        const who = named.get(plan.id);
+        drawn.push({
+          x: at.x,
+          y: at.y,
+          f: () => {
+            drawPerson(g, at.x, at.y, T, plan.id, plan.role, sprite, t);
+            if (who) drawStar(g, at.x, at.y, T);
+          },
+        });
+        if (who) spots.push({ x: at.x, y: at.y, v: who });
       }
       for (const id of sprites.current.keys()) if (!seen.has(id)) sprites.current.delete(id);
+      if (hitRef) {
+        const r = Math.max(10, T * 0.4);
+        hitRef.current = (x, y) => {
+          let best: { d: number; v: NamedVillager } | null = null;
+          for (const sp of spots) {
+            // The body is above the feet (the sprite's position).
+            const d = Math.hypot(sp.x - x, sp.y - Math.max(7, T * 0.32) * 0.5 - y);
+            if (d <= r && (!best || d < best.d)) best = { d, v: sp.v };
+          }
+          return best?.v ?? null;
+        };
+      }
 
       leavers.current = leavers.current.filter((l) => {
         // Walk to the edge tile over land, then step off the map.

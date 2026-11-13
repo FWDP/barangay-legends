@@ -86,11 +86,12 @@ export function activeBanners(state: GameState, content: Content): Banner[] {
   if (sickness && state.sick.length > 0) {
     const healer = content.buildings.find((b) => b.heals);
     const longest = Math.max(...state.sick) / healRate(state, content);
+    const sickName = state.named.find((v) => v.sick)?.name;
     banners.push({
       id: "sickness",
       icon: sickness.icon,
       title: `${sickness.name}: ${state.sick.length} sick`,
-      text: `They can't work. All well in ${clock(longest)}.${healer ? ` A ${healer.name} heals faster.` : ""}`,
+      text: `${sickName ? `${sickName} is among them: they` : "They"} can't work. All well in ${clock(longest)}.${healer ? ` A ${healer.name} heals faster.` : ""}`,
       tone: "warning",
     });
   }

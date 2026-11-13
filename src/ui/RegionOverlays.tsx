@@ -67,8 +67,8 @@ export const latestReportId = (state: GameState) => (state.region?.reports ?? []
 export const unseenReport = (state: GameState, seen: number) => (state.region?.reports ?? []).find((r) => r.id > seen);
 
 /** Shows each new report once, as a short dialog. */
-export function ReportDialog(props: { state: GameState; content: Content; seen: number; onSeen: (id: number) => void; hold?: boolean }) {
-  const { state, content, seen, onSeen: setSeen, hold = false } = props;
+export function ReportDialog(props: { state: GameState; content: Content; seen: number; onSeen: (id: number) => void; hold?: boolean; names?: (r: Report) => string[] }) {
+  const { state, content, seen, onSeen: setSeen, hold = false, names } = props;
   // Held back while the battle plays out on the map.
   const next = hold ? undefined : unseenReport(state, seen);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -79,7 +79,9 @@ export function ReportDialog(props: { state: GameState; content: Content; seen: 
     if (!next && d.open) d.close();
   }, [next]);
   const close = () => next && setSeen(next.id);
-  const text = next ? describeReport(next, content) : null;
+  const described = next ? describeReport(next, content) : null;
+  // Named villagers in the battle: who fell, or who led the defense.
+  const text = described && next ? { ...described, lines: [...described.lines, ...(names?.(next) ?? [])] } : null;
   return (
     <dialog
       ref={dialog}

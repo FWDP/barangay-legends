@@ -1,0 +1,18 @@
+{
+  "id": "first-tulay",
+  "text": {
+    "en": "Build a Tulay across the river",
+    "fil": "Magtayo ng Tulay sa ilog"
+  },
+  "condition": {
+    "type": "built",
+    "building": "tulay",
+    "count": 1
+  },
+  "reward": {
+    "resources": {
+      "wood": 30
+    }
+  },
+  "next": "defend-raid"
+}

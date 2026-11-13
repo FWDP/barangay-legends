@@ -74,7 +74,7 @@ export interface AdvisorDef {
 export const TITLE_TEXT = [
   "tagline", "welcomeBack", "welcomeBackUnnamed", "continue", "newGame", "start", "youWillLead", "chooseNames",
   "datuName", "barangayName", "reroll", "replaceTitle", "replaceText", "replaceConfirm", "cancel", "online",
-  "comingSoon", "help", "settings", "credits", "support", "supportSoon", "close", "free",
+  "comingSoon", "help", "settings", "credits", "support", "close", "free",
 ] as const;
 export type TitleKey = (typeof TITLE_TEXT)[number];
 
@@ -89,11 +89,45 @@ export interface NameLists {
   barangay: string[];
 }
 
+/**
+ * In-game labels (content/ui.json): every group, its keys, and the placeholders each may use.
+ * Adding a key here makes it required in the file.
+ */
+export const GAME_TEXT = {
+  gawain: {
+    title: [], reward: ["reward"], titleReward: ["title"], progress: ["have", "need"], count: ["n", "total"],
+    moreSoon: [], allDone: ["total"], open: [], close: [], history: [], noHistory: [],
+  },
+  roles: { villager: [], farmer: [], woodcutter: [], fisher: [], warrior: [] },
+  history: { named: ["story"], left: ["name"], leftHunger: ["name"], leftCrowded: ["name"], fell: ["name"], task: ["task"] },
+  villager: { sick: [], close: [], ledDefense: ["name"] },
+  news: { taskDone: ["task", "reward"], next: ["task"], title: ["title"], moreSoon: [], firstNamed: ["story"] },
+  share: { button: [], villagers: ["n"], datu: ["datu"], text: [], saved: [], failed: [] },
+} as const satisfies Record<string, Record<string, readonly string[]>>;
+
+export type GameText = { [G in keyof typeof GAME_TEXT]: { [K in keyof (typeof GAME_TEXT)[G]]: Localized } };
+
+export function validateGameText(raw: unknown, file = "ui.json"): GameText {
+  if (!isObject(raw)) throw new Error(`${file}: must be a JSON object`);
+  for (const [group, keys] of Object.entries(GAME_TEXT)) {
+    const g = raw[group];
+    if (!isObject(g)) throw new Error(`${file}: missing "${group}"`);
+    for (const [key, vars] of Object.entries(keys as Record<string, readonly string[]>)) {
+      const text = localized(g[key], `${file}: ${group}.${key}`);
+      for (const l of LANGS) {
+        for (const name of placeholders(text[l])) if (!vars.includes(name)) throw new Error(`${file}: ${group}.${key} has no {${name}}`);
+      }
+    }
+  }
+  return raw as unknown as GameText;
+}
+
 export interface UiContent {
   help: Record<Lang, HelpDoc>;
   advisor: AdvisorDef;
   title: TitleDef;
   names: NameLists;
+  game: GameText;
 }
 
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -239,6 +273,7 @@ export function buildUiContent(
   content: Content,
   rawTitle: unknown,
   rawNames: unknown,
+  rawGameText?: unknown,
 ): UiContent {
   const docs = Object.entries(helpFiles).map(([file, raw]) => validateHelp(raw, file));
   const help = {} as Record<Lang, HelpDoc>;
@@ -257,6 +292,7 @@ export function buildUiContent(
     advisor: validateAdvisor(rawAdvisor, content.buildings.map((b) => b.id)),
     title: validateTitle(rawTitle),
     names: validateNames(rawNames),
+    game: validateGameText(rawGameText),
   };
 }
 
@@ -265,5 +301,6 @@ export function loadUiContent(content: Content): UiContent {
   const advisor = import.meta.glob("../../content/advisor.json", { eager: true, import: "default" });
   const title = import.meta.glob("../../content/title.json", { eager: true, import: "default" });
   const names = import.meta.glob("../../content/names.json", { eager: true, import: "default" });
-  return buildUiContent(help, Object.values(advisor)[0], content, Object.values(title)[0], Object.values(names)[0]);
+  const game = import.meta.glob("../../content/ui.json", { eager: true, import: "default" });
+  return buildUiContent(help, Object.values(advisor)[0], content, Object.values(title)[0], Object.values(names)[0], Object.values(game)[0]);
 }

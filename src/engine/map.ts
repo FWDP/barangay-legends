@@ -390,7 +390,16 @@ export function standingBridgeTiles(map: MapState, def: BuildingDef, x: number, 
 export function canPlace(state: GameState, _content: Content, def: BuildingDef, x: number, y: number): boolean {
   if (!inBounds(state.map, x, y) || buildingAt(state, x, y)) return false;
   if (def.placeOn === "river") return bridgeSpan(state.map, def, x, y) !== null;
+  if (def.placeNextTo && !isNextTo(state.map, x, y, def.placeNextTo)) return false;
   return tileAt(state.map, x, y) === "cleared" && !isPlaza(state.map, x, y) && isReachable(state.map, x, y);
+}
+
+/** Does (x, y) touch one of these terrains on a side (not a corner)? */
+export function isNextTo(map: MapState, x: number, y: number, terrains: readonly string[]): boolean {
+  return NEIGHBOURS.some(([dx, dy]) => {
+    const t = tileAt(map, x + dx, y + dy);
+    return t !== null && terrains.includes(t);
+  });
 }
 
 /** Every tile where the building could go, optionally limited to a rectangle (the view). */

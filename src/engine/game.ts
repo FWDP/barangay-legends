@@ -40,8 +40,12 @@ import { homeWarriors } from "./region";
 import { choose, updateChoices, type PendingChoice } from "./choices";
 import { acceptCounter, declineCounter, handog, proposeTrade, type Goods } from "./trading";
 import { advanceClearing, cancelClearing, clearArea, dropUnreachableJobs, workforce, type ClearingJob } from "./clearing";
+import { checkTasks } from "./gawain";
+import { happinessMultiplier, nextHappiness } from "./happiness";
+import { reconcilePeople, type HistoryEntry, type NamedVillager, type Stats } from "./people";
+import { capGrowth, riceCap, storageCap } from "./storage";
 
-export const STATE_VERSION = 16;
+export const STATE_VERSION = 17;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -136,6 +140,15 @@ export interface GameState {
   legacyReach: boolean;
   /** One-time messages for the player (e.g. what a save update changed), shown until dismissed. */
   notices: string[];
+  /** 0–100: changes production by up to ±rules.happiness.maxEffectPercent (see happiness.ts). */
+  happiness: number;
+  /** Mga Gawain finished, in the order they were done (see gawain.ts). */
+  gawainDone: string[];
+  /** Villagers with a name and a story (see people.ts). */
+  named: NamedVillager[];
+  /** The barangay's history: named villagers coming and going, tasks done. Newest last. */
+  history: HistoryEntry[];
+  stats: Stats;
 }
 
 export type { ClearingJob } from "./clearing";
@@ -178,6 +191,11 @@ export function newGame(
     recentChoices: [],
     legacyReach: false,
     notices: [],
+    happiness: content.rules.happiness.start,
+    gawainDone: [],
+    named: [],
+    history: [],
+    stats: { raidsDefended: 0, rolls: 0, named: 0 },
   };
   if (withRegion && content.neighbors.length > 0) state.region = createRegion(content, 0, seed);
   for (const def of content.buildings) {
@@ -403,7 +421,8 @@ export function rates(state: GameState, content: Content): Rates {
       produced[r] += workers[i] * (def?.produces?.[r] ?? 0) * (1 + bonuses[i] + roads[i] + (groves[i][r] ?? 0));
     }
   });
-  for (const r of RESOURCES) produced[r] *= seasonMultiplier(content, state.time, r);
+  const mood = happinessMultiplier(state, content);
+  for (const r of RESOURCES) produced[r] *= seasonMultiplier(content, state.time, r) * mood;
   const eaten = Object.fromEntries(RESOURCES.map((r) => [r, 0])) as Record<Resource, number>;
   eaten.rice = state.villagers * content.rules.riceEatenPerVillagerPerSecond;
   const net = Object.fromEntries(RESOURCES.map((r) => [r, produced[r] - eaten[r]])) as Record<
@@ -413,11 +432,13 @@ export function rates(state: GameState, content: Content): Rates {
   return { produced, eaten, net };
 }
 
+/** A tap on Gather: gatherPerClick of a gatherable resource, up to the storage cap. */
 export function gather(state: GameState, content: Content, resource: Resource): GameState {
-  return {
-    ...state,
-    resources: { ...state.resources, [resource]: state.resources[resource] + content.rules.gatherPerClick },
-  };
+  if (!content.rules.gatherable.includes(resource)) return state;
+  const now = state.resources[resource];
+  const after = capGrowth(now, now + content.rules.gatherPerClick, storageCap(state, content, resource));
+  if (after === now) return state;
+  return { ...state, resources: { ...state.resources, [resource]: after } };
 }
 
 /**
@@ -676,7 +697,7 @@ export type Command =
   | { type: "removeRoad"; x: number; y: number };
 
 export function apply(state: GameState, content: Content, command: Command): GameState {
-  const next = applyCommand(state, content, command);
+  const next = reconcilePeople(state, applyCommand(state, content, command), content);
   // An old save keeps its old staffing rule until the player changes the map.
   return next.legacyReach && mapChanged(state, next) ? { ...next, legacyReach: false } : next;
 }
@@ -798,6 +819,8 @@ function step(state: GameState, content: Content, dt: number): GameState {
   const resources = { ...state.resources };
   for (const r of RESOURCES) resources[r] += net[r] * dt;
   if (resources.rice < 0) resources.rice = 0;
+  // Full stores: production stops at the cap (rice already above it isn't lost).
+  resources.rice = capGrowth(state.resources.rice, resources.rice, riceCap(state, content));
 
   // Gutom: out of rice. Workers stop (see availableWorkers); after the grace period, families leave.
   const hungry = resources.rice <= 0 && state.villagers > 0;
@@ -808,6 +831,7 @@ function step(state: GameState, content: Content, dt: number): GameState {
   let migration = state.migration;
   const cap = housing(state, content);
   const homes = shelter(state, content);
+  const crowded = !hungry && villagers > homes;
 
   if (hungry) {
     const leaving = gutom ? Math.min(dt, Math.max(0, hunger - gutom.graceSeconds)) : 0;
@@ -841,10 +865,13 @@ function step(state: GameState, content: Content, dt: number): GameState {
 
   // Warriors are villagers: if families leave, warriors go with them.
   const warriors = Math.min(state.warriors, villagers);
-  let next: GameState = { ...state, resources, villagers, migration, hunger, warriors };
+  const happiness = nextHappiness(state, content, dt);
+  let next: GameState = { ...state, resources, villagers, migration, hunger, warriors, happiness };
   next = advanceClearing(next, content, dt, hungry).state;
   next = updateEvents(next, content, dt);
   if (next.region) next = updateRegion(next, content, state.time, dt);
-  return updateChoices(next, content, state.time, dt);
+  next = updateChoices(next, content, state.time, dt);
+  next = reconcilePeople(state, next, content, crowded ? "crowded" : "other");
+  return checkTasks(next, content);
 }
 

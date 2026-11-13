@@ -2,14 +2,19 @@
 // The UI measures the time away (the engine never reads the clock) and passes it in.
 //
 // Only gentle things happen offline: fields and camps produce, villagers eat, newcomers
-// arrive while there is room and rice, the sick recover, a clearing job finishes, seasons turn,
-// neighbors grow and tributaries send tribute. Nothing harmful: no disasters, no raids, nobody
-// leaves or dies. Warnings that were running (a fire, a typhoon, a raid) wait for the player.
+// arrive while there is room and rice (and may get names), the sick recover, a clearing job
+// finishes, seasons turn, happiness drifts, tasks (Mga Gawain) met are credited, neighbors grow
+// and tributaries send tribute. Nothing harmful: no disasters, no raids, nobody leaves or
+// dies. Warnings that were running (a fire, a typhoon, a raid) wait for the player.
 import { RESOURCES, type Content, type Resource } from "./content";
 import { healRate, isHungry } from "./events";
 import { housing, rates, type GameState } from "./game";
 import { advanceClearing } from "./clearing";
 import { aiContent, aiDecide, traitOf, type NeighborState, type RegionState } from "./region";
+import { checkTasks } from "./gawain";
+import { nextHappiness } from "./happiness";
+import { reconcilePeople } from "./people";
+import { capGrowth, riceCap } from "./storage";
 
 export interface OfflineReport {
   /** Seconds credited (after the cap). */
@@ -27,6 +32,8 @@ export interface OfflineReport {
   tribute: Record<Resource, number>;
   /** The neighbor whose trade boat gave up waiting, if any. */
   offerExpired: string | null;
+  /** Mga Gawain finished while away (ids, in order). */
+  tasks: string[];
 }
 
 const zero = (): Record<Resource, number> => Object.fromEntries(RESOURCES.map((r) => [r, 0])) as Record<Resource, number>;
@@ -55,7 +62,11 @@ export function gentleStep(state: GameState, content: Content, dt: number): Step
   for (const res of RESOURCES) produced[res] = r.produced[res] * dt * fed;
   const eaten = Math.min(resources.rice + produced.rice, r.eaten.rice * dt);
   for (const res of RESOURCES) resources[res] = Math.max(0, resources[res] + produced[res] - (res === "rice" ? eaten : 0));
-  let s: GameState = { ...state, resources, time: state.time + dt, lastBuild: null };
+  // Full granaries: what doesn't fit isn't stored (and isn't counted as brought in).
+  const capped = capGrowth(state.resources.rice, resources.rice, riceCap(state, content));
+  produced.rice -= resources.rice - capped;
+  resources.rice = capped;
+  let s: GameState = { ...state, resources, time: state.time + dt, lastBuild: null, happiness: nextHappiness(state, content, dt) };
 
   // Newcomers, only while fed and there's room. Never anyone leaving.
   let arrived = 0;
@@ -81,6 +92,8 @@ export function gentleStep(state: GameState, content: Content, dt: number): Step
     cleared = done.cleared;
     produced.wood += s.resources.wood - before;
   }
+  // Newcomers may get names; recoveries clear named villagers' sickness. Then tasks met are credited.
+  s = checkTasks(reconcilePeople(state, s, content), content);
   return { state: s, produced, eaten, hungry: dt * (1 - fed), arrived, recovered, cleared };
 }
 
@@ -136,6 +149,7 @@ export function offlineProgress(state: GameState, content: Content, awaySeconds:
     cleared: 0,
     tribute: zero(),
     offerExpired: null,
+    tasks: [],
   };
   if (seconds < off.minSeconds) return { state, report: { ...report, seconds: 0 } };
 
@@ -197,5 +211,6 @@ export function offlineProgress(state: GameState, content: Content, awaySeconds:
     };
     s = { ...s, region };
   }
+  report.tasks = s.gawainDone.filter((id) => !state.gawainDone.includes(id));
   return { state: s, report };
 }
