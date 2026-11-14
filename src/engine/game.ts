@@ -47,6 +47,7 @@ import { happinessMultiplier, nextHappiness } from "./happiness";
 import { reconcilePeople, type HistoryEntry, type NamedVillager, type Stats } from "./people";
 import { capGrowth, riceCap, storageCap } from "./storage";
 import { checkAklat } from "./aklat";
+import { ageResidents, growPopulation, notWorking, riceEaters } from "./population";
 import { needsBoat, setSail, trainBalangay, updateVoyages } from "./sea";
 import { datuProductionBonus, upgradeDatu } from "./datu";
 import { upgradeBuilding } from "./upgrades";
@@ -78,7 +79,7 @@ import {
   type TikbalangTrick,
 } from "./worship";
 
-export const STATE_VERSION = 29;
+export const STATE_VERSION = 30;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -144,6 +145,8 @@ export interface GameState {
    * leaving (0..-1). Kept in state so progress survives between ticks.
    */
   migration: number;
+  /** Progress toward the next birth (0..1), kept between ticks (population.ts). */
+  births: number;
   /** Game seconds since this barangay was founded. Drives seasons and when disasters may start. */
   time: number;
   /** Seed of the deterministic RNG; advances every time the engine rolls. */
@@ -270,6 +273,7 @@ export function newGame(
     villagers: start.villagers,
     buildings: [],
     migration: 0,
+    births: 0,
     time: 0,
     rng: seed >>> 0,
     hunger: 0,
@@ -438,7 +442,7 @@ export function warriorCap(state: GameState, content: Content): number {
 
 /** Rice is short: it would last less than staffing.foodFirstBelowRiceSeconds at the current eating rate. */
 export function riceIsLow(state: GameState, content: Content): boolean {
-  const eaten = state.villagers * content.rules.riceEatenPerVillagerPerSecond;
+  const eaten = riceEaters(state, content) * content.rules.riceEatenPerVillagerPerSecond;
   return state.resources.rice < content.rules.staffing.foodFirstBelowRiceSeconds * eaten;
 }
 
@@ -446,8 +450,9 @@ export function riceIsLow(state: GameState, content: Content): boolean {
  * Villagers free for buildings: every healthy one. Buildings come first; clearing forest uses
  * the villagers left over (see clearing.ts), so a long clearing queue never empties the fields.
  */
-export function availableWorkers(state: GameState, _content?: Content): number {
-  return healthyWorkers(state);
+export function availableWorkers(state: GameState, content?: Content): number {
+  // Children don't work and elders work part of a share (population.ts).
+  return Math.max(0, healthyWorkers(state) - (content ? notWorking(state, content) : 0));
 }
 
 /** Spreads available workers across worker slots one at a time, round-robin in content order. */
@@ -562,7 +567,8 @@ export function rates(state: GameState, content: Content, opts: { offline?: bool
   // The diwata withhold part of the harvest while the forest spirits are angry.
   if (!opts.offline && !content.ai && state.forest.stage >= 2) produced.rice *= 1 - content.rules.forest.riceWithheldPercent / 100;
   const eaten = Object.fromEntries(RESOURCES.map((r) => [r, 0])) as Record<Resource, number>;
-  eaten.rice = state.villagers * content.rules.riceEatenPerVillagerPerSecond;
+  // Children eat less (population.ts).
+  eaten.rice = riceEaters(state, content) * content.rules.riceEatenPerVillagerPerSecond;
   const net = Object.fromEntries(RESOURCES.map((r) => [r, produced[r] - eaten[r]])) as Record<
     Resource,
     number
@@ -1052,6 +1058,8 @@ function step(state: GameState, content: Content, dt: number): GameState {
       migration += 1;
     }
     if (villagers <= homes || Math.abs(migration) < EPSILON) migration = 0;
+  } else if (!content.ai) {
+    // The player's barangay grows by births and newcomers (population.ts, below).
   } else if (villagers < cap && resources.rice > 0) {
     migration = Math.max(migration, 0) + dt / rules.secondsPerNewVillager;
     while (migration >= 1 - EPSILON && villagers < cap) {
@@ -1067,6 +1075,8 @@ function step(state: GameState, content: Content, dt: number): GameState {
   const warriors = Math.min(state.warriors, villagers);
   const happiness = nextHappiness(state, content, dt);
   let next: GameState = { ...state, resources, villagers, migration, hunger, warriors, happiness };
+  // Births and newcomers, and children growing up (the player's barangay; AI ones grow above).
+  if (!content.ai) next = ageResidents(growPopulation(next, content, dt), content);
   const beforeClearing = next;
   next = advanceClearing(next, content, dt, hungry).state;
   if (!content.ai) next = advanceReplanting(afterClearing(beforeClearing, next, content), content, dt);

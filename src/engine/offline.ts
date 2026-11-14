@@ -6,6 +6,7 @@
 // finishes, seasons turn, happiness drifts, tasks (Mga Gawain) met are credited, neighbors grow
 // and tributaries send tribute. Nothing harmful: no disasters, no raids, nobody leaves or
 // dies. Warnings that were running (a fire, a typhoon, a raid) wait for the player.
+import { ageResidents, growPopulation } from "./population";
 import { RESOURCES, type Content, type Resource } from "./content";
 import { healRate, isHungry } from "./events";
 import { housing, rates, type GameState } from "./game";
@@ -34,7 +35,10 @@ export interface OfflineReport {
   eaten: number;
   /** Seconds the barangay spent with an empty granary (nobody worked, nobody left). */
   hungrySeconds: number;
+  /** Newcomers who arrived while away. */
   arrived: number;
+  /** Children born while away. */
+  born: number;
   recovered: number;
   /** Forest tiles finished clearing. */
   cleared: number;
@@ -55,6 +59,7 @@ interface StepResult {
   eaten: number;
   hungry: number;
   arrived: number;
+  born: number;
   recovered: number;
   cleared: number;
 }
@@ -80,13 +85,24 @@ export function gentleStep(state: GameState, content: Content, dt: number): Step
   resources.rice = capped;
   let s: GameState = { ...state, resources, time: state.time + dt, lastBuild: null, happiness: nextHappiness(state, content, dt) };
 
-  // Newcomers, only while fed and there's room. Never anyone leaving.
+  // Births and newcomers, only while fed and there's room (no Balita lines: the away story
+  // counts them). Never anyone leaving. AI barangays keep the simple arrivals.
   let arrived = 0;
+  let born = 0;
   const room = Math.max(0, housing(s, content) - s.villagers);
-  if (room > 0 && fed === 1 && resources.rice > 0) {
-    const migration = Math.max(0, s.migration) + dt / content.rules.secondsPerNewVillager;
-    arrived = Math.min(room, Math.floor(migration));
-    s = { ...s, villagers: s.villagers + arrived, migration: arrived === room ? 0 : migration - arrived };
+  if (content.ai) {
+    if (room > 0 && fed === 1 && resources.rice > 0) {
+      const migration = Math.max(0, s.migration) + dt / content.rules.secondsPerNewVillager;
+      arrived = Math.min(room, Math.floor(migration));
+      s = { ...s, villagers: s.villagers + arrived, migration: arrived === room ? 0 : migration - arrived };
+    }
+  } else {
+    const before = s.residents.length;
+    if (fed === 1 && resources.rice > 0) s = growPopulation({ ...s, hunger: 0 }, content, dt, true);
+    const added = s.residents.slice(before);
+    born = added.filter((r) => r.came === "born").length;
+    arrived = added.length - born;
+    s = ageResidents(s, content);
   }
 
   // The sick recover (no new cases).
@@ -115,7 +131,7 @@ export function gentleStep(state: GameState, content: Content, dt: number): Step
   s = updateDoors(state, s, content);
   if (!content.ai) s = trackRanking(state, applyRenown(state, s, content), content);
   s = checkTasks(reconcilePeople(state, s, content), content);
-  return { state: s, produced, eaten, hungry: dt * (1 - fed), arrived, recovered, cleared };
+  return { state: s, produced, eaten, hungry: dt * (1 - fed), arrived, born, recovered, cleared };
 }
 
 /** Neighbors grow, decide and pay tribute; nothing hostile, and loyalty doesn't drift. */
@@ -173,6 +189,7 @@ export function offlineProgress(state: GameState, content: Content, awaySeconds:
     eaten: 0,
     hungrySeconds: 0,
     arrived: 0,
+    born: 0,
     recovered: 0,
     cleared: 0,
     tribute: zero(),
@@ -198,6 +215,7 @@ export function offlineProgress(state: GameState, content: Content, awaySeconds:
     report.eaten += step.eaten;
     report.hungrySeconds += step.hungry;
     report.arrived += step.arrived;
+    report.born += step.born;
     report.recovered += step.recovered;
     report.cleared += step.cleared;
     if (region) {

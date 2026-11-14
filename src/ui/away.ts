@@ -125,6 +125,7 @@ export function offlineStory(report: OfflineReport, before: GameState, after: Ga
   if (work.length) lines.push(`Your people brought in ${work.join(" and ")}, and ate ${Math.round(report.eaten)} rice.`);
   else if (report.eaten > 0) lines.push(`Your people ate ${Math.round(report.eaten)} rice.`);
   if (report.hungrySeconds >= 60) lines.push("For a while the granary was empty, so the work stopped, but everyone waited for your return. Gather rice!");
+  if (report.born > 0) lines.push(`${report.born === 1 ? "A child was" : `${report.born} children were`} born in the barangay.`);
   if (report.arrived > 0) lines.push(`${plural(report.arrived, "newcomer", "newcomers")} settled in the barangay.`);
   if (report.recovered > 0) lines.push(`${plural(report.recovered, "sick villager", "sick villagers")} got well again.`);
   if (report.cleared > 0) lines.push(`The villagers cleared ${plural(report.cleared, "tile", "tiles")} of forest.`);

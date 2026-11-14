@@ -3,10 +3,11 @@
 // Rolls use rollAt with a counter kept in stats, so they never shift the shared RNG that
 // drives events. When villagers leave or warriors fall, named ones may be among them; that is
 // recorded in the history. Pure: called after every engine step and every command.
-import { syncResidents, type Gender } from "./residents";
+import { syncResidents, type Gender, type Resident } from "./residents";
 import type { Content, VillagerRole, VillagerStory } from "./content";
 import type { GameState } from "./game";
 import { rollAt } from "./rng";
+import { linkNamed, startLife, type LifeEvent } from "./talambuhay";
 import { addMourning, remember } from "./death";
 
 export interface NamedVillager {
@@ -21,6 +22,10 @@ export interface NamedVillager {
   sick?: boolean;
   /** Grown old: they may die of old age now (the warning comes first). */
   frail?: boolean;
+  /** The resident they are (residents.ts), for their family and life story. Missing before v30. */
+  resident?: number;
+  /** Their life story's dated events (talambuhay.ts). */
+  life?: LifeEvent[];
   /** Woman or man (pronouns in the history, the name list, the sprite). Missing in old tests only: see namedGender. */
   gender?: Gender;
 }
@@ -133,8 +138,11 @@ function storiesFor(state: GameState, content: Content, warrior: boolean): Villa
   return unused.length ? unused : fits;
 }
 
-/** Gives one new villager (or warrior) a name and story, maybe (content.villagers.chance). */
-function maybeName(state: GameState, content: Content, warrior: boolean): GameState {
+/**
+ * Gives one new villager (or warrior) a name and story, maybe (content.villagers.chance). With
+ * a resident, the name is theirs (their gender, family and life story).
+ */
+export function maybeName(state: GameState, content: Content, warrior: boolean, resident?: Resident): GameState {
   const vc = content.villagers;
   if (vc.chance <= 0 || vc.names.length === 0) return state;
   let [r, s] = roll(state, SALT_NAME);
@@ -143,7 +151,7 @@ function maybeName(state: GameState, content: Content, warrior: boolean): GameSt
   if (stories.length === 0) return s;
   // Mandirigma are men for now (no sourced note yet on women warriors); others by the seed.
   const id = s.stats.named + 1;
-  const gender: Gender = warrior ? "man" : rollAt(s.map.seed, id, SALT_NAMED_GENDER) * 100 < content.rules.residents.womanPercent ? "woman" : "man";
+  const gender: Gender = resident ? resident.gender : warrior ? "man" : rollAt(s.map.seed, id, SALT_NAMED_GENDER) * 100 < content.rules.residents.womanPercent ? "woman" : "man";
   const pool = gender === "woman" ? vc.women : vc.men;
   const taken = new Set([...s.named.map((v) => v.name), s.barangay.datu]);
   const free = pool.filter((n) => !taken.has(n));
@@ -154,7 +162,7 @@ function maybeName(state: GameState, content: Content, warrior: boolean): GameSt
   [b, s] = roll(s, SALT_PICKNAME);
   const story = stories[Math.floor(a * stories.length)];
   const name = names[Math.floor(b * names.length)];
-  const v: NamedVillager = { id, name, story: story.id, role: story.role, since: s.time, gender };
+  const v: NamedVillager = { id, name, story: story.id, role: story.role, since: s.time, gender, ...(resident ? { resident: resident.id, life: startLife(s, resident.id, s.time) } : {}) };
   s = { ...s, named: [...s.named, v], stats: { ...s.stats, named: s.stats.named + 1 } };
   return addHistory(s, { at: s.time, kind: "named", ...about(v) });
 }
@@ -232,10 +240,18 @@ export function reconcilePeople(prev: GameState, nextIn: GameState, content: Con
     }
   }
   s = trim(s, s.warriors, Math.max(0, s.villagers - s.warriors), cause);
-  // Newcomers and new Mandirigma.
+  // Newcomers and new Mandirigma. A newcomer who is a resident gets their own name (children
+  // aren't named until they grow up: population.ts).
   const arrived = Math.max(0, -fewer);
-  for (let i = 0; i < arrived; i++) s = maybeName(s, content, false);
+  const added = content.ai ? [] : s.residents.slice(Math.max(0, s.residents.length - arrived));
+  for (let i = 0; i < arrived; i++) {
+    const r = added[i];
+    if (r?.age === "child") continue;
+    s = maybeName(s, content, false, r);
+  }
   for (let i = 0; i < newWarriors; i++) s = maybeName(s, content, true);
+  // Named villagers are residents too: a new Mandirigma is one of the grown men (talambuhay.ts).
+  if (!content.ai) s = linkNamed(s);
   // Sickness: a new case may be a named villager; recoveries clear the oldest marks first.
   for (let i = 0; i < sickChange; i++) {
     const healthy = s.named.filter((v) => !v.sick && !isWarrior(v));

@@ -23,6 +23,8 @@ export function blocName(state: GameState, content: Content, blocId: string | un
 
 /** A Balita line: a scripted event's own text, or an action's. */
 export function newsLine(item: NewsItem, state: GameState, content: Content, game: GameText, lang: Lang): string {
+  // Births and newcomers in the barangay (content/villagers/arrivals.json).
+  if (item.key === "birth" || item.key === "arrival") return peopleLine(item, state, content, game, lang);
   const ev = content.politics.find((e) => e.id === item.key);
   const n = item.barangay ? content.neighbors.find((x) => x.id === item.barangay) : undefined;
   // "other" is a bloc for scripted events and joined wars, a barangay for battles.
@@ -39,6 +41,22 @@ export function newsLine(item: NewsItem, state: GameState, content: Content, gam
   const key = (own && game.balita[own] ? own : item.key) as keyof GameText["balita"];
   const t = game.balita[key];
   return t ? fill(t[lang], vars) : item.key;
+}
+
+/** "A child was born to Dalisay and Malakas: Tala." / "Ligaya and Banaag came from upriver…". */
+function peopleLine(item: NewsItem, state: GameState, content: Content, game: GameText, lang: Lang): string {
+  const people = item.people ?? [];
+  if (item.key === "birth") return fill(content.arrivals.birth[lang], { mother: people[0] ?? "", father: people[1] ?? "", child: people[2] ?? "" });
+  const reason = content.arrivals.reasons.find((r) => r.id === item.reason) ?? content.arrivals.reasons[0];
+  const newcomers = reason.spouse ? people.slice(0, 1) : people;
+  const and = lang === "fil" ? " at " : " and ";
+  const list = newcomers.length <= 1 ? (newcomers[0] ?? "") : `${newcomers.slice(0, -1).join(", ")}${and}${newcomers.at(-1)}`;
+  return fill(reason.text[lang], {
+    names: list,
+    name: newcomers[0] ?? "",
+    spouse: reason.spouse ? (people[1] ?? "") : "",
+    barangay: barangayName(state, content, item.barangay, game, lang),
+  });
 }
 
 /** Bloc colors for the political map (the player's bloc is always gold). */

@@ -262,6 +262,20 @@
     "slowPercent": 80,
     "stopMultiple": 1.5
   },
+  "population": {
+    "_comment": "Where villagers come from (engine/population.ts). While the barangay is fed and has housing room, newcomers arrive one every secondsPerNewcomer (a reason from content/villagers/arrivals.json; families of up to familyMax), and households in a Bahay Kubo have a child every secondsPerBirth while happiness is at least birthMinHappiness and a couple can be found or formed. Children grow up after childDays game days (Araw) and adults become elders after elderAfterDays. Children don't work and eat childRicePercent of a share; elders work elderWorkPercent of a share (they teach). Newcomers are children or elders by newcomerChildPercent and newcomerElderPercent. The Balita keeps at most balitaMax birth and arrival lines. AI barangays keep the simple arrivals (secondsPerNewVillager). Tuned with npm run simulate so the first 30 minutes grow as before; playtest guesses.",
+    "secondsPerNewcomer": 10,
+    "secondsPerBirth": 90,
+    "birthMinHappiness": 45,
+    "childDays": 1.5,
+    "elderAfterDays": 30,
+    "childRicePercent": 50,
+    "elderWorkPercent": 50,
+    "newcomerChildPercent": 5,
+    "newcomerElderPercent": 5,
+    "familyMax": 3,
+    "balitaMax": 8
+  },
   "residents": {
     "_comment": "Every villager as a person (engine/residents.ts): the share of women, children and elders among new arrivals and births, and of each social class (classPercent: nobility, the warrior class, free commoners, dependents; each tradition names them, content/traditions 'classes'), rolled from the map's seed. Display only (the map's sprites, where they live and work, the villager card); every villager still counts the same in the economy. Class shares are playtest guesses, not historical figures.",
     "womanPercent": 50,

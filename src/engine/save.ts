@@ -1,6 +1,8 @@
 // Saving to the browser. The only engine module allowed to touch browser APIs,
 // and even here the storage is passed in so tests can use a fake.
-import { AGE_GROUPS, classFor, GENDERS, syncResidents, type AgeGroup, type Gender } from "./residents";
+import { AGE_GROUPS, classFor, GENDERS, syncResidents, type AgeGroup, type Gender, type Resident } from "./residents";
+import { linkNamed, parseLife } from "./talambuhay";
+import { rollAt } from "./rng";
 import { makeHousehold } from "./household";
 import { clearingShape } from "./plaza";
 import { REFUSAL_REASONS, RESOURCES, SOCIAL_CLASSES, type BuildingDef, type Content, type RefusalReason, type Resource, type SocialClass } from "./content";
@@ -303,6 +305,24 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
     if (Array.isArray(raw.named)) out.named = raw.named.map((v) => (isObject(v) ? { ...v, story: id(v.story) } : v));
     return out;
   },
+  // v29 → v30: births and newcomers (population.ts). Everyone keeps their age group; each
+  // resident's group "began" partway through it, from the seed, so the children already there
+  // grow up over the next few Araw and nobody turns elder all at once. Named villagers are
+  // linked to a resident when the save is read (talambuhay.ts). No births are under way yet.
+  29: (raw, content) => {
+    const time = typeof raw.time === "number" && Number.isFinite(raw.time) ? raw.time : 0;
+    const seed = isObject(raw.map) && Number.isInteger(raw.map.seed) ? (raw.map.seed as number) >>> 0 : 0;
+    const day = content.rules.dayNight.daySeconds;
+    const p = content.rules.population;
+    const residents = Array.isArray(raw.residents)
+      ? raw.residents.map((r) => {
+          if (!isObject(r) || !Number.isInteger(r.id)) return r;
+          const span = r.age === "child" ? p.childDays * day : r.age === "adult" ? p.elderAfterDays * day : 0;
+          return { ...r, since: time - rollAt(seed, r.id as number, 9306) * span * 0.9 };
+        })
+      : raw.residents;
+    return { ...raw, version: 30, residents, births: 0 };
+  },
 };
 
 // ---------- Frozen v15 bridge rule (for the v14 → v15 migration only) ----------
@@ -507,6 +527,7 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean, withRegi
   }
   if (finiteNonNeg(data.villagers)) state.villagers = Math.floor(data.villagers);
   if (typeof data.migration === "number" && Math.abs(data.migration) < 1) state.migration = data.migration;
+  if (typeof data.births === "number" && data.births >= 0 && data.births < 1) state.births = data.births;
   if (finiteNonNeg(data.time)) state.time = data.time;
   if (Number.isInteger(data.rng)) state.rng = (data.rng as number) >>> 0;
   if (finiteNonNeg(data.hunger)) state.hunger = data.hunger;
@@ -771,10 +792,19 @@ function parseResidents(data: RawSave, content: Content, state: GameState, isPla
     seen.add(p.id as number);
     // A v26 resident has no class yet: the seed gives it, as for a new arrival.
     const cls = SOCIAL_CLASSES.includes(p.cls as SocialClass) ? (p.cls as SocialClass) : classFor(content, state.map.seed, p.id as number);
-    state.residents.push({ id: p.id as number, gender: p.gender as Gender, age: p.age as AgeGroup, cls });
+    const r: Resident = { id: p.id as number, gender: p.gender as Gender, age: p.age as AgeGroup, cls };
+    if (typeof p.since === "number" && Number.isFinite(p.since)) r.since = p.since;
+    if (Number.isInteger(p.spouse)) r.spouse = p.spouse as number;
+    if (Array.isArray(p.parents) && p.parents.length <= 2 && p.parents.every((x) => Number.isInteger(x))) r.parents = p.parents as number[];
+    if (p.came === "born" || p.came === "arrived" || p.came === "founder") r.came = p.came;
+    if (typeof p.why === "string" && p.why.length <= 40) r.why = p.why;
+    if (typeof p.from === "string" && p.from.length <= 40) r.from = p.from;
+    state.residents.push(r);
   }
   if (Number.isInteger(data.residentsNext)) state.residentsNext = Math.max(1, data.residentsNext as number);
   Object.assign(state, syncResidents(state, content));
+  // Named villagers are residents too (their family and life story): link any that aren't.
+  Object.assign(state, linkNamed(state));
   // The datu's household: stored, or made from the seed and the datu's name (older saves).
   const h = data.household;
   const sp = isObject(h) && isObject(h.spouse) ? h.spouse : null;
@@ -812,6 +842,9 @@ function parsePeople(data: RawSave, content: Content, state: GameState, isPlayer
     const nv: NamedVillager = { id: v.id as number, name: v.name, story: story.id, role: story.role, since: v.since };
     if (v.sick === true) nv.sick = true;
     if (v.frail === true) nv.frail = true;
+    if (Number.isInteger(v.resident)) nv.resident = v.resident as number;
+    const life = parseLife(v.life);
+    if (life.length) nv.life = life;
     // Saves from before genders: from the name's list, else the seed (people.ts namedGender).
     nv.gender = GENDERS.includes(v.gender as Gender) ? (v.gender as Gender) : namedGender(content, nv, state.map.seed);
     named.push(nv);

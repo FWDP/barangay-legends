@@ -122,6 +122,7 @@ export interface Rules {
   storage: { baseRice: number };
   /** Shares of women, children and elders among new residents (residents.ts). */
   residents: { womanPercent: number; childPercent: number; elderPercent: number; classPercent: Record<SocialClass, number> };
+  population: PopulationRules;
   /** How many sick villagers a healer's hut holds (healing.ts). */
   healing: { hutCapacity: number };
   /** The Bahay ng Datu's footprint and the gathering spots around it (plaza.ts). */
@@ -464,6 +465,44 @@ export const VILLAGER_ROLES = ["villager", "farmer", "woodcutter", "fisher", "wa
 export type VillagerRole = (typeof VILLAGER_ROLES)[number];
 
 /** Named villagers: content/villagers.json (chance and stories) and the names in content/names.json. */
+/** Births, newcomers and growing up (engine/population.ts; rules.population). */
+export interface PopulationRules {
+  secondsPerNewcomer: number;
+  secondsPerBirth: number;
+  birthMinHappiness: number;
+  childDays: number;
+  elderAfterDays: number;
+  childRicePercent: number;
+  elderWorkPercent: number;
+  newcomerChildPercent: number;
+  newcomerElderPercent: number;
+  familyMax: number;
+  balitaMax: number;
+}
+
+/** When a newcomer's reason can come up (content/villagers/arrivals.json). */
+export const ARRIVAL_NEEDS = ["alliance", "marriage", "trade", "allyRaided"] as const;
+export type ArrivalNeed = (typeof ARRIVAL_NEEDS)[number];
+
+/** Why newcomers came, and the Balita line for it. */
+export interface ArrivalReason {
+  id: string;
+  weight: number;
+  needs?: ArrivalNeed;
+  boost?: number;
+  /** They marry a single villager on arrival. */
+  spouse?: boolean;
+  /** How many come together: [fewest, most]. */
+  size: [number, number];
+  text: Text;
+}
+
+/** Births and arrivals (content/villagers/arrivals.json). */
+export interface ArrivalContent {
+  birth: Text;
+  reasons: ArrivalReason[];
+}
+
 export interface VillagerContent {
   /** Chance that an arriving villager gets a name (0.2 = about 1 in 5). */
   chance: number;
@@ -857,6 +896,7 @@ export interface Content {
   /** Mga Gawain, in chain order (first task first). */
   quests: QuestDef[];
   villagers: VillagerContent;
+  arrivals: ArrivalContent;
   traditions: TraditionDef[];
   rituals: RitualDef[];
   visitor: VisitorDef | null;
@@ -1125,6 +1165,10 @@ export function validateRules(raw: unknown): Rules {
   if ((raw.plaza.clearingMax as number) < (raw.plaza.clearingMin as number)) throw new Error('rules: "plaza.clearingMax" must be at least "plaza.clearingMin"');
   if (!isObject(raw.aiGrowth) || !Number.isInteger(raw.aiGrowth.clearTiles) || (raw.aiGrowth.clearTiles as number) < 1) throw new Error('rules: "aiGrowth.clearTiles" must be a whole number >= 1');
   if (!isObject(raw.happiness)) throw new Error('rules: missing "happiness"');
+  if (!isObject(raw.population)) throw new Error('rules: missing "population"');
+  checkNumbers(raw.population, ["birthMinHappiness", "childRicePercent", "elderWorkPercent", "newcomerChildPercent", "newcomerElderPercent"], "rules: population");
+  checkNumbers(raw.population, ["secondsPerNewcomer", "secondsPerBirth", "childDays", "elderAfterDays", "familyMax", "balitaMax"], "rules: population", true);
+  if ((raw.population.newcomerChildPercent as number) + (raw.population.newcomerElderPercent as number) > 100) throw new Error("rules: population newcomer shares add up to more than 100");
   checkNumbers(raw.happiness, ["start", "maxEffectPercent", "pointsPerSecond", "plazaRadius", "perHouseNearPlaza", "maxFromHouses"], "rules: happiness");
   for (const key of ["hungry", "perSick", "maxFromSick"]) {
     if (typeof raw.happiness[key] !== "number" || !Number.isFinite(raw.happiness[key])) throw new Error(`rules: "happiness.${key}" must be a number`);
@@ -1448,6 +1492,45 @@ export function questChain(quests: QuestDef[], buildingIds: Set<string>, seasonI
 const NO_VILLAGERS: VillagerContent = { chance: 0, names: [], women: [], men: [], datuWomen: [], stories: [], roleBuildings: {} };
 
 /** Checks content/villagers.json and the villager names in content/names.json. */
+/** No arrivals file (hand-made test content): newcomers come for land, with plain words. */
+const NO_ARRIVALS: ArrivalContent = {
+  birth: { en: "A child was born to {mother} and {father}: {child}.", fil: "Isinilang ang anak nina {mother} at {father}: si {child}." },
+  reasons: [{ id: "land", weight: 1, size: [1, 1], text: { en: "{names} came looking for land.", fil: "Dumating si {names} upang maghanap ng lupa." } }],
+};
+
+export function validateArrivals(raw: unknown): ArrivalContent {
+  if (raw === undefined) return NO_ARRIVALS;
+  const file = "villagers/arrivals.json";
+  if (!isObject(raw)) throw new Error(`${file}: must be a JSON object`);
+  if (!isText(raw.birth)) throw new Error(`${file}: "birth" needs en and fil`);
+  if (!Array.isArray(raw.reasons) || raw.reasons.length === 0) throw new Error(`${file}: "reasons" must list at least one reason`);
+  const seen = new Set<string>();
+  const reasons = raw.reasons.map((r, i): ArrivalReason => {
+    const at = `${file}: reason ${i + 1}`;
+    if (!isObject(r) || typeof r.id !== "string" || r.id === "" || seen.has(r.id)) throw new Error(`${at}: needs a unique "id"`);
+    seen.add(r.id);
+    if (!isNonNegNumber(r.weight)) throw new Error(`${at}: "weight" must be a number >= 0`);
+    if (r.boost !== undefined && !isNonNegNumber(r.boost)) throw new Error(`${at}: "boost" must be a number >= 0`);
+    if (r.needs !== undefined && !(ARRIVAL_NEEDS as readonly unknown[]).includes(r.needs)) throw new Error(`${at}: "needs" must be one of ${ARRIVAL_NEEDS.join(", ")}`);
+    const size = r.size;
+    if (!Array.isArray(size) || size.length !== 2 || !size.every((n) => Number.isInteger(n) && (n as number) >= 1) || (size[0] as number) > (size[1] as number)) {
+      throw new Error(`${at}: "size" must be [fewest, most], whole numbers from 1`);
+    }
+    if (!isText(r.text)) throw new Error(`${at}: "text" needs en and fil`);
+    return {
+      id: r.id,
+      weight: r.weight,
+      ...(r.needs ? { needs: r.needs as ArrivalNeed } : {}),
+      ...(r.boost !== undefined ? { boost: r.boost } : {}),
+      ...(r.spouse === true ? { spouse: true } : {}),
+      size: [size[0] as number, size[1] as number],
+      text: r.text,
+    };
+  });
+  if (!reasons.some((r) => !r.needs && r.weight > 0)) throw new Error(`${file}: at least one reason must be possible at any time (no "needs", weight > 0)`);
+  return { birth: raw.birth, reasons };
+}
+
 export function validateVillagers(raw: unknown, rawNames: unknown, buildingIds: Set<string>): VillagerContent {
   if (raw === undefined) return NO_VILLAGERS;
   const file = "villagers.json";
@@ -1656,6 +1739,8 @@ export function buildContent(
   extra: {
     quests?: Record<string, unknown>;
     villagers?: unknown;
+    /** content/villagers/*.json, by file name. */
+    villagerFiles?: Record<string, unknown>;
     names?: unknown;
     traditions?: Record<string, unknown>;
     islands?: unknown;
@@ -1777,6 +1862,7 @@ export function buildContent(
     seasonIds,
   );
   const villagers = validateVillagers(extra.villagers, extra.names, ids);
+  const arrivals = validateArrivals(Object.entries(extra.villagerFiles ?? {}).find(([f]) => f.endsWith("arrivals.json"))?.[1]);
   const islandsRaw = extra.islands;
   const islands = isObject(islandsRaw) && Array.isArray(islandsRaw.names) ? islandsRaw.names.filter((n): n is string => typeof n === "string" && n !== "") : [];
   if (extra.islands !== undefined && islands.length < rules.archipelago.maxIslands) throw new Error(`islands.json: needs at least ${rules.archipelago.maxIslands} names`);
@@ -1785,7 +1871,7 @@ export function buildContent(
     .map(([file, raw]) => validatePolitics(raw, file));
   for (const n of neighbors) if (n.tradition && !traditions.some((t) => t.id === n.tradition)) throw new Error(`${n.id}: unknown tradition "${n.tradition}"`);
   const levels = validateLevels(extra.levels, rules);
-  return { buildings, rules, events, lore, groves, neighbors, choices, quests, villagers, traditions, rituals, visitor, eclipse, trickery, aklat, datuHouse, islands, politics, levels };
+  return { buildings, rules, events, lore, groves, neighbors, choices, quests, villagers, arrivals, traditions, rituals, visitor, eclipse, trickery, aklat, datuHouse, islands, politics, levels };
 }
 
 /** Loads every JSON file in content/ at build time (Vite bundles them). */
@@ -1802,10 +1888,12 @@ export function loadContent(): Content {
   const choices = import.meta.glob("../../content/events/choices/*.json", { eager: true, import: "default" });
   const quests = import.meta.glob("../../content/quests/*.json", { eager: true, import: "default" });
   const villagers = import.meta.glob("../../content/villagers.json", { eager: true, import: "default" });
+  const villagerFiles = import.meta.glob("../../content/villagers/*.json", { eager: true, import: "default" });
   const names = import.meta.glob("../../content/names.json", { eager: true, import: "default" });
   return buildContent(files, Object.values(rules)[0], events, lore, blessings, neighbors, choices, {
     quests,
     villagers: Object.values(villagers)[0],
+    villagerFiles,
     names: Object.values(names)[0],
     traditions: import.meta.glob("../../content/traditions/*.json", { eager: true, import: "default" }),
     islands: Object.values(import.meta.glob("../../content/islands.json", { eager: true, import: "default" }))[0],

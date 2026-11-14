@@ -1,4 +1,5 @@
 // Helpers shared by engine tests.
+import { linkNamed } from "./talambuhay";
 import { syncResidents } from "./residents";
 import { namedGender } from "./people";
 import { loadContent, RESOURCES, type Content, type Events, type ResourceAmounts, type Resources } from "./content";
@@ -70,7 +71,8 @@ export function withState(patch: Omit<Partial<GameState>, "resources"> & { build
 /** One resident per villager (residents.ts) and every named villager's gender, as a save loads them. */
 export function asLoaded(s: GameState): GameState {
   const synced = syncResidents(s, content);
-  return { ...synced, named: synced.named.map((v) => (v.gender ? v : { ...v, gender: namedGender(content, v, synced.map.seed) })) };
+  // Named villagers are linked to residents as a save loads them (talambuhay.ts).
+  return linkNamed({ ...synced, named: synced.named.map((v) => (v.gender ? v : { ...v, gender: namedGender(content, v, synced.map.seed) })) });
 }
 
 /** The state with every building's entrance worked out (doors.ts). */

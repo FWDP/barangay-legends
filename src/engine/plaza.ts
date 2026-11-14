@@ -267,7 +267,8 @@ export function gatheringSpots(state: GameState, content: Content): Gathering {
   const byFront = (p: Point, q: Point) => Math.hypot(p.x + 0.5 - front.x, p.y + 0.5 - front.y) - Math.hypot(q.x + 0.5 - front.x, q.y + 0.5 - front.y) || p.y - q.y || p.x - q.x;
   const near = [...clearing.sort(byFront), ...ring(1).filter((t) => !inC.has(`${t.x},${t.y}`))].flatMap((t) => tileSpots(t.x, t.y, spotsPerTile, fire));
   let spots = near.slice(0, gatherMax);
-  let waiting = [...near.slice(gatherMax), ...ring(2).filter((t) => !inC.has(`${t.x},${t.y}`)).flatMap((t) => tileSpots(t.x, t.y, spotsPerTile, fire))];
+  // The rest wait further out, rings 2 to 4, so a crowd rarely has to share a spot.
+  let waiting = [...near.slice(gatherMax), ...[2, 3, 4].flatMap((r) => ring(r).filter((t) => !inC.has(`${t.x},${t.y}`)).flatMap((t) => tileSpots(t.x, t.y, spotsPerTile, fire)))];
   for (let r = 3; spots.length === 0 && waiting.length === 0 && r <= 6; r++) waiting = ring(r).flatMap((t) => tileSpots(t.x, t.y, spotsPerTile, fire));
   if (spots.length === 0) {
     spots = waiting.slice(0, gatherMax);
@@ -284,7 +285,21 @@ export function gatheringSpots(state: GameState, content: Content): Gathering {
  * the crowd, the rest wait further out. Null only on a map with no open ground near the house.
  */
 export function gatherSpot(g: Gathering, n: number, gatherMax: number): Point | null {
-  if (n < gatherMax && g.spots.length > 0) return g.spots[n % g.spots.length];
-  if (g.waiting.length > 0) return g.waiting[n % g.waiting.length];
-  return g.spots.length > 0 ? g.spots[n % g.spots.length] : null;
+  if (n < gatherMax && g.spots.length > 0) return lap(g.spots, n);
+  if (g.waiting.length > 0) return lap(g.waiting, n);
+  return g.spots.length > 0 ? lap(g.spots, n) : null;
+}
+
+/**
+ * Spot n of a list; when there are more people than spots, each further round stands a little
+ * aside on the same tile, so nobody stands on someone else.
+ */
+function lap(list: Point[], n: number): Point {
+  const p = list[n % list.length];
+  const round = Math.floor(n / list.length);
+  if (round === 0) return p;
+  const keep = (v: number, base: number) => Math.min(base + 0.9, Math.max(base + 0.1, v));
+  const a = round * 2.39996;
+  const r = 0.12 + 0.06 * (round % 3);
+  return { x: keep(p.x + Math.cos(a) * r, Math.floor(p.x)), y: keep(p.y + Math.sin(a) * r, Math.floor(p.y)) };
 }

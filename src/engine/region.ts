@@ -79,6 +79,10 @@ export interface NewsItem {
   barangay?: string;
   bloc?: string;
   other?: string;
+  /** Births and arrivals ("birth", "arrival"): the people named in it (a newborn's mother, father, child; the newcomers). */
+  people?: string[];
+  /** Why newcomers came (arrival): a reason id in content/villagers/arrivals.json. */
+  reason?: string;
 }
 
 /** A Balangay at sea: carrying an action to another island, or coming home. */

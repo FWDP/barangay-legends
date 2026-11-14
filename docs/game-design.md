@@ -37,6 +37,10 @@ different form, and some (prestige and Dangal, export codes) isn't built yet.
   the fire pit and a shade tree (`map.gathering`, seeded per map, v28). It is walkable, never
   built on, counts as part of the Daan network, and is where gatherings stand first. New maps
   clear one extra row behind the start square to make up for the land it keeps open.
+- **Where villagers come from:** births in a Bahay Kubo (fed, room, happiness) and newcomers
+  with a reason (land, marriage, alliance, a trader who stays, kin from a raided ally), told in
+  the Balita; children grow up after `rules.population.childDays`, don't work and eat less;
+  elders work less. AI barangays keep the simple arrivals. Tuned with `npm run simulate`.
 - **Fit to the period:** world art and symbols are precolonial (no candles, steel axes,
   fishing reels, railway tracks or padlocks; see the S prompt and `docs/cultural-review.md`).
   The healer's hut is named by tradition (Babaylan, Katalonan, Healer), the balete's spirit is

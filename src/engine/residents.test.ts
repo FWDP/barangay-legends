@@ -2,7 +2,7 @@
 import { describe, expect, it } from "vitest";
 import { apply, newGame, tick } from "./game";
 import { namedGender, reconcilePeople, type NamedVillager } from "./people";
-import { makeResident, residentAt, syncResidents } from "./residents";
+import { makeResident, residentAt, settler, syncResidents } from "./residents";
 import { parseSave } from "./save";
 import { content, withState } from "./testUtils";
 
@@ -57,7 +57,8 @@ describe("residents", () => {
     delete old.residentsNext;
     const loaded = parseSave(JSON.stringify(old), content)!;
     expect(loaded.residents).toHaveLength(7);
-    expect(loaded.residents).toEqual(Array.from({ length: 7 }, (_, i) => makeResident(content, s.map.seed, i + 1)));
+    // As settlers (population.ts): mostly adults, each partway through their age group.
+    expect(loaded.residents).toEqual(Array.from({ length: 7 }, (_, i) => settler(content, s.map.seed, i + 1, s.time)));
     expect(parseSave(JSON.stringify(old), content)!.residents).toEqual(loaded.residents);
   });
 

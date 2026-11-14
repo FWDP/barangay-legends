@@ -1,0 +1,61 @@
+{
+  "_comment": "How villagers come to the barangay (engine/population.ts): births, and the reasons newcomers arrive, each with a Balita line in English and Filipino. weight: how often the reason is picked; needs: when it can happen at all (alliance: a marriage alliance or sandugo with a neighbor; marriage: a marriage alliance; trade: a trade has been made; allyRaided: an ally was raided in the last two Araw); boost: an extra weight while `needs` holds; size: how many come together (at most rules.population.familyMax, and only while there is room); spouse: the newcomer marries a single villager. Placeholders: {names} the newcomers, {name} the first, {spouse} who they married, {barangay} where they came from, {mother} and {father} the parents of a newborn, {child} the newborn.",
+  "birth": {
+    "en": "A child was born to {mother} and {father}: {child}.",
+    "fil": "Isinilang ang anak nina {mother} at {father}: si {child}."
+  },
+  "reasons": [
+    {
+      "id": "land",
+      "weight": 5,
+      "size": [1, 2],
+      "text": {
+        "en": "{names} came from upriver looking for land to farm.",
+        "fil": "Dumating mula sa itaas ng ilog si {names} upang maghanap ng lupang masasaka."
+      }
+    },
+    {
+      "id": "married-in",
+      "weight": 2,
+      "needs": "marriage",
+      "boost": 6,
+      "spouse": true,
+      "size": [1, 1],
+      "text": {
+        "en": "{name} came from {barangay} to marry {spouse}.",
+        "fil": "Dumating si {name} mula sa {barangay} upang pakasalan si {spouse}."
+      }
+    },
+    {
+      "id": "alliance-family",
+      "weight": 3,
+      "needs": "alliance",
+      "size": [2, 3],
+      "text": {
+        "en": "A family from {barangay} joined the barangay through the alliance: {names}.",
+        "fil": "Sumama sa barangay ang isang pamilya mula sa {barangay} dahil sa alyansa: {names}."
+      }
+    },
+    {
+      "id": "trader-stayed",
+      "weight": 2,
+      "needs": "trade",
+      "size": [1, 1],
+      "text": {
+        "en": "{name}, a trader from {barangay}, decided to stay.",
+        "fil": "Nagpasyang manatili si {name}, isang mangangalakal mula sa {barangay}."
+      }
+    },
+    {
+      "id": "ally-kin",
+      "weight": 0,
+      "needs": "allyRaided",
+      "boost": 6,
+      "size": [2, 3],
+      "text": {
+        "en": "Kin from raided {barangay} came seeking shelter: {names}.",
+        "fil": "Dumating ang mga kamag-anak mula sa sinalakay na {barangay} upang makisilong: {names}."
+      }
+    }
+  ]
+}

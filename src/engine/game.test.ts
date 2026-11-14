@@ -210,7 +210,10 @@ describe("tick", () => {
   it("brings new villagers when there is room and rice", () => {
     const s = withState({ resources: { rice: 100, wood: 0, gold: 0 }, buildings: [at("bahay-kubo", 5, 3), at("bahay-kubo", 4, 3)] });
     expect(housing(s, content)).toBe(7);
-    expect(tick(s, content, 10).villagers).toBe(6);
+    // Newcomers every secondsPerNewcomer (one, or a small family), births too: up to the housing.
+    const after = tick(s, content, content.rules.population.secondsPerNewcomer).villagers;
+    expect(after).toBeGreaterThan(5);
+    expect(after).toBeLessThanOrEqual(5 + content.rules.population.familyMax);
     expect(tick(s, content, 100).villagers).toBe(7);
   });
 

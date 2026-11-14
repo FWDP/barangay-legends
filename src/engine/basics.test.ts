@@ -148,7 +148,8 @@ describe("happiness", () => {
     expect(housesNearPlaza(s, content)).toBe(2);
     expect(happinessTarget(s, content).target).toBe(h.start + 2 * h.perHouseNearPlaza);
     expect(nextHappiness(s, content, 1)).toBeCloseTo(h.start + h.pointsPerSecond);
-    expect(tick(s, calm, 120).happiness).toBe(h.start + 2 * h.perHouseNearPlaza);
+    // Enough rice that nobody goes hungry while it rises (newcomers and births eat too).
+    expect(tick({ ...s, resources: { ...s.resources, rice: 1000 } }, calm, 120).happiness).toBe(h.start + 2 * h.perHouseNearPlaza);
   });
 
   it("caps what houses can add", () => {

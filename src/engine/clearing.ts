@@ -3,7 +3,8 @@
 // time it takes), runs while enough villagers are free, and gives wood when it's done.
 import { curveFactor } from "./curve";
 import { RESOURCES, type Content, type Resource } from "./content";
-import { baseBuildingWorkers, canAfford, healthyWorkers, type GameState } from "./game";
+import { availableWorkers, baseBuildingWorkers, canAfford, type GameState } from "./game";
+import { riceEaters } from "./population";
 import { inBounds, isReachable, NEIGHBOURS, setTiles, TILE_CODE, tileAt, type MapState, type Point } from "./map";
 
 /** One tile being cleared, or waiting its turn. */
@@ -189,7 +190,7 @@ const workforceCache = new WeakMap<GameState, WeakMap<Content, Workforce>>();
 
 /** Is there enough rice to lend out the workers of a protected workplace (e.g. a Palayan)? */
 export function riceIsSafe(state: GameState, content: Content): boolean {
-  const eatenPerSecond = state.villagers * content.rules.riceEatenPerVillagerPerSecond;
+  const eatenPerSecond = riceEaters(state, content) * content.rules.riceEatenPerVillagerPerSecond;
   return state.resources.rice >= content.rules.clearing.borrow.protectBelowRiceSeconds * eatenPerSecond;
 }
 
@@ -206,7 +207,7 @@ export function workforce(state: GameState, content: Content): Workforce {
   if (cached) return cached;
   const base = baseBuildingWorkers(state, content);
   const working = base.reduce((a, b) => a + b, 0);
-  const free = Math.max(0, healthyWorkers(state) - working);
+  const free = Math.max(0, availableWorkers(state, content) - working);
   const per = content.rules.clearing.workers;
   const workers = [...base];
   const borrowed = base.map(() => 0);
