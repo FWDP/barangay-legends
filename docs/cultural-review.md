@@ -105,6 +105,12 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
     "Lolo" (Spanish-derived). Is there a precolonial form of address for elders (e.g. "Apo",
     "Impo", "Ingkong") the game should use?
 
+21. **The Kamalig** (`content/lore/kamalig.json`, its art): is a raised, thatched granary with
+    woven bamboo walls a fair generic form for lowland Tagalog and Visayan barangays? Is the note
+    that rice was kept unhusked in the sheaf and pounded daily accurate (Scott 1994), and is the
+    mention of the Ifugao alang (Barton 1922) appropriate, or should the entry stay with the
+    lowlands?
+
 ### Notes for the future
 
 - **Earth spirits**: if spirits of the ground are added, use precolonial names (for example the
@@ -164,6 +170,7 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 | content/lore/oral-epics.json | Aklat entry: oral epics (the Maranao Darangen; Hinilawod, Hudhud); the game does not quote or retell the Darangen | Maranao; Visayan; Ifugao | UNESCO 2005/2008; MSU Folklore Division, Darangen (1986–1995); Eugenio 2001 |
 | content/lore/baybayin.json | Aklat entry: baybayin and the living related scripts of Mindoro and Palawan | Tagalog, Visayan; Hanunó'o, Buhid, Tagbanwa | Chirino 1604; Scott 1994; UNESCO Memory of the World 1999 |
 | content/villagers/talambuhay.json | Life-story templates: skills, personal details, family sentences, life events and the lessons elders teach. Skills are open to women and men alike (fighting only to the Mandirigma, men for now). Elders are called by name, not "Lola/Lolo" (Spanish-derived) | Widespread lowland | Scott 1994; see questions 19–20 |
+| content/lore/kamalig.json and src/ui/buildingArt.ts (kamaligSvg) | Aklat entry and Kamalig art: a granary raised on posts, woven bamboo walls, steep thatched roof, ladder, palay sheaves; wider on more posts at levels 2-3. Generic, the same for every tradition | Widespread lowland (Tagalog, Visayan) | Scott 1994; Noceda and Sanlúcar 1754; Barton 1922 |
 
 ## Reviewed
 

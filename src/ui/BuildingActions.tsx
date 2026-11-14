@@ -107,7 +107,7 @@ export function BuildingMenu(props: {
     >
       <p className="flex items-center gap-1.5 px-1 pb-1.5 font-display text-base text-amber-900">
         <span aria-hidden className="text-xl leading-none">
-          {buildingArtUrl(def.id) ? <img src={buildingArtUrl(def.id)!} alt="" draggable={false} className="size-[1.2em]" /> : def.icon}
+          {buildingArtUrl(def.id, building ? levelOf(building) : 1) ? <img src={buildingArtUrl(def.id, building ? levelOf(building) : 1)!} alt="" draggable={false} className="size-[1.2em]" /> : def.icon}
         </span>
         {def.name}
       </p>

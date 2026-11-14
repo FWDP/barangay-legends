@@ -7,7 +7,7 @@ import { tileAt, type Point } from "../engine/map";
 import type { Lang } from "./settings";
 import { datuWithTitle } from "./stories";
 import { datuHouseUrl, houseStyleFor } from "./datuHouseArt";
-import { ART_TYPES, buildingArtUrl, mapIcon } from "./buildingArt";
+import { ART_IMAGES, artKey, mapIcon } from "./buildingArt";
 import { drawPaddy } from "./paddy";
 import { barangayLevel } from "../engine/kabantugan";
 import { arawText } from "./Days";
@@ -125,7 +125,7 @@ export function drawShareCard(state: GameState, content: Content, game: GameText
     g.globalAlpha = bl.damaged ? 0.5 : 1;
     // A rice field: the same flat paddy green as on the map, under its icon.
     if ((content.buildings.find((d) => d.id === bl.type)?.produces?.rice ?? 0) > 0) drawPaddy(g, x - tile * 0.44, y - tile * 0.44, tile * 0.88, tile * 0.88);
-    const picture = art?.[bl.type];
+    const picture = art?.[artKey(bl.type, bl.level ?? 1)];
     if (picture) g.drawImage(picture, x - tile * 0.5, y - tile * 0.55, tile, tile);
     else {
       const icon = icons.has(bl.type) ? icons.get(bl.type) : "🛖";
@@ -180,9 +180,9 @@ export async function shareBarangay(state: GameState, content: Content, game: Ga
   const house = await loadImage(datuHouseUrl(state.datuLevel, houseStyleFor(state, content))).catch(() => undefined);
   // The buildings with custom art (Dambana, Kuta), drawn as on the map.
   const art: Record<string, CanvasImageSource> = {};
-  for (const type of ART_TYPES) {
-    const img = await loadImage(buildingArtUrl(type)!).catch(() => null);
-    if (img) art[type] = img;
+  for (const { key, url } of ART_IMAGES) {
+    const img = await loadImage(url).catch(() => null);
+    if (img) art[key] = img;
   }
   const canvas = drawShareCard(state, content, game, lang, SHARE_SIZE, house, art);
   const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, "image/png"));

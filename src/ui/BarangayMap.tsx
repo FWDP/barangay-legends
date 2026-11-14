@@ -1511,8 +1511,8 @@ function Building(props: {
         {/* A bridge is drawn as its deck; the button over it is just the tap target. */}
         {def.bridge ? (
           <span className="inline-block size-[0.9em]" />
-        ) : buildingArtUrl(def.id) ? (
-          <img src={buildingArtUrl(def.id)!} alt="" draggable={false} className="inline-block size-[1.05em] align-bottom" />
+        ) : buildingArtUrl(def.id, level) ? (
+          <img src={buildingArtUrl(def.id, level)!} alt="" draggable={false} className="inline-block size-[1.05em] align-bottom" />
         ) : def.burial && burialLook === "longon" ? (
           "⚰️"
         ) : (

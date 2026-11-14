@@ -1,0 +1,36 @@
+{
+  "id": "kamalig",
+  "name": "Kamalig: raised granaries",
+  "description": "Kamalig is the Tagalog word for a storehouse or granary. In the sixteenth century rice was usually kept unhusked, often still in the sheaf, in small storehouses raised on posts, and pounded in a wooden mortar only as it was needed. Raising the floor kept the grain dry and away from rats and floodwater. In this game the Kamalig is drawn as a small house on posts with woven bamboo walls, a steep thatched roof, a ladder to its door and sheaves of palay; the design is generic, the same for every tradition, and waits for a historian's review.",
+  "tradition": "Widespread lowland (Tagalog, Visayan)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Juan José de Noceda and Pedro de Sanlúcar, Vocabulario de la lengua tagala (Manila, 1754), entry \"camalig\"",
+    "Roy Franklin Barton, Ifugao Economics (University of California Publications in American Archaeology and Ethnology 15, 1922)"
+  ],
+  "aklat": {
+    "order": 25,
+    "icon": "🌾",
+    "name": {
+      "en": "Kamalig: raised granaries",
+      "fil": "Kamalig: nakaangat na kamalig ng palay"
+    },
+    "lore": {
+      "en": "Kamalig is the Tagalog word for a storehouse. In the barangays of the sixteenth century, rice was usually stored unhusked, often still in its sheaves, in small storehouses raised on posts. Each day only what was needed was taken out and pounded in a wooden mortar. Raising the floor kept the grain dry in the rains and out of reach of rats and floodwater. Peoples of the Cordillera still build raised granaries of their own, such as the Ifugao alang, each in its own tradition.",
+      "fil": "Ang kamalig ay salitang Tagalog para sa imbakan. Sa mga barangay noong ika-16 na siglo, karaniwang iniimbak ang palay nang hindi pa binabayo, kadalasa'y nakabigkis pa, sa maliliit na imbakang nakaangat sa mga haligi. Araw-araw, ang kailangan lamang ang inilalabas at binabayo sa lusong na kahoy. Pinananatiling tuyo ng nakaangat na sahig ang butil sa tag-ulan at malayo sa daga at baha. Nagtatayo pa rin ang mga bayan ng Cordillera ng sarili nilang nakaangat na kamalig, gaya ng alang ng mga Ifugao, bawat isa ayon sa sariling tradisyon."
+    },
+    "inGame": {
+      "en": "Each Kamalig stores more rice, and raising it (levels 2 and 3) makes it larger, on more posts. Winning raiders head for a Kamalig first.",
+      "fil": "Bawat Kamalig ay nag-iimbak ng mas maraming palay, at lumalaki ito at dumarami ang haligi kapag itinaas (antas 2 at 3). Kamalig ang unang pinupuntahan ng nagwaging mananalakay."
+    },
+    "hint": {
+      "en": "Build a Kamalig.",
+      "fil": "Magtayo ng Kamalig."
+    },
+    "unlock": {
+      "type": "built",
+      "building": "kamalig"
+    }
+  },
+  "reviewed": false
+}

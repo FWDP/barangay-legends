@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import review from "../../docs/cultural-review.md?raw";
 import { content } from "../engine/testUtils";
-import { ART_LORE, buildingArtUrl, mapIcon } from "./buildingArt";
+import { ART_IMAGES, ART_LORE, artKey, buildingArtUrl, kamaligSvg, mapIcon } from "./buildingArt";
 
 const def = (id: string) => content.buildings.find((d) => d.id === id)!;
 
@@ -30,5 +30,25 @@ describe("how buildings are drawn", () => {
       expect(note.sources.length).toBeGreaterThan(0);
       expect(review).toContain(`content/lore/${id}.json`);
     }
+  });
+
+  it("the Kamalig is a raised granary (no basket), larger on more posts at each level", () => {
+    const posts = (l: number) => (kamaligSvg(l).match(/y2="59"/g) ?? []).length;
+    expect([1, 2, 3].map(posts)).toEqual([3, 4, 5]);
+    const width = (l: number) => Number(/<rect x="[\d.]+" y="23" width="([\d.]+)"/.exec(kamaligSvg(l))![1]);
+    expect(width(2)).toBeGreaterThan(width(1));
+    expect(width(3)).toBeGreaterThan(width(2));
+    const urls = [1, 2, 3].map((l) => buildingArtUrl("kamalig", l));
+    expect(new Set(urls).size).toBe(3);
+    for (const u of urls) expect(decodeURIComponent(u!)).toContain("<svg");
+    expect(buildingArtUrl("kamalig", 9)).toBe(urls[2]);
+    expect(def("kamalig").icon).not.toBe("🧺");
+    // The share card preloads every level.
+    for (const l of [1, 2, 3]) expect(ART_IMAGES.some((a) => a.key === artKey("kamalig", l))).toBe(true);
+  });
+
+  it("the Kamalig's Aklat entry opens when one is built", () => {
+    const e = content.aklat.find((x) => x.id === "kamalig")!;
+    expect(e.aklat.unlock).toEqual({ type: "built", building: "kamalig" });
   });
 });

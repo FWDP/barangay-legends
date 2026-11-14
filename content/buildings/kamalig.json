@@ -2,7 +2,7 @@
   "id": "kamalig",
   "name": "Kamalig",
   "description": "A raised granary of bamboo and thatch. Each one stores more rice, and it can be raised to level 3 to hold more.",
-  "icon": "🧺",
+  "icon": "🌾",
   "order": 4.5,
   "category": "pagkain",
   "cost": {

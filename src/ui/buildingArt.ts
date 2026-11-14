@@ -125,6 +125,59 @@ const TULAY = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <g stroke="#a07a45" stroke-width="1"><line x1="18" y1="22" x2="18" y2="34"/><line x1="25" y1="21" x2="25" y2="33"/><line x1="39" y1="21" x2="39" y2="33"/><line x1="46" y1="22" x2="46" y2="34"/></g>
 </svg>`;
 
+/**
+ * The Kamalig: a granary raised high on posts (to keep the rice dry and out of reach of rats and
+ * floods), with walls of woven bamboo, a steep thatched roof that overhangs them, a small door
+ * reached by a ladder, sheaves of palay showing in the doorway and stacked under the eaves. Each
+ * level (1-3) is a little wider and stands on more posts. Generic, the same for every tradition.
+ */
+export function kamaligSvg(level: number): string {
+  const lv = Math.min(3, Math.max(1, Math.round(level)));
+  // Wider with each level, centred; the roof's peak stays at the top of the tile.
+  const w = 30 + (lv - 1) * 6;
+  const x0 = 32 - w / 2;
+  const x1 = 32 + w / 2;
+  const floor = 36;
+  const wallTop = 23;
+  const posts = 2 + lv;
+  const postXs = Array.from({ length: posts }, (_, i) => x0 + 2 + ((w - 4) * i) / (posts - 1));
+  const postLines = postXs.map((x) => `<line x1="${x.toFixed(1)}" y1="${floor}" x2="${x.toFixed(1)}" y2="59"/>`).join("");
+  // Cross-braces between the posts.
+  const braces = postXs
+    .slice(1)
+    .map((x, i) => `<line x1="${postXs[i].toFixed(1)}" y1="${floor + 3}" x2="${x.toFixed(1)}" y2="52"/>`)
+    .join("");
+  // Woven bamboo walls: a light crosshatch.
+  const weave: string[] = [];
+  for (let x = x0 + 3; x < x1 - 1; x += 3) weave.push(`<line x1="${x.toFixed(1)}" y1="${wallTop}" x2="${x.toFixed(1)}" y2="${floor}"/>`);
+  for (let y = wallTop + 3; y < floor; y += 3) weave.push(`<line x1="${x0}" y1="${y}" x2="${x1}" y2="${y}"/>`);
+  // Thatch fringe along the eaves.
+  const fringe: string[] = [];
+  for (let x = x0 - 4; x <= x1 + 4; x += 3) fringe.push(`<line x1="${x}" y1="${wallTop + 1}" x2="${x + 0.5}" y2="${wallTop + 4 + ((x * 7) % 3)}"/>`);
+  // Palay sheaves stacked under the eaves on the platform's edge (more with each level).
+  const sheaves = Array.from({ length: lv + 1 }, (_, i) => {
+    const sx = x1 - 4 - i * 4.2;
+    return `<path d="M${sx} ${floor} l-1.6 -6 q1.6 -1.6 3.2 0 l-1.6 6 z" fill="#e2b13c" stroke="#a67c1a" stroke-width="0.6"/><line x1="${sx - 1.3}" y1="${floor - 3}" x2="${sx + 1.3}" y2="${floor - 3}" stroke="#7a5a1a" stroke-width="0.7"/>`;
+  }).join("");
+  const door = x0 + 5;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <ellipse cx="32" cy="60" rx="${(w / 2 + 3).toFixed(1)}" ry="2.2" fill="#000" opacity="0.18"/>
+  <g stroke="#5b3a1e" stroke-width="2.2" stroke-linecap="round">${postLines}</g>
+  <g stroke="#7a5230" stroke-width="0.9">${braces}</g>
+  <rect x="${x0 - 2}" y="${floor}" width="${w + 4}" height="3.2" rx="0.8" fill="#9a6a35" stroke="#5b3a1e" stroke-width="0.9"/>
+  <rect x="${x0}" y="${wallTop}" width="${w}" height="${floor - wallTop}" fill="#d6b27a" stroke="#6b4423" stroke-width="1"/>
+  <g stroke="#a98450" stroke-width="0.55" opacity="0.9">${weave.join("")}</g>
+  <rect x="${door}" y="${wallTop + 3}" width="7" height="${floor - wallTop - 3}" fill="#3b2414"/>
+  <path d="M${door + 1} ${floor - 1} l1.4 -5 q1.2 -1.4 2.4 0 l1.2 5 z" fill="#e2b13c" opacity="0.9"/>
+  <g stroke="#7a4f2a" stroke-width="1.1" stroke-linecap="round"><line x1="${door - 3}" y1="59" x2="${door + 1.5}" y2="${floor + 1}"/><line x1="${door + 1}" y1="59" x2="${door + 5.5}" y2="${floor + 1}"/><line x1="${door - 2}" y1="55" x2="${door + 2}" y2="55"/><line x1="${door - 1}" y1="50" x2="${door + 3}" y2="50"/><line x1="${door}" y1="45" x2="${door + 4}" y2="45"/><line x1="${door + 1}" y1="40.5" x2="${door + 5}" y2="40.5"/></g>
+  <path d="M32 2 L${x1 + 6} ${wallTop + 2} L${x0 - 6} ${wallTop + 2} Z" fill="#c8a24a" stroke="#9a7428" stroke-width="1.2" stroke-linejoin="round"/>
+  <g stroke="#a8842f" stroke-width="0.8"><line x1="32" y1="2" x2="${x0 + 4}" y2="${wallTop + 2}"/><line x1="32" y1="2" x2="${x1 - 4}" y2="${wallTop + 2}"/><line x1="32" y1="2" x2="32" y2="${wallTop + 2}"/></g>
+  <path d="M28 3.5 L36 3.5" stroke="#8a6a2a" stroke-width="1.6" stroke-linecap="round"/>
+  <g stroke="#b38a3a" stroke-width="1" stroke-linecap="round">${fringe.join("")}</g>
+  ${sheaves}
+</svg>`;
+}
+
 const url = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg.replace(/\s+/g, " "))}`;
 
 const ART: Record<string, string> = {
@@ -134,13 +187,27 @@ const ART: Record<string, string> = {
   "fishing-dock": url(FISHING_DOCK),
   "woodcutter-camp": url(WOODCUTTER_CAMP),
   tulay: url(TULAY),
+  kamalig: url(kamaligSvg(1)),
 };
 
-/** Custom art for a building type, as an image URL, or null (it is drawn as its icon). */
-export const buildingArtUrl = (type: string): string | null => ART[type] ?? null;
+/** The Kamalig at each level (1-3): wider, on more posts. */
+const KAMALIG_LEVELS = [1, 2, 3].map((l) => url(kamaligSvg(l)));
+
+/** Custom art for a building type (at an upgrade level, for those drawn by level), as an image URL, or null (it is drawn as its icon). */
+export const buildingArtUrl = (type: string, level = 1): string | null =>
+  type === "kamalig" ? KAMALIG_LEVELS[Math.min(3, Math.max(1, Math.round(level))) - 1] : (ART[type] ?? null);
 
 /** The types that have custom art (for preloading on the share card). */
 export const ART_TYPES = Object.keys(ART);
+
+/** The key of a building's art on the share card: its type, and its level for those drawn by level. */
+export const artKey = (type: string, level = 1) => (type === "kamalig" ? `${type}@${Math.min(3, Math.max(1, Math.round(level)))}` : type);
+
+/** Every piece of art to preload for the share card, by artKey. */
+export const ART_IMAGES: { key: string; url: string }[] = [
+  ...ART_TYPES.filter((t) => t !== "kamalig").map((t) => ({ key: t, url: ART[t] })),
+  ...KAMALIG_LEVELS.map((u, i) => ({ key: artKey("kamalig", i + 1), url: u })),
+];
 
 /**
  * The shrine as a small inline image wherever the Dambana stands for faith in the interface (the
@@ -152,4 +219,4 @@ export const DAMBANA_ART = ART.dambana;
 export const mapIcon = (def: Pick<BuildingDef, "icon" | "bridge">): string | null => (def.bridge ? null : def.icon);
 
 /** The lore note (content/lore) about how a building with custom art is drawn. */
-export const ART_LORE: Record<string, string> = { dambana: "dambana-art", kuta: "kuta", "babaylan-hut": "babaylan" };
+export const ART_LORE: Record<string, string> = { dambana: "dambana-art", kuta: "kuta", "babaylan-hut": "babaylan", kamalig: "kamalig" };
