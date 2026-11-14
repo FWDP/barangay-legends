@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 import { isNightAt } from "../engine/daynight";
 import { newGame } from "../engine/game";
 import { tileAt } from "../engine/map";
-import { at, content, mapFrom, withState } from "../engine/testUtils";
+import { at, content, mapFrom, TEST_MAP, withState } from "../engine/testUtils";
 import { solidTiles } from "../engine/doors";
-import { houseFootprint } from "../engine/plaza";
+import { clearingShape, houseFootprint } from "../engine/plaza";
 import type { GameState } from "../engine/game";
 import { carriesTorch, destination, goal, edgeTile, namedSprites, speedOf, exitPoint, MAX_SPRITES, newWalker, planVillagers, SPEED, stepWalker, walk } from "./villagers";
 
@@ -65,7 +65,7 @@ describe("villager sprites", () => {
     expect(Math.floor(destination(guard, 0, true, s.map.plaza, false).x)).toBe(1);
   });
 
-  it("idles at the plaza instead of working while the barangay is hungry", () => {
+  it("idles by the datu's house instead of working while the barangay is hungry", () => {
     const s = withState({ ...fed, villagers: 3, buildings: [at("bahay-kubo", 5, 3), at("palayan", 8, 8)] });
     const worker = planVillagers(s, content)[0];
     const p = destination(worker, 0, false, s.map.plaza, true);
@@ -183,6 +183,30 @@ describe("walking along paths", () => {
             for (const plan of plans) {
               const g = goal(plan, t, night, s.map.plaza, hungry);
               expect(solid[Math.floor(g.p.y) * s.map.width + Math.floor(g.p.x)]).toBe(0);
+            }
+          }
+        }
+      }
+    }
+  });
+});
+
+describe("no stacking", () => {
+  it("never puts two visible villagers on the same spot: day, night, hungry, a crowd at the datu's house", () => {
+    const houses = [at("bahay-kubo", 2, 2), at("bahay-kubo", 3, 2), at("palayan", 8, 7), at("woodcutter-camp", 1, 6), at("bahay-kubo", 4, 5)];
+    const map = { ...TEST_MAP, gathering: clearingShape(TEST_MAP, content) };
+    const states = [
+      withState({ ...fed, datuLevel: 5, villagers: 60, warriors: 4, buildings: houses, map }),
+      withState({ ...fed, datuLevel: 1, villagers: 25, buildings: houses }),
+    ];
+    for (const s of states) {
+      const plans = planVillagers(s, content);
+      for (const hungry of [false, true]) {
+        for (const night of [false, true]) {
+          for (let t = 0; t < 160; t += 9) {
+            const shown = plans.map((plan) => goal(plan, t, night, s.map.plaza, hungry)).filter((g) => !g.inside).map((g) => g.p);
+            for (let i = 0; i < shown.length; i++) {
+              for (let j = i + 1; j < shown.length; j++) expect(Math.hypot(shown[i].x - shown[j].x, shown[i].y - shown[j].y)).toBeGreaterThan(0.04);
             }
           }
         }

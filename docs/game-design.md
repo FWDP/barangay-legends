@@ -37,6 +37,11 @@ different form, and some (prestige and Dangal, export codes) isn't built yet.
   the fire pit and a shade tree (`map.gathering`, seeded per map, v28). It is walkable, never
   built on, counts as part of the Daan network, and is where gatherings stand first. New maps
   clear one extra row behind the start square to make up for the land it keeps open.
+- **Fit to the period:** world art and symbols are precolonial (no candles, steel axes,
+  fishing reels, railway tracks or padlocks; see the S prompt and `docs/cultural-review.md`).
+  The healer's hut is named by tradition (Babaylan, Katalonan, Healer), the balete's spirit is
+  the Anito ng Balete (not the colonial "kapre") and the tigbalang has no horse head. Interface
+  symbols (menus and buttons) can stay modern.
 - **The archipelago:** 4–5 islands of AI barangays with trade (accept, counter or refuse),
   grudges and Handog, marriage alliances, sandugo, raids and defense, tributaries, sea travel by
   Balangay, alliance blocs and wars, and the Balita news feed.
