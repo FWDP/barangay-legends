@@ -12,6 +12,7 @@ import { raidPreview } from "../engine/village";
 import { raidKey } from "../engine/battle";
 import { blocOf } from "../engine/politics";
 import { BarangayMap } from "./BarangayMap";
+import { withTraditionNames } from "./traditionNames";
 import { LevelBadge, levelOf } from "./LevelBadge";
 import { blocColor, blocName } from "./politicsText";
 import { NeighborPanel, STATUS } from "./RegionView";
@@ -73,7 +74,7 @@ export function VisitView(props: {
       <div className="relative flex h-[52vh] shrink-0 flex-col lg:h-auto lg:min-w-0 lg:flex-1">
         <BarangayMap
           state={shown}
-          content={content}
+          content={withTraditionNames(content, shown.tradition)}
           placing={null}
           onPlace={noop}
           onTapTile={noop}

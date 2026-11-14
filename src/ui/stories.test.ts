@@ -229,7 +229,7 @@ describe("worship and the spirits in words", () => {
     const input = (state: GameState) => ({ state, content, advisor: ui.advisor, lang: "en" as const, tipsOn: true, blocked: false, game });
     let m = advise(newModel({ ...NEW_MEMORY, tutorial: "done" }, s, content), input(s));
     m = advise(m, input({ ...s, time: 11, history: [{ at: 11, kind: "aklat", entry: "babaylan" }] }));
-    expect(m.message).toMatchObject({ kind: "news", text: "New in the Aklat ng Alamat: Babaylan" });
+    expect(m.message).toMatchObject({ kind: "news", text: "New in the Aklat ng Alamat: Babaylan and katalonan" });
   });
 });
 

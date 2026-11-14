@@ -102,7 +102,7 @@ export function activeBanners(state: GameState, content: Content): Banner[] {
   if (damaged > 0) {
     banners.push({
       id: "damaged",
-      icon: "🛠️",
+      icon: "🪵",
       title: `${damaged} damaged`,
       text: "Damaged buildings do nothing. Tap one to repair it with wood.",
       tone: "info",

@@ -125,7 +125,7 @@ export function drawShareCard(state: GameState, content: Content, game: GameText
     const picture = art?.[bl.type];
     if (picture) g.drawImage(picture, x - tile * 0.5, y - tile * 0.55, tile, tile);
     else {
-      const icon = icons.has(bl.type) ? icons.get(bl.type) : "🏠";
+      const icon = icons.has(bl.type) ? icons.get(bl.type) : "🛖";
       if (icon) g.fillText(icon, x, y + tile * 0.04);
     }
   }

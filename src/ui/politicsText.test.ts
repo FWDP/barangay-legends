@@ -33,7 +33,7 @@ describe("politics text", () => {
     expect(line).toBe(`${datu} of ${barangayName(s, content, member, game, "en")} leaves ${blocName(s, content, bloc.id, game, "en")}.`);
     expect(newsLine({ id: 2, time: 5, key: "ally-defended", barangay: "malinaw", other: "batong-buhay" }, s, content, game, "en")).toBe("Your warriors helped Malinaw drive off Batong-Buhay.");
     const after = { ...s, time: 100, region: { ...s.region!, news: [{ id: 1, time: 50, key: "formed", barangay: "malinaw" }], nextNewsId: 2 } };
-    expect(awayPeopleLines(s, after, content, game, "en")).toContain("📣 Malinaw forms a new alliance.");
+    expect(awayPeopleLines(s, after, content, game, "en")).toContain("🐚 Malinaw forms a new alliance.");
   });
 
   it("says which blocs are at war", () => {

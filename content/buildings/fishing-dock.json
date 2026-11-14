@@ -2,7 +2,7 @@
   "id": "fishing-dock",
   "name": "Fishing Dock",
   "description": "A bamboo landing on the riverbank. Three villagers fish, and the catch is traded at market for gold.",
-  "icon": "🎣",
+  "icon": "🐟",
   "order": 7,
   "category": "pagkain",
   "cost": {

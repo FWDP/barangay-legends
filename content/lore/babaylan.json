@@ -1,6 +1,6 @@
 {
   "id": "babaylan",
-  "name": "Babaylan",
+  "name": "The ritual specialist (babaylan, katalonan)",
   "description": "The community's healer and ritual specialist, who spoke with the spirits.",
   "tradition": "Visayan (babaylan) and Tagalog (katalonan)",
   "sources": [
@@ -13,16 +13,16 @@
     "order": 5,
     "icon": "🌿",
     "name": {
-      "en": "Babaylan",
-      "fil": "Babaylan"
+      "en": "Babaylan and katalonan",
+      "fil": "Babaylan at katalonan"
     },
     "lore": {
-      "en": "The babaylan was the community's healer and ritual specialist, most often a woman. Visayans called them babaylan; Tagalogs called them katalonan. They led offerings to the anito, healed the sick and kept the community's knowledge. Their standing was high, and Spanish missionaries worked hard to replace them.",
-      "fil": "Ang babaylan ang manggagamot at tagapanguna sa ritwal ng pamayanan, kadalasang babae. Babaylan ang tawag ng mga Bisaya; katalonan naman sa mga Tagalog. Pinangungunahan nila ang paghahandog sa anito, nagpapagaling ng maysakit at nag-iingat ng kaalaman ng pamayanan. Mataas ang kanilang katayuan, at pinagsikapan ng mga misyonerong Espanyol na palitan sila."
+      "en": "The babaylan was the community's healer and ritual specialist, most often a woman. Visayans called them babaylan; Tagalogs called them katalonan. They led offerings to the anito, healed the sick and kept the community's knowledge. Their standing was high, and Spanish missionaries worked hard to replace them. The game names the healer's hut in each barangay's own words: Babaylan's Hut in Visayan barangays, Katalonan's Hut in Tagalog ones, and simply Healer's Hut where the term is not yet settled (Maranao barangays, until reviewed).",
+      "fil": "Ang babaylan ang manggagamot at tagapanguna sa ritwal ng pamayanan, kadalasang babae. Babaylan ang tawag ng mga Bisaya; katalonan naman sa mga Tagalog. Pinangungunahan nila ang paghahandog sa anito, nagpapagaling ng maysakit at nag-iingat ng kaalaman ng pamayanan. Mataas ang kanilang katayuan, at pinagsikapan ng mga misyonerong Espanyol na palitan sila. Sa laro, ipinapangalan ang kubo ng manggagamot sa sariling salita ng bawat barangay: Babaylan's Hut sa mga barangay na Bisaya, Katalonan's Hut sa mga Tagalog, at Healer's Hut kung hindi pa tiyak ang tawag (sa mga barangay na Maranao, hanggang masuri)."
     },
     "inGame": {
-      "en": "The Babaylan's Hut heals the sick faster, and its babaylan leads every ritual at the Dambana.",
-      "fil": "Pinabibilis ng Babaylan's Hut ang paggaling, at pinangungunahan ng babaylan nito ang bawat ritwal sa Dambana."
+      "en": "The healer's hut heals the sick faster (the sick rest inside it), and its ritual specialist leads every ritual at the Dambana.",
+      "fil": "Pinabibilis ng kubo ng manggagamot ang paggaling (doon nagpapahinga ang maysakit), at pinangungunahan ng tagapanguna sa ritwal nito ang bawat ritwal sa Dambana."
     },
     "hint": {
       "en": "Build a home for a healer.",

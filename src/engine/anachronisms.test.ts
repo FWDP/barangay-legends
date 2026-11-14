@@ -36,3 +36,16 @@ describe("the tigbalang", () => {
     expect(lore.sources.some((s) => s.includes("Plasencia"))).toBe(true);
   });
 });
+
+describe("no candles or modern tools in the world", () => {
+  it("no building, lore entry or ui text uses a candle, fishing rod, steel axe, padlock or railway track", () => {
+    const bad = ["🕯", "🎣", "🛤", "🔒"];
+    for (const b of content.buildings) for (const e of bad) expect(b.icon).not.toContain(e);
+    const text = JSON.stringify({ buildings: content.buildings, lore: content.lore, aklat: content.aklat });
+    for (const e of bad) expect(text).not.toContain(e);
+  });
+
+  it("lowland rice fields aren't terraces", () => {
+    expect(content.buildings.find((b) => b.id === "palayan")!.description).toBe("A rice field worked by two villagers.");
+  });
+});

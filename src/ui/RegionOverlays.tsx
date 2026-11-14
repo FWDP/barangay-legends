@@ -218,7 +218,7 @@ export function OfferBar(props: {
 
 const PATH_LABEL: Record<Path, string> = {
   trade: "🛶 Trade",
-  marriage: "💍 Marriage alliance",
+  marriage: "💞 Marriage alliance",
   sandugo: "🩸 Sandugo",
   mangayaw: "🔥 Mangayaw",
 };

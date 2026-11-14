@@ -12,6 +12,7 @@ import { neighborDef } from "../engine/region";
 import { parseSnapshot } from "../engine/save";
 import { villageSnapshot } from "../engine/village";
 import { BarangayMap } from "./BarangayMap";
+import { withTraditionNames } from "./traditionNames";
 import { origin, type Camera, type View } from "./camera";
 import { costText } from "./format";
 import { buildReplay, sampleReplay, type Phase, type Script } from "./replay";
@@ -238,7 +239,7 @@ export function ReplayView(props: { expedition: Expedition; state: GameState; co
       {shown && script && (
         <BarangayMap
           state={shown}
-          content={content}
+          content={withTraditionNames(content, shown.tradition)}
           placing={null}
           onPlace={noop}
           onTapTile={noop}

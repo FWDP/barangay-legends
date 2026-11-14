@@ -13,14 +13,14 @@ import { DAAN, DATU, itemsIn, missingFor, tabOfItem, tabsWithNew, unlockedIds, v
 import { bonusRuleText, costText, groveRuleText, RESOURCE_ICON } from "./format";
 import type { Lang } from "./settings";
 import { fill, type GameText } from "./uiContent";
-import { buildingArtUrl } from "./buildingArt";
+import { buildingArtUrl, DAMBANA_ART } from "./buildingArt";
 
 const TAB_KEY = "barangay-legends/build-tab";
 const SEEN_KEY = "barangay-legends/build-seen";
 const LONG_PRESS_MS = 450;
 const HOVER_MS = 350;
 
-const TAB_ICON: Record<BuildTab, string> = { tirahan: "🛖", pagkain: "🌾", depensa: "🛡️", pananampalataya: "🕯️", daan: "🛤️", iba: "📦" };
+const TAB_ICON: Record<BuildTab, string> = { tirahan: "🛖", pagkain: "🌾", depensa: "🛡️", pananampalataya: "", daan: "👣", iba: "🏺" };
 
 function read<T>(key: string, fallback: T): T {
   try {
@@ -172,7 +172,7 @@ export function BuildToolbar(props: {
           fill(d.level[lang], { level: state.datuLevel, max: maxDatuLevel(content) }),
           fill(d.bonus[lang], { production: (state.datuLevel - 1) * def.productionPercentPerLevel, influence: (state.datuLevel - 1) * def.influencePercentPerLevel }),
           next ? `${fill(d.upgrade[lang], { level: next.level })}${next.unlocks ? ` · ${fill(d.unlocks[lang], { what: d[next.unlocks][lang] })}` : ""}` : d.max[lang],
-          ...(needsText ? [`🔒 ${needsText}`] : []),
+          ...(needsText ? [`⏳ ${needsText}`] : []),
         ],
         status: [],
         recommended: recommend.has(id),
@@ -186,7 +186,7 @@ export function BuildToolbar(props: {
       const ok = canAfford(state, cost);
       return {
         id,
-        icon: "🛤️",
+        icon: "👣",
         name: t.daanName[lang],
         count: null,
         unlocked: true,
@@ -308,7 +308,7 @@ export function BuildToolbar(props: {
                 active ? "border-amber-950/60 bg-amber-100 text-amber-950" : "border-transparent bg-amber-950/25 text-amber-50 hover:bg-amber-950/40"
               } ${glow ? "shadow-[0_0_10px_2px_rgba(250,204,21,0.8)]" : ""}`}
             >
-              <span aria-hidden>{id === "depensa" ? <img src={buildingArtUrl("kuta")!} alt="" draggable={false} className="inline-block size-[1.15em] align-[-0.2em]" /> : TAB_ICON[id]}</span>
+              <span aria-hidden>{id === "depensa" ? <img src={buildingArtUrl("kuta")!} alt="" draggable={false} className="inline-block size-[1.15em] align-[-0.2em]" /> : id === "pananampalataya" ? <img src={DAMBANA_ART} alt="" draggable={false} className="inline-block size-[1.15em] align-[-0.2em]" /> : TAB_ICON[id]}</span>
               <span className={active ? "" : "hidden sm:inline"}>{t[id][lang].replace(/ \(.*\)$/, "")}</span>
               {fresh.has(id) && <span aria-hidden className="absolute -top-1 -right-1 size-3 rounded-full border-2 border-amber-50 bg-red-600" />}
             </button>

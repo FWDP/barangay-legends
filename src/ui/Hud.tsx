@@ -284,7 +284,7 @@ function ResourceChip(props: { resource: Resource; amount: number; rates: Rates;
         )}
         {soft !== undefined && Number.isFinite(soft) && (
           <span className={`block whitespace-normal sm:max-w-72 ${slow ? "text-amber-300" : "text-amber-100/80"}`}>
-            {stockpile ? stockpile.tip(formatAmount(soft), formatAmount(stop ?? Infinity), slow, stopped) : `📦 Stockpile ${formatAmount(amount)}/${formatAmount(soft)}`}
+            {stockpile ? stockpile.tip(formatAmount(soft), formatAmount(stop ?? Infinity), slow, stopped) : `🧺 Stockpile ${formatAmount(amount)}/${formatAmount(soft)}`}
           </span>
         )}
       </div>

@@ -154,7 +154,7 @@ export function HistoryDialog(props: { open: boolean; state: GameState; content:
             <p className="flex flex-wrap gap-1">
               {titles.map((t) => (
                 <span key={t.en} className="rounded-full border border-amber-800/40 bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">
-                  👑 {t[lang]}
+                  🪶 {t[lang]}
                 </span>
               ))}
             </p>
@@ -215,14 +215,14 @@ export function DatuDialog(props: { open: boolean; state: GameState; content: Co
               .filter((l) => l.unlocks)
               .map((l) => (
                 <li key={l.level} className={state.datuLevel >= l.level ? "font-semibold text-green-800" : "text-stone-500"}>
-                  {state.datuLevel >= l.level ? "✅" : "🔒"} {fill(d.level[lang], { level: l.level, max: maxDatuLevel(content) })}: {d[l.unlocks!][lang]}
+                  {state.datuLevel >= l.level ? "✅" : "⏳"} {fill(d.level[lang], { level: l.level, max: maxDatuLevel(content) })}: {d[l.unlocks!][lang]}
                 </li>
               ))}
           </ul>
           <div className="flex items-center justify-between gap-2 pt-1">
             <span className="text-xs font-semibold">
               {next ? costText(cost) : d.max[lang]}
-              {needs !== null && <span className="block font-normal text-red-800">🔒 {fill(game.level.needs[lang], { level: needs })}</span>}
+              {needs !== null && <span className="block font-normal text-red-800">⏳ {fill(game.level.needs[lang], { level: needs })}</span>}
             </span>
             {next && (
               <button
@@ -271,7 +271,7 @@ export function RememberedDialog(props: { open: boolean; state: GameState; conte
             {state.remembered.length === 0 && others === 0 && <li className="text-stone-500">{t.none[lang]}</li>}
             {[...state.remembered].reverse().map((r, i) => (
               <li key={`${r.name}-${r.at}-${i}`} className="border-b border-amber-900/10 pb-1">
-                🕯️ <b>{r.name}</b> <span className="text-xs text-stone-500">· {t[r.cause][lang]}</span>
+                ⚱️ <b>{r.name}</b> <span className="text-xs text-stone-500">· {t[r.cause][lang]}</span>
               </li>
             ))}
             {others > 0 && <li className="text-xs text-stone-500 italic">{fill(t.others[lang], { count: others })}</li>}

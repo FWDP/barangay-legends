@@ -82,6 +82,26 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
     kanggan, with two attendants (dependents); the spouse is named and appears by the house. A
     datu whose name is on the women's list of default names is drawn as a woman with a husband.
     Is a woman datu a reasonable option to allow?
+16. **Staple foods** (flag for the historian, nothing changed yet): the game makes rice the one
+    staple in every tradition. Millet, taro (gabi), yams and sago were staples too, and in many
+    places more common than rice. Should some traditions or islands grow other staples?
+17. **The ritual specialist's name** (`src/ui/traditionNames.ts`): the healer's hut is called
+    Babaylan's Hut in Visayan barangays, Katalonan's Hut in Tagalog ones and Healer's Hut in
+    Maranao ones and before a tradition is chosen. Is "katalonan" (Plasencia's catalonan) the
+    right Tagalog form, and is there a sourced Maranao term to use?
+18. **The anito of the balete and the tigbalang** (`content/lore/anito-ng-balete.json`,
+    `tikbalang.json`): the colonial word "kapre" and the cigar-smoking giant are left out, and the
+    tigbalang keeps Plasencia's name and no horse head. Are the explanations in the Aklat accurate?
+    The balete spirit is drawn as a glow, a faint shape and rustling leaves; the tigbalang as a
+    tall dark figure between trunks.
+
+### Notes for the future
+
+- **Earth spirits**: if spirits of the ground are added, use precolonial names (for example the
+  nuno sa punso) and the *tabi-tabi po* custom of asking leave, not later names.
+- **The aswang**: not in the game. If it is ever added, never tie it to women or to the babaylan:
+  that link is a colonial demonization of women ritual specialists (see Brewer 2004).
+- **No engkanto or duwende** for now (later, partly Spanish-derived figures).
 
 ### Entries
 
@@ -127,6 +147,8 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 | content/lore/alipin.json | Aklat entry: alipin and oripun, dependents (not chattel) | Tagalog, Visayan | Plasencia 1589; Scott 1994 |
 | content/names.json "villagers" | Named villagers' names, split into women's and men's (everyday Tagalog and Visayan words) | Tagalog, Visayan | made up for the game; see the file's note |
 | content/lore/kuta.json and src/ui/buildingArt.ts | Kuta art and lore note: precolonial fortifications (kuta/kota) drawn as a palisade with a gate and a thatched lookout; generic, the same for every tradition | Widespread | Scott 1994 |
+| src/ui/buildingArt.ts (healer's hut, fishing landing, woodcutters' camp, Tulay) | Building art: a raised thatched hut with herbs drying under the eaves and clay jars; a bamboo landing with a bangka, a bubo fish trap and a net; cut timber with a bolo in a stump and an adze; a bamboo footbridge. Generic, for every tradition; replaces a fishing rod with a reel, a steel axe and a plant icon | Widespread lowland | Scott 1994 |
+| Interface symbols (see the S prompt summary) | Era check of emoji: no candles (the Dambana's art, a burial jar for mourning), no railway track for the Daan (footprints), no padlock, ring, crown, dove, wrapped present, megaphone or snare drum (a gong is drawn) | n/a | n/a |
 | content/lore/settlement-layout.json and src/engine/plaza.ts | Aklat entry and map layout: precolonial settlements along rivers and coasts in kinship clusters, gathering informally in a clearing by the datu's house (drawn as an irregular open clearing with a fire pit and a shade tree); the town plaza as a Spanish colonial introduction | Widespread lowland | Scott 1994; Reed 1978; Laws of the Indies 1573 |
 
 ## Reviewed

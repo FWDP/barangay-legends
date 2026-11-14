@@ -227,8 +227,8 @@
       "trigger": "borrowing",
       "max": 1,
       "text": {
-        "en": "Everyone has work, so I've asked the {building} to lend a hand with the clearing. They'll go back when the land is cleared. To keep them working, pause a workplace instead (tap the 🪓 count at the top).",
-        "fil": "May trabaho na ang lahat, kaya pinahiram ko ang mga manggagawa ng {building} sa paghahawan. Babalik sila kapag nahawan na ang lupa. Para tuloy ang kanilang trabaho, i-pause na lang ang isang gusali (pindutin ang bilang ng 🪓 sa itaas)."
+        "en": "Everyone has work, so I've asked the {building} to lend a hand with the clearing. They'll go back when the land is cleared. To keep them working, pause a workplace instead (tap the 🪵 count at the top).",
+        "fil": "May trabaho na ang lahat, kaya pinahiram ko ang mga manggagawa ng {building} sa paghahawan. Babalik sila kapag nahawan na ang lupa. Para tuloy ang kanilang trabaho, i-pause na lang ang isang gusali (pindutin ang bilang ng 🪵 sa itaas)."
       }
     },
     {

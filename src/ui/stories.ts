@@ -167,7 +167,7 @@ export function awayPeopleLines(before: GameState, after: GameState, content: Co
   }
   // The Balita: political news while away.
   const seen = Math.max(0, ...(before.region?.news ?? []).map((n) => n.id));
-  for (const n of after.region?.news ?? []) if (n.id > seen) lines.push(`📣 ${newsLine(n, after, content, game, lang)}`);
+  for (const n of after.region?.news ?? []) if (n.id > seen) lines.push(`🐚 ${newsLine(n, after, content, game, lang)}`);
   return lines;
 }
 

@@ -135,19 +135,26 @@ export type Look = Role | "leaving" | "raider" | "looter" | "datu" | "spouse" | 
 /** How long a mourning marker stays where someone died. */
 const MARKER_MS = 12000;
 
-/** A mourning marker: a small candle on a mat of flowers. Gentle, never more. */
+/** A mourning marker: a small burial jar (like the Libingan's) on a mat of flowers. Gentle, never more; no candle. */
 function drawMarker(g: CanvasRenderingContext2D, x: number, y: number, tile: number) {
   const s = Math.max(7, tile * 0.32);
   g.globalAlpha = 0.9;
   g.fillStyle = "#fef3c7";
   g.beginPath();
-  g.ellipse(x, y, s * 0.28, s * 0.1, 0, 0, Math.PI * 2);
+  g.ellipse(x, y, s * 0.3, s * 0.1, 0, 0, Math.PI * 2);
   g.fill();
-  g.fillStyle = "#f5f5f4";
-  g.fillRect(x - s * 0.05, y - s * 0.4, s * 0.1, s * 0.36);
-  g.fillStyle = "#f59e0b";
+  // The jar: a round clay body, a short neck and a lid.
+  g.fillStyle = "#b45309";
+  g.strokeStyle = "#78350f";
+  g.lineWidth = Math.max(0.6, s * 0.03);
   g.beginPath();
-  g.ellipse(x, y - s * 0.48, s * 0.05, s * 0.09, 0, 0, Math.PI * 2);
+  g.ellipse(x, y - s * 0.2, s * 0.14, s * 0.17, 0, 0, Math.PI * 2);
+  g.fill();
+  g.stroke();
+  g.fillRect(x - s * 0.07, y - s * 0.42, s * 0.14, s * 0.08);
+  g.fillStyle = "#92400e";
+  g.beginPath();
+  g.ellipse(x, y - s * 0.43, s * 0.1, s * 0.035, 0, 0, Math.PI * 2);
   g.fill();
   g.globalAlpha = 1;
 }

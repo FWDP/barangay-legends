@@ -7,6 +7,7 @@ import { aklatEntry, aklatProgress } from "../engine/aklat";
 import { forestStage, isPranked } from "../engine/forest";
 import type { Command, GameState } from "../engine/game";
 import { isActive, offeringFavor, ritualBlocker, traditionChangeCost, traditionOf, worshipBlocker } from "../engine/worship";
+import { DAMBANA_ART } from "./buildingArt";
 import { clock } from "./EventBanners";
 import { costText, RESOURCE_ICON } from "./format";
 import type { Lang } from "./settings";
@@ -244,7 +245,7 @@ export function DambanaDialog(props: {
         <div className="mat-card flex max-h-[85dvh] flex-col gap-3 overflow-y-auto p-4 text-sm">
           <div className="flex items-baseline justify-between gap-2">
             <h2 id="dambana-title" className="font-display text-xl text-amber-900">
-              <span aria-hidden>🕯️</span> {pick ? t.chooseTitle[lang] : t.title[lang]}
+              <span aria-hidden><img src={DAMBANA_ART} alt="" draggable={false} className="inline-block size-[1.15em] align-[-0.2em]" /></span> {pick ? t.chooseTitle[lang] : t.title[lang]}
             </h2>
             {!pick && <span className="rounded-full bg-amber-100 px-2 py-0.5 font-display text-amber-900 tabular-nums">✨ {fill(t.favor[lang], { favor: Math.floor(state.favor) })}</span>}
           </div>
@@ -338,7 +339,7 @@ export function DambanaDialog(props: {
                           disabled={why !== null}
                           onClick={() => {
                             dispatch({ type: "ritual", ritual: r.id });
-                            onRitual(r.productionPercent ? "🕯️" : "🌾");
+                            onRitual(r.productionPercent ? "🔥" : "🌾");
                           }}
                           className={`${primary} shrink-0`}
                         >
@@ -400,9 +401,21 @@ export function EclipseBar({ state, content, game, lang, onGong }: { state: Game
         </span>
       </span>
       <button type="button" onClick={onGong} className={`${btn} shrink-0 border-amber-950 ${done ? "bg-lime-400" : "bg-amber-400"} text-amber-950 active:scale-95`}>
-        🥁 {game.events.gong[lang]}
+        <GongIcon /> {game.events.gong[lang]}
       </button>
     </div>
+  );
+}
+
+/** A bossed bronze gong (agung) hung on a cord, for the eclipse: struck to drive the Bakunawa off. */
+function GongIcon() {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" className="inline-block size-[1.15em] align-[-0.25em]">
+      <path d="M12 1.5 L7 6 M12 1.5 L17 6" stroke="#78350f" strokeWidth="1" fill="none" />
+      <circle cx="12" cy="14" r="8.5" fill="#ca8a04" stroke="#713f12" strokeWidth="1.2" />
+      <circle cx="12" cy="14" r="5.5" fill="none" stroke="#a16207" strokeWidth="0.8" />
+      <circle cx="12" cy="14" r="2.6" fill="#eab308" stroke="#713f12" strokeWidth="0.8" />
+    </svg>
   );
 }
 

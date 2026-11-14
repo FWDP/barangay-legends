@@ -430,8 +430,8 @@
       "fil": "Huwag"
     },
     "locked": {
-      "en": "🔒 {villagers} villagers",
-      "fil": "🔒 {villagers} taga-barangay"
+      "en": "⏳ {villagers} villagers",
+      "fil": "⏳ {villagers} taga-barangay"
     },
     "need": {
       "en": "Need more: {missing}",
@@ -478,8 +478,8 @@
       "fil": "Maglatag ng Daan"
     },
     "lockedDatu": {
-      "en": "🔒 Bahay ng Datu Lv {level}",
-      "fil": "🔒 Bahay ng Datu antas {level}"
+      "en": "⏳ Bahay ng Datu Lv {level}",
+      "fil": "⏳ Bahay ng Datu antas {level}"
     },
     "aboutLook": {
       "en": "About this look",
@@ -1544,16 +1544,16 @@
       "fil": "mabagal"
     },
     "tip": {
-      "en": "📦 Stockpile limit {cap}: above it, work brings in less. It rises as the barangay grows.",
-      "fil": "📦 Hangganan ng imbak {cap}: lampas dito, mas kaunti ang naiipon. Tumataas ito habang lumalaki ang barangay."
+      "en": "🧺 Stockpile limit {cap}: above it, work brings in less. It rises as the barangay grows.",
+      "fil": "🧺 Hangganan ng imbak {cap}: lampas dito, mas kaunti ang naiipon. Tumataas ito habang lumalaki ang barangay."
     },
     "over": {
-      "en": "📦 Over the stockpile limit ({cap}): work brings in {percent}% less. Spend it on Kamalig and Bahay ng Datu upgrades, a Handog, a trade or a Balangay.",
-      "fil": "📦 Lampas sa hangganan ng imbak ({cap}): {percent}% na mas kaunti ang naiipon. Gamitin ito sa pagtataas ng Kamalig at Bahay ng Datu, Handog, kalakalan o Balangay."
+      "en": "🧺 Over the stockpile limit ({cap}): work brings in {percent}% less. Spend it on Kamalig and Bahay ng Datu upgrades, a Handog, a trade or a Balangay.",
+      "fil": "🧺 Lampas sa hangganan ng imbak ({cap}): {percent}% na mas kaunti ang naiipon. Gamitin ito sa pagtataas ng Kamalig at Bahay ng Datu, Handog, kalakalan o Balangay."
     },
     "stop": {
-      "en": "📦 Stockpile full ({stop}): work brings in none until some is spent.",
-      "fil": "📦 Puno ang imbak ({stop}): wala nang maiipon hangga't walang nagagamit."
+      "en": "🧺 Stockpile full ({stop}): work brings in none until some is spent.",
+      "fil": "🧺 Puno ang imbak ({stop}): wala nang maiipon hangga't walang nagagamit."
     },
     "stopLabel": {
       "en": "full",

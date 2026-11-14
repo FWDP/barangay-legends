@@ -198,7 +198,7 @@ function ArchipelagoMap(props: { state: GameState; content: Content; game: GameT
             </text>
             {leader && (
               <text textAnchor="middle" y="-2.9" fontSize="2.3" aria-hidden>
-                👑
+                🪶
               </text>
             )}
             {raiding && <circle r="4" fill="none" stroke="#dc2626" strokeWidth="0.6" className="motion-safe:animate-pulse" />}
@@ -253,7 +253,7 @@ function BlocList(props: { state: GameState; content: Content; game: GameText; l
               if (id === state.barangay.id) {
                 return (
                   <li key={id} className="px-2 py-1 text-sm font-semibold">
-                    🔥 {state.barangay.name || game.balita.you[lang]} {g.leader === id && "👑"} <LevelBadge level={levelOf(state, content, id)} game={game} lang={lang} />
+                    🔥 {state.barangay.name || game.balita.you[lang]} {g.leader === id && "🪶"} <LevelBadge level={levelOf(state, content, id)} game={game} lang={lang} />
                   </li>
                 );
               }
@@ -269,7 +269,7 @@ function BlocList(props: { state: GameState; content: Content; game: GameText; l
                     className={`flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1 text-left text-sm ${selected === id ? "bg-amber-200" : "bg-amber-50"}`}
                   >
                     <span>
-                      {g.leader === id && "👑 "}
+                      {g.leader === id && "🪶 "}
                       {def.name.replace("Barangay ", "")} <LevelBadge level={levelOf(state, content, id)} game={game} lang={lang} />{" "}
                       <span className="text-[11px] text-stone-500">· {islandOf(id)}</span>
                     </span>
@@ -314,7 +314,7 @@ function AlliancePanel(props: { state: GameState; content: Content; game: GameTe
               .map((m) => (
                 <li key={m} className="flex items-center justify-between gap-2 rounded bg-white/60 px-2 py-1 text-sm">
                   <span>
-                    {mine.leader === m && "👑 "}
+                    {mine.leader === m && "🪶 "}
                     {barangayName(state, content, m, game, lang)} <LevelBadge level={levelOf(state, content, m)} game={game} lang={lang} />
                   </span>
                   <button type="button" onClick={() => onVisit(m)} className="ml-auto text-xs font-semibold text-amber-800 underline">
@@ -335,7 +335,7 @@ function AlliancePanel(props: { state: GameState; content: Content; game: GameTe
       ) : (
         <>
           <p className="text-sm">{t.none[lang]}</p>
-          <ActionButton onClick={() => dispatch({ type: "bloc", action: "form" })}>👑 {t.form[lang]}</ActionButton>
+          <ActionButton onClick={() => dispatch({ type: "bloc", action: "form" })}>🪶 {t.form[lang]}</ActionButton>
         </>
       )}
       <p className="text-[11px] text-stone-500">{t.paramount[lang]}</p>
@@ -349,7 +349,7 @@ function Balita(props: { state: GameState; content: Content; game: GameText; lan
   const news = [...(state.region?.news ?? [])].reverse().slice(0, 8);
   return (
     <section className="mb-3 space-y-1 rounded-xl border-2 border-amber-900/30 bg-amber-50/70 p-2.5">
-      <h2 className="font-display text-lg text-amber-900">📣 {game.balita.title[lang]}</h2>
+      <h2 className="font-display text-lg text-amber-900">🐚 {game.balita.title[lang]}</h2>
       {news.length === 0 && <p className="text-xs text-stone-500">{game.balita.none[lang]}</p>}
       <ul className="space-y-0.5 text-xs">
         {news.map((n) => (
@@ -464,7 +464,7 @@ function OurForces(props: { state: GameState; content: Content; dispatch: (c: Co
           </ActionButton>
         </div>
       )}
-      {truceLeft > 0 && <p className="text-xs text-green-800">🕊️ Truce: no raids for {clock(truceLeft)}.</p>}
+      {truceLeft > 0 && <p className="text-xs text-green-800">🤝 Truce: no raids for {clock(truceLeft)}.</p>}
       {region.incomingRaid && (
         <p className="rounded bg-red-100 px-2 py-1 text-xs font-semibold text-red-900">
           🔥 Raid from {neighborDef(content, region.incomingRaid.from)?.name} in {clock(region.incomingRaid.strikeAt - state.time)}! Train warriors and
@@ -634,7 +634,7 @@ export function NeighborPanel(props: {
         )}
         {n.status === "tributary" && <Bar label="Loyalty" value={n.loyalty} color="bg-green-600" />}
         <p className="text-[11px] text-stone-500">
-          {n.marriage ? "💍 Marriage alliance · " : ""}
+          {n.marriage ? "💞 Marriage alliance · " : ""}
           {n.status === "tributary"
             ? `Sends ${d.tribute.percent}% of their production every minute. Rebels below ${d.loyalty.rebelBelow} loyalty: trade with them or send guards.`
             : n.status === "ally"
@@ -672,7 +672,7 @@ export function NeighborPanel(props: {
                     : null
               }
             >
-              💍 Marriage alliance · gift {fmt(d.marriage.cost)}
+              💞 Marriage alliance · gift {fmt(d.marriage.cost)}
             </ActionButton>
           )}
           <ActionButton
@@ -870,7 +870,7 @@ function HandogForm({ n, state, content, dispatch }: { n: NeighborState; state: 
         disabled={v < h.minValue || !!short}
         why={short ? `You have ${Math.floor(state.resources[short])} ${short}.` : `A gift must be worth at least ${h.minValue}.`}
       >
-        🎁 Send Handog
+        🧺 Send Handog
       </ActionButton>
     </div>
   );

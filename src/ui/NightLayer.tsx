@@ -1,5 +1,5 @@
 // The night over the map: soft pools of warm light (plaza fire, Bahay ng Datu, lived-in houses,
-// Kuta torches, the Dambana, dock lanterns, and villagers carrying torches), coming on one by one
+// Kuta torches, the Dambana, resin torches at the docks, and villagers carrying torches), coming on one by one
 // at dusk and fading at dawn, with stars and the moon (dark red while the Bakunawa swallows it).
 // Display only. With reduced motion there's no flicker or twinkle: the glow is still.
 import { useEffect, useMemo, useRef, type RefObject } from "react";

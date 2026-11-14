@@ -1,3 +1,4 @@
+import { Bolo } from "./Bolo";
 import { closesPlaza, entrancesBlockedBy, wouldHaveEntrance } from "../engine/doors";
 import {
   memo,
@@ -747,7 +748,7 @@ export function BarangayMap(props: {
     const inArea = (x: number, y: number) =>
       !!r && x >= Math.min(r.from.x, r.to.x) && x <= Math.max(r.from.x, r.to.x) && y >= Math.min(r.from.y, r.to.y) && y <= Math.max(r.from.y, r.to.y);
     const price = jobCost(state, content, selection.length);
-    const clearLabel = `🪓 Select to clear · ${RESOURCE_ICON.rice} ${price.rice} · +${content.rules.clearing.wood} ${RESOURCE_ICON.wood}`;
+    const clearLabel = `🪵 Select to clear · ${RESOURCE_ICON.rice} ${price.rice} · +${content.rules.clearing.wood} ${RESOURCE_ICON.wood}`;
     for (let y = range.y0; y <= range.y1; y++) {
       for (let x = range.x0; x <= range.x1; x++) {
         const tile = tileAt(map, x, y)!;
@@ -802,13 +803,13 @@ export function BarangayMap(props: {
             hint={
               jobs.has(key) && hovered && !road
                 ? working.has(key)
-                  ? "🪓 Clearing · tap to stop"
+                  ? "🪵 Clearing · tap to stop"
                   : "⏳ Waiting for a free villager · tap to stop"
                 : road && hovered
                 ? tile === "daan"
                   ? "Tap to take up the path (free)"
                   : canPlaceRoad(state, content, x, y)
-                    ? `🛤️ Daan · ${road.costText}`
+                    ? `👣 Daan · ${road.costText}`
                     : null
                 : clearable && hovered
                   ? tile === "balete"
@@ -1203,7 +1204,7 @@ const Cell = memo(function Cell(props: {
       {progress !== null && <ClearingProgress progress={progress} waiting={!!waiting} />}
       {picked && progress === null && (
         <div aria-hidden className="pointer-events-none absolute inset-[4%] flex items-center justify-center rounded-md border-2 border-dashed border-amber-300 bg-amber-300/25">
-          <span className="text-[0.45em] leading-none opacity-90">🪓</span>
+          <Bolo className="size-[0.45em] opacity-90" />
         </div>
       )}
       {paddy && (
@@ -1268,7 +1269,7 @@ function ClearingProgress({ progress, waiting }: { progress: number; waiting: bo
     <>
       <div aria-hidden className={`pointer-events-none absolute inset-[4%] rounded-md border-2 ${waiting ? "border-dashed border-amber-200/70 bg-stone-900/25" : "border-amber-300 bg-amber-900/20"}`} />
       <span aria-hidden className={`pointer-events-none text-[0.6em] leading-none ${waiting ? "opacity-70" : "motion-safe:animate-flicker"}`}>
-        {waiting ? "⏳" : "🪓"}
+        {waiting ? "⏳" : <Bolo className="inline-block size-[1em]" />}
       </span>
       <div
         role="progressbar"
@@ -1387,7 +1388,7 @@ const totalBonus = (b: { adjacency: number; grove: number; road: number }) => b.
 
 /** A building as it stands on the map: its custom art, its icon, or nothing (a Tulay). */
 function ArtOrIcon({ def }: { def: BuildingDef }) {
-  const art = buildingArtUrl(def.id);
+  const art = def.bridge ? null : buildingArtUrl(def.id);
   if (art) return <img src={art} alt="" draggable={false} className="inline-block size-[1.05em] align-bottom" />;
   return <>{mapIcon(def)}</>;
 }
@@ -1415,7 +1416,7 @@ function Ghost({ info }: { info: GhostInfo }) {
     );
   }
   const base = def.bridge ? "Bridge across to the far bank" : bonusPreviewText(def, adjacency, { name: groveName, bonus: grove });
-  const text = road > 0 ? `${base} · 🛤️ Connected +${Math.round(road * 100)}%` : base;
+  const text = road > 0 ? `${base} · 👣 Connected +${Math.round(road * 100)}%` : base;
   return (
     <>
       {mapIcon(def) && (
@@ -1530,7 +1531,7 @@ function Building(props: {
           aria-hidden
           className="pointer-events-none absolute right-0 bottom-0 rounded-full bg-amber-100/90 px-0.5 text-[0.35em] leading-none shadow"
         >
-          🛠️
+          🪵
         </span>
       )}
       {paused && !damaged && (
@@ -1547,7 +1548,7 @@ function Building(props: {
           title={`${lent} lent to clearing`}
           className="pointer-events-none absolute top-0 left-0.5 rounded-full bg-amber-300 px-0.5 text-[0.26em] leading-tight font-semibold text-amber-950 shadow"
         >
-          🪓{lent}
+          🪵{lent}
         </span>
       )}
       {noPath && !damaged && (
@@ -1560,7 +1561,7 @@ function Building(props: {
       )}
       {connected && !damaged && !noPath && (
         <span aria-hidden className="pointer-events-none absolute bottom-0 left-0.5 text-[0.28em] leading-none">
-          🛤️
+          👣
         </span>
       )}
       {bonus > 0 && !damaged && (

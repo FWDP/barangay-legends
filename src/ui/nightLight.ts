@@ -61,7 +61,7 @@ const onAt = (x: number, y: number) => {
 
 /**
  * The barangay's lights: the plaza fire and the Bahay ng Datu, houses with people living in them,
- * torches at each Kuta, the Dambana, and lanterns at the docks. Damaged buildings stay dark.
+ * torches at each Kuta, the Dambana, and a resin torch (sulô) at each dock: fire only, no glass lamps. Damaged buildings stay dark.
  */
 export function barangayLights(state: GameState, content: Content): Light[] {
   const defs = new Map(content.buildings.map((d) => [d.id, d]));

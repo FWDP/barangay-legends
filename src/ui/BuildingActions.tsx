@@ -1,6 +1,7 @@
 // Changing your mind about a building: the menu on a placed building (Move, Demolish), the
 // demolish confirmation with its warnings, and the short-lived Undo button after building.
-import { ART_LORE, buildingArtUrl } from "./buildingArt";
+import { Bolo } from "./Bolo";
+import { ART_LORE, buildingArtUrl, DAMBANA_ART } from "./buildingArt";
 import { healerStays, sickPlaces } from "../engine/healing";
 import { boatCap, boatCost } from "../engine/sea";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -132,7 +133,7 @@ export function BuildingMenu(props: {
             <span className="mt-0.5 block rounded bg-stone-200 px-1 text-[11px] font-semibold text-stone-700">⏸ Paused: its workers are free for other work.</span>
           ) : lent > 0 ? (
             <span className="mt-0.5 block rounded bg-amber-100 px-1 text-[11px] font-semibold text-amber-900">
-              🪓 {lent} lent to clearing forest; {lent === 1 ? "they come" : "they come"} back when the job is done.
+              <Bolo /> {lent} lent to clearing forest; {lent === 1 ? "they come" : "they come"} back when the job is done.
             </span>
           ) : noPath ? (
             <span className="mt-0.5 block rounded bg-red-100 px-1 text-[11px] font-semibold text-red-900">🚫 No path: workers can't walk here. Join it with a Tulay, or move it.</span>
@@ -144,9 +145,9 @@ export function BuildingMenu(props: {
       {def.produces && (
         <p className="px-1 pb-1.5 text-[11px] text-stone-600">
           {connected ? (
-            <span className="font-semibold text-amber-800">🛤️ Connected: +{content.rules.roads.connectedBonusPercent}% output</span>
+            <span className="font-semibold text-amber-800">👣 Connected: +{content.rules.roads.connectedBonusPercent}% output</span>
           ) : (
-            <>🛤️ {game ? fill(game.doors.joinHouse[lang], { percent: content.rules.roads.connectedBonusPercent }) : `Join it to the Bahay ng Datu with a Daan for +${content.rules.roads.connectedBonusPercent}%`}</>
+            <>👣 {game ? fill(game.doors.joinHouse[lang], { percent: content.rules.roads.connectedBonusPercent }) : `Join it to the Bahay ng Datu with a Daan for +${content.rules.roads.connectedBonusPercent}%`}</>
           )}
         </p>
       )}
@@ -199,7 +200,7 @@ export function BuildingMenu(props: {
             onClick={onRemembered}
             className="game-btn flex items-center justify-between border-2 border-amber-950/60 bg-amber-100 px-3 py-1.5 text-sm font-semibold text-amber-950"
           >
-            <span>🕯️ The remembered</span>
+            <span>⚱️ The remembered</span>
             <span className="text-xs font-normal">{state.remembered.length}</span>
           </button>
         )}
@@ -220,7 +221,7 @@ export function BuildingMenu(props: {
             onClick={onShrine}
             className="game-btn flex items-center justify-between border-2 border-green-950 bg-green-700 px-3 py-1.5 text-sm font-semibold text-white"
           >
-            <span>🕯️ Offerings and rituals</span>
+            <span><img src={DAMBANA_ART} alt="" draggable={false} className="inline-block size-[1.15em] align-[-0.2em] mr-1" />Offerings and rituals</span>
           </button>
         )}
         <button

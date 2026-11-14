@@ -1,3 +1,4 @@
+import { Bolo } from "./Bolo";
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import type { Resource } from "../engine/content";
 import { buildingCost, canAfford, canMove, moveCost, owned, repairCost, roadCost, withoutBuilding } from "../engine/game";
@@ -24,7 +25,8 @@ import { TitleScreen } from "./TitleScreen";
 import { useLang, useSettings } from "./settings";
 import { initSound, isMuted, setMuted, sfx } from "./sound";
 import { loadUiContent } from "./uiContent";
-import { content, useGame } from "./useGame";
+import { content as baseContent, useGame } from "./useGame";
+import { withTraditionNames } from "./traditionNames";
 import { useGameSounds } from "./useGameSounds";
 import { awayStory, offlineStory } from "./away";
 import { AwayDialog, ChoiceBanner, ChoiceDialog, NoticeDialog } from "./StoryDialogs";
@@ -54,6 +56,9 @@ import { fill } from "./uiContent";
 import { VERSION_TEXT } from "./version";
 import { arawText, DayChip } from "./Days";
 import { DevPanel, devMode } from "./DevPanel";
+
+/** The game's content as loaded (App itself uses it with the tradition's names, below). */
+const content = baseContent;
 
 /** The ui.json defense key for a raid reason ("uncovered" is taken by the map label). */
 const reasonKey = (r: RaidReason) => (r === "uncovered" ? "uncovered_" : r);
@@ -126,7 +131,7 @@ function CancelClearingDialog(props: { state: GameState; target: { x: number; y:
       {job && (
         <div className="mat-card space-y-3 p-5">
           <h2 id="cancel-clear-title" className="font-display text-2xl text-amber-900">
-            🪓 Stop clearing this tile?
+            <Bolo /> Stop clearing this tile?
           </h2>
           <p className="text-sm">
             {started ? (
@@ -162,7 +167,7 @@ function ClearSelectionBar(props: { state: GameState; selection: { x: number; y:
   return (
     <div role="status" className="wood-panel pointer-events-auto flex max-w-full flex-wrap items-center gap-2 rounded-xl border-2 border-amber-950/70 py-1.5 pr-1.5 pl-3 text-amber-50 shadow-lg">
       <span className="text-2xl leading-none" aria-hidden>
-        🪓
+        <Bolo />
       </span>
       <span className="min-w-0 flex-1 text-sm leading-tight">
         <span className="text-outline block font-display text-base">
@@ -205,7 +210,7 @@ function ClearingQueueChip({ state, onOpen }: { state: GameState; onOpen: () => 
       aria-label={`Clearing: ${active} at work, ${borrowed} borrowed, ${waiting} waiting. Open the queue`}
       className="pointer-events-auto rounded-full border border-amber-950/50 bg-stone-900/80 px-2.5 py-0.5 text-xs text-amber-50 shadow hover:bg-stone-900"
     >
-      🪓 {active} clearing{borrowed > 0 && ` · ${borrowed} borrowed`}
+      <Bolo /> {active} clearing{borrowed > 0 && ` · ${borrowed} borrowed`}
       {waiting > 0 && ` · ${waiting} waiting`}
       {active === 0 && " · no free hands"} ›
     </button>
@@ -258,7 +263,7 @@ function ClearingQueueDialog(props: {
       {show && (
         <div className="mat-card max-h-[85dvh] space-y-3 overflow-y-auto p-5">
           <h2 id="queue-title" className="font-display text-2xl text-amber-900">
-            🪓 Clearing the forest
+            <Bolo /> Clearing the forest
           </h2>
           <p className="text-sm text-stone-600">
             {working.size} at work, {waiting} waiting. {force.free} free {force.free === 1 ? "villager" : "villagers"}
@@ -268,7 +273,7 @@ function ClearingQueueDialog(props: {
             {state.clearing.map((j, n) => (
               <li key={`${j.x},${j.y}`} className="flex items-center gap-2 rounded-lg bg-white/60 px-2 py-1 text-sm">
                 <span className="w-5 text-right text-xs text-stone-500 tabular-nums">{n + 1}</span>
-                <span aria-hidden>{working.has(j) ? "🪓" : "⏳"}</span>
+                <span aria-hidden>{working.has(j) ? <Bolo /> : "⏳"}</span>
                 <span className="min-w-0 flex-1">
                   {tileAt(state.map, j.x, j.y) === "balete" ? "Old balete" : "Forest"} at {j.x}, {j.y} ·{" "}
                   {working.has(j) ? `${Math.round((j.progress / j.seconds) * 100)}%` : j.progress > 0 ? `paused at ${Math.round((j.progress / j.seconds) * 100)}%` : "waiting"}
@@ -364,6 +369,8 @@ export function App() {
   // The "While you were away" story pauses the game, so its warnings don't run while the player reads.
   const [away, setAway] = useState<string[] | null>(null);
   const { state, dispatch, onReset, startNew, hasSave, continueGame, replaceGame } = useGame(screen === "game" && away === null);
+  // What the player sees: the healer's hut named in the barangay's tradition's words (traditionNames.ts).
+  const content = withTraditionNames(baseContent, state.tradition);
   const [muted, setMutedState] = useState(isMuted);
   const [selected, setSelected] = useState<string | null>(null);
   // Forest tiles picked for clearing (in working order), and the dialogs that go with it.
@@ -648,7 +655,7 @@ export function App() {
     },
     expedition: fresh ? { node: expeditionBar, label: `🎬 ${fill(nt.expedition[lang], { barangay: neighborDef(content, fresh.to)?.name ?? fresh.to })}` } : undefined,
     sailing: { node: expeditionBar, label: `⛵ ${nt.sailing[lang]}` },
-    prank: { node: <PrankBar state={state} content={content} game={ui.game} lang={lang} />, label: `🪓 ${nt.prank[lang]}` },
+    prank: { node: <PrankBar state={state} content={content} game={ui.game} lang={lang} />, label: `🪵 ${nt.prank[lang]}` },
     ...Object.fromEntries(
       [...eventBanners.values()].map((b) => [
         b.id,
@@ -1052,7 +1059,7 @@ export function App() {
               className="wood-panel pointer-events-auto flex items-center gap-2 rounded-xl border-2 border-amber-950/70 py-1.5 pr-1.5 pl-3 text-amber-50 shadow-lg"
             >
               <span className="text-2xl leading-none" aria-hidden>
-                🛤️
+                👣
               </span>
               <span className="text-sm leading-tight">
                 <span className="text-outline block font-display text-base">Lay Daan</span>
