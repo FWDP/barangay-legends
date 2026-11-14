@@ -2,6 +2,7 @@
 // Details (description, bonuses, staffing) open in a popover on hover (desktop) or long-press
 // (phone), with a Build button. The row fades at its edges and shows arrows when it
 // overflows. Tabs badge newly unlocked buildings; the adviser's or task's pick glows.
+import { shoreCovered } from "../engine/defense";
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { RESOURCES, type BuildingDef, type Content } from "../engine/content";
 import { asCost, buildingCost, canAfford, owned, roadCost, staffedBuildings, unreachableWorkplaces, type GameState } from "../engine/game";
@@ -110,8 +111,11 @@ export function BuildToolbar(props: {
   recommend: Set<string>;
   /** Raise the Bahay ng Datu a level. */
   onUpgradeDatu: () => void;
+  /** The Defense map (landing points and Kuta coverage) is on, and turning it on or off. */
+  defenseMap?: boolean;
+  onDefenseMap?: () => void;
 }) {
-  const { state, content, game, lang, selected, onSelect, roadActive, onRoad, recommend, onUpgradeDatu } = props;
+  const { state, content, game, lang, selected, onSelect, roadActive, onRoad, recommend, onUpgradeDatu, defenseMap = false, onDefenseMap } = props;
   const t = game.build;
   const tabs = visibleTabs(content);
   const [tab, setTabState] = useState<BuildTab>(() => {
@@ -319,7 +323,7 @@ export function BuildToolbar(props: {
           className="flex snap-x snap-proximity scroll-px-2 gap-1.5 overflow-x-auto scroll-smooth px-2 pt-2 pb-1 [scrollbar-width:none] sm:gap-2"
         >
           {items.map((it, i) => (
-            <li key={it.id} className={`shrink-0 snap-start ${i === 0 ? "ml-auto" : ""} ${i === items.length - 1 ? "mr-auto" : ""}`}>
+            <li key={it.id} className={`shrink-0 snap-start ${i === 0 ? "ml-auto" : ""} ${i === items.length - 1 && !(tab === "depensa" && onDefenseMap) ? "mr-auto" : ""}`}>
               <button
                 type="button"
                 data-build-card
@@ -397,6 +401,28 @@ export function BuildToolbar(props: {
               </button>
             </li>
           ))}
+          {/* The Depensa tab's Defense map: every landing point and the Kutas' cover. */}
+          {tab === "depensa" && onDefenseMap && (
+            <li className="mr-auto shrink-0 snap-start">
+              <button
+                type="button"
+                aria-pressed={defenseMap}
+                title={game.defense.mapTip[lang]}
+                onClick={onDefenseMap}
+                className={`game-btn mat-card flex h-full w-[5rem] flex-col items-center gap-0.5 border-2 px-1 pt-1.5 pb-1 text-stone-800 shadow-md sm:w-[6.6rem] ${
+                  defenseMap ? "-translate-y-1 border-amber-500 ring-4 ring-amber-300" : "border-amber-900/70"
+                }`}
+              >
+                <span aria-hidden className="text-3xl leading-none sm:text-4xl">
+                  <img src={buildingArtUrl("kuta")!} alt="" draggable={false} className="size-[1.25em]" />
+                </span>
+                <span className="text-center font-display text-[12px] leading-tight text-amber-950 sm:text-sm">{(defenseMap ? game.defense.mapOn : game.defense.map)[lang].replace(/^🗺️ /, "")}</span>
+                <span className={`mt-auto w-full rounded-md px-1 py-0.5 text-center text-[11px] leading-tight font-semibold sm:text-xs ${defenseMap ? "bg-amber-600 text-white" : "bg-stone-200 text-stone-700"}`}>
+                  {fill(game.defense.legend[lang], { covered: shoreCovered(state, content).covered, total: shoreCovered(state, content).total }).replace(/^🛡️ /, "")}
+                </span>
+              </button>
+            </li>
+          )}
         </ul>
         {/* Overflow hints: the row fades at an edge with more cards beyond it, with an arrow to scroll. */}
         {edges.left && (

@@ -24,8 +24,8 @@ const withStatus = (s: GameState, status: "ally" | "tributary" | "independent", 
 const only = (id: string, chance = 1): Content => ({ ...calm, choices: [def(id)], rules: { ...calm.rules, choices: { ...calm.rules.choices, chancePerSecond: chance } } });
 
 describe("choice event content", () => {
-  it("ships 10 events, each with 2–3 choices and a source", () => {
-    expect(content.choices).toHaveLength(10);
+  it("ships 11 events, each with 2–3 choices and a source", () => {
+    expect(content.choices).toHaveLength(11);
     for (const c of content.choices) {
       expect(c.choices.length).toBeGreaterThanOrEqual(2);
       expect(c.choices.length).toBeLessThanOrEqual(3);
@@ -196,7 +196,8 @@ describe("choice effects", () => {
   it("every option in every event can be applied", () => {
     for (const c of content.choices as ChoiceEventDef[]) {
       for (const o of c.choices) {
-        const s = pending(withStatus(rich(), "ally", 0), c.id, rich().region!.neighbors[0].id);
+        // (Warriors at home, for an ally's call for help.)
+        const s = { ...pending(withStatus(rich(), "ally", 0), c.id, rich().region!.neighbors[0].id), warriors: 4 };
         const after = choose(s, content, o.id);
         expect(after.choice, `${c.id}/${o.id}`).toBeNull();
         expect(after.resources.rice).toBeGreaterThanOrEqual(0);

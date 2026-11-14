@@ -9,6 +9,7 @@ import { datuInfluenceMultiplier } from "./datu";
 import { RESOURCES, type Content, type NeighborDef, type RefusalReason, type Resource, type TraitDef } from "./content";
 import { apply, canAfford, asCost, buildingCost, housing, newGame, owned, placeAuto, rates, tick, warriorCap, type GameState } from "./game";
 import { autoPlaceTile } from "./map";
+import { nearestClearable } from "./clearing";
 import { Rng } from "./rng";
 import { proposeTrade, type CounterOffer, type Proposal } from "./trading";
 import { chooseLanding } from "./border";
@@ -112,6 +113,14 @@ export interface IncomingRaid {
   landing?: Point | null;
 }
 
+/** An ally being raided: its messenger's call for help waits at the Bahay ng Datu until the raid strikes. */
+export interface AllyCall {
+  /** The ally raided, and the barangay raiding it. */
+  ally: string;
+  from: string;
+  strikeAt: number;
+}
+
 export type ReportKind = "raid" | "defense" | "rebellion" | "tributary" | "alliance";
 
 /** A short battle or diplomacy report for the player. Captives are never part of it. */
@@ -169,6 +178,8 @@ export interface RegionState {
   /** The player's Balangay at sea. */
   voyages: Voyage[];
   nextVoyageId: number;
+  /** An ally's call for help, waiting for the datu's answer (missing in older saves). */
+  allyCall?: AllyCall | null;
 }
 
 const EPSILON = 1e-9;
@@ -276,6 +287,7 @@ export function createRegion(content: Content, time: number, seed: number, playe
     renown: 0,
     truceUntil: Math.floor(time) + d.truceSeconds,
     incomingRaid: null,
+    allyCall: null,
     nextAiRaidAt: 0,
     offer: null,
     reports: [],
@@ -702,11 +714,14 @@ export function aiDecide(state: GameState, content: Content, trait: TraitDef): G
   if (s.resources.rice < 5) {
     for (let i = 0; i < 20; i++) s = apply(s, ai, { type: "gather", resource: "rice" });
   }
+  // Room to build at all (a house's tile)? If not, every build waits for land to be cleared.
+  const house = ai.buildings.find((b) => b.id === "bahay-kubo");
+  const room = house ? autoPlaceTile(s, ai, house, { keepEdge: true }) !== null : true;
   const tryBuild = (id: string): GameState | null => {
     const def = ai.buildings.find((b) => b.id === id);
-    if (!def) return null;
+    if (!def || !room) return null;
     if (!canAfford(s, buildingCost(ai, def, owned(s, id)))) return null;
-    const tile = autoPlaceTile(s, ai, def);
+    const tile = autoPlaceTile(s, ai, def, { keepEdge: true });
     if (!tile) return null;
     const built = apply(s, ai, { type: "build", building: id, x: tile.x, y: tile.y });
     return built === s ? null : built;
@@ -727,6 +742,11 @@ export function aiDecide(state: GameState, content: Content, trait: TraitDef): G
     const next = step();
     if (next) return next;
   }
+  // Out of room: clear the nearest forest, so the barangay keeps growing.
+  if (s.clearing.length === 0 && !room) {
+    const cleared = apply(s, ai, { type: "clearArea", tiles: nearestClearable(s, ai.rules.aiGrowth.clearTiles) });
+    if (cleared !== s) return cleared;
+  }
   return s;
 }
 
@@ -739,19 +759,13 @@ export function aiDecide(state: GameState, content: Content, trait: TraitDef): G
  */
 export function updateRegion(state: GameState, content: Content, t0: number, dt: number): GameState {
   if (!state.region) return state;
-  const ai = aiContent(content);
   const d = content.rules.diplomacy;
   const t1 = t0 + dt;
   let s: GameState = state;
   let region: RegionState = { ...state.region };
 
-  // Neighbors live their own lives.
-  // Grudges fade slowly.
-  region.neighbors = region.neighbors.map((n) => ({
-    ...n,
-    state: tick(n.state, ai, dt),
-    grudge: n.grudge > 0 ? Math.max(0, n.grudge - (d.grudge.decayPerMinute * dt) / 60) : n.grudge,
-  }));
+  // Grudges fade slowly. (Neighbors live their own lives a whole second at a time, below.)
+  region.neighbors = region.neighbors.map((n) => (n.grudge > 0 ? { ...n, grudge: Math.max(0, n.grudge - (d.grudge.decayPerMinute * dt) / 60) } : n));
   if (region.counter && t1 > region.counter.expiresAt) region = { ...region, counter: null };
 
   // Tributary loyalty: guarded ones grow more loyal, the rest slowly drift away and may rebel.
@@ -784,6 +798,10 @@ function onRegionSecond(state: GameState, content: Content, second: number, rng:
   let s = state;
   let region = { ...s.region! };
 
+  // Neighbors live their own lives, one whole second at a time, so they grow the same however
+  // finely the player's time is cut (a frame, a long tick, an offline step).
+  region.neighbors = region.neighbors.map((n) => ({ ...n, state: tick(n.state, ai, 1) }));
+
   // Tribute: each tributary sends a share of a minute's production.
   if (second >= region.nextTributeAt) {
     region.nextTributeAt += d.tribute.everySeconds;
@@ -806,6 +824,10 @@ function onRegionSecond(state: GameState, content: Content, second: number, rng:
       : n,
   );
   s = { ...s, region };
+
+  // An ally's call for help: a raid on it starts now and then, and an unanswered call runs out.
+  s = updateAllyCall({ ...s, region }, content, second);
+  region = { ...s.region! };
 
   // A raid on the player strikes when its warning runs out.
   if (region.incomingRaid && second >= region.incomingRaid.strikeAt) s = aiRaidStrikes(s, content, second, rng);
@@ -1119,4 +1141,102 @@ export function alliedBattle(state: GameState, content: Content, ally: string, e
   });
   const next = addNews({ ...region, neighbors }, { time: state.time, key: battle.attackerWins ? "ally-lost" : "ally-defended", barangay: ally, other: enemy });
   return { ...player, region: next };
+}
+
+// ---------- Allies raided: the call for help ----------
+
+/** The key in GameState.nextEventAt for the earliest next raid on an ally. */
+export const ALLY_CALL_KEY = "allyCall";
+/** Salts for the ally-call rolls (rollAt), so they never line up with other rolls. */
+const ALLY_CALL_SALT = 9100;
+
+/** The player's allies who can be raided: sandugo allies and bloc mates. */
+export function raidableAllies(state: GameState): NeighborState[] {
+  const region = state.region;
+  if (!region) return [];
+  const myBloc = blocOf(region.politics, state.barangay.id);
+  return region.neighbors.filter((n) => n.status === "ally" || (myBloc?.members.includes(n.id) ?? false));
+}
+
+/** Who could raid this ally: an aggressive, independent barangay with warriors, not on its side. */
+export function allyRaiders(state: GameState, content: Content, ally: string): NeighborState[] {
+  const region = state.region;
+  if (!region) return [];
+  const bloc = blocOf(region.politics, ally);
+  return region.neighbors.filter(
+    (n) => n.id !== ally && n.status === "independent" && traitOf(content, n.id).raids && n.state.warriors > 0 && !(bloc?.members.includes(n.id) ?? false),
+  );
+}
+
+/**
+ * Starts a raid on `ally` by `from`: its messenger's call for help comes up as a choice event at
+ * the Bahay ng Datu (content/events/choices/ally-call.json). The same state if it can't.
+ */
+export function startAllyCall(state: GameState, content: Content, ally: string, from: string, second: number): GameState {
+  const region = state.region;
+  const def = content.choices.find((c) => c.conditions.allyCall);
+  if (!region || !def || region.allyCall || state.choice) return state;
+  const c = content.rules.allyCalls;
+  return {
+    ...state,
+    choice: { id: def.id, neighbor: ally, at: second, enemy: from },
+    nextEventAt: { ...state.nextEventAt, [ALLY_CALL_KEY]: second + c.cooldownSeconds },
+    region: { ...region, allyCall: { ally, from, strikeAt: second + c.warningSeconds } },
+  };
+}
+
+/** One second of ally calls: maybe a new raid on an ally; a call still unanswered when the raid strikes is let go. */
+function updateAllyCall(state: GameState, content: Content, second: number): GameState {
+  const region = state.region!;
+  const call = region.allyCall;
+  if (call) return second >= call.strikeAt ? answerAllyCall(state, content, false) : state;
+  const c = content.rules.allyCalls;
+  if (second < c.startsAfterSeconds || second < (state.nextEventAt[ALLY_CALL_KEY] ?? 0) || state.choice || region.incomingRaid) return state;
+  const seed = state.map.seed;
+  if (rollAt(seed, second, ALLY_CALL_SALT) >= c.chancePerSecond) return state;
+  const allies = raidableAllies(state).filter((a) => allyRaiders(state, content, a.id).length > 0);
+  if (allies.length === 0) return state;
+  const ally = allies[Math.floor(rollAt(seed, second, ALLY_CALL_SALT + 1) * allies.length)];
+  const raiders = allyRaiders(state, content, ally.id);
+  const from = raiders[Math.floor(rollAt(seed, second, ALLY_CALL_SALT + 2) * raiders.length)];
+  return startAllyCall(state, content, ally.id, from.id, second);
+}
+
+/**
+ * The datu answers the call (or it runs out): sending warriors fights beside the ally (the
+ * same battle as defending an ally at war) and earns renown and trust; not sending costs trust,
+ * and the ally fights alone. Either way the call and its choice event are done.
+ */
+export function answerAllyCall(state: GameState, content: Content, send: boolean): GameState {
+  const call = state.region?.allyCall;
+  if (!call) return state;
+  const c = content.rules.allyCalls;
+  const closed: GameState = {
+    ...state,
+    region: { ...state.region!, allyCall: null },
+    choice: state.choice && content.choices.find((d) => d.id === state.choice!.id)?.conditions.allyCall ? null : state.choice,
+  };
+  if (send) {
+    const fought = alliedBattle(closed, content, call.ally, call.from, c.sendPercent);
+    // No warriors at home to send: the call can't be answered that way.
+    if (fought === closed) return state;
+    return { ...fought, kabantugan: fought.kabantugan + c.renown };
+  }
+  const lowered = adjustRelations(closed, content, call.ally, { trust: -c.ignoreTrust });
+  return allyFightsAlone(lowered, content, call.ally, call.from);
+}
+
+/** An ally meets a raid with only its own warriors: losses on both sides, and the news. */
+function allyFightsAlone(state: GameState, content: Content, ally: string, enemy: string): GameState {
+  const region = state.region;
+  const a = region?.neighbors.find((n) => n.id === ally);
+  const e = region?.neighbors.find((n) => n.id === enemy);
+  if (!region || !a || !e) return state;
+  const battle = resolveBattle(attackOf(e.state.warriors, content), defenseOf(a.state, content), rollAt(state.map.seed, Math.floor(state.time), ALLY_CALL_SALT + 3), content);
+  const allyLosses = casualties(a.state.warriors, battle.defenderLossPercent, battle.attackerWins);
+  const enemyLosses = casualties(e.state.warriors, battle.attackerLossPercent, !battle.attackerWins);
+  const neighbors = region.neighbors.map((n) =>
+    n.id === ally ? { ...n, state: loseWarriors(n.state, allyLosses) } : n.id === enemy ? { ...n, state: loseWarriors(n.state, enemyLosses) } : n,
+  );
+  return { ...state, region: addNews({ ...region, neighbors }, { time: state.time, key: battle.attackerWins ? "ally-lost" : "ally-defended", barangay: ally, other: enemy }) };
 }

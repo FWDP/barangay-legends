@@ -9,6 +9,8 @@ import { buildingWorkers, owned, rates, unreachableWorkplaces, type GameState } 
 import { directionFrom, raidLanding } from "../engine/border";
 import { barangayCenter, isUnlocked, TILE_CODE } from "../engine/map";
 import { neighborDef } from "../engine/region";
+import { riceFull } from "../engine/storage";
+import { landedUncovered, shoreCovered } from "../engine/defense";
 import { storyText, type HistoryEntry } from "../engine/people";
 import type { Lang } from "./settings";
 import { historyLine, levelNews, taskNews } from "./stories";
@@ -215,6 +217,13 @@ export function observe(session: AdvisorSession, state: GameState, content: Cont
       direction: landing ? directionFrom(barangayCenter(state.map), landing) : "near",
     });
   }
+
+  // Full granaries: raise a Kamalig or spend rice (one line, shown once).
+  // (Before the first Kamalig the store's tip says to build one.)
+  if (riceFull(state, content) && state.buildings.some((b) => !!defsById.get(b.type)?.upgrades)) active.set("rice-full", {});
+  // A raid landed where no Kuta reached: build one near the shore (once).
+  const lastDefense = [...(state.region?.reports ?? [])].reverse().find((r) => r.kind === "defense");
+  if (lastDefense && landedUncovered(lastDefense) && shoreCovered(state, content).covered === 0) active.set("kuta-shore", {});
 
   if (state.buildings.length > s.buildingCount) s.lastBuildAt = t;
   s.buildingCount = state.buildings.length;

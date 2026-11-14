@@ -1,0 +1,17 @@
+{
+  "id": "cover-shoreline",
+  "text": {
+    "en": "Cover your shoreline: build a Kuta within reach of the river or beach",
+    "fil": "Bantayan ang dalampasigan: magtayo ng Kuta na abot ang ilog o dalampasigan"
+  },
+  "condition": {
+    "type": "shoreCovered",
+    "count": 1
+  },
+  "reward": {
+    "resources": {
+      "wood": 30
+    }
+  },
+  "next": "three-warriors"
+}

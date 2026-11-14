@@ -285,6 +285,18 @@ export function entrancesBlockedBy(state: GameState, content: Content, x: number
   return out;
 }
 
+/**
+ * Would a building at (x, y) cut some open land off from the plaza (the tile is the only way
+ * there on foot)? Automatic placement (AI barangays, starting buildings) avoids such tiles, so a
+ * ring of buildings never seals the plaza in from the rest of the cleared land.
+ */
+export function cutsOffLand(state: GameState, content: Content, x: number, y: number): boolean {
+  const reach = walkReach(state, content);
+  const W = state.map.width;
+  if (!inBounds(state.map, x, y) || !reach[y * W + x]) return false;
+  return (cutsOf(state.map, reach).cutOff.get(y * W + x)?.length ?? 0) > 0;
+}
+
 /** A building's reachable side tiles (as indexes). */
 function sidesOf(map: MapState, reach: Uint8Array, b: { x: number; y: number }): number[] {
   const out: number[] = [];

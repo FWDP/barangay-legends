@@ -1,9 +1,10 @@
 // Clearing forest, several tiles at once: a queue of jobs worked by free villagers.
 // Pure and deterministic. Each tile is paid for upfront in rice (rising per tile, like the
 // time it takes), runs while enough villagers are free, and gives wood when it's done.
+import { curveFactor } from "./curve";
 import { RESOURCES, type Content, type Resource } from "./content";
 import { baseBuildingWorkers, canAfford, healthyWorkers, type GameState } from "./game";
-import { inBounds, isReachable, NEIGHBOURS, setTiles, tileAt, type MapState, type Point } from "./map";
+import { inBounds, isReachable, NEIGHBOURS, setTiles, TILE_CODE, tileAt, type MapState, type Point } from "./map";
 
 /** One tile being cleared, or waiting its turn. */
 export interface ClearingJob {
@@ -30,8 +31,8 @@ const isForest = (map: MapState, x: number, y: number) => {
   return t === "forest" || t === "balete";
 };
 
-/** n tiles from now: the rising factor for the next tile is growth^(cleared so far + queued). */
-const growth = (state: GameState, content: Content, ahead: number) => content.rules.clearing.secondsGrowth ** (state.tilesCleared + state.clearing.length + ahead);
+/** n tiles from now: the rising factor (curve.ts) after the tiles cleared so far and queued. */
+const growth = (state: GameState, content: Content, ahead: number) => curveFactor(content.rules.clearing.growth, state.tilesCleared + state.clearing.length + ahead);
 
 /** Seconds the tile `ahead` places after the current queue would take. */
 export function jobSeconds(state: GameState, content: Content, ahead = 0): number {
@@ -307,4 +308,28 @@ export function dropUnreachableJobs(state: GameState): GameState {
   const resources = { ...state.resources };
   for (const j of state.clearing) if (!keep.includes(j)) for (const r of RESOURCES) resources[r] += j.paid[r];
   return { ...state, resources, clearing: keep };
+}
+
+/**
+ * The forest tiles to clear next when the barangay needs room: plain forest (never a balete)
+ * touching open land, nearest the plaza first. Used by the AI barangays and the balance bot.
+ */
+export function nearestClearable(state: GameState, n: number): Point[] {
+  const { map } = state;
+  const { plaza } = map;
+  const out: { x: number; y: number; d: number }[] = [];
+  const queued = new Set(state.clearing.map((j) => key(j.x, j.y)));
+  const forest = TILE_CODE.forest;
+  for (let y = 0; y < map.height; y++) {
+    for (let x = 0; x < map.width; x++) {
+      // Cheap checks first: forest, at the edge of open land, not queued; then reachability.
+      if (map.tiles[y * map.width + x] !== forest || !NEIGHBOURS.some(([dx, dy]) => isOpenLand(map, x + dx, y + dy))) continue;
+      if (queued.has(key(x, y)) || !isReachable(map, x, y)) continue;
+      out.push({ x, y, d: Math.hypot(x - plaza.x, y - plaza.y) });
+    }
+  }
+  return out
+    .sort((a, b) => a.d - b.d || a.y - b.y || a.x - b.x)
+    .slice(0, n)
+    .map(({ x, y }) => ({ x, y }));
 }

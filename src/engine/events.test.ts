@@ -129,9 +129,25 @@ describe("Sakit (sickness)", () => {
     const crowded = [at("bahay-kubo", 2, 3), at("bahay-kubo", 3, 3), at("bahay-kubo", 2, 2), at("bahay-kubo", 3, 2)];
     expect(adjacentPairs(withState({ buildings: apart }), "bahay-kubo")).toBe(0);
     expect(adjacentPairs(withState({ buildings: crowded }), "bahay-kubo")).toBe(4);
+    const ev = content.events.sickness!;
+    const healthy = 7 / 8;
     const chance = (buildings: typeof apart) => spreadChance(withState({ villagers: 8, sick: [60], buildings }), content);
-    expect(chance(apart)).toBeCloseTo(0.02);
-    expect(chance(crowded)).toBeCloseTo(0.02 * (1 + 4 * 0.5));
+    expect(chance(apart)).toBeCloseTo(ev.spreadChancePerSecond * healthy);
+    // Four shared walls: 4 × 50%, up to the crowding cap.
+    const crowding = Math.min(4 * ev.crowding.percentPerAdjacentPair, ev.crowding.maxPercent ?? Infinity) / 100;
+    expect(chance(crowded)).toBeCloseTo(ev.spreadChancePerSecond * (1 + crowding) * healthy);
+  });
+
+  it("burns out instead of holding most of the barangay sick for good", () => {
+    const ev = content.events.sickness!;
+    const crowded = [at("bahay-kubo", 2, 3), at("bahay-kubo", 3, 3), at("bahay-kubo", 2, 2), at("bahay-kubo", 3, 2)];
+    // With most villagers already sick, the few healthy ones are caught slowly...
+    const most = spreadChance(withState({ villagers: 30, sick: Array(26).fill(60), buildings: crowded }), content);
+    const few = spreadChance(withState({ villagers: 30, sick: Array(4).fill(60), buildings: crowded }), content);
+    expect(most / 26).toBeLessThan(few / 4);
+    // ...so each sick villager passes it on to fewer than one other before recovering.
+    const perSick = most / 26;
+    expect(perSick * ev.sickSeconds).toBeLessThan(1);
   });
 
   it("spreads to one more villager when the roll succeeds, and never past the population", () => {

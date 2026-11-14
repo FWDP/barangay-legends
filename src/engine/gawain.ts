@@ -6,6 +6,7 @@ import { RESOURCES, type Content, type QuestDef, type Text } from "./content";
 import type { GameState } from "./game";
 import { isConnected } from "./map";
 import { addHistory } from "./people";
+import { shoreCovered } from "./defense";
 
 /** The task to show now, or null when every task is done ("More tasks coming soon"). */
 export function currentTask(state: GameState, content: Content): QuestDef | null {
@@ -64,6 +65,8 @@ export function taskProgress(state: GameState, content: Content, q: QuestDef): {
     }
     case "paramount":
       return { have: state.region?.victory ? 1 : 0, need: 1 };
+    case "shoreCovered":
+      return { have: shoreCovered(state, content).covered, need: c.count };
   }
 }
 

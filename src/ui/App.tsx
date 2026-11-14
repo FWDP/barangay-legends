@@ -12,6 +12,7 @@ import { RegionView } from "./RegionView";
 import { activeBanners, EventBanner } from "./EventBanners";
 import { NoticeStack, StatusIcons, type NoticeView } from "./NoticeStack";
 import { noticeQueue } from "./notices";
+import { landedUncovered, raidReason, raidWarning, type RaidReason } from "../engine/defense";
 import { FloatLayer, spawnFloat } from "./floats";
 import { baleteWarning, bonusRuleText, costText, groveRuleText, RESOURCE_ICON } from "./format";
 import { GatherButtons } from "./GatherButtons";
@@ -52,6 +53,9 @@ import { fill } from "./uiContent";
 import { VERSION_TEXT } from "./version";
 import { arawText, DayChip } from "./Days";
 import { DevPanel, devMode } from "./DevPanel";
+
+/** The ui.json defense key for a raid reason ("uncovered" is taken by the map label). */
+const reasonKey = (r: RaidReason) => (r === "uncovered" ? "uncovered_" : r);
 
 const ui = loadUiContent(content);
 
@@ -368,6 +372,8 @@ export function App() {
   const [queueOpen, setQueueOpen] = useState(false);
   const [loreNote, setLoreNote] = useState<string | null>(null);
   const [view, setViewRaw] = useState<"barangay" | "rehiyon">("barangay");
+  // The Defense map (Depensa tab): every landing point and the Kutas' cover on the map.
+  const [defenseMap, setDefenseMap] = useState(false);
   // Bisitahin: the barangay being visited, over whichever view it was opened from.
   const [visiting, setVisiting] = useState<string | null>(null);
   // Panoorin: the expedition being watched (by record id), over everything else.
@@ -599,6 +605,7 @@ export function App() {
   const fresh = freshExpedition(state, seenExpedition);
   const noticeQueueNow = noticeQueue(state, content, { expeditionFresh: !!fresh, sailing: !!sailingVoyage(state), tradeHeld });
   const eventBanners = new Map(activeBanners(state, content).map((b) => [b.id, b]));
+  const raidCover = raidWarning(state, content);
   const nt = ui.game.notices;
   const offerFrom = state.region?.offer ? (neighborDef(content, state.region.offer.from)?.name ?? state.region.offer.from) : "";
   const expeditionBar = (
@@ -641,7 +648,16 @@ export function App() {
     expedition: fresh ? { node: expeditionBar, label: `🎬 ${fill(nt.expedition[lang], { barangay: neighborDef(content, fresh.to)?.name ?? fresh.to })}` } : undefined,
     sailing: { node: expeditionBar, label: `⛵ ${nt.sailing[lang]}` },
     prank: { node: <PrankBar state={state} content={content} game={ui.game} lang={lang} />, label: `🪓 ${nt.prank[lang]}` },
-    ...Object.fromEntries([...eventBanners.values()].map((b) => [b.id, { node: <EventBanner banner={b} />, label: `${b.icon} ${b.title}` }])),
+    ...Object.fromEntries(
+      [...eventBanners.values()].map((b) => [
+        b.id,
+        {
+          // The raid warning says whether a Kuta covers the landing.
+          node: <EventBanner banner={b} extra={b.id === "raid" && raidCover ? (raidCover.covered ? ui.game.defense.warnCovered[lang] : ui.game.defense.warnUncovered[lang]) : undefined} danger={!!raidCover && !raidCover.covered} />,
+          label: `${b.icon} ${b.title}`,
+        },
+      ]),
+    ),
   };
 
   const gather = useCallback(
@@ -809,7 +825,13 @@ export function App() {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-green-800 pt-[env(safe-area-inset-top)] text-stone-800">
-      <Hud state={state} content={content} level={
+      <Hud state={state} content={content} full={{ label: ui.game.kamalig.full[lang], tip: ui.game.kamalig.fullTip[lang] }}
+        stockpile={{
+          label: ui.game.stockpile.label[lang],
+          stopLabel: ui.game.stockpile.stopLabel[lang],
+          tip: (cap, stop, over, stopped) =>
+            stopped ? fill(ui.game.stockpile.stop[lang], { stop }) : over ? fill(ui.game.stockpile.over[lang], { cap, percent: content.rules.stockpile.slowPercent }) : fill(ui.game.stockpile.tip[lang], { cap }),
+        }} level={
           <LevelChip
             state={state}
             content={content}
@@ -970,6 +992,7 @@ export function App() {
           blockedLabel={(building) => fill(ui.game.doors.blocked[lang], { building })}
           wholeMap={wholeMap}
           plazaLabel={ui.game.doors.plaza[lang]}
+          defense={{ on: defenseMap, text: ui.game.defense, lang }}
           tradeHeld={tradeHeld}
           ritual={ritual}
           onSarimanok={() => {
@@ -1133,6 +1156,11 @@ export function App() {
           lang={lang}
           recommend={recommended(state, content, advisor.message?.kind === "tip" ? advisor.message.trigger : null)}
           onUpgradeDatu={upgradeDatu}
+          defenseMap={defenseMap}
+          onDefenseMap={() => {
+            sfx.click();
+            setDefenseMap((on) => !on);
+          }}
           selected={selected}
           roadActive={roadMode}
           onRoad={() => {
@@ -1188,6 +1216,12 @@ export function App() {
           dispatch({ type: "trainBalangay" });
           sfx.build();
         }}
+        onUpgrade={(x, y) => {
+          dispatch({ type: "upgradeBuilding", x, y });
+          sfx.build();
+        }}
+        game={ui.game}
+        lang={lang}
       />
       <DatuDialog open={datuOpen} state={state} content={content} game={ui.game} lang={lang} onUpgrade={upgradeDatu} onClose={() => setDatuOpen(false)} />
       <RememberedDialog open={rememberedOpen} state={state} content={content} game={ui.game} lang={lang} onClose={() => setRememberedOpen(false)} />
@@ -1259,6 +1293,17 @@ export function App() {
         onSeen={setSeenReport}
         hold={clash !== null || away !== null}
         names={(r) => battleNames(r, state, ui.game, lang)}
+        reason={(r) => (r.kind === "defense" ? ui.game.defense[reasonKey(raidReason(r))][lang] : null)}
+        showLabel={ui.game.defense.showMe[lang]}
+        onShowShore={(r) =>
+          landedUncovered(r)
+            ? () => {
+                setSeenReport(r.id);
+                setView("barangay");
+                setDefenseMap(true);
+              }
+            : null
+        }
         watchLabel={ui.game.expedition.watch[lang]}
         onWatch={(r) => {
           const e = expeditionForReport(state, r.id);

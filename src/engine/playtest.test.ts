@@ -66,10 +66,11 @@ describe("night", () => {
 
   it("offline progress uses the same day and night share", () => {
     expect(nightFactor(content, 0, DAY)).toBeCloseTo(1 - (dn.nightTo - dn.nightFrom) * (1 - dn.nightProductionFactor), 6);
-    // Wood (no season, no granary cap): four whole days bring in the day rate times the day's average factor.
+    // Wood (no season, no granary cap, and here no stockpile limit): four whole days bring in the day rate times the day's average factor.
+    const open = { ...calm, rules: { ...calm.rules, stockpile: { ...calm.rules.stockpile, slowPercent: 0, stopMultiple: Infinity } } };
     const s = withState({ villagers: 6, happiness: 60, resources: { rice: 900 }, buildings: [at("bahay-kubo", 5, 3), at("woodcutter-camp", 3, 3)] });
-    const dayRate = rates({ ...s, time: NOON }, calm).produced.wood;
-    const { report } = offlineProgress(s, calm, 4 * DAY);
+    const dayRate = rates({ ...s, time: NOON }, open).produced.wood;
+    const { report } = offlineProgress(s, open, 4 * DAY);
     expect(dayRate).toBeGreaterThan(0);
     expect(report.produced.wood / (4 * DAY)).toBeCloseTo(dayRate * nightFactor(content, 0, DAY), 2);
   });

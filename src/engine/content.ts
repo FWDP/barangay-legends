@@ -1,4 +1,5 @@
 // Content schema and validation. Buildings, events and balance rules live in content/ as JSON.
+import type { Curve } from "./curve";
 
 export const RESOURCES = ["rice", "wood", "gold"] as const;
 export type Resource = (typeof RESOURCES)[number];
@@ -15,6 +16,14 @@ export interface AdjacencyBonus {
   nextTo: string[];
   /** Extra production, in percent, while the condition holds. Applies once, not per neighbour. */
   percent: number;
+}
+
+/** One level a placed building can be raised to (a Kamalig's bigger granary). */
+export interface BuildingUpgrade {
+  level: number;
+  cost: ResourceAmounts;
+  /** Storage the copy holds at this level (replaces the level-1 storage). */
+  storage?: ResourceAmounts;
 }
 
 export interface BuildingDef {
@@ -48,8 +57,10 @@ export interface BuildingDef {
   placeNextTo?: string[];
   /** Works at the normal rate at night (night fishing); other buildings slow down at night. */
   nightWork?: boolean;
-  /** Storage added per copy (a Kamalig: +100 rice). */
+  /** Storage added per copy at level 1 (a Kamalig). */
   storage?: ResourceAmounts;
+  /** Levels a placed copy can be raised to (2, 3…), each with its cost and the storage it then holds. */
+  upgrades?: BuildingUpgrade[];
   /** A shrine (the Dambana): where offerings and rituals happen. */
   shrine?: boolean;
   /** It must stand within `radius` tiles (straight line) of a standing building of this type. */
@@ -73,7 +84,8 @@ export interface Rules {
   };
   baseHousing: number;
   riceEatenPerVillagerPerSecond: number;
-  costGrowth: number;
+  /** How each copy's price rises: base × (1 + linear·n + quadratic·n²) after n copies (curve.ts). */
+  costCurve: Curve;
   gatherPerClick: number;
   secondsPerNewVillager: number;
   /** When there are more villagers than houses shelter (a house was demolished), one leaves this often. */
@@ -98,6 +110,8 @@ export interface Rules {
   sea: { secondsPerUnit: number; minSeconds: number; raidWarriorsPerBoat: number };
   politics: PoliticsRules;
   allyDefense: { landSeconds: number; landSecondsPerUnit: number; balangayMinVillagers: number };
+  /** An ally raided: its messenger's call for help (region.ts allyCall). */
+  allyCalls: { startsAfterSeconds: number; chancePerSecond: number; cooldownSeconds: number; warningSeconds: number; sendPercent: number; renown: number; ignoreTrust: number };
   kabantugan: KabantuganRules;
   limits: LimitRules;
   /** Expedition records kept for replays (expeditions.ts), envoys sent on a trade, and the most sprites a replay draws. */
@@ -106,6 +120,10 @@ export interface Rules {
   mourning: { seconds: number; maxSeconds: number; happiness: number };
   /** Rice the barangay holds with no Kamalig. */
   storage: { baseRice: number };
+  /** The wood and gold soft cap (stockpile.ts): multiple × the next big purchase, at least minimum; above it production is slowPercent lower, and above stopMultiple × the cap none comes in. */
+  stockpile: { multiple: number; minimum: Partial<Record<Resource, number>>; slowPercent: number; stopMultiple: number };
+  /** AI barangays: how many forest tiles they queue at a time when they run out of room. */
+  aiGrowth: { clearTiles: number };
   happiness: HappinessRules;
 }
 
@@ -400,9 +418,11 @@ export type QuestCondition =
   | { type: "voyages"; count: number }
   | { type: "leadBloc" }
   | { type: "blocMembers"; count: number }
-  | { type: "paramount" };
+  | { type: "paramount" }
+  /** Landing points on the barangay's shore within a standing Kuta's radius (defense.ts). */
+  | { type: "shoreCovered"; count: number };
 
-export const QUEST_CONDITIONS = ["built", "villagers", "tilesCleared", "connected", "survivedSeason", "traded", "warriors", "raidsDefended", "tributaries", "aklat", "replanted", "permittedClears", "datuLevel", "voyages", "leadBloc", "blocMembers", "paramount"] as const;
+export const QUEST_CONDITIONS = ["built", "villagers", "tilesCleared", "connected", "survivedSeason", "traded", "warriors", "raidsDefended", "tributaries", "aklat", "replanted", "permittedClears", "datuLevel", "voyages", "leadBloc", "blocMembers", "paramount", "shoreCovered"] as const;
 
 /** One of the Mga Gawain: a task in a chain, with a reward (resources and/or a title for the datu). */
 export interface QuestDef {
@@ -487,6 +507,9 @@ export interface ChoiceEffects {
   joinWar?: boolean;
   /** Send this percent of the warriors at home to defend the ally against {enemy} (a battle). */
   defendAlly?: number;
+  /** Answer an ally's call for help (rules.allyCalls: warriors sent, trust and renown), or let it go unanswered (trust lost). */
+  answerAllyCall?: boolean;
+  ignoreAllyCall?: boolean;
 }
 
 export type ResourceAmountsSigned = Partial<Record<Resource, number>>;
@@ -512,6 +535,8 @@ export interface ChoiceConditions {
   minVillagers?: number;
   /** An ally (sandugo, or in the player's bloc) whose bloc is at war: the event's neighbor; {enemy} is a member of the other side. */
   allyAtWar?: boolean;
+  /** The call for help when an ally is raided: never drawn at random, it comes with the raid (region.ts). */
+  allyCall?: boolean;
 }
 
 /** A short story with 2–3 choices (content/events/choices). */
@@ -683,8 +708,8 @@ export interface MapRules {
 /** Clearing a forest tile: villagers work for a while and bring back some wood. */
 export interface ClearingRules {
   baseSeconds: number;
-  /** Each tile cleared so far multiplies the time by this. */
-  secondsGrowth: number;
+  /** How time and cost rise with each tile cleared or queued: × (1 + linear·n + quadratic·n²) (curve.ts). */
+  growth: Curve;
   /** Rice (or other goods) paid upfront for the first tile; later tiles cost more, like the time. */
   cost: ResourceAmounts;
   /** Free villagers each clearing job needs (villagers not working in a building). */
@@ -748,7 +773,8 @@ export interface SicknessEvent extends DisasterBase {
   /** Chance per second, per sick villager, that one more falls sick. */
   spreadChancePerSecond: number;
   /** Each pair of these buildings sharing an edge raises the spread chance by this percent. */
-  crowding: { building: string; percentPerAdjacentPair: number };
+  /** Crowded houses spread it faster: percentPerAdjacentPair for each pair, up to maxPercent in all. */
+  crowding: { building: string; percentPerAdjacentPair: number; maxPercent?: number };
 }
 
 /** Sunog: a building catches fire, spreads to neighbours of the same type, and burns down (damaged). */
@@ -897,6 +923,14 @@ export function validateBuilding(raw: unknown, file = "building"): BuildingDef {
     throw new Error(`${file}: "placeNextTo" must list terrains (${TERRAINS.join(", ")})`);
   }
   if (raw.storage !== undefined) checkAmounts(raw.storage, `${file}: storage`);
+  if (raw.upgrades !== undefined) {
+    if (!Array.isArray(raw.upgrades) || raw.upgrades.length === 0) throw new Error(`${file}: "upgrades" must list levels`);
+    raw.upgrades.forEach((u, i) => {
+      if (!isObject(u) || u.level !== i + 2) throw new Error(`${file}: upgrades must run level 2, 3… in order`);
+      checkAmounts(u.cost, `${file}: upgrade level ${i + 2} cost`);
+      if (u.storage !== undefined) checkAmounts(u.storage, `${file}: upgrade level ${i + 2} storage`);
+    });
+  }
   if (raw.nightWork !== undefined && typeof raw.nightWork !== "boolean") throw new Error(`${file}: "nightWork" must be true or false`);
   if (raw.burial !== undefined && (!isObject(raw.burial) || !isNonNegNumber(raw.burial.mourningPercentFaster))) throw new Error(`${file}: "burial.mourningPercentFaster" must be a number >= 0`);
   if (raw.datuHouse !== undefined) {
@@ -929,6 +963,10 @@ export function validateBuilding(raw: unknown, file = "building"): BuildingDef {
   return raw as unknown as BuildingDef;
 }
 
+function checkCurve(raw: unknown, where: string) {
+  if (!isObject(raw) || !isNonNegNumber(raw.linear) || !isNonNegNumber(raw.quadratic)) throw new Error(`${where} needs "linear" and "quadratic" numbers >= 0`);
+}
+
 export function validateRules(raw: unknown): Rules {
   if (!isObject(raw) || !isObject(raw.start)) throw new Error("rules: missing \"start\"");
   checkAmounts(raw.start.resources, "rules: start.resources");
@@ -937,12 +975,12 @@ export function validateRules(raw: unknown): Rules {
   for (const key of [
     "baseHousing",
     "riceEatenPerVillagerPerSecond",
-    "costGrowth",
     "gatherPerClick",
     "secondsPerNewVillager",
   ]) {
     if (!isNonNegNumber(raw[key])) throw new Error(`rules: "${key}" must be a number >= 0`);
   }
+  checkCurve(raw.costCurve, "rules: costCurve");
   const map = raw.map;
   if (!isObject(map)) throw new Error('rules: missing "map"');
   for (const key of ["width", "height", "startClearRadius", "riverWidth", "baleteTrees", "baleteMinDistance"]) {
@@ -963,7 +1001,8 @@ export function validateRules(raw: unknown): Rules {
   if ((placement.demolishRefundPercent as number) > 100) throw new Error("rules: placement.demolishRefundPercent can't be over 100");
   const clearing = raw.clearing;
   if (!isObject(clearing)) throw new Error('rules: missing "clearing"');
-  checkNumbers(clearing, ["baseSeconds", "secondsGrowth", "wood"], "rules: clearing", false);
+  checkNumbers(clearing, ["baseSeconds", "wood"], "rules: clearing", false);
+  checkCurve(clearing.growth, "rules: clearing.growth");
   checkNumbers(clearing, ["workers"], "rules: clearing", true);
   checkAmounts(clearing.cost, "rules: clearing.cost");
   const borrow = clearing.borrow;
@@ -1046,6 +1085,9 @@ export function validateRules(raw: unknown): Rules {
     throw new Error('rules: "gatherable" must list resources');
   }
   if (!isObject(raw.storage) || !isNonNegNumber(raw.storage.baseRice)) throw new Error('rules: "storage.baseRice" must be a number >= 0');
+  if (!isObject(raw.stockpile) || !isNonNegNumber(raw.stockpile.multiple) || !isNonNegNumber(raw.stockpile.slowPercent) || (raw.stockpile.slowPercent as number) > 100 || typeof raw.stockpile.stopMultiple !== "number" || (raw.stockpile.stopMultiple as number) < 1) throw new Error('rules: "stockpile" needs "multiple", "slowPercent" (0-100) and "stopMultiple" (>= 1)');
+  checkAmounts(raw.stockpile.minimum, "rules: stockpile.minimum");
+  if (!isObject(raw.aiGrowth) || !Number.isInteger(raw.aiGrowth.clearTiles) || (raw.aiGrowth.clearTiles as number) < 1) throw new Error('rules: "aiGrowth.clearTiles" must be a whole number >= 1');
   if (!isObject(raw.happiness)) throw new Error('rules: missing "happiness"');
   checkNumbers(raw.happiness, ["start", "maxEffectPercent", "pointsPerSecond", "plazaRadius", "perHouseNearPlaza", "maxFromHouses"], "rules: happiness");
   for (const key of ["hungry", "perSick", "maxFromSick"]) {
@@ -1087,6 +1129,7 @@ export function validateRules(raw: unknown): Rules {
     ["sea", ["secondsPerUnit", "minSeconds", "raidWarriorsPerBoat"]],
     ["politics", ["startsAfterSeconds", "minGapSeconds", "chancePerSecond", "warTickSeconds", "warLossPercent", "joinTrust", "maxGrudge", "leaveTrustLoss", "expelTrustLoss", "solidarityPercent"]],
     ["allyDefense", ["landSeconds", "landSecondsPerUnit", "balangayMinVillagers"]],
+    ["allyCalls", ["startsAfterSeconds", "chancePerSecond", "cooldownSeconds", "warningSeconds", "sendPercent", "renown", "ignoreTrust"]],
   ] as const) {
     const g = raw[key];
     if (!isObject(g)) throw new Error(`rules: missing "${key}"`);
@@ -1170,6 +1213,7 @@ export function validateEvent(raw: unknown, file = "event"): EventDef {
       if (!isObject(raw.crowding) || typeof raw.crowding.building !== "string" || !isNonNegNumber(raw.crowding.percentPerAdjacentPair)) {
         throw new Error(`${file}: "crowding" needs a "building" id and "percentPerAdjacentPair"`);
       }
+      if (raw.crowding.maxPercent !== undefined && !isNonNegNumber(raw.crowding.maxPercent)) throw new Error(`${file}: "crowding.maxPercent" must be a number >= 0`);
       break;
     case "fire":
       checkStrings(raw, ["icon", "target"], file);
@@ -1239,7 +1283,7 @@ export function validateNeighbor(raw: unknown, file = "neighbor"): NeighborDef {
   return raw as unknown as NeighborDef;
 }
 
-const CHOICE_EFFECTS = ["resources", "villagers", "sick", "trust", "influence", "joinWar", "defendAlly"];
+const CHOICE_EFFECTS = ["resources", "villagers", "sick", "trust", "influence", "joinWar", "defendAlly", "answerAllyCall", "ignoreAllyCall"];
 const MAX_CHOICE_EFFECT = 1000;
 
 /** Checks one choice event file. Building and season ids are checked in buildContent. */
@@ -1263,17 +1307,20 @@ export function validateChoice(raw: unknown, file = "choice"): ChoiceEventDef {
   }
   if (c.allied !== undefined && c.allied !== true) throw new Error(`${file}: "conditions.allied" can only be true`);
   if (c.allyAtWar !== undefined && c.allyAtWar !== true) throw new Error(`${file}: "conditions.allyAtWar" can only be true`);
+  if (c.allyCall !== undefined && c.allyCall !== true) throw new Error(`${file}: "conditions.allyCall" can only be true`);
   if (c.minVillagers !== undefined && (!Number.isInteger(c.minVillagers) || (c.minVillagers as number) < 0)) {
     throw new Error(`${file}: "conditions.minVillagers" must be a whole number >= 0`);
   }
   for (const k of Object.keys(c)) {
-    if (!["season", "hasBuilding", "lacksBuilding", "allied", "minVillagers", "allyAtWar"].includes(k)) throw new Error(`${file}: unknown condition "${k}"`);
+    if (!["season", "hasBuilding", "lacksBuilding", "allied", "minVillagers", "allyAtWar", "allyCall"].includes(k)) throw new Error(`${file}: unknown condition "${k}"`);
   }
   raw.conditions = c;
   if (!Array.isArray(raw.choices) || raw.choices.length < 2 || raw.choices.length > 3) throw new Error(`${file}: needs 2 or 3 "choices"`);
   const ids = new Set<string>();
   const usesNeighbor = raw.neighbor !== undefined || c.allied === true;
-  const atWar = c.allyAtWar === true;
+  // A call for help names the raider as {enemy}, like a war.
+  const atWar = c.allyAtWar === true || c.allyCall === true;
+  const call = c.allyCall === true;
   raw.choices.forEach((o, i) => {
     const where = `${file}: choices[${i}]`;
     if (!isObject(o)) throw new Error(`${where} must be an object`);
@@ -1292,6 +1339,8 @@ export function validateChoice(raw: unknown, file = "choice"): ChoiceEventDef {
         }
       } else if (k === "joinWar") {
         if (v !== true || !atWar) throw new Error(`${where}: "joinWar" can only be true, in an event with "allyAtWar"`);
+      } else if (k === "answerAllyCall" || k === "ignoreAllyCall") {
+        if (v !== true || !call) throw new Error(`${where}: "${k}" can only be true, in an event with "allyCall"`);
       } else if (k === "defendAlly") {
         if (!Number.isInteger(v) || (v as number) < 1 || (v as number) > 100 || !atWar) throw new Error(`${where}: "defendAlly" must be 1–100, in an event with "allyAtWar"`);
       } else if (!Number.isInteger(v) || Math.abs(v as number) > MAX_CHOICE_EFFECT) {

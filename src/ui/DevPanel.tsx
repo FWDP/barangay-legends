@@ -1,6 +1,7 @@
 // The hidden dev panel, only with ?dev=1 in the address. Every action is an ordinary command
 // (type "dev"), so saves stay valid; a save that used one is marked as a dev save. "Whole map"
 // only moves the camera. For testers, not players: its labels stay in English.
+import { raidableAllies } from "../engine/region";
 import { useState } from "react";
 import type { Content } from "../engine/content";
 import { DEV_EVENTS, MAX_FAST_FORWARD_DAYS, type DevAction, type DevEvent } from "../engine/dev";
@@ -22,7 +23,11 @@ export function DevPanel(props: { state: GameState; content: Content; dispatch: 
   const [open, setOpen] = useState(false);
   const [event, setEvent] = useState<DevEvent>("fire");
   const dev = (c: DevAction) => dispatch({ type: "dev", ...c });
-  const events: DevEvent[] = [...DEV_EVENTS, ...content.choices.map((c) => `choice:${c.id}` as DevEvent)];
+  // (The call for help comes with a raid on an ally: see "raid ally" below.)
+  const events: DevEvent[] = [...DEV_EVENTS, ...content.choices.filter((c) => !c.conditions.allyCall).map((c) => `choice:${c.id}` as DevEvent)];
+  const allies = raidableAllies(state);
+  const [ally, setAlly] = useState("");
+  const target = allies.some((a) => a.id === ally) ? ally : (allies[0]?.id ?? "");
   return (
     <div data-map-overlay className="pointer-events-auto fixed bottom-2 left-2 z-[60] max-w-[min(20rem,calc(100vw-1rem))] rounded-lg border-2 border-lime-400 bg-stone-900/95 p-1.5 font-mono text-[11px] text-lime-100 shadow-xl">
       <button type="button" className="font-bold text-lime-300" onClick={() => setOpen(!open)} aria-expanded={open}>
@@ -62,6 +67,25 @@ export function DevPanel(props: { state: GameState; content: Content; dispatch: 
             <button type="button" className={btn} onClick={() => dev({ action: "trigger", event: "raid" })}>
               raid
             </button>
+          </div>
+          <div className="flex flex-wrap items-center gap-1">
+            🐚
+            {allies.length === 0 ? (
+              <span className="text-lime-300/70">no ally to raid (sandugo or bloc)</span>
+            ) : (
+              <>
+                <select value={target} onChange={(e) => setAlly(e.target.value)} className="max-w-36 rounded bg-stone-800 px-1 text-[11px] text-lime-100">
+                  {allies.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {content.neighbors.find((n) => n.id === a.id)?.name ?? a.id}
+                    </option>
+                  ))}
+                </select>
+                <button type="button" className={btn} disabled={!!state.choice || !!state.region?.allyCall} onClick={() => dev({ action: "allyRaid", ally: target })}>
+                  raid ally
+                </button>
+              </>
+            )}
           </div>
           <div className="flex flex-wrap items-center gap-1">
             🕒

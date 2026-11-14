@@ -52,7 +52,10 @@ import { spawnFloat } from "./floats";
 import { NightLayer } from "./NightLayer";
 import { bonusPreviewText, RESOURCE_ICON } from "./format";
 import { activeJobs, jobCost, workforce } from "../engine/clearing";
-import { landingCandidates, raidLanding } from "../engine/border";
+import { raidLanding } from "../engine/border";
+import { shoreCoverage } from "../engine/defense";
+import { fill, type GameText } from "./uiContent";
+import type { Lang } from "./settings";
 import { useReducedMotion, VillagerLayer, type Clash, type NamedHit } from "./VillagerLayer";
 import type { NamedVillager } from "../engine/people";
 import { dockPoint, riverPath, SAIL_SECONDS, waitIndex } from "./visitors";
@@ -94,6 +97,8 @@ interface BuildingInfo {
   paused: boolean;
   /** Workers lent to clearing forest right now. */
   lent: number;
+  /** Raised to this level (a Kamalig); 1 when not raised. */
+  level: number;
   damaged: boolean;
   burning: boolean;
   repairText: string;
@@ -155,8 +160,10 @@ export function BarangayMap(props: {
   blockedLabel?: (building: string) => string;
   /** The warning for a tile that would close the plaza in. */
   plazaLabel?: string;
+  /** The Defense map (Depensa tab): every landing point and the Kutas' cover; and its words. */
+  defense?: { on: boolean; text: GameText["defense"]; lang: Lang } | null;
 }) {
-  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onVillager, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null, selection = [], onSelectArea, focus = null, tradeHeld = false, onSarimanok, ritual = null, visit = null, blockedLabel, plazaLabel, wholeMap = 0, overlay } = props;
+  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onVillager, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null, selection = [], onSelectArea, focus = null, tradeHeld = false, onSarimanok, ritual = null, visit = null, blockedLabel, plazaLabel, wholeMap = 0, overlay, defense = null } = props;
   // The rectangle being dragged over the forest (desktop), from its first tile to the current one.
   const [dragArea, setDragArea] = useState<{ from: Point; to: Point } | null>(null);
   // Tiles being painted with a mouse drag in road mode (laid on release).
@@ -258,6 +265,7 @@ export function BarangayMap(props: {
         noPath: stranded.has(b),
         paused: b.paused === true,
         lent: lentOut[i] ?? 0,
+        level: b.level ?? 1,
         damaged: b.damaged === true,
         burning: b.burningSince !== undefined,
         repairText: repair || "free",
@@ -289,8 +297,7 @@ export function BarangayMap(props: {
   const placement = useMemo(() => {
     if (!placing || !range) return null;
     const taken = occupancy(plan);
-    const banks = placing.defense ? landingCandidates(plan.map) : [];
-    return new Map<string, { adjacency: number; grove: number; road: number; noPath: boolean; bank: number }>(
+    return new Map<string, { adjacency: number; grove: number; road: number; noPath: boolean; bank: number; shore: string }>(
       validTiles(plan, content, placing, range)
         .filter((t) => !(moveFrom && t.x === moveFrom.x && t.y === moveFrom.y))
         .map((t) => {
@@ -298,11 +305,25 @@ export function BarangayMap(props: {
           const g = grove ? groveBonusAt(plan.map, content, placing, t.x, t.y, grove.resource) : 0;
           const road = placing.produces && isConnected(plan.map, t.x, t.y) ? content.rules.roads.connectedBonusPercent / 100 : 0;
           const noPath = (placing.workers ?? 0) > 0 && !wouldHaveEntrance(plan, content, t.x, t.y);
-          const bank = placing.defense ? banks.filter((p) => Math.hypot(p.x - t.x, p.y - t.y) <= content.rules.military.kutaRadius).length : 0;
-          return [`${t.x},${t.y}`, { adjacency, grove: g, road, noPath, bank }];
+          // The landing points (the engine's own, see defense.ts) a Kuta here would cover.
+          let bank = 0;
+          let shore = "";
+          if (placing.defense) {
+            const cover = shoreCoverage(plan, content, t);
+            bank = cover.filter((s) => s.byNew).length;
+            const union = cover.filter((s) => s.covered || s.byNew).length;
+            const dt = defense?.text;
+            const lang = defense?.lang ?? "en";
+            shore = cover.length === 0
+              ? (dt?.noShore[lang] ?? "No shore where raiders can land")
+              : bank === 0
+                ? (dt?.placingNone[lang] ?? "🛡️ Covers no landing point")
+                : fill(dt?.placing[lang] ?? "🛡️ Covers {covered} of {total} landing points ({left} left uncovered)", { covered: union, total: cover.length, left: cover.length - union });
+          }
+          return [`${t.x},${t.y}`, { adjacency, grove: g, road, noPath, bank, shore }];
         }),
     );
-  }, [placing, plan.buildings, plan.map, content, rangeKey, moveFrom?.x, moveFrom?.y]);
+  }, [placing, plan.buildings, plan.map, content, rangeKey, moveFrom?.x, moveFrom?.y, defense?.lang]);
 
   // Placing a bridge: the crossing it would make from the hovered tile, drawn in full (or a red
   // "Can't cross here" on river where it can't).
@@ -345,7 +366,7 @@ export function BarangayMap(props: {
     if (placing?.defense && hover) guardCenters.push(hover);
     const focused = focus ? state.buildings.find((b) => b.x === focus.x && b.y === focus.y) : undefined;
     if (focused && kutaIds.has(focused.type)) guardCenters.push(focused);
-    if (landing || placing?.defense || visit) for (const b of state.buildings) if (kutaIds.has(b.type) && !b.damaged) guardCenters.push(b);
+    if (landing || placing?.defense || visit || defense?.on) for (const b of state.buildings) if (kutaIds.has(b.type) && !b.damaged) guardCenters.push(b);
   }
   const guardKey = guardCenters.map((p) => `${p.x},${p.y}`).join(";");
   const guard = useMemo(() => {
@@ -360,6 +381,17 @@ export function BarangayMap(props: {
     }
     return tiles;
   }, [guardKey, rangeKey, radius]);
+
+  // The landing points on the shore: shown while placing a Kuta (with what the new one would
+  // cover), on the Defense map, and while a raid is coming. Green: a Kuta covers it.
+  const showShore = !scenic && !visit && (!!defense?.on || !!placing?.defense || !!landing);
+  const planned = placing?.defense && hover && placement?.has(`${hover.x},${hover.y}`) ? hover : null;
+  const shore = useMemo(() => {
+    const out = new Map<string, "covered" | "new" | "open">();
+    if (!showShore) return out;
+    for (const s of shoreCoverage(plan, content, planned)) out.set(`${s.p.x},${s.p.y}`, s.covered ? "covered" : s.byNew ? "new" : "open");
+    return out;
+  }, [showShore, plan.buildings, plan.map, content, planned?.x, planned?.y]);
 
   // Now and then a kapre rests in a balete. Which trees, and when, comes from a hash of the
   // tree's position and the current time window, so it's stable for a while (UI only).
@@ -726,6 +758,8 @@ export function BarangayMap(props: {
             }
             glow={glow.has(key)}
             guard={guard.has(key)}
+            shore={shore.get(key)}
+            shoreText={shore.has(key) && defense ? `${defense.text.landing[defense.lang]}: ${shore.get(key) === "open" ? defense.text.uncovered[defense.lang] : defense.text.covered[defense.lang]}` : undefined}
             deck={decks.get(key) ?? (tile === "bridge" ? FALLBACK_DECK : null)}
             deckPreview={crossingDecks.get(key) ?? null}
             cantCross={cantCross && hovered}
@@ -1052,6 +1086,9 @@ const Cell = memo(function Cell(props: {
   picked?: boolean;
   /** Inside a Kuta's defense radius (shown while placing or looking at a Kuta, and during a raid warning). */
   guard?: boolean;
+  /** A landing point on the shore: covered by a Kuta, covered by the Kuta being placed, or open. */
+  shore?: "covered" | "new" | "open";
+  shoreText?: string;
   /** A bridge deck on this tile, and a planned one (placing a Tulay). */
   deck?: BridgeTile | null;
   deckPreview?: BridgeTile | null;
@@ -1062,7 +1099,7 @@ const Cell = memo(function Cell(props: {
   /** Land by the sea: drawn as sandy beach. */
   beach?: boolean;
 }) {
-  const { x, y, tile, plaza, datuLevel, houseStyle, building, fresh, lifted, target, ghost, glow, spirit, onSpiritKey, clearable, hint, progress, onActivate, pathPreview, waiting, picked, guard, deck, deckPreview, cantCross, beach, warn } = props;
+  const { x, y, tile, plaza, datuLevel, houseStyle, building, fresh, lifted, target, ghost, glow, spirit, onSpiritKey, clearable, hint, progress, onActivate, pathPreview, waiting, picked, guard, deck, deckPreview, cantCross, beach, warn, shore, shoreText } = props;
   const h = hash(x, y);
   const valid = typeof target === "number";
   const paddy = building?.def.produces?.rice;
@@ -1086,6 +1123,18 @@ const Cell = memo(function Cell(props: {
         </span>
       )}
       {guard && <div aria-hidden className="pointer-events-none absolute inset-0 bg-sky-200/15 shadow-[inset_0_0_10px_rgb(186_230_253_/_0.45)]" />}
+      {shore && (
+        <div
+          role="img"
+          aria-label={shoreText}
+          title={shoreText}
+          className={`pointer-events-none absolute inset-[6%] z-[2] flex items-center justify-center rounded-full border-[0.06em] border-dashed ${
+            shore === "open" ? "border-red-600 bg-red-500/30" : shore === "new" ? "border-lime-300 bg-lime-400/35 motion-safe:animate-pulse" : "border-emerald-700 bg-emerald-500/30"
+          }`}
+        >
+          <span aria-hidden className="text-[0.4em] leading-none">{shore === "open" ? "⚠️" : "🛡️"}</span>
+        </div>
+      )}
       {glow && (
         <div aria-hidden className="pointer-events-none absolute inset-0 bg-amber-200/20 shadow-[inset_0_0_14px_rgb(253_230_138_/_0.55)]" />
       )}
@@ -1248,8 +1297,9 @@ interface GhostInfo {
   road: number;
   /** Workers couldn't walk here. */
   noPath: boolean;
-  /** For a Kuta: river-bank landing spots within its defense radius. */
+  /** For a Kuta: landing points within its defense radius, and the line saying so. */
   bank: number;
+  shore: string;
 }
 
 const totalBonus = (b: { adjacency: number; grove: number; road: number }) => b.adjacency + b.grove + b.road;
@@ -1262,14 +1312,14 @@ function ArtOrIcon({ def }: { def: BuildingDef }) {
 }
 
 function Ghost({ info }: { info: GhostInfo }) {
-  const { def, adjacency, grove, groveName, road, noPath, bank } = info;
+  const { def, adjacency, grove, groveName, road, noPath, bank, shore } = info;
   if (def.defense) {
     return (
       <>
         <span aria-hidden className="pointer-events-none leading-none opacity-60 select-none">
           <ArtOrIcon def={def} />
         </span>
-        <Label text={bank > 0 ? `🛡️ Guards the river bank (${bank} landing spots in reach)` : "🛡️ No river bank in reach: raiders land at the shore"} good={bank > 0} />
+        <Label text={shore} good={bank > 0} />
       </>
     );
   }
@@ -1334,7 +1384,7 @@ function Building(props: {
   onActivate: (x: number, y: number, el: Element) => void;
 }) {
   const { x, y, info, fresh, lifted, onActivate } = props;
-  const { def, bonus, damaged, burning, repairText, connected, noPath, paused, lent, burialLook } = info;
+  const { def, bonus, damaged, burning, repairText, connected, noPath, paused, lent, burialLook, level } = info;
   // Decided once, at mount: only buildings that were just built bounce in.
   const [bounce] = useState(fresh);
   const label = burning
@@ -1347,7 +1397,7 @@ function Building(props: {
         ? `${def.name}: no path. Workers can't walk here. Tap to move or demolish`
         : bonus > 0
           ? `${def.name}, +${Math.round(bonus * 100)}% bonus${connected ? ", connected by Daan" : ""}. Tap to move or demolish`
-          : `${def.name}. Tap to move or demolish`;
+          : `${def.name}${level > 1 ? ` (level ${level})` : ""}. Tap to move or demolish`;
   return (
     <>
       {lifted && (
@@ -1430,6 +1480,12 @@ function Building(props: {
       {bonus > 0 && !damaged && (
         <span aria-hidden className="pointer-events-none absolute top-0 right-0.5 text-[0.3em] leading-none">
           ✨
+        </span>
+      )}
+      {/* A raised building's level, on the ground below it (like the Bahay ng Datu's). */}
+      {level > 1 && (
+        <span aria-hidden className="pointer-events-none absolute bottom-[-6%] left-1/2 -translate-x-1/2 rounded-full border-[0.03em] border-amber-900 bg-amber-300 px-[0.2em] text-[0.22em] leading-tight font-bold whitespace-nowrap text-amber-950 shadow">
+          Lv {level}
         </span>
       )}
     </>

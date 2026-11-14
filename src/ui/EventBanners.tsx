@@ -118,7 +118,8 @@ const TONE = {
   info: "border-amber-950/70 wood-panel text-amber-50",
 } as const;
 
-export function EventBanner({ banner }: { banner: Banner }) {
+/** An event banner; `extra` is one more line (the raid warning: is the landing covered?), `danger` makes it stand out. */
+export function EventBanner({ banner, extra, danger = false }: { banner: Banner; extra?: string; danger?: boolean }) {
   return (
     <div
       role={banner.tone === "info" ? "status" : "alert"}
@@ -129,6 +130,7 @@ export function EventBanner({ banner }: { banner: Banner }) {
       </span>
       <span className="min-w-0 text-xs leading-tight sm:text-sm">
         <span className="font-display text-sm sm:text-base">{banner.title}</span> {banner.text}
+        {extra && <span className={`mt-0.5 block font-semibold ${danger ? "rounded bg-red-950/40 px-1 text-yellow-200" : ""}`}>{extra}</span>}
       </span>
     </div>
   );

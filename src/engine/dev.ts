@@ -7,6 +7,7 @@ import { chooseLanding } from "./border";
 import type { GameState } from "./game";
 import { setTiles, tileAt } from "./map";
 import { addFlag } from "./worship";
+import { allyRaiders, raidableAllies, startAllyCall } from "./region";
 
 /** Events the dev panel can start. "choice:<id>" starts a choice event. */
 export const DEV_EVENTS = ["fire", "typhoon", "sickness", "eclipse", "tikbalang", "sarimanok", "raid", "offer"] as const;
@@ -17,7 +18,9 @@ export type DevAction =
   | { action: "addResources"; amounts: ResourceAmounts }
   | { action: "trigger"; event: DevEvent }
   | { action: "setTime"; phase: "day" | "night" }
-  | { action: "clearForest" };
+  | { action: "clearForest" }
+  /** An ally (sandugo or bloc mate) is raided: its messenger's call for help comes now. */
+  | { action: "allyRaid"; ally: string };
 
 /** At most this many days per fast-forward (each day is simulated second by second). */
 export const MAX_FAST_FORWARD_DAYS = 10;
@@ -67,6 +70,12 @@ function devAction(state: GameState, content: Content, cmd: DevAction, run: (s: 
     }
     case "trigger":
       return trigger(state, content, cmd.event);
+    case "allyRaid": {
+      if (!raidableAllies(state).some((a) => a.id === cmd.ally)) return state;
+      // Their usual raiders, or any other barangay with warriors.
+      const from = allyRaiders(state, content, cmd.ally)[0] ?? state.region!.neighbors.find((n) => n.id !== cmd.ally && n.status !== "ally" && n.state.warriors > 0);
+      return from ? startAllyCall(state, content, cmd.ally, from.id, Math.floor(state.time)) : state;
+    }
   }
 }
 

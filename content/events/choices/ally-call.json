@@ -1,0 +1,32 @@
+{
+  "id": "ally-call",
+  "title": "A messenger calls for help",
+  "icon": "🐚",
+  "story": "A messenger runs up to the Bahay ng Datu, out of breath: warriors from {enemy} are sailing to raid {neighbor}. {datu} asks you to send defenders before they land.",
+  "neighbor": "ally",
+  "conditions": {
+    "allyCall": true
+  },
+  "weight": 1,
+  "choices": [
+    {
+      "id": "send",
+      "label": "Send warriors to stand with them",
+      "result": "Your Mandirigma run to {neighbor}'s shore to fight beside them.",
+      "effects": {
+        "answerAllyCall": true
+      }
+    },
+    {
+      "id": "refuse",
+      "label": "Keep our warriors home",
+      "result": "{neighbor} meets {enemy} alone. {datu} will remember who came and who did not.",
+      "effects": {
+        "ignoreAllyCall": true
+      }
+    }
+  ],
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+  ]
+}

@@ -13,7 +13,7 @@
     "wood": 12
   },
   "produces": {
-    "gold": 0.2
+    "gold": 0.1
   },
   "workers": 3,
   "nightWork": true,
@@ -24,7 +24,7 @@
     "villagers": 15
   },
   "sources": [
-    "docs/game-design.md (cost, +0.2 gold/s per worker, 3 workers, unlock at 15 villagers)",
+    "docs/game-design.md (cost, 3 workers, unlock at 15 villagers; gold per worker lowered from 0.2 to 0.1 by the balance pass, npm run simulate)",
     "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
   ]
 }

@@ -1,5 +1,5 @@
 {
-  "_comment": "Core balance numbers. Values marked in docs/game-design.md are copied here; the rest are playtest guesses. map: size and features of the generated map (seaDepth: rows of sea along the bottom edge, the coast). placement: undo window after building, moving cost (percent of the current price) and demolish refund (percent of what the last copy cost). secondsPerVillagerLeavingOvercrowded: when demolished houses leave more villagers than shelter, one leaves this often. clearing: the cost of turning forest into buildable land; seconds and the rice cost (cost, paid upfront per tile) grow by secondsGrowth for every tile cleared or queued; each job needs `workers` free villagers (not working in a building); when none are free, clearing borrows from workplaces in `borrow.order` first, then the busiest, never from `borrow.protect` while rice would last less than protectBelowRiceSeconds. military/diplomacy: warriors, battles and the four paths to absorb a neighbor (trade, marriage alliance, sandugo, mangayaw); all placeholders for playtesting. choices: choice events (content/events/choices); minGapSeconds is the 4-minute limit, the start time and chance are playtest guesses. offline: time away credited on return (maxSeconds is the 8-hour cap from docs/game-design.md); the rest only set how coarse, and so how fast, the offline steps are. roads: Daan footpaths (cost per tile, the Connected output bonus for buildings joined to the plaza by an unbroken Daan, and how much faster villagers walk on them, which is visual only); playtest guesses. Raids at the border: raiders land on a river bank, picked among the aiRaid.landingChoices spots nearest the barangay; a Kuta gives its full defense only if the landing is within military.kutaRadius tiles, kutaOutsidePercent of it otherwise; warriors walk military.warriorTilesPerSecond (forest is slower) and only fight if they get there within the raid warning. The player's raids on AI barangays follow the same rules (engine/battle.ts) on the target's generated village, with the landing rolled once per day (Araw), so the visit preview holds; the target's bloc mates come if they arrive within the same warning. aiRaid.lootTargets is where winning raiders go for loot, first one that exists ('kamalig' is listed for when it's built). Playtest guesses. Mandirigma are part-time: they work like any villager except while a raid is coming (they go to meet it) or while away guarding; each Kuta allows military.warriorsPerKuta of them. staffing: below foodFirstBelowRiceSeconds of rice, food workplaces are filled first; the adviser warns once if rice is falling and fewer than foodWorkersWarnPercent of villagers grow food. diplomacy.grudge: how much a neighbor resents the player's raids (raises per raid, decays per minute); at embargoAt they refuse all trade and send no offers; above noAlliancesAbove no marriage or sandugo. tradeDecision: how a neighbor weighs a proposed trade (values per resource, how much trust and grudge shift what they ask, the close-call band decided by a seeded roll, and how far off a deal can be for a counter-offer). handog: peace gifts; value per resource. refusals: what the datu says. Traits' tradeWillingness: traders accept more, proud ones less. Playtest guesses. gatherable: resources the Gather buttons give (gold only comes from Fishing Docks). storage.baseRice: rice the barangay can hold with no Kamalig (each Kamalig adds its own 'storage' from content/buildings); production and gathering stop at the cap, nothing already stored is lost. Base cap is a playtest guess (docs/game-design.md only gives the Kamalig's +100). happiness: 0-100, starts at `start`, which is also the level that changes nothing; it moves toward a target by pointsPerSecond. The target is start, plus perHouseNearPlaza for every Bahay Kubo within plazaRadius tiles of the plaza (up to maxFromHouses), plus `hungry` while there is no rice, plus perSick for every sick villager (down to maxFromSick). At 100 production is maxEffectPercent higher, at 0 that much lower. Playtest guesses. dayNight: the game's own day (daySeconds of game time; night from nightFrom to nightTo of the day), which the map's tint follows; the Bakunawa eclipse only comes at night. worship: offerings at the Dambana turn resources into Favor (offeringValues per resource × favorPerValue, up to maxFavor); changing the barangay's tradition after the first choice costs changeTraditionCost; after neglectAfterSeconds without a ritual, happiness slowly sags by neglectPerMinute up to neglectMax (time away doesn't count); asking permission (permission) costs favorCost Favor and makes the next `tiles` cleared tiles lower Forest Balance by balanceFactor. forest: Forest Balance (0-100) falls by perTile for each forest tile cleared (perTileNearBalete within baleteRadius of a balete, baleteFelled for a balete itself); after quietSeconds with no clearing it recovers by recoveryPerMinute plus recoveryPerForestShare × the share of the map still forest plus recoveryPerBalete per standing balete, each per minute. Below stage1Below kapre pranks (a Woodcutter Camp's tools gone for prankSeconds, prankChancePerSecond) and more tikbalang; below stage2Below the diwata withhold riceWithheldPercent of the rice and sickness is sicknessPercent more likely. replant: turning cleared land back to forest (cost, seconds of one free villager's work, balance gained). All playtest guesses. death: villagers die only with warning and never offline: named villagers grow frail after oldAge.frailAfterSeconds and may then die (chancePerSecond); a sickness that has lasted sickness.afterSeconds with no healer standing may take a sick villager (warning at warnAfterSeconds); after hunger has already driven families away (hunger.afterSeconds of hunger), one villager dies every hunger.everySeconds. mourning: each death adds `seconds` of mourning (up to maxSeconds), during which happiness is `happiness` lower; a Libingan makes it pass faster. Playtest guesses. archipelago: the region's islands (count from min to max, from the seed); blocs: how many rival alliance blocs the AI barangays form at the start, and how many stay independent. sea: Balangay travel: seconds per unit of distance on the regional map (0..1 across), never under minSeconds; boats carry at most raidWarriorsPerBoat warriors. politics: scripted events (content/events/politics), at most one per minGapSeconds, not before startsAfterSeconds; a war costs each member warLossPercent of its warriors every warTickSeconds; invites and join requests need trust (joinTrust) and grudge under maxGrudge; leaving a bloc costs leaveTrustLoss trust with its members, expelling costs expelTrustLoss with the expelled; raiding a bloc member raises the other members' grudge by solidarityPercent of the raid's grudge. allyDefense: allies on the same island arrive in landSeconds plus landSecondsPerUnit × distance; on other islands only allies of at least balangayMinVillagers (who have boats) can come, at sea speed; like the player's own warriors they only fight if they arrive within the raid warning. Playtest guesses. kabantugan: renown, earned and never lost; amounts per source (per 10 villagers reached, per task, per raid won attacking or defending, per trade, per tributary or ally gained, per Bahay ng Datu level, per Aklat entry). levelAt: the renown each barangay level from 2 to 20 needs. AI barangays get a level from their size and strength: aiPerVillager × villagers + aiPerStrength × strength, on the same thresholds. Playtest guesses.",
+  "_comment": "Core balance numbers. Values marked in docs/game-design.md are copied here; the rest are playtest guesses. map: size and features of the generated map (seaDepth: rows of sea along the bottom edge, the coast). placement: undo window after building, moving cost (percent of the current price) and demolish refund (percent of what the last copy cost). secondsPerVillagerLeavingOvercrowded: when demolished houses leave more villagers than shelter, one leaves this often. clearing: the cost of turning forest into buildable land; seconds and the rice cost (cost, paid upfront per tile) rise on the gentle curve `growth` (1 + linear·n + quadratic·n², engine/curve.ts) with every tile cleared or queued; each job needs `workers` free villagers (not working in a building); when none are free, clearing borrows from workplaces in `borrow.order` first, then the busiest, never from `borrow.protect` while rice would last less than protectBelowRiceSeconds. military/diplomacy: warriors, battles and the four paths to absorb a neighbor (trade, marriage alliance, sandugo, mangayaw); all placeholders for playtesting. choices: choice events (content/events/choices); minGapSeconds is the 4-minute limit, the start time and chance are playtest guesses. offline: time away credited on return (maxSeconds is the 8-hour cap from docs/game-design.md); the rest only set how coarse, and so how fast, the offline steps are. roads: Daan footpaths (cost per tile, the Connected output bonus for buildings joined to the plaza by an unbroken Daan, and how much faster villagers walk on them, which is visual only); playtest guesses. Raids at the border: raiders land on a river bank, picked among the aiRaid.landingChoices spots nearest the barangay; a Kuta gives its full defense only if the landing is within military.kutaRadius tiles, kutaOutsidePercent of it otherwise; warriors walk military.warriorTilesPerSecond (forest is slower) and only fight if they get there within the raid warning. The player's raids on AI barangays follow the same rules (engine/battle.ts) on the target's generated village, with the landing rolled once per day (Araw), so the visit preview holds; the target's bloc mates come if they arrive within the same warning. aiRaid.lootTargets is where winning raiders go for loot, first one that exists ('kamalig' is listed for when it's built). Playtest guesses. Mandirigma are part-time: they work like any villager except while a raid is coming (they go to meet it) or while away guarding; each Kuta allows military.warriorsPerKuta of them. staffing: below foodFirstBelowRiceSeconds of rice, food workplaces are filled first; the adviser warns once if rice is falling and fewer than foodWorkersWarnPercent of villagers grow food. diplomacy.grudge: how much a neighbor resents the player's raids (raises per raid, decays per minute); at embargoAt they refuse all trade and send no offers; above noAlliancesAbove no marriage or sandugo. tradeDecision: how a neighbor weighs a proposed trade (values per resource, how much trust and grudge shift what they ask, the close-call band decided by a seeded roll, and how far off a deal can be for a counter-offer). handog: peace gifts; value per resource. refusals: what the datu says. Traits' tradeWillingness: traders accept more, proud ones less. Playtest guesses. gatherable: resources the Gather buttons give (gold only comes from Fishing Docks). storage.baseRice: rice the barangay can hold with no Kamalig (each Kamalig adds its own 'storage' from content/buildings, more at each upgrade level). costCurve: each further copy of a building costs base × (1 + linear·n + quadratic·n²) after n copies (engine/curve.ts); tuned with npm run simulate; production and gathering stop at the cap, nothing already stored is lost. Base cap is a playtest guess. happiness: 0-100, starts at `start`, which is also the level that changes nothing; it moves toward a target by pointsPerSecond. The target is start, plus perHouseNearPlaza for every Bahay Kubo within plazaRadius tiles of the plaza (up to maxFromHouses), plus `hungry` while there is no rice, plus perSick for every sick villager (down to maxFromSick). At 100 production is maxEffectPercent higher, at 0 that much lower. Playtest guesses. dayNight: the game's own day (daySeconds of game time; night from nightFrom to nightTo of the day), which the map's tint follows; the Bakunawa eclipse only comes at night. worship: offerings at the Dambana turn resources into Favor (offeringValues per resource × favorPerValue, up to maxFavor); changing the barangay's tradition after the first choice costs changeTraditionCost; after neglectAfterSeconds without a ritual, happiness slowly sags by neglectPerMinute up to neglectMax (time away doesn't count); asking permission (permission) costs favorCost Favor and makes the next `tiles` cleared tiles lower Forest Balance by balanceFactor. forest: Forest Balance (0-100) falls by perTile for each forest tile cleared (perTileNearBalete within baleteRadius of a balete, baleteFelled for a balete itself); after quietSeconds with no clearing it recovers by recoveryPerMinute plus recoveryPerForestShare × the share of the map still forest plus recoveryPerBalete per standing balete, each per minute. Below stage1Below kapre pranks (a Woodcutter Camp's tools gone for prankSeconds, prankChancePerSecond) and more tikbalang; below stage2Below the diwata withhold riceWithheldPercent of the rice and sickness is sicknessPercent more likely. replant: turning cleared land back to forest (cost, seconds of one free villager's work, balance gained). All playtest guesses. death: villagers die only with warning and never offline: named villagers grow frail after oldAge.frailAfterSeconds and may then die (chancePerSecond); a sickness that has lasted sickness.afterSeconds with no healer standing may take a sick villager (warning at warnAfterSeconds); after hunger has already driven families away (hunger.afterSeconds of hunger), one villager dies every hunger.everySeconds. mourning: each death adds `seconds` of mourning (up to maxSeconds), during which happiness is `happiness` lower; a Libingan makes it pass faster. Playtest guesses. archipelago: the region's islands (count from min to max, from the seed); blocs: how many rival alliance blocs the AI barangays form at the start, and how many stay independent. sea: Balangay travel: seconds per unit of distance on the regional map (0..1 across), never under minSeconds; boats carry at most raidWarriorsPerBoat warriors. politics: scripted events (content/events/politics), at most one per minGapSeconds, not before startsAfterSeconds; a war costs each member warLossPercent of its warriors every warTickSeconds; invites and join requests need trust (joinTrust) and grudge under maxGrudge; leaving a bloc costs leaveTrustLoss trust with its members, expelling costs expelTrustLoss with the expelled; raiding a bloc member raises the other members' grudge by solidarityPercent of the raid's grudge. allyDefense: allies on the same island arrive in landSeconds plus landSecondsPerUnit × distance; on other islands only allies of at least balangayMinVillagers (who have boats) can come, at sea speed; like the player's own warriors they only fight if they arrive within the raid warning. Playtest guesses. kabantugan: renown, earned and never lost; amounts per source (per 10 villagers reached, per task, per raid won attacking or defending, per trade, per tributary or ally gained, per Bahay ng Datu level, per Aklat entry). levelAt: the renown each barangay level from 2 to 20 needs. AI barangays get a level from their size and strength: aiPerVillager × villagers + aiPerStrength × strength, on the same thresholds (retuned with npm run simulate so AI and player levels rise at a similar pace for similar development). Playtest guesses.",
   "start": {
     "resources": {
       "rice": 10,
@@ -12,7 +12,10 @@
   },
   "baseHousing": 3,
   "riceEatenPerVillagerPerSecond": 0.1,
-  "costGrowth": 1.15,
+  "costCurve": {
+    "linear": 0.15,
+    "quadratic": 0.012
+  },
   "gatherPerClick": 1,
   "secondsPerNewVillager": 10,
   "secondsPerVillagerLeavingOvercrowded": 10,
@@ -32,7 +35,10 @@
   },
   "clearing": {
     "baseSeconds": 6,
-    "secondsGrowth": 1.04,
+    "growth": {
+      "linear": 0.03,
+      "quadratic": 0.0001
+    },
     "workers": 1,
     "wood": 3,
     "cost": {
@@ -246,6 +252,20 @@
   "storage": {
     "baseRice": 200
   },
+  "stockpile": {
+    "_comment": "Soft cap for wood and gold (engine/stockpile.ts), shown in the HUD: multiple × the dearest next big purchase (the next copy of any building the barangay can build, the next Bahay ng Datu or Kamalig level, a Balangay), at least `minimum`. Above it, work brings in slowPercent less of that resource, and above stopMultiple × the cap none at all; nothing stored is lost. Tuned with npm run simulate.",
+    "multiple": 3,
+    "minimum": {
+      "wood": 400,
+      "gold": 150
+    },
+    "slowPercent": 80,
+    "stopMultiple": 1.5
+  },
+  "aiGrowth": {
+    "_comment": "AI barangays clear forest when no free tile is left near their plaza: clearTiles at a time (the same clearing rules and costs as the player). Playtest guess.",
+    "clearTiles": 3
+  },
   "happiness": {
     "start": 60,
     "maxEffectPercent": 10,
@@ -353,6 +373,16 @@
     "expelTrustLoss": 25,
     "solidarityPercent": 40
   },
+  "allyCalls": {
+    "_comment": "An ally raided (region.ts): after startsAfterSeconds, each second an aggressive independent barangay may raid one of the player's sandugo allies or bloc mates (chancePerSecond, at most one every cooldownSeconds). A messenger brings a call for help to the Bahay ng Datu (a choice event, content/events/choices/ally-call.json); the raid strikes after warningSeconds. Sending warriors (sendPercent of those at home) fights beside the ally and earns renown and trust; leaving the call unanswered (or saying no) costs ignoreTrust trust with that ally. Playtest guesses.",
+    "startsAfterSeconds": 900,
+    "chancePerSecond": 0.002,
+    "cooldownSeconds": 900,
+    "warningSeconds": 90,
+    "sendPercent": 50,
+    "renown": 15,
+    "ignoreTrust": 15
+  },
   "allyDefense": {
     "landSeconds": 8,
     "landSecondsPerUnit": 60,
@@ -368,28 +398,28 @@
     "perAlly": 25,
     "perDatuLevel": 20,
     "perAklat": 5,
-    "aiPerVillager": 8,
-    "aiPerStrength": 4,
+    "aiPerVillager": 3,
+    "aiPerStrength": 0.5,
     "levelAt": [
       20,
       50,
       90,
       140,
-      200,
-      270,
-      350,
-      440,
-      540,
-      650,
-      770,
-      900,
+      190,
+      240,
+      290,
+      340,
+      400,
+      460,
+      530,
+      610,
+      700,
+      800,
+      910,
       1040,
-      1190,
-      1350,
-      1520,
-      1700,
-      1890,
-      2090
+      1250,
+      1550,
+      2000
     ]
   },
   "expeditions": {

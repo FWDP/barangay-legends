@@ -50,7 +50,9 @@ export function noticeQueue(state: GameState, content: Content, ctx: NoticeConte
   const offer = state.region?.offer;
   if (offer && !tradingPaused(state) && !ctx.tradeHeld) out.push({ id: "offer", tier: 1, expiresAt: offer.expiresAt });
   // A raid holds back the choice events.
-  if (state.choice && !state.region?.incomingRaid) out.push({ id: "choice", tier: 1 });
+  // An ally's call for help runs out when the raid on it strikes (the badge counts it down).
+  const call = state.region?.allyCall;
+  if (state.choice && !state.region?.incomingRaid) out.push({ id: "choice", tier: 1, ...(call ? { expiresAt: call.strikeAt } : {}) });
   if (ctx.expeditionFresh) out.push({ id: "expedition", tier: 1 });
   if (state.pranks.length > 0) out.push({ id: "prank", tier: 2, dismissKey: `prank:${state.pranks.length}` });
   if (!ctx.expeditionFresh && ctx.sailing) out.push({ id: "sailing", tier: 2, dismissKey: `sailing:${state.region?.nextVoyageId ?? 0}` });

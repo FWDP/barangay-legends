@@ -137,9 +137,9 @@ describe("clearing land", () => {
   });
 
   it("gets slower with every tile cleared", () => {
-    const { baseSeconds, secondsGrowth } = content.rules.clearing;
+    const { baseSeconds, growth } = content.rules.clearing;
     expect(clearSeconds(start(), content)).toBe(baseSeconds);
-    expect(clearSeconds({ ...start(), tilesCleared: 10 }, content)).toBeCloseTo(baseSeconds * secondsGrowth ** 10);
+    expect(clearSeconds({ ...start(), tilesCleared: 10 }, content)).toBeCloseTo(baseSeconds * (1 + growth.linear * 10 + growth.quadratic * 100));
     expect(clearSeconds({ ...start(), tilesCleared: 10 }, content)).toBeGreaterThan(baseSeconds);
   });
 

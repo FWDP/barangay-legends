@@ -1,7 +1,7 @@
 {
   "id": "kamalig",
   "name": "Kamalig",
-  "description": "A raised granary of bamboo and thatch. Each one stores more rice.",
+  "description": "A raised granary of bamboo and thatch. Each one stores more rice, and it can be raised to level 3 to hold more.",
   "icon": "🧺",
   "order": 4.5,
   "category": "pagkain",
@@ -12,13 +12,35 @@
     "wood": 8
   },
   "storage": {
-    "rice": 100
+    "rice": 1500
   },
   "unlock": {
     "villagers": 10
   },
   "sources": [
-    "docs/game-design.md (cost, +100 rice storage, unlock at 10 villagers)",
+    "docs/game-design.md (cost, unlock at 10 villagers; storage and upgrades retuned with npm run simulate)",
     "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+  ],
+  "upgrades": [
+    {
+      "level": 2,
+      "cost": {
+        "wood": 150,
+        "gold": 20
+      },
+      "storage": {
+        "rice": 2500
+      }
+    },
+    {
+      "level": 3,
+      "cost": {
+        "wood": 400,
+        "gold": 60
+      },
+      "storage": {
+        "rice": 4000
+      }
+    }
   ]
 }

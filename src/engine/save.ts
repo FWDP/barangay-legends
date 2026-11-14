@@ -262,9 +262,15 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
   },
   // v23 → v24: expedition records for replays. Older trades and raids weren't written down.
   23: (raw) => ({ ...raw, version: 24, expeditions: [], nextExpeditionId: 1 }),
+  // v24 → v25: a Kamalig can be raised (buildings may carry a level; missing means level 1) and
+  // an ally can call for help (region.allyCall). Older saves have neither, so nothing changes.
+  24: (raw) => ({ ...raw, version: 25 }),
 };
 
 // ---------- Frozen v15 bridge rule (for the v14 → v15 migration only) ----------
+
+/** The per-copy price growth when v15 came out (refunds for bridges that no longer fit). */
+const FROZEN_COST_GROWTH_V15 = 1.15;
 
 type FrozenTile = "f" | "c" | "r" | "b" | "t" | "d";
 
@@ -324,7 +330,7 @@ function migrateBridgesV15(raw: RawSave, content: Content): RawSave {
       buildings.push({ ...item, x: anchor.x, y: anchor.y, span: best });
     } else {
       removed++;
-      for (const [r, n] of Object.entries(def.cost)) refund[r] = (refund[r] ?? 0) + Math.ceil((n ?? 0) * content.rules.costGrowth ** nth);
+      for (const [r, n] of Object.entries(def.cost)) refund[r] = (refund[r] ?? 0) + Math.ceil((n ?? 0) * FROZEN_COST_GROWTH_V15 ** nth);
     }
   }
   out.map = { ...map, tiles: tiles.join("") };
@@ -508,6 +514,9 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean, withRegi
     }
     if (item.paused === true && def.workers) building.paused = true;
     if (item.legacyDoor === true) building.legacyDoor = true;
+    // A raised building's level (upgrades.ts), within the levels its type has.
+    if (Number.isInteger(item.level) && (item.level as number) > 1) building.level = Math.min(item.level as number, 1 + (def.upgrades?.length ?? 0));
+    if (building.level === 1) delete building.level;
     if (isObject(item.door) && Number.isInteger(item.door.x) && Number.isInteger(item.door.y)) building.door = { x: item.door.x as number, y: item.door.y as number };
     if (item.damaged === true) building.damaged = true;
     else if (finiteNonNeg(item.burningSince) && item.burningSince <= state.time && content.events.fire) {
@@ -556,7 +565,9 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean, withRegi
   const ch = data.choice;
   if (isPlayer && isObject(ch) && typeof ch.id === "string" && content.choices.some((c) => c.id === ch.id) && finiteNonNeg(ch.at)) {
     const neighbor = typeof ch.neighbor === "string" && state.region?.neighbors.some((n) => n.id === ch.neighbor) ? ch.neighbor : null;
-    state.choice = { id: ch.id, neighbor, at: ch.at };
+    // The other side of an ally's war or raid ({enemy}), if it still exists.
+    const enemy = typeof ch.enemy === "string" && state.region?.neighbors.some((n) => n.id === ch.enemy) ? ch.enemy : null;
+    state.choice = { id: ch.id, neighbor, at: ch.at, ...(enemy ? { enemy } : {}) };
   }
   if (isPlayer) {
     parseRenown(data, content, state);
@@ -869,6 +880,10 @@ function parseRegion(raw: unknown, content: Content, player: GameState): RegionS
         ? { from: incoming.from as string, strikeAt: incoming.strikeAt, landing: parseLanding(incoming.landing, player.map) }
         : null,
     nextAiRaidAt: finiteNonNeg(raw.nextAiRaidAt) ? raw.nextAiRaidAt : 0,
+    allyCall:
+      isObject(raw.allyCall) && ids.has(raw.allyCall.ally as string) && ids.has(raw.allyCall.from as string) && finiteNonNeg(raw.allyCall.strikeAt)
+        ? { ally: raw.allyCall.ally as string, from: raw.allyCall.from as string, strikeAt: raw.allyCall.strikeAt }
+        : null,
     counter: parseCounter(raw.counter, ids, content),
     offer:
       isObject(offer) &&

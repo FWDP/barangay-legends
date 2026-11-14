@@ -3,11 +3,12 @@
 // gift, a trade, a reward, a Kamalig lost) is never thrown away.
 import type { Content, Resource } from "./content";
 import type { GameState } from "./game";
+import { levelOf, storageAt } from "./upgrades";
 
-/** Rice the barangay can hold: rules.storage.baseRice plus each standing building's storage. */
+/** Rice the barangay can hold: rules.storage.baseRice plus each standing building's storage at its level. */
 export function riceCap(state: GameState, content: Content): number {
   const defs = new Map(content.buildings.map((d) => [d.id, d]));
-  return state.buildings.reduce((sum, b) => sum + (b.damaged ? 0 : (defs.get(b.type)?.storage?.rice ?? 0)), content.rules.storage.baseRice);
+  return state.buildings.reduce((sum, b) => sum + (b.damaged ? 0 : (storageAt(defs.get(b.type), levelOf(b)).rice ?? 0)), content.rules.storage.baseRice);
 }
 
 /** The cap for a resource (only rice has one). */

@@ -98,10 +98,10 @@ describe("move", () => {
   it("costs 10% of the building's current price, rounded up", () => {
     const s = farm();
     const price = buildingCost(content, def("palayan"), owned(s, "palayan")).wood;
-    expect(price).toBe(20); // 15 × 1.15² = 19.8
-    expect(moveCost(s, content, "palayan").wood).toBe(2);
+    expect(price).toBe(Math.ceil(15 * (1 + content.rules.costCurve.linear * 2 + content.rules.costCurve.quadratic * 4)));
+    expect(moveCost(s, content, "palayan").wood).toBe(Math.ceil(price * 0.1));
     const moved = apply(s, calm, { type: "move", x: 3, y: 7, toX: 6, toY: 7 });
-    expect(moved.resources.wood).toBe(98);
+    expect(moved.resources.wood).toBe(100 - Math.ceil(price * 0.1));
     expect(moved.buildings[2]).toMatchObject(at("palayan", 6, 7));
   });
 

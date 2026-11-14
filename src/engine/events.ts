@@ -74,12 +74,18 @@ export function adjacentPairs(state: GameState, type: string): number {
   return pairs;
 }
 
-/** Chance per second that one more villager falls sick. */
+/**
+ * Chance per second that one more villager falls sick: more sick, more crowded houses (up to
+ * crowding.maxPercent) spread it faster, and it slows as fewer healthy villagers are left to
+ * catch it, so a sickness burns out instead of holding most of the barangay for good.
+ */
 export function spreadChance(state: GameState, content: Content): number {
   const ev = content.events.sickness;
   if (!ev || state.sick.length === 0 || state.sick.length >= state.villagers) return 0;
-  const crowding = 1 + (adjacentPairs(state, ev.crowding.building) * ev.crowding.percentPerAdjacentPair) / 100;
-  return Math.min(0.9, ev.spreadChancePerSecond * state.sick.length * crowding);
+  const pct = adjacentPairs(state, ev.crowding.building) * ev.crowding.percentPerAdjacentPair;
+  const crowding = 1 + Math.min(pct, ev.crowding.maxPercent ?? Infinity) / 100;
+  const healthy = 1 - state.sick.length / state.villagers;
+  return Math.min(0.9, ev.spreadChancePerSecond * state.sick.length * crowding * healthy);
 }
 
 // ---------- Fire ----------

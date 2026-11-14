@@ -14,7 +14,6 @@ const goods = (g?: Partial<Record<Resource, number>>) =>
 function border(report: Report): string[] {
   const lines: string[] = [];
   if (report.late) lines.push(`${report.late} ${report.late === 1 ? "warrior was" : "warriors were"} too far away to reach the shore in time.`);
-  if (report.covered === false) lines.push("No Kuta stood close enough to the landing to help fully. Build one near the river.");
   return lines;
 }
 
@@ -77,8 +76,13 @@ export function ReportDialog(props: {
   /** Panoorin: what watching this report's battle does, or null if it can't be watched. */
   onWatch?: (r: Report) => (() => void) | null;
   watchLabel?: string;
+  /** Why a defense went the way it did, in one line (defense.ts raidReason), or null. */
+  reason?: (r: Report) => string | null;
+  /** "Show me": the uncovered shoreline on the map, for a raid that landed where no Kuta reached. */
+  onShowShore?: (r: Report) => (() => void) | null;
+  showLabel?: string;
 }) {
-  const { state, content, seen, onSeen: setSeen, hold = false, names, onWatch, watchLabel } = props;
+  const { state, content, seen, onSeen: setSeen, hold = false, names, onWatch, watchLabel, reason, onShowShore, showLabel } = props;
   // Held back while the battle plays out on the map.
   const next = hold ? undefined : unseenReport(state, seen);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -106,12 +110,21 @@ export function ReportDialog(props: {
           <h2 id="report-title" className="font-display text-2xl text-amber-900">
             <span aria-hidden>{text.icon}</span> {text.title}
           </h2>
+          {reason?.(next) && <p className="rounded-lg bg-amber-100 px-2 py-1 text-sm font-semibold text-amber-950">{reason(next)}</p>}
           <ul className="space-y-1 text-sm">
             {text.lines.filter(Boolean).map((l) => (
               <li key={l}>{l}</li>
             ))}
           </ul>
-          <div className="flex justify-end gap-2 pt-1">
+          <div className="flex flex-wrap justify-end gap-2 pt-1">
+            {(() => {
+              const show = onShowShore?.(next);
+              return show ? (
+                <button type="button" onClick={show} className="game-btn border-2 border-amber-950/60 bg-amber-600 px-4 py-2 text-sm font-semibold text-white">
+                  {showLabel}
+                </button>
+              ) : null;
+            })()}
             {(() => {
               const go = onWatch?.(next);
               return go ? (

@@ -7,7 +7,10 @@ import type { Content } from "../engine/content";
 import { workforce } from "../engine/clearing";
 import { buildingWorkers, canAfford, canStaff, demolishPreview, moveCost, roadBonuses, undoSecondsLeft, type GameState } from "../engine/game";
 import { buildingAt } from "../engine/map";
-import { costText } from "./format";
+import { costText, formatAmount } from "./format";
+import { levelOf, maxLevelOf, nextUpgrade, storageAt, upgradeBlocker, upgradeCost } from "../engine/upgrades";
+import { fill, type GameText } from "./uiContent";
+import type { Lang } from "./settings";
 
 export interface MenuTarget {
   x: number;
@@ -38,8 +41,13 @@ export function BuildingMenu(props: {
   /** Open a lore note (how a building with custom art is drawn, and its sources). */
   onLore?: (id: string) => void;
   aboutLabel?: string;
+  /** Raise a building with upgrades (a Kamalig) one level. */
+  onUpgrade?: (x: number, y: number) => void;
+  /** In-game text (content/ui.json) for the upgrade lines. */
+  game?: GameText;
+  lang?: Lang;
 }) {
-  const { state, content, target, onClose, onMove, onDemolish, onPause, onShrine, onRemembered, onTrainBoat, onLore, aboutLabel } = props;
+  const { state, content, target, onClose, onMove, onDemolish, onPause, onShrine, onRemembered, onTrainBoat, onLore, aboutLabel, onUpgrade, game, lang = "en" } = props;
   const box = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
   const building = target ? buildingAt(state, target.x, target.y) : undefined;
@@ -126,7 +134,34 @@ export function BuildingMenu(props: {
           )}
         </p>
       )}
+      {def.upgrades && game && (
+        <p className="px-1 pb-1.5 text-xs text-stone-600">
+          {fill(game.kamalig.level[lang], { level: levelOf(building), max: maxLevelOf(def) })} · {fill(game.kamalig.stores[lang], { amount: formatAmount(storageAt(def, levelOf(building)).rice ?? 0) })}
+        </p>
+      )}
       <div className="flex flex-col gap-1.5">
+        {def.upgrades && onUpgrade && game && (() => {
+          const next = nextUpgrade(content, building);
+          const why = upgradeBlocker(state, content, target.x, target.y);
+          return (
+            <button
+              type="button"
+              role="menuitem"
+              disabled={why !== null}
+              onClick={() => onUpgrade(target.x, target.y)}
+              title={why === "damaged" ? game.kamalig.damaged[lang] : why === "cost" && next ? fill(game.kamalig.cost[lang], { cost: costText(upgradeCost(content, building)) }) : undefined}
+              className="game-btn flex items-center justify-between border-2 border-amber-950 bg-amber-600 px-3 py-1.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <span>{next ? fill(game.kamalig.upgrade[lang], { level: next.level }) : game.kamalig.top[lang]}</span>
+              {next && (
+                <span className="text-right text-xs font-normal">
+                  {costText(upgradeCost(content, building))}
+                  <span className="block">{fill(game.kamalig.stores[lang], { amount: formatAmount(next.storage?.rice ?? 0) })}</span>
+                </span>
+              )}
+            </button>
+          );
+        })()}
         {def.balangayDock && onTrainBoat && (
           <button
             type="button"

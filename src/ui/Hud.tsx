@@ -4,13 +4,14 @@ import { isHungry, seasonAt } from "../engine/events";
 import { freeVillagers } from "../engine/clearing";
 import { happinessMultiplier, happinessTarget } from "../engine/happiness";
 import { riceCap } from "../engine/storage";
+import { softCap, stopCap } from "../engine/stockpile";
 import { homeWarriors } from "../engine/region";
 import { buildingWorkers, housing, rates, warriorCap, type GameState, type Rates } from "../engine/game";
 import { clock } from "./EventBanners";
 import { formatAmount, formatBreakdown, formatRate, RESOURCE_ICON } from "./format";
 
 /** Slim top bar: title, resources, and whatever controls are passed as children. */
-export function Hud(props: { state: GameState; content: Content; children: ReactNode; extraChips?: ReactNode; level?: ReactNode; day?: ReactNode }) {
+export function Hud(props: { state: GameState; content: Content; children: ReactNode; extraChips?: ReactNode; level?: ReactNode; day?: ReactNode; full?: FullText; stockpile?: StockpileText }) {
   const { state, content, children, extraChips, level, day } = props;
   const r = rates(state, content);
   const working = buildingWorkers(state, content).reduce((a, b) => a + b, 0);
@@ -28,9 +29,9 @@ export function Hud(props: { state: GameState; content: Content; children: React
       </h1>
       {level}
       {day}
-      <ResourceChip resource="rice" amount={state.resources.rice} rates={r} note={notes(state, content).rice} cap={riceCap(state, content)} />
-      <ResourceChip resource="wood" amount={state.resources.wood} rates={r} note={notes(state, content).wood} />
-      {(state.resources.gold > 0 || r.net.gold !== 0) && <ResourceChip resource="gold" amount={state.resources.gold} rates={r} note={notes(state, content).gold} />}
+      <ResourceChip resource="rice" amount={state.resources.rice} rates={r} note={notes(state, content).rice} cap={riceCap(state, content)} full={props.full} />
+      <ResourceChip resource="wood" amount={state.resources.wood} rates={r} note={notes(state, content).wood} soft={softCap(state, content, "wood")} stop={stopCap(state, content, "wood")} stockpile={props.stockpile} />
+      {(state.resources.gold > 0 || r.net.gold !== 0) && <ResourceChip resource="gold" amount={state.resources.gold} rates={r} note={notes(state, content).gold} soft={softCap(state, content, "gold")} stop={stopCap(state, content, "gold")} stockpile={props.stockpile} />}
       <Chip
         icon={
           <>
@@ -215,8 +216,26 @@ function Chip(props: { icon: ReactNode; label: string; title?: string; tip?: Rea
 const RESOURCE_LABEL: Record<Resource, string> = { rice: "Rice", wood: "Wood", gold: "Gold" };
 
 /** A resource chip that explains its rate on hover (desktop) or tap (phone). */
-function ResourceChip(props: { resource: Resource; amount: number; rates: Rates; note: string | null; cap?: number }) {
-  const { resource, amount, rates, note, cap } = props;
+/** The words for a full store (content/ui.json kamalig.full, kamalig.fullTip). */
+export interface FullText {
+  label: string;
+  tip: string;
+}
+
+/** The words for the wood and gold soft cap (content/ui.json stockpile). */
+export interface StockpileText {
+  label: string;
+  /** The short label once work brings in none (over the stop line). */
+  stopLabel: string;
+  /** The tip, given the cap and the stop line; `over` above the cap, `stopped` above the stop line. */
+  tip: (cap: string, stop: string, over: boolean, stopped: boolean) => string;
+}
+
+function ResourceChip(props: { resource: Resource; amount: number; rates: Rates; note: string | null; cap?: number; full?: FullText; soft?: number; stop?: number; stockpile?: StockpileText }) {
+  const { resource, amount, rates, note, cap, soft, stop, stockpile } = props;
+  const slow = soft !== undefined && Number.isFinite(soft) && amount >= soft;
+  const stopped = slow && stop !== undefined && amount >= stop;
+  const words = props.full ?? { label: "full", tip: "Full: raise a Kamalig to store more, or spend rice." };
   const full = cap !== undefined && amount >= cap;
   const [open, setOpen] = useState(false);
   const net = rates.net[resource];
@@ -238,21 +257,26 @@ function ResourceChip(props: { resource: Resource; amount: number; rates: Rates;
           {RESOURCE_ICON[resource]}
         </span>
         <span className="text-left">
-          <span className={`block font-display text-base leading-none tabular-nums sm:text-lg ${full ? "text-amber-300" : ""}`}>{formatAmount(amount)}</span>
-          <span className={`block text-[10px] leading-tight tabular-nums ${full ? "text-amber-300" : rateColor}`}>{full ? "full" : formatRate(net)}</span>
+          <span className={`block font-display text-base leading-none tabular-nums sm:text-lg ${full || slow ? "text-amber-300" : ""}`}>{formatAmount(amount)}</span>
+          <span className={`block text-[10px] leading-tight tabular-nums ${full || slow ? "text-amber-300" : rateColor}`}>{full ? words.label : stopped ? (stockpile?.stopLabel ?? "full") : slow ? (stockpile?.label ?? "slow") : formatRate(net)}</span>
         </span>
       </button>
       <div
         id={tipId}
         role="tooltip"
-        className={`absolute top-full left-0 z-50 mt-2 w-max max-w-[calc(100vw-1rem)] rounded-lg border border-amber-950/50 bg-stone-900/95 px-2.5 py-1.5 text-xs text-amber-50 tabular-nums shadow-lg group-hover:block ${open ? "block" : "hidden"}`}
+        className={`absolute top-full left-0 z-50 mt-2 w-max max-w-[calc(100vw-1rem)] rounded-lg border border-amber-950/50 bg-stone-900/95 px-2.5 py-1.5 text-xs text-amber-50 tabular-nums shadow-lg group-hover:block max-sm:fixed max-sm:inset-x-2 max-sm:top-14 max-sm:mt-0 max-sm:w-auto ${open ? "block" : "hidden"}`}
       >
         {formatBreakdown(rates, resource)}
         {note && <span className="block text-amber-300">{note}</span>}
         {cap !== undefined && (
           <span className={`block ${full ? "text-amber-300" : "text-amber-100/80"}`}>
             🧺 Storage {formatAmount(amount)}/{formatAmount(cap)}
-            {full ? ": full. Build a Kamalig to store more." : ""}
+            {full && <span className="block">{words.tip}</span>}
+          </span>
+        )}
+        {soft !== undefined && Number.isFinite(soft) && (
+          <span className={`block whitespace-normal sm:max-w-72 ${slow ? "text-amber-300" : "text-amber-100/80"}`}>
+            {stockpile ? stockpile.tip(formatAmount(soft), formatAmount(stop ?? Infinity), slow, stopped) : `📦 Stockpile ${formatAmount(amount)}/${formatAmount(soft)}`}
           </span>
         )}
       </div>

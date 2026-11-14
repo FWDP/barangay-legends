@@ -28,7 +28,9 @@ describe("content", () => {
     expect(byId["palayan"]).toMatchObject({ cost: { wood: 15 }, produces: { rice: 0.5 }, workers: 2 });
     expect(byId["woodcutter-camp"]).toMatchObject({ cost: { rice: 10 }, produces: { wood: 0.4 }, workers: 2 });
     expect(rules.riceEatenPerVillagerPerSecond).toBe(0.1);
-    expect(rules.costGrowth).toBe(1.15);
+    // A gentle cost curve (curve.ts): the 50th Bahay Kubo costs hundreds of wood, not thousands.
+    expect(rules.costCurve.linear).toBeGreaterThan(0);
+    expect(10 * (1 + rules.costCurve.linear * 49 + rules.costCurve.quadratic * 49 * 49)).toBeLessThan(1000);
     expect(byId["palayan"].adjacencyBonus).toEqual({ nextTo: ["river", "palayan"], percent: 10 });
     expect(byId["woodcutter-camp"].adjacencyBonus).toEqual({ nextTo: ["forest"], percent: 10 });
     expect(byId["babaylan-hut"].heals).toEqual({ percentFaster: 100 });

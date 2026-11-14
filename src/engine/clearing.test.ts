@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { curveFactor } from "./curve";
 import { activeJobs, affordableTiles, canSelect, clearingCrews, freeVillagers, jobCost, orderSelection, selectionCost } from "./clearing";
 import { apply, tick, type GameState } from "./game";
 import { tileAt } from "./map";
@@ -13,7 +14,8 @@ const small = mapFrom([
   "T.....T",
   "TTTBTTT",
 ]);
-const { cost, secondsGrowth, baseSeconds, wood } = content.rules.clearing;
+const { cost, growth, baseSeconds, wood } = content.rules.clearing;
+const f = (n: number) => curveFactor(growth, n);
 const start = (patch: Partial<GameState> = {}) =>
   withState({ map: small, buildings: [], resources: { rice: 500, wood: 0, gold: 0 }, villagers: 3, ...patch });
 const run = (s: GameState, seconds: number) => tick(s, calm, seconds);
@@ -53,17 +55,17 @@ describe("selection rules", () => {
 describe("total cost and partial affordability", () => {
   it("each tile costs a bit more than the last", () => {
     const s = start();
-    expect(jobCost(s, content).rice).toBe(Math.ceil(cost.rice! * secondsGrowth ** 0));
-    expect(jobCost(s, content, 20).rice).toBe(Math.ceil(cost.rice! * secondsGrowth ** 20));
-    const total = [0, 1, 2, 3].reduce((n, i) => n + Math.ceil(cost.rice! * secondsGrowth ** i), 0);
+    expect(jobCost(s, content).rice).toBe(Math.ceil(cost.rice! * f(0)));
+    expect(jobCost(s, content, 20).rice).toBe(Math.ceil(cost.rice! * f(20)));
+    const total = [0, 1, 2, 3].reduce((n, i) => n + Math.ceil(cost.rice! * f(i)), 0);
     expect(selectionCost(s, content, 4).rice).toBe(total);
   });
 
   it("prices follow the tiles already cleared and queued", () => {
     const s = start({ tilesCleared: 10 });
-    expect(jobCost(s, content).rice).toBe(Math.ceil(cost.rice! * secondsGrowth ** 10));
+    expect(jobCost(s, content).rice).toBe(Math.ceil(cost.rice! * f(10)));
     const queued = apply(s, calm, { type: "clearArea", tiles: [T(0, 1)] });
-    expect(jobCost(queued, content).rice).toBe(Math.ceil(cost.rice! * secondsGrowth ** 11));
+    expect(jobCost(queued, content).rice).toBe(Math.ceil(cost.rice! * f(11)));
   });
 
   it("is paid upfront for the whole selection", () => {
@@ -116,7 +118,7 @@ describe("worker limits and queueing", () => {
 
   it("each tile still gives wood, and later tiles take longer", () => {
     const s = apply(start({ villagers: 3 }), calm, { type: "clearArea", tiles: [T(0, 1), T(0, 2), T(0, 3)] });
-    expect(s.clearing.map((j) => j.seconds)).toEqual([0, 1, 2].map((i) => baseSeconds * secondsGrowth ** i));
+    expect(s.clearing.map((j) => j.seconds)).toEqual([0, 1, 2].map((i) => baseSeconds * f(i)));
     const done = run(s, 10);
     expect(done.clearing).toEqual([]);
     expect(done.resources.wood).toBe(3 * wood);
@@ -168,9 +170,10 @@ describe("offline", () => {
     // The whole ring of forest (not the balete): far more than a minute of work for one crew.
     const ring = [];
     for (let y = 0; y < 5; y++) for (let x = 0; x < 7; x++) if (tileAt(small, x, y) === "forest") ring.push(T(x, y));
-    const s = apply(start({ villagers: 1 }), calm, { type: "clearArea", tiles: ring });
+    // Well into the clearing curve, so every tile takes a while.
+    const s = apply(start({ villagers: 1, tilesCleared: 200, resources: { rice: 9000, wood: 0, gold: 0 } }), calm, { type: "clearArea", tiles: ring });
     expect(s.clearing.length).toBe(ring.length);
-    const { state, report } = offlineProgress(s, content, 61);
+    const { state, report } = offlineProgress(s, content, 300);
     expect(report.cleared).toBeGreaterThan(0);
     expect(report.cleared).toBeLessThan(ring.length);
     expect(state.clearing.length).toBe(ring.length - report.cleared);

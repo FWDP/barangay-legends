@@ -1345,5 +1345,151 @@
       "en": "Status",
       "fil": "Kalagayan"
     }
+  },
+  "kamalig": {
+    "level": {
+      "en": "Level {level} of {max}",
+      "fil": "Antas {level} sa {max}"
+    },
+    "badge": {
+      "en": "Lv {level}",
+      "fil": "Lv {level}"
+    },
+    "stores": {
+      "en": "🧺 Holds {amount} rice",
+      "fil": "🧺 Nag-iimbak ng {amount} palay"
+    },
+    "upgrade": {
+      "en": "⬆️ Raise to level {level}",
+      "fil": "⬆️ Itaas sa antas {level}"
+    },
+    "top": {
+      "en": "✅ Highest level",
+      "fil": "✅ Pinakamataas na antas"
+    },
+    "cost": {
+      "en": "Raising it costs {cost}",
+      "fil": "Ang pagtataas ay nagkakahalaga ng {cost}"
+    },
+    "damaged": {
+      "en": "Repair it first",
+      "fil": "Kumpunihin muna"
+    },
+    "full": {
+      "en": "full",
+      "fil": "puno"
+    },
+    "fullTip": {
+      "en": "Full: raise a Kamalig to store more, or spend rice (offerings at the Dambana, a Handog, a trade).",
+      "fil": "Puno na: itaas ang isang Kamalig para mag-imbak ng mas marami, o gamitin ang palay (handog sa Dambana, Handog, kalakalan)."
+    }
+  },
+  "defense": {
+    "map": {
+      "en": "🗺️ Defense map",
+      "fil": "🗺️ Mapa ng depensa"
+    },
+    "mapOn": {
+      "en": "🗺️ Hide defense map",
+      "fil": "🗺️ Itago ang mapa ng depensa"
+    },
+    "mapTip": {
+      "en": "Shows where raiders can land and which landing points your Kutas cover.",
+      "fil": "Ipinapakita kung saan maaaring dumaong ang mananalakay at kung aling daungan ang sakop ng iyong mga Kuta."
+    },
+    "legend": {
+      "en": "🛡️ {covered} of {total} landing points covered",
+      "fil": "🛡️ {covered} sa {total} daungan ang sakop"
+    },
+    "landing": {
+      "en": "Landing point",
+      "fil": "Daungan"
+    },
+    "covered": {
+      "en": "covered by a Kuta",
+      "fil": "sakop ng Kuta"
+    },
+    "uncovered": {
+      "en": "no Kuta in reach",
+      "fil": "walang Kutang abot"
+    },
+    "placing": {
+      "en": "🛡️ Covers {covered} of {total} landing points ({left} left uncovered)",
+      "fil": "🛡️ Sakop ang {covered} sa {total} daungan ({left} pa ang walang bantay)"
+    },
+    "placingNone": {
+      "en": "🛡️ Covers no landing point: build nearer the river or beach",
+      "fil": "🛡️ Walang daungang sakop: magtayo nang mas malapit sa ilog o dalampasigan"
+    },
+    "noShore": {
+      "en": "No shore where raiders can land",
+      "fil": "Walang pampang na madadaungan ng mananalakay"
+    },
+    "warnCovered": {
+      "en": "🛡️ A Kuta guards the landing.",
+      "fil": "🛡️ May Kutang nagbabantay sa daungan."
+    },
+    "warnUncovered": {
+      "en": "⚠️ No Kuta at the shore! (Walang Kuta sa dalampasigan!)",
+      "fil": "⚠️ Walang Kuta sa dalampasigan!"
+    },
+    "showMe": {
+      "en": "🗺️ Show me",
+      "fil": "🗺️ Ipakita"
+    },
+    "close": {
+      "en": "Close",
+      "fil": "Isara"
+    },
+    "wonCovered": {
+      "en": "Your Kuta stood by the landing point, and your warriors held the shore.",
+      "fil": "Nakatayo ang iyong Kuta sa daungan, at naipagtanggol ng mga mandirigma ang pampang."
+    },
+    "won": {
+      "en": "Your warriors reached the shore in time and drove them off, even with no Kuta near the landing point.",
+      "fil": "Umabot sa pampang ang iyong mga mandirigma at naitaboy sila, kahit walang Kuta malapit sa daungan."
+    },
+    "lateUncovered": {
+      "en": "Your warriors arrived late: no Kuta near the landing point.",
+      "fil": "Huli nang dumating ang iyong mga mandirigma: walang Kuta malapit sa daungan."
+    },
+    "uncovered_": {
+      "en": "No Kuta near the landing point, so its walls barely helped.",
+      "fil": "Walang Kuta malapit sa daungan, kaya halos hindi nakatulong ang mga pader nito."
+    },
+    "late": {
+      "en": "Some of your warriors arrived too late to fight.",
+      "fil": "Huli nang dumating ang ilan sa iyong mga mandirigma."
+    },
+    "lostCovered": {
+      "en": "Your Kuta covered the landing point, but the raiders were too many.",
+      "fil": "Sakop ng iyong Kuta ang daungan, ngunit masyadong marami ang mananalakay."
+    },
+    "outnumbered": {
+      "en": "The raiders outnumbered your defenders at the landing point.",
+      "fil": "Mas marami ang mananalakay kaysa sa mga tagapagtanggol sa daungan."
+    }
+  },
+  "stockpile": {
+    "label": {
+      "en": "slow",
+      "fil": "mabagal"
+    },
+    "tip": {
+      "en": "📦 Stockpile limit {cap}: above it, work brings in less. It rises as the barangay grows.",
+      "fil": "📦 Hangganan ng imbak {cap}: lampas dito, mas kaunti ang naiipon. Tumataas ito habang lumalaki ang barangay."
+    },
+    "over": {
+      "en": "📦 Over the stockpile limit ({cap}): work brings in {percent}% less. Spend it on Kamalig and Bahay ng Datu upgrades, a Handog, a trade or a Balangay.",
+      "fil": "📦 Lampas sa hangganan ng imbak ({cap}): {percent}% na mas kaunti ang naiipon. Gamitin ito sa pagtataas ng Kamalig at Bahay ng Datu, Handog, kalakalan o Balangay."
+    },
+    "stop": {
+      "en": "📦 Stockpile full ({stop}): work brings in none until some is spent.",
+      "fil": "📦 Puno ang imbak ({stop}): wala nang maiipon hangga't walang nagagamit."
+    },
+    "stopLabel": {
+      "en": "full",
+      "fil": "puno"
+    }
   }
 }

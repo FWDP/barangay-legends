@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "simulate": "vite build --ssr scripts/simulate.ts --outDir node_modules/.simulate --emptyOutDir --logLevel warn && node node_modules/.simulate/simulate.js"
   },
   "dependencies": {
     "react": "^19.3.1",

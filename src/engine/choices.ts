@@ -4,7 +4,7 @@
 import { RESOURCES, type ChoiceEffects, type ChoiceEventDef, type ChoiceOption, type Content } from "./content";
 import { seasonAt } from "./events";
 import { housing, type GameState } from "./game";
-import { addNews, adjustRelations, alliedBattle, strengthFn, type NeighborStatus } from "./region";
+import { addNews, adjustRelations, alliedBattle, answerAllyCall, homeWarriors, strengthFn, type NeighborStatus } from "./region";
 import { blocById, blocOf, enemiesOf } from "./politics";
 import { rollAt } from "./rng";
 
@@ -64,6 +64,8 @@ export function isEligible(state: GameState, content: Content, def: ChoiceEventD
   if (c.hasBuilding && !state.buildings.some((b) => b.type === c.hasBuilding && !b.damaged)) return false;
   if (c.lacksBuilding && state.buildings.some((b) => b.type === c.lacksBuilding)) return false;
   if (c.minVillagers !== undefined && state.villagers < c.minVillagers) return false;
+  // The call for help comes only with a raid on an ally (region.ts), never at random.
+  if (c.allyCall) return false;
   if ((c.allied || def.neighbor || c.allyAtWar) && candidates(state, def, content).length === 0) return false;
   return true;
 }
@@ -113,6 +115,7 @@ export function optionBlocker(state: GameState, option: ChoiceOption): string | 
     if (n < 0 && state.resources[r] < -n) return `Needs ${-n} ${r}`;
   }
   if ((e.villagers ?? 0) < 0 && state.villagers <= -(e.villagers ?? 0)) return "Not enough villagers";
+  if (e.answerAllyCall && homeWarriors(state) < 1) return "No Mandirigma at home to send";
   return null;
 }
 
@@ -150,6 +153,11 @@ export function choose(state: GameState, content: Content, optionId: string): Ga
   const def = pending && choiceDef(content, pending.id);
   const option = def?.choices.find((o) => o.id === optionId);
   if (!pending || !def || !option || optionBlocker(state, option)) return state;
+  // An ally's call for help: the answer is the battle (or the trust lost), worked out in region.ts.
+  if (def.conditions.allyCall) {
+    const s = answerAllyCall(state, content, option.effects.answerAllyCall === true);
+    return { ...s, choice: null, recentChoices: [...state.recentChoices, def.id].slice(-RECENT) };
+  }
   let s = applyEffects(state, content, option.effects, pending.neighbor);
   if (pending.enemy && pending.neighbor) s = allyWarEffects(s, content, option.effects, pending.neighbor, pending.enemy);
   return { ...s, choice: null, recentChoices: [...state.recentChoices, def.id].slice(-RECENT) };

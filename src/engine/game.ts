@@ -47,6 +47,9 @@ import { capGrowth, riceCap, storageCap } from "./storage";
 import { checkAklat } from "./aklat";
 import { needsBoat, setSail, trainBalangay, updateVoyages } from "./sea";
 import { datuProductionBonus, upgradeDatu } from "./datu";
+import { upgradeBuilding } from "./upgrades";
+import { curveFactor } from "./curve";
+import { softCapFactor } from "./stockpile";
 import { applyRenown } from "./kabantugan";
 import { nightFactor } from "./daynight";
 import { hasEntrance, updateDoors } from "./doors";
@@ -72,7 +75,7 @@ import {
   type TikbalangTrick,
 } from "./worship";
 
-export const STATE_VERSION = 24;
+export const STATE_VERSION = 25;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -91,6 +94,8 @@ export interface PlacedBuilding {
   door?: Point;
   /** Boxed in when an old save was loaded: still counts as reachable until something next to it changes. */
   legacyDoor?: true;
+  /** Raised to this level (upgrades.ts); missing means level 1. */
+  level?: number;
 }
 
 /** The most recent build, so it can be undone for a few seconds (rules.placement.undoSeconds). */
@@ -319,9 +324,9 @@ export function owned(state: GameState, id: string): number {
   return state.buildings.reduce((n, b) => n + (b.type === id ? 1 : 0), 0);
 }
 
-/** Cost of the next copy: base cost × growth^owned, rounded up to a whole number. */
+/** Cost of the next copy: base cost × the cost curve after `count` copies (curve.ts), rounded up. */
 export function buildingCost(content: Content, def: BuildingDef, count: number): Record<Resource, number> {
-  const factor = content.rules.costGrowth ** count;
+  const factor = curveFactor(content.rules.costCurve, count);
   return Object.fromEntries(
     RESOURCES.map((r) => [r, Math.ceil((def.cost[r] ?? 0) * factor)]),
   ) as Record<Resource, number>;
@@ -535,7 +540,8 @@ export function rates(state: GameState, content: Content, opts: { offline?: bool
     }
   });
   const mood = happinessMultiplier(state, content) * (1 + ritualProductionBonus(state, content) + datuProductionBonus(state, content));
-  for (const r of RESOURCES) produced[r] *= seasonMultiplier(content, state.time, r) * mood;
+  // Above the stockpile's soft cap, work brings in much less wood or gold (stockpile.ts).
+  for (const r of RESOURCES) produced[r] *= seasonMultiplier(content, state.time, r) * mood * softCapFactor(state, content, r);
   // The diwata withhold part of the harvest while the forest spirits are angry.
   if (!opts.offline && !content.ai && state.forest.stage >= 2) produced.rice *= 1 - content.rules.forest.riceWithheldPercent / 100;
   const eaten = Object.fromEntries(RESOURCES.map((r) => [r, 0])) as Record<Resource, number>;
@@ -823,6 +829,8 @@ export type Command =
   | { type: "replant"; x: number; y: number }
   | { type: "cancelReplant"; x: number; y: number }
   | { type: "upgradeDatu" }
+  /** Raise a placed building (a Kamalig) one level. */
+  | { type: "upgradeBuilding"; x: number; y: number }
   | { type: "trainBalangay" }
   | { type: "bloc"; action: "form" | "invite" | "join" | "leave" | "expel"; target?: string }
   /** Dev tools (?dev=1 only): marks the save as a dev save. */
@@ -919,6 +927,8 @@ function applyCommand(state: GameState, content: Content, command: Command): Gam
       return cancelReplant(state, content, command.x, command.y);
     case "upgradeDatu":
       return upgradeDatu(state, content);
+    case "upgradeBuilding":
+      return upgradeBuilding(state, content, command.x, command.y);
     case "trainBalangay":
       return trainBalangay(state, content);
     case "bloc":

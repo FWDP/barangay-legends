@@ -172,7 +172,9 @@ describe("offline progress: nothing harmful", () => {
     const a = offlineProgress(s, content, 8 * HOUR);
     const ms = performance.now() - t0;
     expect(offlineProgress(s, content, 8 * HOUR)).toEqual(a);
-    expect(ms).toBeLessThan(1500);
+    // AI barangays keep growing while the player is away (they clear land), about three times
+    // bigger after 8 hours than before the balance pass, so the budget is a little larger.
+    expect(ms).toBeLessThan(2000);
   });
 });
 

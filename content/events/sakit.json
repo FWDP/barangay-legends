@@ -9,9 +9,10 @@
   "cooldownSeconds": 180,
   "sickSeconds": 60,
   "firstCases": 1,
-  "spreadChancePerSecond": 0.02,
+  "spreadChancePerSecond": 0.012,
   "crowding": {
     "building": "bahay-kubo",
-    "percentPerAdjacentPair": 50
+    "percentPerAdjacentPair": 50,
+    "maxPercent": 100
   }
 }

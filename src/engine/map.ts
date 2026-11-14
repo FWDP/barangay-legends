@@ -1,7 +1,8 @@
 // The barangay map: a seeded, generated world of forest with a winding river, a few old
 // balete trees and a small cleared start around the plaza. The player grows it by clearing
 // forest and bridging the river. Pure and deterministic, like the rest of the engine.
-import { closesPlaza, entrancesBlockedBy, wouldHaveEntrance } from "./doors";
+import { curveFactor } from "./curve";
+import { closesPlaza, cutsOffLand, entrancesBlockedBy, wouldHaveEntrance } from "./doors";
 import type { BuildingDef, Content, GroveBlessing, Resource } from "./content";
 import type { GameState, PlacedBuilding } from "./game";
 import { rollAt, Rng } from "./rng";
@@ -172,8 +173,12 @@ export function generateMap(content: Content, seed: number): MapState {
 const tileKey = (x: number, y: number) => `${x},${y}`;
 
 /** Building type by tile, for quick neighbour lookups. */
-export function occupancy(state: GameState): Map<string, string> {
-  return new Map(state.buildings.map((b) => [tileKey(b.x, b.y), b.type]));
+const occupancyCache = new WeakMap<PlacedBuilding[], ReadonlyMap<string, string>>();
+/** Which building type stands on each tile (worked out once per buildings list; read-only). */
+export function occupancy(state: GameState): ReadonlyMap<string, string> {
+  let m = occupancyCache.get(state.buildings);
+  if (!m) occupancyCache.set(state.buildings, (m = new Map(state.buildings.map((b) => [tileKey(b.x, b.y), b.type]))));
+  return m;
 }
 
 export function buildingAt(state: GameState, x: number, y: number): PlacedBuilding | undefined {
@@ -454,6 +459,8 @@ export function validTiles(
   content: Content,
   def: BuildingDef,
   area = { x0: 0, y0: 0, x1: state.map.width - 1, y1: state.map.height - 1 },
+  /** Optional cheap test run before the full one: tiles it rejects are skipped. */
+  prefilter?: (x: number, y: number) => boolean,
 ): Point[] {
   const tiles: Point[] = [];
   const taken = occupancy(state);
@@ -463,6 +470,7 @@ export function validTiles(
   for (let y = Math.max(0, area.y0); y <= Math.min(state.map.height - 1, area.y1); y++) {
     for (let x = Math.max(0, area.x0); x <= Math.min(state.map.width - 1, area.x1); x++) {
       if (codes[y * width + x] !== want || taken.has(tileKey(x, y))) continue;
+      if (prefilter && !prefilter(x, y)) continue;
       if (canPlace(state, content, def, x, y)) tiles.push({ x, y });
     }
   }
@@ -478,7 +486,7 @@ export function validTiles(
  */
 export function adjacencyBonusAt(
   map: MapState,
-  taken: Map<string, string>,
+  taken: ReadonlyMap<string, string>,
   def: BuildingDef,
   x: number,
   y: number,
@@ -557,23 +565,36 @@ export function buildingGroveBonuses(state: GameState, content: Content): Partia
  * Best bonus first, then nearest the plaza, then top-to-bottom, left-to-right.
  * Returns null if there is no free cleared land.
  */
-export function autoPlaceTile(state: GameState, content: Content, def: BuildingDef): Point | null {
+export function autoPlaceTile(state: GameState, content: Content, def: BuildingDef, opts: { keepEdge?: boolean } = {}): Point | null {
   const { plaza } = state.map;
   // Look near the plaza first (where a barangay builds anyway); the whole map only if nothing fits there.
   const near = { x0: plaza.x - AUTO_PLACE_RADIUS, y0: plaza.y - AUTO_PLACE_RADIUS, x1: plaza.x + AUTO_PLACE_RADIUS, y1: plaza.y + AUTO_PLACE_RADIUS };
+  // Tiles at the forest's edge are kept free when there is any other choice, so land cleared
+  // later stays joined to the plaza on foot.
+  // A growing barangay (keepEdge: AI decisions) clears more forest rather than build on the edge.
+  const inside = bestTile(state, content, def, near, true) ?? bestTile(state, content, def, undefined, true);
+  if (inside || opts.keepEdge) return inside;
   return bestTile(state, content, def, near) ?? bestTile(state, content, def);
 }
+
+/** Does the tile touch forest (or a balete), where the next clearing will open land? */
+const atForestEdge = (map: MapState, x: number, y: number) =>
+  NEIGHBOURS.some(([dx, dy]) => {
+    const t = tileAt(map, x + dx, y + dy);
+    return t === "forest" || t === "balete";
+  });
 
 /** How far from the plaza autoPlaceTile looks first. */
 const AUTO_PLACE_RADIUS = 9;
 
-function bestTile(state: GameState, content: Content, def: BuildingDef, area?: { x0: number; y0: number; x1: number; y1: number }): Point | null {
+function bestTile(state: GameState, content: Content, def: BuildingDef, area?: { x0: number; y0: number; x1: number; y1: number }, avoidEdge = false): Point | null {
   const { plaza } = state.map;
   const taken = occupancy(state);
   let best: { t: Point; bonus: number; dist: number } | null = null;
-  for (const t of validTiles(state, content, def, area)) {
-    // Buildings are solid: only where people can get in (a bridge is walked over).
-    if (!def.bridge && !wouldHaveEntrance(state, content, t.x, t.y)) continue;
+  // Cheap checks first (the full placement check is the costly one).
+  const quick = (x: number, y: number) =>
+    !!def.bridge || (!(avoidEdge && atForestEdge(state.map, x, y)) && !cutsOffLand(state, content, x, y) && wouldHaveEntrance(state, content, x, y));
+  for (const t of validTiles(state, content, def, area, quick)) {
     const bonus = adjacencyBonusAt(state.map, taken, def, t.x, t.y);
     const dist = (t.x - plaza.x) ** 2 + (t.y - plaza.y) ** 2;
     if (!best || bonus > best.bonus || (bonus === best.bonus && dist < best.dist)) best = { t, bonus, dist };
@@ -583,10 +604,10 @@ function bestTile(state: GameState, content: Content, def: BuildingDef, area?: {
 
 // ---------- Clearing land ----------
 
-/** Seconds of work the next clearing takes: baseSeconds × secondsGrowth^(tiles cleared so far). */
+/** Seconds of work the next clearing takes: baseSeconds × the clearing curve after the tiles cleared so far. */
 export function clearSeconds(state: GameState, content: Content): number {
   const c = content.rules.clearing;
-  return c.baseSeconds * c.secondsGrowth ** state.tilesCleared;
+  return c.baseSeconds * curveFactor(c.growth, state.tilesCleared);
 }
 
 /** Forest (or a balete) that touches cleared land or a bridge, on land the barangay can reach. */
@@ -610,7 +631,7 @@ export function clearBlocker(state: GameState, content: Content, x: number, y: n
   if (tile !== "forest" && tile !== "balete") return "not-forest";
   if (state.clearing.some((j) => j.x === x && j.y === y)) return "queued";
   if (!isClearable(state.map, x, y)) return "not-adjacent";
-  const f = content.rules.clearing.secondsGrowth ** (state.tilesCleared + state.clearing.length);
+  const f = curveFactor(content.rules.clearing.growth, state.tilesCleared + state.clearing.length);
   const cost = content.rules.clearing.cost;
   if (Object.entries(cost).some(([r, n]) => state.resources[r as keyof typeof state.resources] < Math.ceil((n ?? 0) * f))) return "cost";
   if (tile === "balete" && !confirmBalete) return "balete";

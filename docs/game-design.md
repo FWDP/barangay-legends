@@ -38,6 +38,13 @@ different form, and some (prestige and Dangal, export codes) isn't built yet.
 - **Panoorin (expedition replays):** each trade and raid (the player's, and AI raids on the
   player) is written down by the engine as a plain record; the newest few can be watched in the
   target's village, or skipped straight to the report. The replay only shows what was decided.
+- **Shore defense and ally calls:** the map shows the landing points raiders pick from and which
+  ones a Kuta covers (also while placing one); raid warnings and defense reports say whether the
+  landing was covered and why the fight went as it did. Sandugo allies and bloc mates can be
+  raided by aggressive neighbors, and a messenger asks the player to send warriors
+  (`rules.allyCalls`, the `ally-call` choice event).
+- **Balance:** a gentle building cost curve (`rules.costCurve`), Kamalig levels 2 and 3, a soft
+  cap on wood and gold (`rules.stockpile`), and an AI renown pace retuned with `npm run simulate`.
 - **Ranggo ng Kapuluan:** an archipelago ranking by renown, raids defended and Aklat entries,
   built to take online rankings later.
 - **Guidance and sharing:** Mga Gawain tasks, Dalisay the adviser, help in English and Filipino,
@@ -90,11 +97,13 @@ V1 ships with 4 resources and 6 buildings. All numbers below are starting values
 | Bahay kubo | 10 wood | +2 villager capacity | Start |
 | Palayan (rice field) | 15 wood | +0.5 rice/s per worker, 2 workers | Start |
 | Woodcutter camp | 10 rice | +0.4 wood/s per worker, 2 workers | Start |
-| Kamalig (granary) | 30 wood | +100 rice storage | 10 villagers |
-| Fishing dock | 40 wood, 20 rice | +0.2 gold/s per worker, 3 workers | 15 villagers |
+| Kamalig (granary) | 30 wood | +1,500 rice storage; raised to level 2 (150 wood, 20 gold: 2,500) and 3 (400 wood, 60 gold: 4,000) | 10 villagers |
+| Fishing dock | 40 wood, 20 rice | +0.1 gold/s per worker, 3 workers | 15 villagers |
 | Datu's house upgrade | 50 gold, 100 wood | +10% all production per level | 50 total gold |
 
-**Cost scaling:** each extra copy of a building costs 15% more than the last (cost × 1.15^owned). This is the usual idle-game curve and the first thing to tune in playtests.
+**Cost scaling:** each extra copy of a building costs more on a gentle curve: cost × (1 + 0.15·n + 0.012·n²) after n copies (`rules.costCurve`). The first ten copies cost about what the old 1.15ⁿ curve gave; the 50th Bahay Kubo costs about 370 wood instead of about 9,400. Clearing forest rises the same way (`rules.clearing.growth`: 1 + 0.03·n + 0.0001·n²) instead of 1.04ⁿ, which made a tile cost more rice than the granaries could hold after about 140 tiles.
+
+**Stockpile soft cap:** wood and gold above 4× the next big purchase (the dearest next building, Bahay ng Datu level, Kamalig level or Balangay; at least 400 wood, 150 gold) come in 80% slower (`rules.stockpile`); nothing stored is lost and the HUD shows the limit. Balance numbers in this section were retuned with `npm run simulate` (scripts/simulate.ts).
 
 ## Anito blessings
 
