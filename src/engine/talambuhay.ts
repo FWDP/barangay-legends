@@ -281,6 +281,8 @@ export function noteLifeEvents(prev: GameState, next: GameState, content: Conten
   return s;
 }
 
+const addFlag = (state: GameState, flag: string): GameState => (state.flags.includes(flag) ? state : { ...state, flags: [...state.flags, flag] });
+
 /** Evenings begun between two times: night falls at rules.dayNight.nightFrom of each Araw. */
 function eveningsBetween(content: Content, from: number, to: number): number[] {
   const { daySeconds, nightFrom } = content.rules.dayNight;
@@ -320,6 +322,8 @@ export function teach(prev: GameState, next: GameState, content: Content): GameS
     const teacher = pool[Math.floor(rollAt(seed, k, SALT_TEACHER) * pool.length)];
     const lesson = lessons[Math.floor(rollAt(seed, k, SALT_LESSON) * lessons.length)].id;
     const event: Omit<LifeEvent, "at"> = { kind: "learned", lesson, other: teacher.id };
+    // The Aklat ng Alamat entries on learning, the epics and baybayin open from these flags.
+    s = addFlag(addFlag(s, "fireside-lesson"), `lesson-${lesson}`);
     if (who.named) s = noteLife(s, content, who.named.resident!, event);
     else if (who.child) {
       const e = withName(s, content, { at: s.time, ...event });

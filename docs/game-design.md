@@ -47,6 +47,11 @@ different form, and some (prestige and Dangal, export codes) isn't built yet.
   became a parent, came of age, fought at a raid, sick and healed, learned from an elder, became
   an elder, died. Tap a named villager for their card (portrait, class and role, family links to
   open, timeline); the Libingan keeps the stories of the dead (v31).
+- **How children learned:** no school building (schools came with the Spanish). In the evening
+  (`rules.dayNight.eveningShare`) elders and children sit by the fire at the datu's clearing; now
+  and then an elder teaches a child or a named apprentice a lesson (`rules.population.learning`),
+  a dated line in their life story. Aklat entries: learning by family and apprenticeship, oral
+  epics (the Darangen), baybayin.
 - **Fit to the period:** world art and symbols are precolonial (no candles, steel axes,
   fishing reels, railway tracks or padlocks; see the S prompt and `docs/cultural-review.md`).
   The healer's hut is named by tradition (Babaylan, Katalonan, Healer), the balete's spirit is

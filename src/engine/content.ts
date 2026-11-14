@@ -101,7 +101,7 @@ export interface Rules {
   staffing: StaffingRules;
   /** Resources the Gather buttons can give. */
   gatherable: Resource[];
-  dayNight: { daySeconds: number; nightFrom: number; nightTo: number; nightProductionFactor: number };
+  dayNight: { daySeconds: number; nightFrom: number; nightTo: number; nightProductionFactor: number; eveningShare: number };
   worship: WorshipRules;
   forest: ForestRules;
   death: DeathRules;
@@ -1210,7 +1210,8 @@ export function validateRules(raw: unknown): Rules {
   const dn = raw.dayNight;
   if (!isObject(dn)) throw new Error('rules: missing "dayNight"');
   checkNumbers(dn, ["daySeconds"], "rules: dayNight", true);
-  checkNumbers(dn, ["nightFrom", "nightTo", "nightProductionFactor"], "rules: dayNight");
+  checkNumbers(dn, ["nightFrom", "nightTo", "nightProductionFactor", "eveningShare"], "rules: dayNight");
+  if ((dn.eveningShare as number) > 1) throw new Error("rules: dayNight.eveningShare must be 0-1");
   if ((dn.nightProductionFactor as number) > 1) throw new Error("rules: dayNight.nightProductionFactor must be at most 1");
   if ((dn.nightFrom as number) >= (dn.nightTo as number) || (dn.nightTo as number) > 1) throw new Error("rules: dayNight needs 0 <= nightFrom < nightTo <= 1");
   const w = raw.worship;

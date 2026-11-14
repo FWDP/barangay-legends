@@ -1,0 +1,36 @@
+{
+  "id": "oral-epics",
+  "name": "Oral epics: the Darangen and others",
+  "description": "Long epics were chanted from memory over many nights. The Darangen of the Maranao of Lake Lanao, centred on the hero Bantugan, has thousands of lines and is recognized by UNESCO (proclaimed 2005, inscribed 2008) as intangible cultural heritage. Other peoples keep their own, such as the Hinilawod of Panay and the Hudhud of the Ifugao.",
+  "tradition": "Maranao (Darangen); also Visayan (Hinilawod) and others",
+  "sources": [
+    "UNESCO, The Darangen Epic of the Maranao People of Lake Lanao (Representative List of the Intangible Cultural Heritage of Humanity, proclaimed 2005, inscribed 2008), https://ich.unesco.org/en/RL/darangen-epic-of-the-maranao-people-of-lake-lanao-00089",
+    "Darangen, in original Maranao verse with English translation, 8 vols. (Folklore Division, University Research Center, Mindanao State University, 1986–1995)",
+    "Damiana L. Eugenio, ed., Philippine Folk Literature: The Epics (University of the Philippines Press, 2001)"
+  ],
+  "aklat": {
+    "order": 23,
+    "icon": "🎶",
+    "name": {
+      "en": "Oral epics: the Darangen",
+      "fil": "Mga epikong pasalita: ang Darangen"
+    },
+    "lore": {
+      "en": "Many peoples of the islands kept long epics in memory and chanted them over many nights at weddings and gatherings. The best known is the Darangen of the Maranao of Lake Lanao: its thousands of lines tell of the hero Bantugan and his kin, and also carry customary law, genealogy and ideas of right conduct. UNESCO recognizes it as part of the intangible cultural heritage of humanity. Other epics include the Hinilawod of Panay and the Hudhud of the Ifugao, each the heritage of its own people. Chanters learned them by listening, again and again, from those who knew them.",
+      "fil": "Maraming bayan sa kapuluan ang nag-ingat ng mahahabang epiko sa alaala at inawit ang mga ito sa loob ng maraming gabi sa mga kasalan at pagtitipon. Ang pinakakilala ay ang Darangen ng mga Maranao ng Lawa ng Lanao: isinasalaysay ng libu-libong taludtod nito ang bayaning si Bantugan at ang kanyang angkan, at dala rin nito ang batas ng kaugalian, angkan at mga ideya ng tamang asal. Kinikilala ito ng UNESCO bilang bahagi ng di-materyal na pamanang pangkultura ng sangkatauhan. Kabilang sa iba pang epiko ang Hinilawod ng Panay at ang Hudhud ng mga Ifugao, bawat isa'y pamana ng sarili nitong bayan. Natutunan ito ng mga mang-aawit sa paulit-ulit na pakikinig sa mga nakaaalam."
+    },
+    "inGame": {
+      "en": "An elder by the evening fire may teach a child \"the long epic chanted by the fire\". The game does not quote or retell the Darangen itself.",
+      "fil": "Maaaring ituro ng isang matanda sa tabi ng apoy sa gabi sa isang bata ang \"mahabang epikong inaawit sa tabi ng apoy\". Hindi sinisipi o muling isinasalaysay ng laro ang Darangen mismo."
+    },
+    "hint": {
+      "en": "An elder teaches a child the long epic by the fire.",
+      "fil": "Ituro ng isang matanda sa isang bata ang mahabang epiko sa tabi ng apoy."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "lesson-epic"
+    }
+  },
+  "reviewed": false
+}

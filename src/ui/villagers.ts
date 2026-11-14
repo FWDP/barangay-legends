@@ -252,17 +252,21 @@ function doorSpot(door: Point, building: Point, o: Point): Point {
 /**
  * Where a villager is heading at time t, and whether they go indoors there. By day: workers at
  * their workplace's doorway (never on top of the building), idle villagers between home and the
- * plaza. At night most go home and inside; a few sit by the plaza fire; warriors on watch stay at
+ * plaza. At night most go home and inside; a few sit by the plaza fire (in the evening, the elders
+ * and children too); warriors on watch stay at
  * the Kuta; raids and the sick keep their own places. Buildings without a doorway (old saves,
  * plaza homes) fall back to the building's own tile.
  */
-export function goal(plan: VillagerPlan, t: number, night: boolean, plaza: Point, hungry: boolean): Goal {
+export function goal(plan: VillagerPlan, t: number, night: boolean, plaza: Point, hungry: boolean, evening = false): Goal {
   const o = jitter(plan.id);
   const at = (b: Point, d: Point | null | undefined, dy = 0.2): Point => (d ? doorSpot(d, b, o) : destinationAt(b, o, dy));
   const fireside = plan.id % 6 === 0;
   if (night && plan.role !== "warrior" && plan.role !== "sick") {
     if (plan.watch) return { p: { x: plan.watch.x + 0.5 + o.x * 0.4, y: plan.watch.y + 0.5 + o.y * 0.3 }, inside: false };
     if (fireside) return { p: gatherAt(plan, plaza, o), inside: false };
+    // In the evening the elders sit with the children by the fire at the datu's clearing, telling
+    // stories (no school: engine/talambuhay.ts teach); everyone else goes home.
+    if (evening && plan.role === "idle" && (plan.look?.age === "elder" || plan.look?.age === "child")) return { p: gatherAt(plan, plaza, o), inside: false };
     return { p: at(plan.home, plan.homeDoor, 0.3), inside: !!plan.homeDoor };
   }
   const cycle = (t / 80 + ((plan.id * 0.618) % 1)) % 1;

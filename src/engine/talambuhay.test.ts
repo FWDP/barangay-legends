@@ -225,3 +225,37 @@ describe("the templates", () => {
     for (const x of [...content.talambuhay.skills, ...content.talambuhay.details]) expect(Object.keys(x)).not.toContain("gender");
   });
 });
+
+describe("the evening and the Aklat", () => {
+  it("the evening is the first part of the night", async () => {
+    const { isEveningAt, isNightAt } = await import("./daynight");
+    const { nightFrom, nightTo, eveningShare } = content.rules.dayNight;
+    const at = (phase: number) => phase * day;
+    expect(isEveningAt(content, at(nightFrom + 0.01))).toBe(true);
+    expect(isEveningAt(content, at(nightFrom + (nightTo - nightFrom) * eveningShare + 0.01))).toBe(false);
+    expect(isNightAt(content, at(nightFrom + (nightTo - nightFrom) * eveningShare + 0.01))).toBe(true);
+    expect(isEveningAt(content, at(0.2))).toBe(false);
+  });
+
+  it("a lesson by the fire opens the entries on learning, and the one on what was taught", async () => {
+    const { checkAklat } = await import("./aklat");
+    const sure = { ...content, rules: { ...content.rules, population: { ...content.rules.population, learning: { chancePerEvening: 1, maxPerChild: 3 } } } };
+    const evening = content.rules.dayNight.nightFrom * day;
+    const s = family({ time: evening - 1, named: [], aklat: [] });
+    const taught = teach(s, { ...s, time: evening + 1 }, sure);
+    const lesson = taught.residents.find((r) => r.id === 4)!.lessons![0].lesson!;
+    expect(taught.flags).toContain("fireside-lesson");
+    expect(taught.flags).toContain(`lesson-${lesson}`);
+    const found = checkAklat(taught, content).aklat;
+    expect(found).toContain("learning-by-family");
+    for (const id of ["learning-by-family", "oral-epics", "baybayin"]) {
+      const e = content.lore[id];
+      expect(e.reviewed).toBe(false);
+      expect(e.sources.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("there is no school building (schools came with the Spanish)", () => {
+    expect(content.buildings.some((b) => /school|paaralan|eskwela/i.test(b.id + b.name))).toBe(false);
+  });
+});

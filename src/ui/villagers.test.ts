@@ -65,6 +65,19 @@ describe("villager sprites", () => {
     expect(Math.floor(destination(guard, 0, true, s.map.plaza, false).x)).toBe(1);
   });
 
+  it("in the evening the elders and children sit by the fire; later they go home, adults go home at once", () => {
+    const s = withState({ ...fed, villagers: 3, buildings: [at("bahay-kubo", 5, 3)] });
+    const base = planVillagers(s, content)[1];
+    const plan = (age: "child" | "adult" | "elder") => ({ ...base, role: "idle" as const, gather: { x: 2.5, y: 2.5 }, look: { gender: "woman" as const, age, malong: false } });
+    for (const age of ["child", "elder"] as const) {
+      const evening = goal(plan(age), 0, true, s.map.plaza, false, true);
+      expect(evening.inside).toBe(false);
+      expect({ x: Math.floor(evening.p.x), y: Math.floor(evening.p.y) }).toEqual({ x: 2, y: 2 });
+      expect(goal(plan(age), 0, true, s.map.plaza, false, false).inside).toBe(true);
+    }
+    expect(goal(plan("adult"), 0, true, s.map.plaza, false, true).inside).toBe(true);
+  });
+
   it("idles by the datu's house instead of working while the barangay is hungry", () => {
     const s = withState({ ...fed, villagers: 3, buildings: [at("bahay-kubo", 5, 3), at("palayan", 8, 8)] });
     const worker = planVillagers(s, content)[0];

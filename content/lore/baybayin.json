@@ -1,0 +1,36 @@
+{
+  "id": "baybayin",
+  "name": "Baybayin and related scripts",
+  "description": "Many lowland Filipinos wrote in baybayin, a syllabic script of the Brahmic family, before and in the first century of Spanish rule. Chirino (1604) reported that nearly all Tagalogs, women and men, could read and write it; it was written on bamboo and leaves with a knife point and used mainly for letters, messages and verse. Related scripts are still taught and used by the Hanunó'o and Buhid of Mindoro and the Tagbanwa of Palawan.",
+  "tradition": "Tagalog, Visayan; related scripts of Mindoro and Palawan",
+  "sources": [
+    "Pedro Chirino, Relación de las Islas Filipinas (Rome, 1604), in Emma H. Blair and James A. Robertson, eds., The Philippine Islands, 1493–1898, vols. 12–13 (Arthur H. Clark, 1904)",
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "UNESCO Memory of the World Register, Philippine Paleographs (Hanunó'o, Buhid, Tagbanwa and Pala'wan scripts) (inscribed 1999)"
+  ],
+  "aklat": {
+    "order": 24,
+    "icon": "🎋",
+    "name": {
+      "en": "Baybayin: writing on bamboo",
+      "fil": "Baybayin: pagsulat sa kawayan"
+    },
+    "lore": {
+      "en": "Baybayin is a syllabic script, related to the scripts of South and Southeast Asia: each sign is a consonant with the vowel a, and a small mark above or below changes the vowel. The Jesuit Pedro Chirino wrote in 1604 that almost all the Tagalogs, women as well as men, could read and write it, scratching it with a knife point on bamboo or palm leaves. People used it mostly for letters, messages, promises and verse rather than for long records, and children learned it from family and friends, not in schools. Related scripts survive among the Hanunó'o and Buhid of Mindoro and the Tagbanwa of Palawan, who still write them today.",
+      "fil": "Ang baybayin ay isang palantigang panulat, kaugnay ng mga panulat ng Timog at Timog-Silangang Asya: bawat titik ay isang katinig na may patinig na a, at binabago ng maliit na marka sa itaas o ibaba ang patinig. Isinulat ng Heswitang si Pedro Chirino noong 1604 na halos lahat ng Tagalog, babae man o lalaki, ay marunong bumasa at sumulat nito, na iniuukit sa kawayan o dahon ng palma gamit ang dulo ng kutsilyo. Ginamit ito ng mga tao para sa mga liham, mensahe, pangako at tula sa halip na sa mahahabang talaan, at natutunan ito ng mga bata mula sa pamilya at mga kaibigan, hindi sa paaralan. Nananatili ang mga kaugnay na panulat sa mga Hanunó'o at Buhid ng Mindoro at sa mga Tagbanwa ng Palawan, na sumusulat pa rin nito hanggang ngayon."
+    },
+    "inGame": {
+      "en": "An elder by the evening fire may teach a child to write in baybayin; it is a line in their life story.",
+      "fil": "Maaaring turuan ng isang matanda sa tabi ng apoy sa gabi ang isang bata na sumulat sa baybayin; isa itong linya sa kanyang talambuhay."
+    },
+    "hint": {
+      "en": "An elder teaches a child baybayin by the fire.",
+      "fil": "Turuan ng isang matanda ang isang bata ng baybayin sa tabi ng apoy."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "lesson-baybayin"
+    }
+  },
+  "reviewed": false
+}

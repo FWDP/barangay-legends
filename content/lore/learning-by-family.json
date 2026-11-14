@@ -1,0 +1,35 @@
+{
+  "id": "learning-by-family",
+  "name": "Learning through family and apprenticeship",
+  "description": "There were no schools in the precolonial barangay; formal schools came with the Spanish missions. Children learned within the household and kin group: farming, fishing, weaving, pottery and boat-building by working beside parents and relatives, and specialist crafts such as smithing or healing by apprenticeship to a master. Stories, genealogies and laws were kept in memory and passed on by elders.",
+  "tradition": "Widespread lowland (Tagalog, Visayan)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Pedro Chirino, Relación de las Islas Filipinas (Rome, 1604), in Emma H. Blair and James A. Robertson, eds., The Philippine Islands, 1493–1898, vols. 12–13 (Arthur H. Clark, 1904)"
+  ],
+  "aklat": {
+    "order": 22,
+    "icon": "🔥",
+    "name": {
+      "en": "Learning by the fire: family and apprenticeship",
+      "fil": "Pagkatuto sa tabi ng apoy: pamilya at pag-aaprentis"
+    },
+    "lore": {
+      "en": "The precolonial barangay had no school buildings: formal schooling came later, with the Spanish missions. Children learned where they lived. They planted, fished, wove and shaped pots beside their parents and kin, and learned a craft such as boat-building, smithing or healing by working for years beside someone who had mastered it. What a community needed to remember (its genealogies, customs, songs and stories) was kept in memory and passed on by elders, often in the evening when work was done.",
+      "fil": "Walang gusaling paaralan ang barangay bago dumating ang mga Espanyol: kasama ng mga misyong Espanyol dumating ang pormal na pag-aaral. Natututo ang mga bata kung saan sila nakatira. Nagtatanim, nangingisda, humahabi at humuhubog sila ng palayok kasama ang mga magulang at kamag-anak, at natututo ng isang gawain gaya ng paggawa ng bangka, pagpapanday o panggagamot sa pamamagitan ng ilang taong pagtatrabaho sa tabi ng isang dalubhasa. Ang kailangang alalahanin ng pamayanan (ang angkan, kaugalian, awit at kuwento) ay iniingatan sa alaala at ipinapasa ng matatanda, kadalasan sa gabi kapag tapos na ang trabaho."
+    },
+    "inGame": {
+      "en": "In the evening the elders sit with the children by the fire at the clearing by the Bahay ng Datu. Now and then a child learns something from an elder, and it stays in their life story when they grow up. There is no school to build.",
+      "fil": "Sa gabi, nauupo ang matatanda kasama ang mga bata sa tabi ng apoy sa liwasan malapit sa Bahay ng Datu. Paminsan-minsan, may natututunan ang isang bata mula sa isang matanda, at nananatili ito sa kanyang talambuhay paglaki niya. Walang paaralang itatayo."
+    },
+    "hint": {
+      "en": "Wait for an evening when the elders sit with the children by the fire.",
+      "fil": "Hintayin ang gabing nauupo ang matatanda kasama ang mga bata sa tabi ng apoy."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "fireside-lesson"
+    }
+  },
+  "reviewed": false
+}

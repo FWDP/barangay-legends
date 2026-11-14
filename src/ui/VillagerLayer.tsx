@@ -7,7 +7,7 @@ import { isHungry } from "../engine/events";
 import { overcrowded, type GameState } from "../engine/game";
 import { layOutSpan, tileAt, type BridgeTile, type Point } from "../engine/map";
 import type { NamedVillager } from "../engine/people";
-import { isNightAt } from "../engine/daynight";
+import { isEveningAt, isNightAt } from "../engine/daynight";
 import { origin, type Camera, type View } from "./camera";
 import {
   carriesTorch,
@@ -639,6 +639,7 @@ export function VillagerLayer(props: {
       // The game's own night (rules.dayNight), the same clock as the map's tint. Each villager
       // keeps their own moment (a few seconds apart), so they don't all head home at once.
       const nightFor = (id: number) => isNightAt(content, s.time + ((id * 7919) % 17) - 8);
+      const eveningFor = (id: number) => isEveningAt(content, s.time + ((id * 7919) % 17) - 8);
       const night = isNightAt(content, s.time);
       // Buildings are solid: routes go around them to the doorways.
       const blocked = solidTiles(s, content);
@@ -836,7 +837,7 @@ export function VillagerLayer(props: {
       const seen = new Set<number>();
       for (const plan of plans) {
         seen.add(plan.id);
-        const target = goal(plan, t, nightFor(plan.id), s.map.plaza, hungry);
+        const target = goal(plan, t, nightFor(plan.id), s.map.plaza, hungry, eveningFor(plan.id));
         const to = target.p;
         let sp = sprites.current.get(plan.id);
         if (!sp) {

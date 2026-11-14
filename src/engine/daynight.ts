@@ -14,6 +14,13 @@ export function isNightAt(content: Content, time: number): boolean {
   return p >= nightFrom && p < nightTo;
 }
 
+/** The evening: the first eveningShare of the night, when elders and children sit by the fire. */
+export function isEveningAt(content: Content, time: number): boolean {
+  const { nightFrom, nightTo, eveningShare } = content.rules.dayNight;
+  const p = dayPhaseAt(content, time);
+  return p >= nightFrom && p < nightFrom + (nightTo - nightFrom) * eveningShare;
+}
+
 /** The share (0..1) of the span from `time` to `time + span` that is night. */
 export function nightShare(content: Content, time: number, span: number): number {
   if (span <= 0) return isNightAt(content, time) ? 1 : 0;

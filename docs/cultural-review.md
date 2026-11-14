@@ -94,6 +94,16 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
     tigbalang keeps Plasencia's name and no horse head. Are the explanations in the Aklat accurate?
     The balete spirit is drawn as a glow, a faint shape and rustling leaves; the tigbalang as a
     tall dark figure between trunks.
+19. **How children learned** (`content/lore/learning-by-family.json`, `oral-epics.json`,
+    `baybayin.json`, the lessons in `content/villagers/talambuhay.json`): there is no school
+    building; elders teach children by the evening fire at the datu's clearing (drawn, no words).
+    Is it fair to show every tradition's elders teaching "the long epic" and baybayin, or should
+    lessons follow the tradition (the Darangen only for Maranao barangays, baybayin for Tagalog
+    and Visayan ones)? Is the UNESCO wording on the Darangen and the Mindoro and Palawan scripts
+    accurate, and respectful of the communities who still keep them?
+20. **Elders' titles**: the timeline says "Learned the old songs from Ines", without "Lola" or
+    "Lolo" (Spanish-derived). Is there a precolonial form of address for elders (e.g. "Apo",
+    "Impo", "Ingkong") the game should use?
 
 ### Notes for the future
 
@@ -150,6 +160,10 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 | src/ui/buildingArt.ts (healer's hut, fishing landing, woodcutters' camp, Tulay) | Building art: a raised thatched hut with herbs drying under the eaves and clay jars; a bamboo landing with a bangka, a bubo fish trap and a net; cut timber with a bolo in a stump and an adze; a bamboo footbridge. Generic, for every tradition; replaces a fishing rod with a reel, a steel axe and a plant icon | Widespread lowland | Scott 1994 |
 | Interface symbols (see the S prompt summary) | Era check of emoji: no candles (the Dambana's art, a burial jar for mourning), no railway track for the Daan (footprints), no padlock, ring, crown, dove, wrapped present, megaphone or snare drum (a gong is drawn) | n/a | n/a |
 | content/lore/settlement-layout.json and src/engine/plaza.ts | Aklat entry and map layout: precolonial settlements along rivers and coasts in kinship clusters, gathering informally in a clearing by the datu's house (drawn as an irregular open clearing with a fire pit and a shade tree); the town plaza as a Spanish colonial introduction | Widespread lowland | Scott 1994; Reed 1978; Laws of the Indies 1573 |
+| content/lore/learning-by-family.json and engine/talambuhay.ts (teach) | Aklat entry and evening lessons: no schools before the Spanish; children learned from family, by apprenticeship and from elders by the fire | Widespread lowland (Tagalog, Visayan) | Scott 1994; Chirino 1604 |
+| content/lore/oral-epics.json | Aklat entry: oral epics (the Maranao Darangen; Hinilawod, Hudhud); the game does not quote or retell the Darangen | Maranao; Visayan; Ifugao | UNESCO 2005/2008; MSU Folklore Division, Darangen (1986–1995); Eugenio 2001 |
+| content/lore/baybayin.json | Aklat entry: baybayin and the living related scripts of Mindoro and Palawan | Tagalog, Visayan; Hanunó'o, Buhid, Tagbanwa | Chirino 1604; Scott 1994; UNESCO Memory of the World 1999 |
+| content/villagers/talambuhay.json | Life-story templates: skills, personal details, family sentences, life events and the lessons elders teach. Skills are open to women and men alike (fighting only to the Mandirigma, men for now). Elders are called by name, not "Lola/Lolo" (Spanish-derived) | Widespread lowland | Scott 1994; see questions 19–20 |
 
 ## Reviewed
 
