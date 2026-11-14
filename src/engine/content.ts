@@ -120,6 +120,8 @@ export interface Rules {
   mourning: { seconds: number; maxSeconds: number; happiness: number };
   /** Rice the barangay holds with no Kamalig. */
   storage: { baseRice: number };
+  /** Shares of women, children and elders among new residents (residents.ts). */
+  residents: { womanPercent: number; childPercent: number; elderPercent: number };
   /** How many sick villagers a healer's hut holds (healing.ts). */
   healing: { hutCapacity: number };
   /** The Bahay ng Datu's footprint and the gathering spots around it (plaza.ts). */
@@ -287,6 +289,8 @@ export interface TraditionDef extends Heritage {
   burialLook: "jars" | "longon";
   /** How its Bahay ng Datu looks (presentation only): a large raised lowland house, or torogan-inspired. */
   houseStyle?: "lowland" | "torogan";
+  /** How villagers dress on the map: "malong" (the tube cloth, for women and men alike), or the default baro and tapis / bahag and kanggan (content/lore/precolonial-dress.json). */
+  dress?: "malong";
   forestSpirit: { name: Text; stage1: Text; stage2: Text; sources: string[] };
   /** How much more often the Sarimanok visits (1 = the base rate). */
   sarimanokChance: number;
@@ -457,7 +461,11 @@ export type VillagerRole = (typeof VILLAGER_ROLES)[number];
 export interface VillagerContent {
   /** Chance that an arriving villager gets a name (0.2 = about 1 in 5). */
   chance: number;
+  /** Every name (women's and men's). */
   names: string[];
+  /** Names for named villagers by gender (content/names.json "villagers"). */
+  women: string[];
+  men: string[];
   stories: VillagerStory[];
   /** Building that makes each role's work possible (no building: anyone). */
   roleBuildings: Partial<Record<VillagerRole, string>>;
@@ -1091,6 +1099,12 @@ export function validateRules(raw: unknown): Rules {
   if (!isObject(raw.storage) || !isNonNegNumber(raw.storage.baseRice)) throw new Error('rules: "storage.baseRice" must be a number >= 0');
   if (!isObject(raw.stockpile) || !isNonNegNumber(raw.stockpile.multiple) || !isNonNegNumber(raw.stockpile.slowPercent) || (raw.stockpile.slowPercent as number) > 100 || typeof raw.stockpile.stopMultiple !== "number" || (raw.stockpile.stopMultiple as number) < 1) throw new Error('rules: "stockpile" needs "multiple", "slowPercent" (0-100) and "stopMultiple" (>= 1)');
   checkAmounts(raw.stockpile.minimum, "rules: stockpile.minimum");
+  if (!isObject(raw.residents)) throw new Error('rules: missing "residents"');
+  for (const key of ["womanPercent", "childPercent", "elderPercent"]) {
+    const v = raw.residents[key];
+    if (typeof v !== "number" || v < 0 || v > 100) throw new Error(`rules: "residents.${key}" must be 0-100`);
+  }
+  if ((raw.residents.childPercent as number) + (raw.residents.elderPercent as number) > 100) throw new Error('rules: "residents" childPercent + elderPercent must be at most 100');
   if (!isObject(raw.healing) || !Number.isInteger(raw.healing.hutCapacity) || (raw.healing.hutCapacity as number) < 1) throw new Error('rules: "healing.hutCapacity" must be a whole number >= 1');
   if (!isObject(raw.plaza)) throw new Error('rules: missing "plaza"');
   for (const key of ["bigFromLevel", "reserveFromLevel", "bigWidth", "bigHeight", "spotsPerTile", "gatherMax"]) {
@@ -1418,7 +1432,7 @@ export function questChain(quests: QuestDef[], buildingIds: Set<string>, seasonI
   return chain;
 }
 
-const NO_VILLAGERS: VillagerContent = { chance: 0, names: [], stories: [], roleBuildings: {} };
+const NO_VILLAGERS: VillagerContent = { chance: 0, names: [], women: [], men: [], stories: [], roleBuildings: {} };
 
 /** Checks content/villagers.json and the villager names in content/names.json. */
 export function validateVillagers(raw: unknown, rawNames: unknown, buildingIds: Set<string>): VillagerContent {
@@ -1426,10 +1440,18 @@ export function validateVillagers(raw: unknown, rawNames: unknown, buildingIds: 
   const file = "villagers.json";
   if (!isObject(raw)) throw new Error(`${file}: must be a JSON object`);
   if (!isNonNegNumber(raw.chance) || raw.chance > 1) throw new Error(`${file}: "chance" must be 0–1`);
-  const names = isObject(rawNames) ? rawNames.villagers : undefined;
-  if (!Array.isArray(names) || names.length === 0 || !names.every((n) => typeof n === "string" && n !== "" && n.length <= 30)) {
-    throw new Error('names.json: "villagers" must list names (at most 30 characters each)');
-  }
+  const byGender = isObject(rawNames) ? rawNames.villagers : undefined;
+  const list = (key: string): string[] => {
+    const l = isObject(byGender) ? byGender[key] : undefined;
+    if (!Array.isArray(l) || l.length === 0 || !l.every((n) => typeof n === "string" && n !== "" && n.length <= 30)) {
+      throw new Error(`names.json: "villagers.${key}" must list names (at most 30 characters each)`);
+    }
+    return l as string[];
+  };
+  const women = list("women");
+  const men = list("men");
+  const names = [...women, ...men];
+  if (new Set(names).size !== names.length) throw new Error('names.json: a villager name is listed twice');
   if (!Array.isArray(raw.stories) || raw.stories.length === 0) throw new Error(`${file}: "stories" must list at least one story`);
   const ids = new Set<string>();
   for (const st of raw.stories) {
@@ -1446,7 +1468,7 @@ export function validateVillagers(raw: unknown, rawNames: unknown, buildingIds: 
       throw new Error(`${file}: roleBuildings.${role} must name a building`);
     }
   }
-  return { chance: raw.chance, names: names as string[], stories: raw.stories as unknown as VillagerStory[], roleBuildings: rb as VillagerContent["roleBuildings"] };
+  return { chance: raw.chance, names, women, men, stories: raw.stories as unknown as VillagerStory[], roleBuildings: rb as VillagerContent["roleBuildings"] };
 }
 
 /** Checks content/levels.json: one reward per level from 2 up, resources or a title. */
@@ -1507,6 +1529,7 @@ export function validateTradition(raw: unknown, file = "tradition"): TraditionDe
   checkNumbers(raw, ["sarimanokChance"], file);
   if (raw.burialLook !== "jars" && raw.burialLook !== "longon") throw new Error(`${file}: "burialLook" must be "jars" or "longon"`);
   if (raw.houseStyle !== undefined && raw.houseStyle !== "lowland" && raw.houseStyle !== "torogan") throw new Error(`${file}: "houseStyle" must be "lowland" or "torogan"`);
+  if (raw.dress !== undefined && raw.dress !== "malong") throw new Error(`${file}: "dress" must be "malong" when given`);
   return raw as unknown as TraditionDef;
 }
 

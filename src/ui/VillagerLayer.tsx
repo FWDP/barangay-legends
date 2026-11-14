@@ -21,7 +21,9 @@ import {
   routeTo,
   presentVillagers,
   SPEED,
+  speedOf,
   stepWalker,
+  type Appearance,
   type Role,
   type VillagerPlan,
   type Walker,
@@ -51,6 +53,7 @@ import { alliedDefenders } from "../engine/region";
 import { raidLanding } from "../engine/border";
 import { solidTiles } from "../engine/doors";
 import { houseFront } from "../engine/plaza";
+import { namedGender } from "../engine/people";
 import { datuHouseBox, datuHouseImage, eraseImage, houseStyleFor } from "./datuHouseArt";
 
 /** A battle at the Kuta being shown right now (see App): who won, and when it ends (ms). */
@@ -190,44 +193,146 @@ function drawTorch(g: CanvasRenderingContext2D, x: number, y: number, tile: numb
   g.fill();
 }
 
-export function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, tile: number, id: number, role: Look, sprite: Sprite, t: number, alpha = 1) {
-  const s = Math.max(7, tile * 0.32);
+/** Default looks for sprites without a resident (replays, visitors): adult, by sprite number. */
+const lookFor = (id: number, role: Look): Appearance => ({
+  gender: role === "warrior" || role === "raider" || role === "looter" || role === "defender" || role === "ally" || role === "datu" || id % 2 ? "man" : "woman",
+  age: "adult",
+  malong: false,
+});
+
+/** Blouse and wrap colors: undyed abaca and cotton, indigo, and the reds, browns and yellows of plant dyes. */
+const BARO = ["#f5f0e1", "#e7dcc0", "#d6c7a1", "#c9b48a"];
+const TAPIS = ["#7f1d1d", "#1e3a8a", "#3f6212", "#7c2d12", "#164e63", "#a16207"];
+
+/**
+ * A villager at map scale, in precolonial dress (content/lore/precolonial-dress.json): women in a
+ * baro (blouse) with a wrapped tapis or patadyong skirt and their hair tied back; men in a bahag
+ * (loincloth) with a short kanggan jacket, some with a putong (head cloth); in a malong
+ * tradition, the tube cloth for both. Children are smaller; elders grey, a little stooped, with a
+ * stick. The skirt-or-legs silhouette keeps women and men apart even at 375px.
+ */
+export function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, tile: number, id: number, role: Look, sprite: Sprite, t: number, alpha = 1, lookIn?: Appearance) {
+  const look = lookIn ?? lookFor(id, role);
+  const child = look.age === "child";
+  const elder = look.age === "elder";
+  const woman = look.gender === "woman";
+  const s = Math.max(7, tile * 0.32) * (child ? 0.72 : 1);
   const swing = sprite.moving ? Math.sin(sprite.stride) * s * 0.12 : 0;
   // Workers busy at their post bob a little.
   const bob = !sprite.moving && role === "work" ? Math.abs(Math.sin(t * 5 + id)) * s * 0.05 : 0;
   const sick = role === "sick";
   g.globalAlpha = (sick ? 0.85 : 1) * alpha;
+  const skin = sick ? "#9cae7a" : SKIN[(id * 3) % SKIN.length];
+  const raider = role === "raider" || role === "looter";
+  const special = role === "datu" ? "#7f1d1d" : role === "envoy" ? "#e7e5e4" : raider ? "#3b0a0a" : null;
+  const cloth = sick ? "#7c9a5a" : special ?? CLOTH[id % CLOTH.length];
+  const wrap = sick ? "#6b8a4a" : TAPIS[(id * 5) % TAPIS.length];
+  const lean = elder ? s * 0.06 : 0;
 
   g.fillStyle = "rgb(0 0 0 / 0.25)";
   g.beginPath();
   g.ellipse(x, y, s * 0.2, s * 0.07, 0, 0, Math.PI * 2);
   g.fill();
 
-  g.strokeStyle = "#3b2414";
-  g.lineWidth = Math.max(1, s * 0.08);
-  g.lineCap = "round";
-  g.beginPath();
-  g.moveTo(x - s * 0.05, y - s * 0.3);
-  g.lineTo(x - s * 0.06 + swing, y);
-  g.moveTo(x + s * 0.05, y - s * 0.3);
-  g.lineTo(x + s * 0.06 - swing, y);
-  g.stroke();
+  const top = y - s * 0.72 - bob + (elder ? s * 0.04 : 0);
+  const waist = top + s * 0.44;
+  const malong = look.malong && !raider;
+  if (woman) {
+    // Legs show only at the feet under the skirt.
+    g.strokeStyle = skin;
+    g.lineWidth = Math.max(1, s * 0.07);
+    g.lineCap = "round";
+    g.beginPath();
+    g.moveTo(x - s * 0.05, y - s * 0.1);
+    g.lineTo(x - s * 0.06 + swing * 0.5, y);
+    g.moveTo(x + s * 0.05, y - s * 0.1);
+    g.lineTo(x + s * 0.06 - swing * 0.5, y);
+    g.stroke();
+    // The wrapped skirt (or a malong from the chest), flaring a little to the ankles.
+    const from = malong ? top + s * 0.12 : waist - s * 0.06;
+    g.fillStyle = wrap;
+    g.beginPath();
+    g.moveTo(x - s * 0.15, from);
+    g.lineTo(x + s * 0.15, from);
+    g.lineTo(x + s * 0.21, y - s * 0.08);
+    g.lineTo(x - s * 0.21, y - s * 0.08);
+    g.closePath();
+    g.fill();
+    // A band woven across it.
+    g.fillStyle = malong ? "#facc15" : "rgb(255 255 255 / 0.35)";
+    g.fillRect(x - s * 0.19, y - s * 0.26, s * 0.38, s * 0.05);
+    // The baro: a short blouse (under the malong's top edge if worn).
+    if (!malong) {
+      g.fillStyle = sick ? cloth : special ?? BARO[id % BARO.length];
+      g.beginPath();
+      g.roundRect(x - s * 0.16 + lean, top, s * 0.32, s * 0.4, s * 0.08);
+      g.fill();
+    } else {
+      g.fillStyle = skin;
+      g.beginPath();
+      g.roundRect(x - s * 0.12 + lean, top, s * 0.24, s * 0.16, s * 0.06);
+      g.fill();
+    }
+  } else {
+    // Bare legs (a bahag leaves them free), or a malong to the knees.
+    g.strokeStyle = raider ? "#3b2414" : skin;
+    g.lineWidth = Math.max(1, s * 0.08);
+    g.lineCap = "round";
+    g.beginPath();
+    g.moveTo(x - s * 0.05, y - s * 0.3);
+    g.lineTo(x - s * 0.06 + swing, y);
+    g.moveTo(x + s * 0.05, y - s * 0.3);
+    g.lineTo(x + s * 0.06 - swing, y);
+    g.stroke();
+    if (malong) {
+      g.fillStyle = wrap;
+      g.fillRect(x - s * 0.17, waist - s * 0.06, s * 0.34, s * 0.3);
+      g.fillStyle = "#facc15";
+      g.fillRect(x - s * 0.17, waist + s * 0.08, s * 0.34, s * 0.04);
+    } else {
+      // The bahag: a band at the hips and a flap hanging in front.
+      g.fillStyle = sick ? cloth : role === "datu" ? "#b91c1c" : wrap;
+      g.fillRect(x - s * 0.15, waist - s * 0.06, s * 0.3, s * 0.08);
+      g.fillRect(x - s * 0.05, waist - s * 0.02, s * 0.1, s * 0.18);
+    }
+    // The kanggan: a short jacket (the datu's finer, envoys' pale), over a bare chest.
+    g.fillStyle = cloth;
+    g.beginPath();
+    g.roundRect(x - s * 0.17 + lean, top, s * 0.34, s * 0.4, s * 0.08);
+    g.fill();
+    g.fillStyle = skin;
+    g.fillRect(x - s * 0.035 + lean, top + s * 0.04, s * 0.07, s * 0.3);
+  }
 
-  const top = y - s * 0.72 - bob;
-  const raider = role === "raider" || role === "looter";
-  g.fillStyle = sick ? "#7c9a5a" : raider ? "#3b0a0a" : role === "datu" ? "#7f1d1d" : role === "envoy" ? "#e7e5e4" : CLOTH[id % CLOTH.length];
+  // The head.
+  const hx = x + lean;
+  g.fillStyle = skin;
   g.beginPath();
-  g.roundRect(x - s * 0.17, top, s * 0.34, s * 0.44, s * 0.08);
+  g.arc(hx, top - s * 0.12, s * 0.13, 0, Math.PI * 2);
   g.fill();
-
-  g.fillStyle = sick ? "#9cae7a" : SKIN[(id * 3) % SKIN.length];
+  g.fillStyle = elder ? "#d6d3d1" : "#1c1410";
   g.beginPath();
-  g.arc(x, top - s * 0.12, s * 0.13, 0, Math.PI * 2);
+  g.arc(hx, top - s * 0.15, s * 0.13, Math.PI, Math.PI * 2);
   g.fill();
-  g.fillStyle = "#1c1410";
-  g.beginPath();
-  g.arc(x, top - s * 0.15, s * 0.13, Math.PI, Math.PI * 2);
-  g.fill();
+  if (woman) {
+    // Hair tied back in a knot.
+    g.beginPath();
+    g.arc(hx - s * 0.13, top - s * 0.17, s * 0.075, 0, Math.PI * 2);
+    g.fill();
+  } else if (!raider && role !== "warrior" && role !== "defender" && role !== "ally" && role !== "datu" && !child && id % 3 === 0) {
+    // Some men wear a putong, a cloth wound round the head.
+    g.fillStyle = "#7c2d12";
+    g.fillRect(hx - s * 0.14, top - s * 0.21, s * 0.28, s * 0.06);
+  }
+  if (elder) {
+    // A walking stick.
+    g.strokeStyle = "#6b4a1c";
+    g.lineWidth = Math.max(1, s * 0.05);
+    g.beginPath();
+    g.moveTo(x + s * 0.22, top + s * 0.18);
+    g.lineTo(x + s * 0.25, y);
+    g.stroke();
+  }
 
   if (role === "datu") {
     // The datu: a gold-trimmed putong and a gold sash, a little taller in the crowd.
@@ -713,10 +818,10 @@ export function VillagerLayer(props: {
           sp.moving = false;
         } else {
           // Along the A* route: on land and bridges only, faster on Daan.
-          sp.walker = stepWalker({ ...sp.walker, p: sp.p }, to, s.map, SPEED[plan.role], dt, roadSpeed, blocked);
+          sp.walker = stepWalker({ ...sp.walker, p: sp.p }, to, s.map, speedOf(plan), dt, roadSpeed, blocked);
           sp.p = sp.walker.p;
           sp.moving = sp.walker.moving;
-          if (sp.moving) sp.stride += dt * 9 * (SPEED[plan.role] / SPEED.work);
+          if (sp.moving) sp.stride += dt * 9 * (speedOf(plan) / SPEED.work);
         }
         // Going in: they fade into the doorway once there; coming out, they fade back in.
         const goingIn = target.inside && !sp.moving;
@@ -734,11 +839,13 @@ export function VillagerLayer(props: {
         // Walking legs, or a worker bobbing at their post.
         if (!reducedMotion && (sp.moving || plan.role === "work")) animating = true;
         const who = named.get(plan.id);
+        // A named villager always looks like themselves: their own gender, never a child.
+        const look: Appearance | undefined = who && plan.look ? { ...plan.look, gender: namedGender(content, who, s.map.seed), age: plan.look.age === "child" ? "adult" : plan.look.age } : plan.look;
         drawn.push({
           x: at.x,
           y: at.y,
           f: () => {
-            drawPerson(g, at.x, at.y, T, plan.id, plan.role, sprite, t, alpha);
+            drawPerson(g, at.x, at.y, T, plan.id, plan.role, sprite, t, alpha, look);
             if (torch) drawTorch(g, at.x, at.y, T, t, reducedMotion);
             if (who) drawStar(g, at.x, at.y, T);
           },

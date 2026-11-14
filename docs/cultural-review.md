@@ -61,6 +61,14 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
     ruler's title, after Scott) fitting as an earned game title? Are the Filipino words used for
     the new features natural: Kabantugan, Ranggo ng Kapuluan, Pinakatanyag, Tagapagtanggol,
     Kolektor ng Alamat, Bisitahin, Bumalik?
+12. **Villagers' dress** (`content/lore/precolonial-dress.json`, sprites in
+    `src/ui/VillagerLayer.tsx`): women in a baro and a wrapped tapis or patadyong with their hair
+    tied back; men in a bahag and short kanggan, some with a putong; the malong for women and men
+    in a Maranao barangay. Are these fair at map scale, and are the colors (undyed fiber, indigo,
+    plant-dye reds and browns) reasonable?
+13. **Women as Mandirigma**: the Mandirigma are drawn (and named) as men for now. Is there a
+    sourced basis for showing women among a barangay's warriors? If so, please give the source
+    and the game will add it.
 
 ### Entries
 
@@ -98,6 +106,8 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 | content/levels.json | Level titles (Datu of Renown … Lakan of Legend) | Tagalog title (lakan) | see question 11 |
 | content/traditions/*.json "burialLook" | How each tradition's Libingan looks | Tagalog: jars, Visayan: longon, Maranao: jars | see questions 7–8 |
 | content/lore/dambana-art.json and src/ui/buildingArt.ts | Dambana art: generic form inspired by raised bamboo shrines (pinag-anituhan); needs a historical source and review; tradition-specific designs pending. | Widespread (generic) | Scott 1994; Plasencia 1589 |
+| content/lore/precolonial-dress.json and src/ui/VillagerLayer.tsx | Aklat entry and villager sprites: baro, tapis/patadyong, bahag, kanggan, putong; malong (Maranao) | Tagalog, Visayan; Maranao | Scott 1994; Boxer Codex (Souza and Turley 2016); Alcina 1668 (Kobak and Gutiérrez 2002); Wikipedia: Malong |
+| content/names.json "villagers" | Named villagers' names, split into women's and men's (everyday Tagalog and Visayan words) | Tagalog, Visayan | made up for the game; see the file's note |
 | content/lore/kuta.json and src/ui/buildingArt.ts | Kuta art and lore note: precolonial fortifications (kuta/kota) drawn as a palisade with a gate and a thatched lookout; generic, the same for every tradition | Widespread | Scott 1994 |
 
 ## Reviewed

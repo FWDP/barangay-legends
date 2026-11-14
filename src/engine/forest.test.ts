@@ -196,7 +196,7 @@ describe("Aklat ng Alamat", () => {
     expect(checkAklat(s, content).aklat).not.toContain("babaylan");
     const hut = checkAklat({ ...s, buildings: [...s.buildings, at("babaylan-hut", 1, 1)] }, content);
     expect(hut.aklat).toContain("babaylan");
-    expect(hut.history.at(-1)).toMatchObject({ kind: "aklat", entry: "babaylan" });
+    expect(hut.history.filter((h) => h.kind === "aklat").map((h) => h.entry)).toContain("babaylan");
     // Taking the hut down doesn't lock it again.
     expect(checkAklat({ ...hut, buildings: s.buildings }, content).aklat).toContain("babaylan");
   });

@@ -8,9 +8,10 @@ import { tileAt, type MapState, type Point } from "../engine/map";
 import { cachedPath, isWalkable } from "../engine/paths";
 import { homeWarriors } from "../engine/region";
 import { doorOf, isSolid } from "../engine/doors";
-import type { NamedVillager } from "../engine/people";
+import { namedGender, type NamedVillager } from "../engine/people";
 import { gatheringSpots, gatherSpot } from "../engine/plaza";
 import { healerStays } from "../engine/healing";
+import { residentAt, type AgeGroup, type Gender, type Resident } from "../engine/residents";
 
 /** Never draw more sprites than this, however big the barangay grows. Night comes from engine/daynight.ts. */
 export const MAX_SPRITES = 60;
@@ -35,6 +36,16 @@ export interface VillagerPlan {
    * house and fire (engine/plaza.ts), or a waiting spot further out once the crowd is full.
    */
   gather?: Point | null;
+  /** Who this sprite shows: a woman or man, child, adult or elder (engine/residents.ts), and how they dress. */
+  look?: Appearance;
+}
+
+/** How a villager sprite looks: from their resident record and the barangay's tradition. */
+export interface Appearance {
+  gender: Gender;
+  age: AgeGroup;
+  /** The malong, for women and men alike (a tradition with dress "malong"). */
+  malong: boolean;
 }
 
 /** Where a villager is going, and whether they go inside when they get there. */
@@ -45,6 +56,12 @@ export interface Goal {
 
 /** Walking speed in tiles per second. Sick villagers shuffle. */
 export const SPEED: Record<Role | "leaving", number> = { work: 1.2, clearing: 1.2, idle: 1, warrior: 1.4, sick: 0.45, leaving: 1.6 };
+
+/** Elders walk slower than everyone else (a share of their role's speed). */
+export const ELDER_PACE = 0.65;
+
+/** A plan's walking speed: its role's, slower for elders. */
+export const speedOf = (plan: VillagerPlan) => SPEED[plan.role] * (plan.look?.age === "elder" ? ELDER_PACE : 1);
 
 
 /** A small fixed offset per villager so a crowd doesn't stand on one pixel. */
@@ -118,8 +135,43 @@ export function planVillagers(state: GameState, content: Content, cap = MAX_SPRI
     const onWatch = r.role === "work" && watching < watchers ? forts[watching++ % forts.length] : null;
     plans.push({ id: j, role: r.role, home, place: r.place, homeDoor: door(homes[i] ? home : null), placeDoor: r.role === "clearing" ? null : door(r.place), watch: onWatch ? door(onWatch) ?? onWatch : null, gather });
   }
+  dressPlans(plans, state, content, total, cap);
   sendSickInside(plans, state, content, door);
   return plans;
+}
+
+/**
+ * Gives each sprite a person to show (residents.ts), the same sample of villagers the roles
+ * come from. Mandirigma are adult men (for now: see content/lore/precolonial-dress.json);
+ * work and clearing go to adults (women and men alike), then elders; children are among the
+ * idle and the sick, staying near home and the house's clearing. If there are more workers to
+ * show than grown-ups, the rest are drawn as adults.
+ */
+function dressPlans(plans: VillagerPlan[], state: GameState, content: Content, total: number, cap: number): void {
+  const malong = content.traditions.find((t) => t.id === state.tradition)?.dress === "malong";
+  const n = plans.length;
+  const folk = Array.from({ length: n }, (_, j) => residentAt(state, content, total > cap ? Math.floor((j * total) / cap) : j));
+  const pool = {
+    men: folk.filter((p) => p.age === "adult" && p.gender === "man"),
+    women: folk.filter((p) => p.age === "adult" && p.gender === "woman"),
+    elders: folk.filter((p) => p.age === "elder"),
+    children: folk.filter((p) => p.age === "child"),
+  };
+  const take = (...from: (keyof typeof pool)[]): Resident | null => {
+    for (const k of from) if (pool[k].length) return pool[k].shift()!;
+    return null;
+  };
+  const look = (p: Resident | null, fallback: Appearance): Appearance => (p ? { gender: p.gender, age: p.age, malong } : fallback);
+  let alt = 0;
+  const order = (r: Role) => (r === "warrior" ? 0 : r === "work" || r === "clearing" ? 1 : r === "sick" ? 2 : 3);
+  for (const plan of [...plans].sort((a, b) => order(a.role) - order(b.role) || a.id - b.id)) {
+    if (plan.role === "warrior") plan.look = { gender: "man", age: "adult", malong };
+    else if (plan.role === "work" || plan.role === "clearing") {
+      // Women and men both work the fields, the fishing and the crafts: alternate.
+      const first = alt++ % 2 === 0 ? (["women", "men"] as const) : (["men", "women"] as const);
+      plan.look = look(take(...first, "elders"), { gender: first[0] === "women" ? "woman" : "man", age: "adult", malong });
+    } else plan.look = look(take("children", "elders", "women", "men"), { gender: plan.id % 2 ? "man" : "woman", age: "adult", malong });
+  }
 }
 
 /**
@@ -188,8 +240,9 @@ export function goal(plan: VillagerPlan, t: number, night: boolean, plaza: Point
       // Most of the day at work, a short break at the plaza.
       return { p: cycle < 0.9 ? at(plan.place!, plan.placeDoor) : gatherAt(plan, plaza, o), inside: false };
     case "idle":
-      // Mostly about their home, some time at the plaza.
-      return { p: cycle < 0.7 ? at(plan.home, plan.homeDoor, 0.3) : gatherAt(plan, plaza, o), inside: false };
+      // Mostly about their home, some time at the plaza; elders rest by the datu's house more
+      // (children keep to the same two places: home and the gathering spots).
+      return { p: cycle < (plan.look?.age === "elder" ? 0.35 : 0.7) ? at(plan.home, plan.homeDoor, 0.3) : gatherAt(plan, plaza, o), inside: false };
   }
 }
 
@@ -355,6 +408,7 @@ export function namedSprites(plans: VillagerPlan[], state: GameState, content: C
   const workplace = (p: VillagerPlan) => (p.place ? typeAt.get(`${p.place.x},${p.place.y}`) : undefined);
   const roleBuilding = content.villagers.roleBuildings;
   const fits = (p: VillagerPlan, v: NamedVillager) => {
+    if (p.look && p.look.gender !== namedGender(content, v, state.map.seed)) return false;
     if (v.sick) return p.role === "sick";
     if (p.role === "sick") return false;
     if (v.role === "warrior") return p.role === "warrior" || p.role === "work";
@@ -366,7 +420,9 @@ export function namedSprites(plans: VillagerPlan[], state: GameState, content: C
   for (const v of [...state.named].sort((a, b) => a.id - b.id)) {
     const start = (Math.imul(v.id, 2654435761) >>> 0) % plans.length;
     let pick: VillagerPlan | null = null;
-    for (const ok of [(p: VillagerPlan) => fits(p, v), () => true]) {
+    // Their kind of work and their own gender first; then any sprite (drawn as them).
+    const loose = (p: VillagerPlan) => (v.sick ? p.role === "sick" : p.role !== "sick");
+    for (const ok of [(p: VillagerPlan) => fits(p, v), loose, () => true]) {
       for (let k = 0; k < plans.length && !pick; k++) {
         const p = plans[(start + k) % plans.length];
         if (!used.has(p.id) && ok(p)) pick = p;

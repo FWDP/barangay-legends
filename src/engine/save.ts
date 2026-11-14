@@ -1,5 +1,6 @@
 // Saving to the browser. The only engine module allowed to touch browser APIs,
 // and even here the storage is passed in so tests can use a fake.
+import { AGE_GROUPS, GENDERS, syncResidents, type AgeGroup, type Gender } from "./residents";
 import { REFUSAL_REASONS, RESOURCES, type BuildingDef, type Content, type RefusalReason, type Resource } from "./content";
 import { cleanName, newGame, placeAuto, STATE_VERSION, type ClearingJob, type GameState, type PlacedBuilding } from "./game";
 import {
@@ -32,7 +33,7 @@ import {
 import { validProposal, type CounterOffer } from "./trading";
 import { generateArchipelago, type Island, type Place } from "./archipelago";
 import { generateBlocs, type Politics } from "./politics";
-import { MAX_HISTORY, type HistoryEntry, type HistoryKind, type NamedVillager } from "./people";
+import { MAX_HISTORY, namedGender, type HistoryEntry, type HistoryKind, type NamedVillager } from "./people";
 import { forestStage } from "./forest";
 import { levelForRenown, renownFromAchievements } from "./kabantugan";
 import { newFame, type Fame } from "./ranking";
@@ -265,6 +266,10 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
   // v24 → v25: a Kamalig can be raised (buildings may carry a level; missing means level 1) and
   // an ally can call for help (region.allyCall). Older saves have neither, so nothing changes.
   24: (raw) => ({ ...raw, version: 25 }),
+  // v25 → v26: every villager as a person (gender and age group) and named villagers' genders.
+  // Older villagers get theirs from the map's seed when the save is read (residents.ts), the
+  // same way new arrivals do; named villagers from their name (content/names.json).
+  25: (raw) => ({ ...raw, version: 26, residents: [], residentsNext: 1 }),
 };
 
 // ---------- Frozen v15 bridge rule (for the v14 → v15 migration only) ----------
@@ -580,6 +585,7 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean, withRegi
     const next = Number.isInteger(data.nextExpeditionId) ? (data.nextExpeditionId as number) : 1;
     state.nextExpeditionId = Math.max(next, ...state.expeditions.map((e) => e.id + 1), 1);
   }
+  parseResidents(data, content, state, isPlayer);
   // Entrances: worked out again; a save from before solid buildings keeps boxed-in ones working.
   return updateDoors(null, state, content, data.grandfatherDoors === true);
 }
@@ -712,6 +718,25 @@ function parseWorship(data: RawSave, content: Content, state: GameState) {
 const CAUSES = ["hunger", "crowded", "other", "age", "sickness", "raid"];
 const count = (v: unknown) => (finiteNonNeg(v) ? Math.floor(v) : 0);
 
+/**
+ * Every villager as a person (residents.ts): the stored ones that are valid (one per villager at
+ * most), then new ones from the seed for the rest. AI barangays store none.
+ */
+function parseResidents(data: RawSave, content: Content, state: GameState, isPlayer: boolean) {
+  state.residents = [];
+  state.residentsNext = 1;
+  if (!isPlayer) return;
+  const seen = new Set<number>();
+  for (const p of Array.isArray(data.residents) ? data.residents.slice(0, state.villagers) : []) {
+    if (!isObject(p) || !Number.isInteger(p.id) || (p.id as number) < 1 || seen.has(p.id as number)) continue;
+    if (!GENDERS.includes(p.gender as Gender) || !AGE_GROUPS.includes(p.age as AgeGroup)) continue;
+    seen.add(p.id as number);
+    state.residents.push({ id: p.id as number, gender: p.gender as Gender, age: p.age as AgeGroup });
+  }
+  if (Number.isInteger(data.residentsNext)) state.residentsNext = Math.max(1, data.residentsNext as number);
+  Object.assign(state, syncResidents(state, content));
+}
+
 /** Tasks done, named villagers, history and counters. Unknown tasks and stories are dropped. */
 function parsePeople(data: RawSave, content: Content, state: GameState, isPlayer: boolean) {
   const st = isObject(data.stats) ? data.stats : {};
@@ -740,6 +765,8 @@ function parsePeople(data: RawSave, content: Content, state: GameState, isPlayer
     const nv: NamedVillager = { id: v.id as number, name: v.name, story: story.id, role: story.role, since: v.since };
     if (v.sick === true) nv.sick = true;
     if (v.frail === true) nv.frail = true;
+    // Saves from before genders: from the name's list, else the seed (people.ts namedGender).
+    nv.gender = GENDERS.includes(v.gender as Gender) ? (v.gender as Gender) : namedGender(content, nv, state.map.seed);
     named.push(nv);
   }
   // No more named warriors than warriors, nor other named villagers than other villagers.
@@ -763,6 +790,7 @@ function parsePeople(data: RawSave, content: Content, state: GameState, isPlayer
     if (!isObject(h) || !finiteNonNeg(h.at) || !HISTORY_KINDS.includes(h.kind as HistoryKind)) continue;
     const e: HistoryEntry = { at: h.at, kind: h.kind as HistoryKind };
     if (typeof h.name === "string" && h.name.length <= 30) e.name = h.name;
+    if (GENDERS.includes(h.gender as Gender)) e.gender = h.gender as Gender;
     if (typeof h.story === "string" && stories.has(h.story)) e.story = h.story;
     if (typeof h.cause === "string" && CAUSES.includes(h.cause)) e.cause = h.cause as HistoryEntry["cause"];
     if (typeof h.task === "string" && quests.has(h.task)) e.task = h.task;

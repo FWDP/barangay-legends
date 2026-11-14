@@ -6,7 +6,7 @@ import { at, content, mapFrom, withState } from "../engine/testUtils";
 import { solidTiles } from "../engine/doors";
 import { houseFootprint } from "../engine/plaza";
 import type { GameState } from "../engine/game";
-import { carriesTorch, destination, goal, edgeTile, exitPoint, MAX_SPRITES, newWalker, planVillagers, SPEED, stepWalker, walk } from "./villagers";
+import { carriesTorch, destination, goal, edgeTile, namedSprites, speedOf, exitPoint, MAX_SPRITES, newWalker, planVillagers, SPEED, stepWalker, walk } from "./villagers";
 
 const fed = { resources: { rice: 100, wood: 0, gold: 0 } };
 
@@ -220,5 +220,47 @@ describe("the sick", () => {
     const home = plans.filter((p) => !p.place);
     expect(home).toHaveLength(2);
     for (const p of home) expect(goal(p, 0, false, s.map.plaza, false).inside).toBe(!!p.homeDoor);
+  });
+});
+
+describe("villagers of all kinds", () => {
+  const fed2 = { resources: { rice: 500, wood: 0, gold: 0 } };
+  const town = () =>
+    withState({ ...fed2, villagers: 40, warriors: 4, buildings: [at("bahay-kubo", 2, 2), at("bahay-kubo", 3, 2), at("bahay-kubo", 2, 6), at("palayan", 7, 7), at("palayan", 1, 8), at("woodcutter-camp", 8, 1), at("kuta", 3, 6)] });
+
+  it("every sprite shows a person; Mandirigma are men, children never work", () => {
+    const region = newGame(content, 5).region!;
+    const s = { ...town(), region: { ...region, incomingRaid: { from: "batong-buhay", strikeAt: 60 } } };
+    const plans = planVillagers(s, content);
+    for (const p of plans) expect(p.look).toBeDefined();
+    for (const p of plans.filter((x) => x.role === "warrior")) expect(p.look).toMatchObject({ gender: "man", age: "adult" });
+    for (const p of plans.filter((x) => x.role === "work" || x.role === "clearing")) expect(p.look!.age).not.toBe("child");
+    // Women and men both work.
+    const workers = plans.filter((x) => x.role === "work").map((x) => x.look!.gender);
+    expect(workers).toContain("woman");
+    expect(workers).toContain("man");
+  });
+
+  it("are the same people every time, and elders walk slower", () => {
+    const a = planVillagers(town(), content).map((p) => p.look);
+    expect(planVillagers(town(), content).map((p) => p.look)).toEqual(a);
+    const elder = planVillagers(town(), content).find((p) => p.look?.age === "elder" && p.role === "idle");
+    if (elder) expect(speedOf(elder)).toBeLessThan(SPEED.idle);
+  });
+
+  it("wear the malong in a tradition that dresses that way", () => {
+    const maranao = content.traditions.find((t) => t.dress === "malong")!;
+    expect(planVillagers({ ...town(), tradition: maranao.id }, content).every((p) => p.look!.malong)).toBe(true);
+    expect(planVillagers(town(), content).some((p) => p.look!.malong)).toBe(false);
+  });
+
+  it("named villagers show on a sprite of their own gender", () => {
+    const named = [
+      { id: 1, name: content.villagers.women[0], story: "singer", role: "villager" as const, since: 0, gender: "woman" as const },
+      { id: 2, name: content.villagers.men[0], story: "singer", role: "villager" as const, since: 0, gender: "man" as const },
+    ];
+    const s = withState({ ...fed2, villagers: 40, named, buildings: town().buildings });
+    const plans = planVillagers(s, content);
+    for (const [id, v] of namedSprites(plans, s, content)) expect(plans.find((p) => p.id === id)!.look!.gender).toBe(v.gender);
   });
 });

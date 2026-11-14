@@ -1,0 +1,37 @@
+{
+  "id": "precolonial-dress",
+  "name": "How people dressed",
+  "description": "Sixteenth-century accounts and the Boxer Codex paintings (about 1590) show lowland dress: women in a baro (a short blouse) over a wrapped skirt (tapis among the Tagalogs, patadyong in the Visayas), men in a bahag (loincloth) with a short kanggan jacket and a putong (head cloth). The malong, a woven tube of cloth, is worn by women and men among the Maranao and other Mindanao peoples. The map's villagers are drawn in a simplified flat style after these sources.",
+  "tradition": "Tagalog, Visayan; Maranao (malong)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "The Boxer Codex (about 1590), transcribed and translated by George Bryan Souza and Jeffrey S. Turley (Brill, 2016)",
+    "Francisco Ignacio Alcina, History of the Bisayan People in the Philippine Islands (1668), translated by Cantius J. Kobak and Lucio Gutiérrez (UST Publishing House, 2002)",
+    "https://en.wikipedia.org/wiki/Malong"
+  ],
+  "aklat": {
+    "order": 16,
+    "icon": "🧵",
+    "name": {
+      "en": "How people dressed",
+      "fil": "Ang kasuotan noon"
+    },
+    "lore": {
+      "en": "Spanish writers of the sixteenth century, and the painters of the Boxer Codex, recorded how people in the lowland islands dressed. Women wore a baro, a short blouse, over a skirt wrapped around the body: the tapis among the Tagalogs, the patadyong in the Visayas. Men wore the bahag, a loincloth wound between the legs and around the waist, with a short jacket, the kanggan, and a putong, a cloth wound around the head. Cloth was woven from abaca, cotton and other fibers and colored with plant dyes. Among the Maranao and other peoples of Mindanao, the malong, a wide tube of woven cloth, is worn by women and men alike: as a skirt, a wrap or a blanket.",
+      "fil": "Itinala ng mga manunulat na Espanyol noong ika-16 na siglo, at ng mga pintor ng Boxer Codex, kung paano manamit ang mga tao sa mababang lupain ng mga pulo. Nakasuot ang mga babae ng baro, isang maikling blusa, sa ibabaw ng palda na ibinabalot sa katawan: ang tapis sa mga Tagalog, ang patadyong sa Kabisayaan. Nakabahag ang mga lalaki, isang telang ibinabalot sa pagitan ng mga hita at sa baywang, may maikling dyaket na kanggan at putong, telang ibinabalot sa ulo. Hinahabi ang tela mula sa abaka, bulak at iba pang hibla, at kinukulayan ng mga katas ng halaman. Sa mga Maranao at iba pang mamamayan ng Mindanao, ang malong, isang malapad na tubong telang hinabi, ay isinusuot ng babae at lalaki: bilang palda, balabal o kumot."
+    },
+    "inGame": {
+      "en": "Villagers on the map wear these: women a baro and a wrapped skirt with their hair tied back, men a bahag and kanggan, some with a putong. In a Maranao barangay, women and men wear the malong. Children are smaller and elders walk with a stick. The Mandirigma are drawn as men for now, until a sourced note on women warriors is added.",
+      "fil": "Ganito ang suot ng mga taganayon sa mapa: baro at tapis ang mga babae, nakatali ang buhok; bahag at kanggan ang mga lalaki, at may ilang nakaputong. Sa barangay na Maranao, malong ang suot ng babae at lalaki. Mas maliliit ang mga bata at may tungkod ang matatanda. Mga lalaki muna ang iginuguhit na Mandirigma, hangga't wala pang talang may sanggunian tungkol sa mga babaeng mandirigma."
+    },
+    "hint": {
+      "en": "Watch your villagers about the barangay.",
+      "fil": "Pagmasdan ang mga taganayon sa barangay."
+    },
+    "unlock": {
+      "type": "built",
+      "building": "bahay-kubo"
+    }
+  },
+  "reviewed": false
+}

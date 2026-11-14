@@ -1,4 +1,6 @@
 // Helpers shared by engine tests.
+import { syncResidents } from "./residents";
+import { namedGender } from "./people";
 import { loadContent, RESOURCES, type Content, type Events, type ResourceAmounts, type Resources } from "./content";
 import { newGame, type GameState, type PlacedBuilding } from "./game";
 import { updateDoors } from "./doors";
@@ -44,8 +46,9 @@ export const TEST_MAP = mapFrom([
 export function withState(patch: Omit<Partial<GameState>, "resources"> & { buildings?: PlacedBuilding[]; resources?: ResourceAmounts }): GameState {
   const { resources, ...rest } = patch;
   const base = newGame(content);
-  // Entrances worked out as the game does, so states compare equal after a save round trip.
-  return withDoors({
+  // Entrances worked out as the game does, and residents and named villagers' genders filled in
+  // as loading a save does, so states compare equal after a save round trip.
+  return withDoors(asLoaded({
     ...base,
     map: TEST_MAP,
     buildings: [at("bahay-kubo", 5, 3)],
@@ -61,7 +64,13 @@ export function withState(patch: Omit<Partial<GameState>, "resources"> & { build
     resources: resources ? { ...zero(), ...resources } : base.resources,
     // Villager milestones already counted for the villagers the test starts with.
     stats: { ...base.stats, ...rest.stats, bestTens: rest.stats?.bestTens ?? Math.floor((rest.villagers ?? base.villagers) / 10) },
-  });
+  }));
+}
+
+/** One resident per villager (residents.ts) and every named villager's gender, as a save loads them. */
+export function asLoaded(s: GameState): GameState {
+  const synced = syncResidents(s, content);
+  return { ...synced, named: synced.named.map((v) => (v.gender ? v : { ...v, gender: namedGender(content, v, synced.map.seed) })) };
 }
 
 /** The state with every building's entrance worked out (doors.ts). */

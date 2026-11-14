@@ -1,5 +1,6 @@
 // Game state and rules. Pure functions only: no React, no browser APIs, and no unseeded
 // randomness or wall-clock time. Time is passed in; randomness comes from the RNG in the state.
+import { syncResidents, type Resident } from "./residents";
 import { RESOURCES, type BuildingDef, type Content, type Resource, type ResourceAmounts } from "./content";
 import { isHungry, seasonMultiplier, updateEvents } from "./events";
 import {
@@ -75,7 +76,7 @@ import {
   type TikbalangTrick,
 } from "./worship";
 
-export const STATE_VERSION = 25;
+export const STATE_VERSION = 26;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -182,6 +183,14 @@ export interface GameState {
   gawainDone: string[];
   /** Villagers with a name and a story (see people.ts). */
   named: NamedVillager[];
+  /**
+   * Every villager as a person (residents.ts): gender and age group, one per villager, kept in
+   * step with the count. Only the player's barangay stores them (AI barangays work theirs out
+   * from their seed).
+   */
+  residents: Resident[];
+  /** The next resident's id. */
+  residentsNext: number;
   /** The barangay's history: named villagers coming and going, tasks done. Newest last. */
   history: HistoryEntry[];
   stats: Stats;
@@ -276,6 +285,8 @@ export function newGame(
     happiness: content.rules.happiness.start,
     gawainDone: [],
     named: [],
+    residents: [],
+    residentsNext: 1,
     history: [],
     stats: { raidsDefended: 0, rolls: 0, named: 0, replanted: 0, permittedClears: 0, deaths: 0, voyages: 0, trades: 0, bestTens: 0 },
     favor: 0,
@@ -304,6 +315,7 @@ export function newGame(
     expeditions: [],
     nextExpeditionId: 1,
   };
+  if (!content.ai) state = syncResidents(state, content);
   if (withRegion && content.neighbors.length > 0) state.region = createRegion(content, 0, seed, state.barangay.id);
   for (const def of content.buildings) {
     for (let i = 0; i < (start.buildings[def.id] ?? 0); i++) state = placeAuto(state, content, def.id);

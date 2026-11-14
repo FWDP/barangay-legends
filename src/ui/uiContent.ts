@@ -105,7 +105,7 @@ export const GAME_TEXT = {
     moreSoon: [], allDone: ["total"], open: [], close: [], history: [], noHistory: [],
   },
   roles: { villager: [], farmer: [], woodcutter: [], fisher: [], warrior: [] },
-  history: { named: ["story"], left: ["name"], leftHunger: ["name"], leftCrowded: ["name"], fell: ["name"], task: ["task"] },
+  history: { named: ["story"], left: ["name"], leftHunger: ["name"], leftCrowded: ["name", "them"], fell: ["name"], task: ["task"], herThem: [], himThem: [], anyThem: [] },
   villager: { sick: [], close: [], ledDefense: ["name"] },
   news: { taskDone: ["task", "reward"], next: ["task"], title: ["title"], moreSoon: [], firstNamed: ["story"] },
   share: { button: [], villagers: ["n"], datu: ["datu"], text: [], saved: [], failed: [] },
@@ -120,7 +120,7 @@ export const GAME_TEXT = {
     recommended: [], more: [], new: [], details: [], staffed: ["staffed"], noPath: ["n"], perTile: [], daanName: [], daanText: ["percent"], layDaan: [], aboutLook: [],
   },
   death: {
-    died: ["cause"], diedNamed: ["name", "cause"], diedRaid: ["count"], frail: ["name"], age: [], sickness: [], hunger: [], raid: [], mourning: ["time"],
+    died: ["cause"], diedNamed: ["name", "cause", "them"], diedRaid: ["count"], frail: ["name"], age: [], sickness: [], hunger: [], raid: [], mourning: ["time"],
     sickWarning: [], hungerWarning: [], remembered: [], none: [], others: ["count"], jars: [], longon: [],
   },
   datu: { title: [], level: ["level", "max"], bonus: ["production", "influence"], upgrade: ["level"], max: [], envoys: [], balangay: [], alliances: [], unlocks: ["what"], news: ["level", "what"], close: [] },

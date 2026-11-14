@@ -65,7 +65,7 @@ export function die(state: GameState, content: Content, cause: DeathCause, opts:
     named: who ? state.named.filter((v) => v.id !== who.id) : state.named,
     stats: { ...state.stats, deaths: state.stats.deaths + 1 },
   };
-  const entry: HistoryEntry = { at: state.time, kind: "died", cause, ...(who ? { name: who.name, story: who.story } : {}) };
+  const entry: HistoryEntry = { at: state.time, kind: "died", cause, ...(who ? { name: who.name, story: who.story, ...(who.gender ? { gender: who.gender } : {}) } : {}) };
   s = addHistory(s, entry);
   if (who) s = remember(s, who, cause, state.time);
   return addMourning(s, content, 1);
@@ -100,7 +100,7 @@ export function updateDeaths(prev: GameState, next: GameState, content: Content,
   // Frailty: the warning before old age.
   for (const v of s.named) {
     if (!v.frail && s.time - v.since >= d.oldAge.frailAfterSeconds) {
-      s = addHistory({ ...s, named: s.named.map((x) => (x.id === v.id ? { ...x, frail: true } : x)) }, { at: s.time, kind: "frail", name: v.name, story: v.story });
+      s = addHistory({ ...s, named: s.named.map((x) => (x.id === v.id ? { ...x, frail: true } : x)) }, { at: s.time, kind: "frail", name: v.name, story: v.story, ...(v.gender ? { gender: v.gender } : {}) });
     }
   }
   // Long sickness: how long the barangay has had sickness without a break.

@@ -262,6 +262,12 @@
     "slowPercent": 80,
     "stopMultiple": 1.5
   },
+  "residents": {
+    "_comment": "Every villager as a person (engine/residents.ts): the share of women, children and elders among new arrivals and births, rolled from the map's seed. Display only (the map's sprites); every villager still counts the same in the economy.",
+    "womanPercent": 50,
+    "childPercent": 25,
+    "elderPercent": 10
+  },
   "healing": {
     "_comment": "Sick villagers stay in the nearest standing healer's hut (engine/healing.ts), at most hutCapacity to a hut; the rest wait at home. Display only: how fast the sick get better still comes from the hut's 'heals' (content/buildings).",
     "hutCapacity": 6

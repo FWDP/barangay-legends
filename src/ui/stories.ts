@@ -36,7 +36,7 @@ export function historyLine(h: HistoryEntry, content: Content, game: GameText, l
       const d = game.death;
       if (h.cause === "raid" && !h.name) return fill(d.diedRaid[lang], { count: h.count ?? 1 });
       const cause = h.cause === "age" || h.cause === "sickness" || h.cause === "hunger" || h.cause === "raid" ? d[h.cause][lang] : "";
-      return h.name ? fill(d.diedNamed[lang], { name: h.name, cause }) : fill(d.died[lang], { cause });
+      return h.name ? fill(d.diedNamed[lang], { name: h.name, cause, them: them(game, h, lang) }) : fill(d.died[lang], { cause });
     }
     case "frail":
       return fill(game.death.frail[lang], { name: h.name ?? "" });
@@ -66,7 +66,7 @@ export function historyLine(h: HistoryEntry, content: Content, game: GameText, l
       return fill(t.fell[lang], { name: h.name ?? "" });
     case "left": {
       const line = h.cause === "hunger" ? t.leftHunger : h.cause === "crowded" ? t.leftCrowded : t.left;
-      return fill(line[lang], { name: h.name ?? "" });
+      return fill(line[lang], { name: h.name ?? "", them: them(game, h, lang) });
     }
   }
 }
@@ -135,4 +135,10 @@ export function awayPeopleLines(before: GameState, after: GameState, content: Co
   const seen = Math.max(0, ...(before.region?.news ?? []).map((n) => n.id));
   for (const n of after.region?.news ?? []) if (n.id > seen) lines.push(`📣 ${newsLine(n, after, content, game, lang)}`);
   return lines;
+}
+
+/** The pronoun for a named villager in a history line ({them}): from their stored gender. */
+function them(game: GameText, h: HistoryEntry, lang: Lang): string {
+  const t = game.history;
+  return (h.gender === "woman" ? t.herThem : h.gender === "man" ? t.himThem : t.anyThem)[lang];
 }

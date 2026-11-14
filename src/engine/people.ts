@@ -3,6 +3,7 @@
 // Rolls use rollAt with a counter kept in stats, so they never shift the shared RNG that
 // drives events. When villagers leave or warriors fall, named ones may be among them; that is
 // recorded in the history. Pure: called after every engine step and every command.
+import { syncResidents, type Gender } from "./residents";
 import type { Content, VillagerRole, VillagerStory } from "./content";
 import type { GameState } from "./game";
 import { rollAt } from "./rng";
@@ -20,6 +21,8 @@ export interface NamedVillager {
   sick?: boolean;
   /** Grown old: they may die of old age now (the warning comes first). */
   frail?: boolean;
+  /** Woman or man (pronouns in the history, the name list, the sprite). Missing in old tests only: see namedGender. */
+  gender?: Gender;
 }
 
 export type HistoryKind = "named" | "left" | "fell" | "task" | "spirits" | "aklat" | "event" | "died" | "frail" | "datu" | "level" | "rank";
@@ -30,6 +33,8 @@ export interface HistoryEntry {
   kind: HistoryKind;
   /** The villager (named, left, fell). */
   name?: string;
+  /** Their gender, for pronouns in the text ({them}). */
+  gender?: Gender;
   story?: string;
   /** Why they left ("hunger", "crowded": no house, "other"), or what they died of (died). */
   cause?: "hunger" | "crowded" | "other" | "age" | "sickness" | "raid";
@@ -79,6 +84,18 @@ const SALT_PICKNAME = 7103;
 const SALT_LEAVE = 7104;
 const SALT_WHO = 7105;
 const SALT_SICK = 7106;
+const SALT_NAMED_GENDER = 7107;
+
+/** A named villager's gender: stored, or (an entry from before genders) from their name, else their id. */
+export function namedGender(content: Content, v: { id: number; name: string; gender?: Gender }, seed = 0): Gender {
+  if (v.gender) return v.gender;
+  if (content.villagers.women.includes(v.name)) return "woman";
+  if (content.villagers.men.includes(v.name)) return "man";
+  return rollAt(seed, v.id, SALT_NAMED_GENDER) * 100 < content.rules.residents.womanPercent ? "woman" : "man";
+}
+
+/** The history fields for a named villager (name, story and gender). */
+const about = (v: NamedVillager) => ({ name: v.name, story: v.story, ...(v.gender ? { gender: v.gender } : {}) });
 
 export function addHistory(state: GameState, entry: HistoryEntry): GameState {
   return { ...state, history: [...state.history, entry].slice(-MAX_HISTORY) };
@@ -124,18 +141,22 @@ function maybeName(state: GameState, content: Content, warrior: boolean): GameSt
   if (r >= vc.chance) return s;
   const stories = storiesFor(s, content, warrior);
   if (stories.length === 0) return s;
+  // Mandirigma are men for now (no sourced note yet on women warriors); others by the seed.
+  const id = s.stats.named + 1;
+  const gender: Gender = warrior ? "man" : rollAt(s.map.seed, id, SALT_NAMED_GENDER) * 100 < content.rules.residents.womanPercent ? "woman" : "man";
+  const pool = gender === "woman" ? vc.women : vc.men;
   const taken = new Set([...s.named.map((v) => v.name), s.barangay.datu]);
-  const free = vc.names.filter((n) => !taken.has(n));
-  const names = free.length ? free : vc.names;
+  const free = pool.filter((n) => !taken.has(n));
+  const names = free.length ? free : pool.length ? pool : vc.names;
   let a: number;
   let b: number;
   [a, s] = roll(s, SALT_STORY);
   [b, s] = roll(s, SALT_PICKNAME);
   const story = stories[Math.floor(a * stories.length)];
   const name = names[Math.floor(b * names.length)];
-  const v: NamedVillager = { id: s.stats.named + 1, name, story: story.id, role: story.role, since: s.time };
+  const v: NamedVillager = { id, name, story: story.id, role: story.role, since: s.time, gender };
   s = { ...s, named: [...s.named, v], stats: { ...s.stats, named: s.stats.named + 1 } };
-  return addHistory(s, { at: s.time, kind: "named", name, story: story.id });
+  return addHistory(s, { at: s.time, kind: "named", ...about(v) });
 }
 
 /**
@@ -150,7 +171,7 @@ function maybeLose(state: GameState, candidates: NamedVillager[], pool: number, 
   [w, s] = roll(s, SALT_WHO);
   const who = candidates[Math.floor(w * candidates.length)];
   s = { ...s, named: s.named.filter((v) => v !== who) };
-  return addHistory(s, { ...entry, at: s.time, name: who.name, story: who.story });
+  return addHistory(s, { ...entry, at: s.time, ...about(who) });
 }
 
 /** Removes the named ones that can't still be there (more named than people), newest first. */
@@ -159,11 +180,11 @@ function trim(state: GameState, warriorsLeft: number, othersLeft: number, cause:
   const over = (warrior: boolean) => s.named.filter((v) => isWarrior(v) === warrior);
   while (over(true).length > warriorsLeft) {
     const who = over(true).at(-1)!;
-    s = addHistory({ ...s, named: s.named.filter((v) => v !== who) }, { at: s.time, kind: "fell", name: who.name, story: who.story });
+    s = addHistory({ ...s, named: s.named.filter((v) => v !== who) }, { at: s.time, kind: "fell", ...about(who) });
   }
   while (over(false).length > othersLeft) {
     const who = over(false).at(-1)!;
-    s = addHistory({ ...s, named: s.named.filter((v) => v !== who) }, { at: s.time, kind: "left", name: who.name, story: who.story, ...(cause ? { cause } : {}) });
+    s = addHistory({ ...s, named: s.named.filter((v) => v !== who) }, { at: s.time, kind: "left", ...about(who), ...(cause ? { cause } : {}) });
   }
   return s;
 }
@@ -173,7 +194,9 @@ function trim(state: GameState, warriorsLeft: number, othersLeft: number, cause:
  * and new warriors may get names; villagers who left and warriors who fell may be named ones;
  * new sickness may strike a named villager. Returns `next` itself if nothing changed.
  */
-export function reconcilePeople(prev: GameState, next: GameState, content: Content, leftBecause: HistoryEntry["cause"] = "other"): GameState {
+export function reconcilePeople(prev: GameState, nextIn: GameState, content: Content, leftBecause: HistoryEntry["cause"] = "other"): GameState {
+  // Every villager as a person (residents.ts): arrivals added, the newest leave first.
+  const next = content.ai ? nextIn : syncResidents(nextIn, content);
   // Deaths already handled (death.ts) aren't departures.
   const fewer = prev.villagers - next.villagers - (next.stats.deaths - prev.stats.deaths);
   const warriorLoss = Math.max(0, prev.warriors - next.warriors);

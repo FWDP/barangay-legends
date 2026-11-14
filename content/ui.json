@@ -82,7 +82,7 @@
       "fil": "Umalis si {name}: kulang ang bigas."
     },
     "leftCrowded": {
-      "en": "{name} left: there was no house for them.",
+      "en": "{name} left: there was no house for {them}.",
       "fil": "Umalis si {name}: walang bahay para sa kanila."
     },
     "fell": {
@@ -92,6 +92,18 @@
     "task": {
       "en": "Task done: {task}.",
       "fil": "Natapos ang gawain: {task}."
+    },
+    "herThem": {
+      "en": "her",
+      "fil": "kaniya"
+    },
+    "himThem": {
+      "en": "him",
+      "fil": "kaniya"
+    },
+    "anyThem": {
+      "en": "them",
+      "fil": "kaniya"
     }
   },
   "villager": {
@@ -436,7 +448,7 @@
       "fil": "Isa sa ating mga tao ang namatay dahil sa {cause}."
     },
     "diedNamed": {
-      "en": "{name} died of {cause}. The barangay remembers them.",
+      "en": "{name} died of {cause}. The barangay remembers {them}.",
       "fil": "Pumanaw si {name} dahil sa {cause}. Inaalala siya ng barangay."
     },
     "diedRaid": {
