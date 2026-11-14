@@ -1,7 +1,7 @@
 import { directionFrom, raidLanding } from "../engine/border";
 import type { Content } from "../engine/content";
 import { barangayCenter } from "../engine/map";
-import { healRate, isBurning, seasonAt, secondsUntilLeaving } from "../engine/events";
+import { healRate, isBurning, secondsUntilLeaving } from "../engine/events";
 import { hungerDeathAt, sicknessWarning } from "../engine/death";
 import { overcrowded, type GameState } from "../engine/game";
 
@@ -12,9 +12,6 @@ export interface Banner {
   text: string;
   tone: "danger" | "warning" | "info";
 }
-
-/** Seconds a "new season" banner stays up. */
-const SEASON_BANNER_SECONDS = 10;
 
 export const clock = (seconds: number) => {
   const s = Math.max(0, Math.ceil(seconds));
@@ -111,26 +108,7 @@ export function activeBanners(state: GameState, content: Content): Banner[] {
       tone: "info",
     });
   }
-  const season = seasonAt(content, state.time);
-  if (season && state.time >= season.season.durationSeconds && season.elapsed < SEASON_BANNER_SECONDS) {
-    banners.push({
-      id: "season",
-      icon: season.season.icon,
-      title: season.season.name,
-      text: season.season.description,
-      tone: "info",
-    });
-  }
-  // Mourning: gentle, and only while nothing more urgent is showing.
-  if (state.mourning > 0 && banners.length === 0) {
-    banners.push({
-      id: "mourning",
-      icon: "🕯️",
-      title: "Mourning",
-      text: `The barangay mourns its dead: ${clock(state.mourning)} left.${state.buildings.some((b) => content.buildings.find((d) => d.id === b.type)?.burial) ? "" : " A Libingan helps it pass."} A rite at the Dambana eases it.`,
-      tone: "info",
-    });
-  }
+  // The season (its own chip) and mourning (a status icon) are ongoing states, not banners.
   return banners;
 }
 

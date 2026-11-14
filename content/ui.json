@@ -424,6 +424,10 @@
     "lockedDatu": {
       "en": "🔒 Bahay ng Datu Lv {level}",
       "fil": "🔒 Bahay ng Datu antas {level}"
+    },
+    "aboutLook": {
+      "en": "About this look",
+      "fil": "Tungkol sa anyong ito"
     }
   },
   "death": {
@@ -1266,6 +1270,80 @@
     "close": {
       "en": "Close",
       "fil": "Isara"
+    }
+  },
+  "notices": {
+    "more": {
+      "en": "+{n}",
+      "fil": "+{n}"
+    },
+    "moreLabel": {
+      "en": "{n} more notifications",
+      "fil": "{n} pang abiso"
+    },
+    "soon": {
+      "en": "one ends soon",
+      "fil": "may matatapos na"
+    },
+    "list": {
+      "en": "Also happening",
+      "fil": "Nangyayari rin"
+    },
+    "dismiss": {
+      "en": "Dismiss",
+      "fil": "Isara"
+    },
+    "show": {
+      "en": "Show",
+      "fil": "Ipakita"
+    },
+    "eclipse": {
+      "en": "The Bakunawa swallows the moon",
+      "fil": "Nilulunok ng Bakunawa ang buwan"
+    },
+    "tikbalang": {
+      "en": "A tikbalang's riddle",
+      "fil": "Bugtong ng tikbalang"
+    },
+    "offer": {
+      "en": "Trade offer from {barangay}",
+      "fil": "Alok na kalakal mula sa {barangay}"
+    },
+    "choice": {
+      "en": "Someone waits to see the datu",
+      "fil": "May naghihintay sa datu"
+    },
+    "expedition": {
+      "en": "Your expedition reached {barangay}",
+      "fil": "Nakarating ang iyong lakbay sa {barangay}"
+    },
+    "sailing": {
+      "en": "A Balangay is at sea",
+      "fil": "May Balangay sa laot"
+    },
+    "prank": {
+      "en": "A kapre hid the tools",
+      "fil": "Itinago ng kapre ang mga kagamitan"
+    },
+    "mourning": {
+      "en": "Mourning: {time} left. A Libingan helps it pass; a rite at the Dambana eases it.",
+      "fil": "Pagluluksa: {time} pa. Nakatutulong ang Libingan; pinagagaan ito ng ritwal sa Dambana."
+    },
+    "embargo": {
+      "en": "Embargo: {names} refuse to trade with you.",
+      "fil": "Embargo: ayaw makipagkalakalan ng {names}."
+    },
+    "tradePaused": {
+      "en": "Trade paused: a raid is coming. Offers wait offshore until it is over.",
+      "fil": "Hinto ang kalakalan: may paparating na pagsalakay. Naghihintay ang mga alok hanggang matapos ito."
+    },
+    "blessings": {
+      "en": "Blessings in effect: {names}",
+      "fil": "Mga biyayang umiiral: {names}"
+    },
+    "status": {
+      "en": "Status",
+      "fil": "Kalagayan"
     }
   }
 }

@@ -10,6 +10,8 @@ import { recommended } from "./buildMenu";
 import { latestReportId, OfferBar, ReportDialog, unseenReport, VictoryDialog } from "./RegionOverlays";
 import { RegionView } from "./RegionView";
 import { activeBanners, EventBanner } from "./EventBanners";
+import { NoticeStack, StatusIcons, type NoticeView } from "./NoticeStack";
+import { noticeQueue } from "./notices";
 import { FloatLayer, spawnFloat } from "./floats";
 import { baleteWarning, bonusRuleText, costText, groveRuleText, RESOURCE_ICON } from "./format";
 import { GatherButtons } from "./GatherButtons";
@@ -40,7 +42,7 @@ import { isPlaza } from "../engine/map";
 import { villageKey, villageSnapshot } from "../engine/village";
 import { neighborDef } from "../engine/region";
 import { VisitView } from "./VisitView";
-import { ExpeditionBar, expeditionTitle, ReplayView } from "./ReplayView";
+import { ExpeditionBar, expeditionTitle, freshExpedition, ReplayView, sailingVoyage } from "./ReplayView";
 import { expeditionForReport, expeditionsBetween, type Expedition } from "../engine/expeditions";
 import { LevelChip } from "./LevelBadge";
 import { localRanking, RankingDialog } from "./Ranking";
@@ -593,7 +595,54 @@ export function App() {
     .every((b) => owned(state, b.id) > 0);
 
   // Keep the top of the map clear: placing shows one event banner, otherwise two.
-  const banners = activeBanners(state, content).slice(0, placing ? 1 : 2);
+  // Every notification that wants the banner, and how each looks (full banner, one line for the list).
+  const fresh = freshExpedition(state, seenExpedition);
+  const noticeQueueNow = noticeQueue(state, content, { expeditionFresh: !!fresh, sailing: !!sailingVoyage(state), tradeHeld });
+  const eventBanners = new Map(activeBanners(state, content).map((b) => [b.id, b]));
+  const nt = ui.game.notices;
+  const offerFrom = state.region?.offer ? (neighborDef(content, state.region.offer.from)?.name ?? state.region.offer.from) : "";
+  const expeditionBar = (
+    <ExpeditionBar state={state} content={content} game={ui.game} lang={lang} seen={seenExpedition} onWatch={watch} onDismiss={(id) => setSeenExpedition(id)} />
+  );
+  const noticeViews: Record<string, NoticeView | undefined> = {
+    eclipse: {
+      node: (
+        <EclipseBar
+          state={state}
+          content={content}
+          game={ui.game}
+          lang={lang}
+          onGong={() => {
+            dispatch({ type: "gong" });
+            sfx.click();
+          }}
+        />
+      ),
+      label: `🌑 ${nt.eclipse[lang]}`,
+    },
+    tikbalang: { node: <TikbalangBar state={state} content={content} game={ui.game} lang={lang} onAnswer={(i) => dispatch({ type: "answerRiddle", option: i })} />, label: `🐴 ${nt.tikbalang[lang]}` },
+    offer: {
+      node: <OfferBar state={state} content={content} dispatch={dispatch} folded={view === "barangay" && !offerOpen} sailing={sailing} held={tradeHeld} onOpen={() => !sailing && setOfferOpen(true)} />,
+      label: `🛶 ${fill(nt.offer[lang], { barangay: offerFrom })}`,
+    },
+    choice: {
+      node: (
+        <ChoiceBanner
+          state={state}
+          content={content}
+          onOpen={() => {
+            sfx.click();
+            setChoiceOpen(true);
+          }}
+        />
+      ),
+      label: `📜 ${nt.choice[lang]}`,
+    },
+    expedition: fresh ? { node: expeditionBar, label: `🎬 ${fill(nt.expedition[lang], { barangay: neighborDef(content, fresh.to)?.name ?? fresh.to })}` } : undefined,
+    sailing: { node: expeditionBar, label: `⛵ ${nt.sailing[lang]}` },
+    prank: { node: <PrankBar state={state} content={content} game={ui.game} lang={lang} />, label: `🪓 ${nt.prank[lang]}` },
+    ...Object.fromEntries([...eventBanners.values()].map((b) => [b.id, { node: <EventBanner banner={b} />, label: `${b.icon} ${b.title}` }])),
+  };
 
   const gather = useCallback(
     (r: Resource, e: MouseEvent<HTMLButtonElement>) => {
@@ -772,7 +821,12 @@ export function App() {
             }}
           />
         }
-        day={<DayChip state={state} content={content} game={ui.game} lang={lang} className="hidden sm:flex" />} extraChips={<ForestChip state={state} content={content} game={ui.game} lang={lang} />}>
+        day={<DayChip state={state} content={content} game={ui.game} lang={lang} className="hidden sm:flex" />} extraChips={
+          <>
+            <ForestChip state={state} content={content} game={ui.game} lang={lang} />
+            <StatusIcons state={state} content={content} game={ui.game} lang={lang} className="hidden sm:flex" tradeHeld={tradeHeld} />
+          </>
+        }>
         <span className="hidden sm:block">
           <AklatButton state={state} content={content} game={ui.game} lang={lang} onOpen={() => setAklatOpen(true)} />
         </span>
@@ -935,6 +989,7 @@ export function App() {
             <ForestChip state={state} content={content} game={ui.game} lang={lang} />
           </span>
           <AklatButton state={state} content={content} game={ui.game} lang={lang} onOpen={() => setAklatOpen(true)} compact />
+          <StatusIcons state={state} content={content} game={ui.game} lang={lang} tradeHeld={tradeHeld} />
         </MapSeasonBadge>}
         {/* On phones the banners keep clear of the season, leaf and book on the right, and the task joins them. */}
         <div
@@ -1025,26 +1080,6 @@ export function App() {
               }}
             />
           )}
-          <ExpeditionBar state={state} content={content} game={ui.game} lang={lang} seen={seenExpedition} onWatch={watch} onDismiss={(id) => setSeenExpedition(id)} />
-          <OfferBar
-            state={state}
-            content={content}
-            dispatch={dispatch}
-            folded={view === "barangay" && !offerOpen}
-            sailing={sailing}
-            held={tradeHeld}
-            onOpen={() => !sailing && setOfferOpen(true)}
-          />
-          {!raidComing && (
-            <ChoiceBanner
-              state={state}
-              content={content}
-              onOpen={() => {
-                sfx.click();
-                setChoiceOpen(true);
-              }}
-            />
-          )}
           {view === "barangay" &&
             replantAsk &&
             !placing &&
@@ -1069,21 +1104,8 @@ export function App() {
               onCancel={() => setReplantAsk(null)}
             />
           )}
-          <EclipseBar
-            state={state}
-            content={content}
-            game={ui.game}
-            lang={lang}
-            onGong={() => {
-              dispatch({ type: "gong" });
-              sfx.click();
-            }}
-          />
-          <TikbalangBar state={state} content={content} game={ui.game} lang={lang} onAnswer={(i) => dispatch({ type: "answerRiddle", option: i })} />
-          <PrankBar state={state} content={content} game={ui.game} lang={lang} />
-          {banners.map((b) => (
-            <EventBanner key={b.id} banner={b} />
-          ))}
+          {/* Notifications: ONE banner at a time by priority, the rest behind a "+N" badge (notices.ts). */}
+          <NoticeStack state={state} queue={noticeQueueNow} views={noticeViews} game={ui.game} lang={lang} />
         </div>
         {view === "barangay" && !placing && !roadMode && (
           <div className="hidden sm:block">
@@ -1132,6 +1154,11 @@ export function App() {
       <BuildingMenu
         state={state}
         content={content}
+        onLore={(id) => {
+          setMenu(null);
+          setLoreNote(id);
+        }}
+        aboutLabel={ui.game.build.aboutLook[lang]}
         target={view === "barangay" ? menu : null}
         onClose={closeMenu}
         onMove={(x, y) => {

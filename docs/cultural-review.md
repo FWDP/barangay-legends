@@ -97,6 +97,8 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 | content/traditions/*.json "houseStyle" and src/ui/datuHouseArt.ts | How the Bahay ng Datu is drawn | Lowland (Tagalog, Visayan); torogan-inspired (Maranao) | see question 10 |
 | content/levels.json | Level titles (Datu of Renown … Lakan of Legend) | Tagalog title (lakan) | see question 11 |
 | content/traditions/*.json "burialLook" | How each tradition's Libingan looks | Tagalog: jars, Visayan: longon, Maranao: jars | see questions 7–8 |
+| content/lore/dambana-art.json and src/ui/buildingArt.ts | Dambana art: generic form inspired by raised bamboo shrines (pinag-anituhan); needs a historical source and review; tradition-specific designs pending. | Widespread (generic) | Scott 1994; Plasencia 1589 |
+| content/lore/kuta.json and src/ui/buildingArt.ts | Kuta art and lore note: precolonial fortifications (kuta/kota) drawn as a palisade with a gate and a thatched lookout; generic, the same for every tradition | Widespread | Scott 1994 |
 
 ## Reviewed
 

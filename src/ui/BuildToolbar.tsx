@@ -12,6 +12,7 @@ import { DAAN, DATU, itemsIn, missingFor, tabOfItem, tabsWithNew, unlockedIds, v
 import { bonusRuleText, costText, groveRuleText, RESOURCE_ICON } from "./format";
 import type { Lang } from "./settings";
 import { fill, type GameText } from "./uiContent";
+import { buildingArtUrl } from "./buildingArt";
 
 const TAB_KEY = "barangay-legends/build-tab";
 const SEEN_KEY = "barangay-legends/build-seen";
@@ -205,6 +206,8 @@ export function BuildToolbar(props: {
     return {
       id,
       icon: b.icon,
+      // The same custom art as on the map (Dambana, Kuta).
+      iconUrl: buildingArtUrl(b.id) ?? undefined,
       name: b.name,
       count,
       unlocked: open,
@@ -301,7 +304,7 @@ export function BuildToolbar(props: {
                 active ? "border-amber-950/60 bg-amber-100 text-amber-950" : "border-transparent bg-amber-950/25 text-amber-50 hover:bg-amber-950/40"
               } ${glow ? "shadow-[0_0_10px_2px_rgba(250,204,21,0.8)]" : ""}`}
             >
-              <span aria-hidden>{TAB_ICON[id]}</span>
+              <span aria-hidden>{id === "depensa" ? <img src={buildingArtUrl("kuta")!} alt="" draggable={false} className="inline-block size-[1.15em] align-[-0.2em]" /> : TAB_ICON[id]}</span>
               <span className={active ? "" : "hidden sm:inline"}>{t[id][lang].replace(/ \(.*\)$/, "")}</span>
               {fresh.has(id) && <span aria-hidden className="absolute -top-1 -right-1 size-3 rounded-full border-2 border-amber-50 bg-red-600" />}
             </button>

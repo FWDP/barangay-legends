@@ -1,5 +1,6 @@
 // Changing your mind about a building: the menu on a placed building (Move, Demolish), the
 // demolish confirmation with its warnings, and the short-lived Undo button after building.
+import { ART_LORE, buildingArtUrl } from "./buildingArt";
 import { boatCap, boatCost } from "../engine/sea";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Content } from "../engine/content";
@@ -34,8 +35,11 @@ export function BuildingMenu(props: {
   onRemembered?: () => void;
   /** A Balangay dock: train a boat. */
   onTrainBoat?: () => void;
+  /** Open a lore note (how a building with custom art is drawn, and its sources). */
+  onLore?: (id: string) => void;
+  aboutLabel?: string;
 }) {
-  const { state, content, target, onClose, onMove, onDemolish, onPause, onShrine, onRemembered, onTrainBoat } = props;
+  const { state, content, target, onClose, onMove, onDemolish, onPause, onShrine, onRemembered, onTrainBoat, onLore, aboutLabel } = props;
   const box = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
   const building = target ? buildingAt(state, target.x, target.y) : undefined;
@@ -93,7 +97,7 @@ export function BuildingMenu(props: {
     >
       <p className="flex items-center gap-1.5 px-1 pb-1.5 font-display text-base text-amber-900">
         <span aria-hidden className="text-xl leading-none">
-          {def.icon}
+          {buildingArtUrl(def.id) ? <img src={buildingArtUrl(def.id)!} alt="" draggable={false} className="size-[1.2em]" /> : def.icon}
         </span>
         {def.name}
       </p>
@@ -146,6 +150,16 @@ export function BuildingMenu(props: {
           >
             <span>🕯️ The remembered</span>
             <span className="text-xs font-normal">{state.remembered.length}</span>
+          </button>
+        )}
+        {ART_LORE[def.id] && onLore && content.lore[ART_LORE[def.id]] && (
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => onLore(ART_LORE[def.id])}
+            className="game-btn flex items-center justify-between border-2 border-amber-950/60 bg-amber-50 px-3 py-1.5 text-sm font-semibold text-amber-950"
+          >
+            <span>📜 {aboutLabel}</span>
           </button>
         )}
         {def.shrine && onShrine && (

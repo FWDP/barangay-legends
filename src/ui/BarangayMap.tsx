@@ -50,7 +50,6 @@ import {
 } from "./camera";
 import { spawnFloat } from "./floats";
 import { NightLayer } from "./NightLayer";
-import { tintAt } from "./nightLight";
 import { bonusPreviewText, RESOURCE_ICON } from "./format";
 import { activeJobs, jobCost, workforce } from "../engine/clearing";
 import { landingCandidates, raidLanding } from "../engine/border";
@@ -61,6 +60,7 @@ import { isClear, labelSize, placeLabel, type Rect } from "./labels";
 import { isPranked } from "../engine/forest";
 import { sarimanokAt } from "../engine/worship";
 import { datuHouseUrl, houseStyleFor, type HouseStyle } from "./datuHouseArt";
+import { buildingArtUrl, mapIcon } from "./buildingArt";
 
 const INCOME_EVERY_MS = 3000;
 const WAITING_TEXT = "⏸ Trade paused — raid in progress";
@@ -858,8 +858,8 @@ export function BarangayMap(props: {
             them, and a blended tint over the drifting map is costly to composite. */}
         {!scenic && (
           <>
-        {/* Dusk, night and dawn from the game's clock (not the device's), never too dark to read. */}
-        <div aria-hidden className="pointer-events-none absolute inset-0 mix-blend-multiply" style={{ backgroundColor: tintAt(content, state.time) }} />
+        {/* Dusk, night and dawn from the game's clock (not the device's): one cool-blue layer with the
+            barangay's lights, never too dark to read (NightLayer). */}
         {cam && view.w > 0 && <NightLayer state={state} content={content} cam={cam} view={view} reducedMotion={reducedMotion} torches={torches} />}
         {/* The Bakunawa swallowing the moon: the night goes darker and redder. */}
         <div
@@ -1254,13 +1254,20 @@ interface GhostInfo {
 
 const totalBonus = (b: { adjacency: number; grove: number; road: number }) => b.adjacency + b.grove + b.road;
 
+/** A building as it stands on the map: its custom art, its icon, or nothing (a Tulay). */
+function ArtOrIcon({ def }: { def: BuildingDef }) {
+  const art = buildingArtUrl(def.id);
+  if (art) return <img src={art} alt="" draggable={false} className="inline-block size-[1.05em] align-bottom" />;
+  return <>{mapIcon(def)}</>;
+}
+
 function Ghost({ info }: { info: GhostInfo }) {
   const { def, adjacency, grove, groveName, road, noPath, bank } = info;
   if (def.defense) {
     return (
       <>
         <span aria-hidden className="pointer-events-none leading-none opacity-60 select-none">
-          {def.icon}
+          <ArtOrIcon def={def} />
         </span>
         <Label text={bank > 0 ? `🛡️ Guards the river bank (${bank} landing spots in reach)` : "🛡️ No river bank in reach: raiders land at the shore"} good={bank > 0} />
       </>
@@ -1270,7 +1277,7 @@ function Ghost({ info }: { info: GhostInfo }) {
     return (
       <>
         <span aria-hidden className="pointer-events-none leading-none opacity-60 select-none">
-          {def.icon}
+          <ArtOrIcon def={def} />
         </span>
         <Label text="🚫 No path: workers can't walk here" warn />
       </>
@@ -1280,9 +1287,9 @@ function Ghost({ info }: { info: GhostInfo }) {
   const text = road > 0 ? `${base} · 🛤️ Connected +${Math.round(road * 100)}%` : base;
   return (
     <>
-      {!def.bridge && (
+      {mapIcon(def) && (
         <span aria-hidden className="pointer-events-none leading-none opacity-60 select-none">
-          {def.icon}
+          <ArtOrIcon def={def} />
         </span>
       )}
       <Label text={text} good={adjacency + grove + road > 0 || !!def.bridge} />
@@ -1364,7 +1371,15 @@ function Building(props: {
         } ${lifted ? "opacity-40" : ""} cursor-pointer`}
       >
         {/* A bridge is drawn as its deck; the button over it is just the tap target. */}
-        {def.bridge ? <span className="inline-block size-[0.9em]" /> : def.burial && burialLook === "longon" ? "⚰️" : def.icon}
+        {def.bridge ? (
+          <span className="inline-block size-[0.9em]" />
+        ) : buildingArtUrl(def.id) ? (
+          <img src={buildingArtUrl(def.id)!} alt="" draggable={false} className="inline-block size-[1.05em] align-bottom" />
+        ) : def.burial && burialLook === "longon" ? (
+          "⚰️"
+        ) : (
+          def.icon
+        )}
       </span>
       {burning && (
         <span
@@ -1440,8 +1455,26 @@ function SpiritOverlays(props: {
   const at = (x: number, y: number) => ({ left: o.x + x * T, top: o.y + y * T });
   const bird = state.sarimanok ? sarimanokAt(state.sarimanok, state.time) : null;
   const camps = state.buildings.filter((b) => isPranked(state, b.x, b.y));
+  // A raid is coming: a lookout stands on each Kuta's raised platform.
+  const lookouts = state.region?.incomingRaid ? state.buildings.filter((b) => !b.damaged && content.buildings.find((d) => d.id === b.type)?.defense) : [];
   return (
     <>
+      {lookouts.map((b) => (
+        <span
+          key={`l${b.x},${b.y}`}
+          aria-hidden
+          title="A lookout watches for the raiders"
+          className="pointer-events-none absolute z-[3]"
+          style={{ ...at(b.x + 0.66, b.y - 0.06), width: T * 0.2, height: T * 0.26 }}
+        >
+          <svg viewBox="0 0 10 13" className="h-full w-full drop-shadow-[0_1px_1px_rgb(0_0_0_/_0.5)]">
+            <circle cx="5" cy="2.6" r="1.8" fill="#8d5524" />
+            <rect x="3.1" y="0.6" width="3.8" height="1" fill="#b91c1c" />
+            <path d="M3 5 H7 L7.4 12 H2.6 Z" fill="#7f1d1d" />
+            <line x1="8.6" y1="0.4" x2="8.6" y2="12.6" stroke="#6b4a1c" strokeWidth="0.7" />
+          </svg>
+        </span>
+      ))}
       {state.replanting.map((j) => (
         <span
           key={`r${j.x},${j.y}`}
@@ -1475,6 +1508,22 @@ function SpiritOverlays(props: {
           <span className="leading-none motion-safe:animate-ping">✨</span>
           <span className="leading-none motion-safe:animate-bounce">{ritual.icon}</span>
           <span className="leading-none">🙌</span>
+        </span>
+      )}
+      {ritual && (
+        // A soft glow round the Dambana and smoke rising from its offerings while the babaylan leads the rite.
+        <span aria-hidden className="pointer-events-none absolute z-[5]" style={{ left: o.x + ritual.x * T, top: o.y + ritual.y * T, width: T, height: T }}>
+          <span
+            className="absolute rounded-full motion-safe:animate-pulse"
+            style={{ inset: -T * 0.45, background: "radial-gradient(circle, rgb(253 224 71 / 0.55) 0%, rgb(251 191 36 / 0.25) 45%, transparent 70%)" }}
+          />
+          {[0, 0.9, 1.7].map((delay, i) => (
+            <span
+              key={i}
+              className="absolute rounded-full bg-stone-200/70 motion-safe:animate-smoke"
+              style={{ left: T * (0.4 + i * 0.08), top: T * 0.15, width: T * 0.22, height: T * 0.22, animationDelay: `${delay}s`, filter: "blur(1px)" }}
+            />
+          ))}
         </span>
       )}
       {bird && content.visitor && (

@@ -241,6 +241,12 @@ export function ReplayView(props: { expedition: Expedition; state: GameState; co
 /** How long (game seconds) a finished expedition is offered on the map before it moves to the Balita. */
 const OFFER_SECONDS = 120;
 
+/** The player's expedition that has just arrived and hasn't been offered yet, if any. */
+export const freshExpedition = (state: GameState, seen: number) => [...state.expeditions].reverse().find((e) => e.side === "out" && e.id > seen && state.time - e.arriveAt <= OFFER_SECONDS);
+
+/** The next Balangay of the player's to arrive, if one is at sea. */
+export const sailingVoyage = (state: GameState) => state.region?.voyages.filter((v) => v.leg === "out").sort((a, b) => a.arriveAt - b.arriveAt)[0];
+
 /**
  * The bar over the map: a Balangay on its way (and when it arrives), then, once the player's
  * expedition has arrived and the engine has decided it, Panoorin.
@@ -248,8 +254,8 @@ const OFFER_SECONDS = 120;
 export function ExpeditionBar(props: { state: GameState; content: Content; game: GameText; lang: Lang; seen: number; onWatch: (id: number) => void; onDismiss: (id: number) => void }) {
   const { state, content, game, lang, seen, onWatch, onDismiss } = props;
   const t = game.expedition;
-  const fresh = [...state.expeditions].reverse().find((e) => e.side === "out" && e.id > seen && state.time - e.arriveAt <= OFFER_SECONDS);
-  const voyage = state.region?.voyages.filter((v) => v.leg === "out").sort((a, b) => a.arriveAt - b.arriveAt)[0];
+  const fresh = freshExpedition(state, seen);
+  const voyage = sailingVoyage(state);
   if (!fresh && !voyage) return null;
   const panel = "wood-panel pointer-events-auto flex max-w-full items-center gap-2 rounded-xl border-2 border-amber-950/70 px-3 py-1.5 text-xs leading-tight text-amber-50 shadow-lg sm:text-sm";
   if (fresh) {

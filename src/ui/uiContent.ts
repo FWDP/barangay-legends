@@ -115,7 +115,7 @@ export const GAME_TEXT = {
   forest: { label: ["balance"], tip: [], stage1: [], stage2: ["percent"], replant: ["cost"], replanting: ["time"], prank: ["building", "time"] },
   build: {
     tirahan: [], pagkain: [], depensa: [], pananampalataya: [], daan: [], iba: [], build: [], cancel: [], locked: ["villagers"], lockedDatu: ["level"], need: ["missing"],
-    recommended: [], more: [], new: [], details: [], staffed: ["staffed"], noPath: ["n"], perTile: [], daanName: [], daanText: ["percent"], layDaan: [],
+    recommended: [], more: [], new: [], details: [], staffed: ["staffed"], noPath: ["n"], perTile: [], daanName: [], daanText: ["percent"], layDaan: [], aboutLook: [],
   },
   death: {
     died: ["cause"], diedNamed: ["name", "cause"], diedRaid: ["count"], frail: ["name"], age: [], sickness: [], hunger: [], raid: [], mourning: ["time"],
@@ -148,6 +148,10 @@ export const GAME_TEXT = {
   },
   report: { button: [], title: [], what: [], expected: [], note: [], share: [], copy: [], copied: [], github: [], githubNote: [], pasteSave: [], close: [] },
   version: { label: ["version"] },
+  notices: {
+    more: ["n"], moreLabel: ["n"], soon: [], list: [], dismiss: [], show: [], eclipse: [], tikbalang: [], offer: ["barangay"], choice: [], expedition: ["barangay"], sailing: [],
+    prank: [], mourning: ["time"], embargo: ["names"], tradePaused: [], blessings: ["names"], status: [],
+  },
   expedition: {
     watch: [], skip: [], back: [], next: [], trade: ["barangay"], raid: ["barangay"], raidIn: ["barangay"], arrive: [], walk: [], datu: [], return: [], march: [], clash: [],
     loot: [], retreat: [], leave: [], report: [], won: [], lost: [], youWon: [], youLost: [], sides: ["attackers", "defenders"], chance: ["percent"],

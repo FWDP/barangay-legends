@@ -7,6 +7,7 @@ import { tileAt, type Point } from "../engine/map";
 import type { Lang } from "./settings";
 import { datuWithTitle } from "./stories";
 import { datuHouseUrl, houseStyleFor } from "./datuHouseArt";
+import { ART_TYPES, buildingArtUrl, mapIcon } from "./buildingArt";
 import { barangayLevel } from "../engine/kabantugan";
 import { arawText } from "./Days";
 
@@ -73,7 +74,7 @@ const TILE_COLOR: Record<string, string> = {
 };
 
 /** Draws the card. Pure drawing: no clock, no network. */
-export function drawShareCard(state: GameState, content: Content, game: GameText, lang: Lang, size = SHARE_SIZE, house?: CanvasImageSource): HTMLCanvasElement {
+export function drawShareCard(state: GameState, content: Content, game: GameText, lang: Lang, size = SHARE_SIZE, house?: CanvasImageSource, art?: Record<string, CanvasImageSource>): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
   canvas.width = size;
   canvas.height = size;
@@ -113,15 +114,20 @@ export function drawShareCard(state: GameState, content: Content, game: GameText
   g.textAlign = "center";
   g.textBaseline = "middle";
   if (!house) g.fillText("🔥", px, py);
-  // Buildings as their icons.
-  const icons = new Map(content.buildings.map((d) => [d.id, d.icon]));
+  // Buildings as on the map: custom art where there is some, else the icon; a Tulay is only its deck.
+  const icons = new Map(content.buildings.map((d) => [d.id, mapIcon(d)]));
   g.font = `${tile * 0.82}px serif`;
   for (const bl of state.buildings) {
     const x = ox + (bl.x - b.x0 + 0.5) * tile;
     const y = oy + (bl.y - b.y0 + 0.5) * tile;
     if (x < ox || y < oy || x > ox + tile * b.size || y > oy + tile * b.size) continue;
     g.globalAlpha = bl.damaged ? 0.5 : 1;
-    g.fillText(icons.get(bl.type) ?? "🏠", x, y + tile * 0.04);
+    const picture = art?.[bl.type];
+    if (picture) g.drawImage(picture, x - tile * 0.5, y - tile * 0.55, tile, tile);
+    else {
+      const icon = icons.has(bl.type) ? icons.get(bl.type) : "🏠";
+      if (icon) g.fillText(icon, x, y + tile * 0.04);
+    }
   }
   g.globalAlpha = 1;
   if (house) {
@@ -169,7 +175,13 @@ export function shareFileName(state: GameState): string {
  */
 export async function shareBarangay(state: GameState, content: Content, game: GameText, lang: Lang): Promise<"shared" | "saved" | "cancelled"> {
   const house = await loadImage(datuHouseUrl(state.datuLevel, houseStyleFor(state, content))).catch(() => undefined);
-  const canvas = drawShareCard(state, content, game, lang, SHARE_SIZE, house);
+  // The buildings with custom art (Dambana, Kuta), drawn as on the map.
+  const art: Record<string, CanvasImageSource> = {};
+  for (const type of ART_TYPES) {
+    const img = await loadImage(buildingArtUrl(type)!).catch(() => null);
+    if (img) art[type] = img;
+  }
+  const canvas = drawShareCard(state, content, game, lang, SHARE_SIZE, house, art);
   const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, "image/png"));
   if (!blob) throw new Error("no image");
   const name = shareFileName(state);
