@@ -7,6 +7,8 @@ import { RESOURCES, type Content, type Resource, type ResourceAmounts, type Ritu
 import { isNightAt } from "./daynight";
 import { asCost, canAfford, healthyWorkersBase, rates, type GameState, type PlacedBuilding } from "./game";
 import { addHistory } from "./people";
+import { barangayLevel } from "./kabantugan";
+import { levelOf } from "./upgrades";
 import { rollAt } from "./rng";
 import { capGrowth, riceCap } from "./storage";
 import type { Point } from "./map";
@@ -27,7 +29,12 @@ export interface SarimanokVisit {
 
 export interface Eclipse {
   endsAt: number;
+  /** Strikes made (any kind). */
   taps: number;
+  /** What the strikes were worth: on-beat ones fully, off-beat less, mashing nothing (v32; older: the taps). */
+  strength?: number;
+  /** When the last strike was (game time), to tell mashing from a beat. */
+  lastAt?: number;
 }
 
 export interface TikbalangTrick {
@@ -194,11 +201,70 @@ export function catchSarimanok(state: GameState, content: Content): GameState {
   return addHistory(addFlag(s, def.lore ?? def.id), { at: state.time, kind: "event", event: "sarimanok", amounts: { [r]: amount } });
 }
 
-/** One beat of the gongs during an eclipse. */
-export function gong(state: GameState, content: Content): GameState {
+// ---------- The Bakunawa challenge (rules.eclipse) ----------
+
+/** When this eclipse began. */
+const eclipseStart = (e: Eclipse, content: Content) => e.endsAt - (content.eclipse?.durationSeconds ?? 0);
+
+/** The strength the gongs must reach: hungrier the higher the barangay's level. */
+export function eclipseNeeded(state: GameState, content: Content): number {
+  const def = content.eclipse;
+  if (!def) return 0;
+  return def.gongsNeeded + content.rules.eclipse.strengthPerLevel * (barangayLevel(state, content) - 1);
+}
+
+/** Strikes the villagers add by themselves over the whole event: each Kuta level and each Bahay ng Datu level. */
+export function eclipseAutoStrikes(state: GameState, content: Content): number {
+  const r = content.rules.eclipse;
+  const fromBuildings = state.buildings.reduce((n, b) => n + (b.damaged ? 0 : (r.autoStrikes[b.type] ?? 0) * levelOf(b)), 0);
+  return fromBuildings + r.autoPerDatuLevel * state.datuLevel;
+}
+
+/** The strength so far: the player's strikes plus the villagers' share of theirs by now. */
+export function eclipseStrength(state: GameState, content: Content, time = state.time): number {
   const e = state.eclipse;
-  if (!e || !content.eclipse || state.time >= e.endsAt || e.taps >= content.eclipse.gongsNeeded * 2) return state;
-  return { ...state, eclipse: { ...e, taps: e.taps + 1 } };
+  const def = content.eclipse;
+  if (!e || !def) return 0;
+  const share = def.durationSeconds > 0 ? Math.min(1, Math.max(0, (time - eclipseStart(e, content)) / def.durationSeconds)) : 1;
+  return (e.strength ?? e.taps) + eclipseAutoStrikes(state, content) * share;
+}
+
+/** How much of the moon is back (0 swallowed .. 1 free): the progress shown instead of a count. */
+export function eclipseProgress(state: GameState, content: Content, time = state.time): number {
+  const need = eclipseNeeded(state, content);
+  return need <= 0 ? 1 : Math.min(1, eclipseStrength(state, content, time) / need);
+}
+
+/** How far a moment is from the nearest beat, in seconds (beats from the eclipse's start). */
+export function beatOffset(state: GameState, content: Content, at: number): number {
+  const e = state.eclipse;
+  if (!e) return Infinity;
+  const beat = content.rules.eclipse.beatSeconds;
+  const p = ((((at - eclipseStart(e, content)) % beat) + beat) % beat);
+  return Math.min(p, beat - p);
+}
+
+/** What one strike at `at` is worth: on the beat fully, off it less, too soon after the last nothing; held: holdBeat. */
+export function strikeValue(state: GameState, content: Content, at: number, held = false): number {
+  const e = state.eclipse;
+  const r = content.rules.eclipse;
+  if (!e) return 0;
+  if (e.lastAt !== undefined && at - e.lastAt < r.mashGapSeconds) return 0;
+  if (held) return r.holdBeat;
+  return beatOffset(state, content, at) <= r.onBeatWindowSeconds ? r.onBeat : r.offBeat;
+}
+
+/**
+ * One strike of the gongs during an eclipse. `at` is the game moment of the tap (the UI passes it
+ * between engine steps, kept within the last second); `held` is the "hold to beat" option, which
+ * strikes on each beat by itself.
+ */
+export function gong(state: GameState, content: Content, at?: number, held = false): GameState {
+  const e = state.eclipse;
+  if (!e || !content.eclipse || state.time >= e.endsAt || e.taps >= 500) return state;
+  const t = Math.min(state.time + 0.2, Math.max(state.time - 1, eclipseStart(e, content), Number.isFinite(at) ? (at as number) : state.time));
+  const value = strikeValue(state, content, t, held);
+  return { ...state, eclipse: { ...e, taps: e.taps + 1, strength: (e.strength ?? e.taps) + value, lastAt: t } };
 }
 
 /** The answer to the tikbalang's riddle: right brings the workers home at once; wrong leaves them lost. */
@@ -213,7 +279,7 @@ export function answerRiddle(state: GameState, content: Content, option: number)
 function resolveEclipse(state: GameState, content: Content, second: number): GameState {
   const def = content.eclipse!;
   const e = state.eclipse!;
-  if (e.taps >= def.gongsNeeded) {
+  if (eclipseStrength(state, content, e.endsAt) >= eclipseNeeded(state, content)) {
     const s = {
       ...state,
       eclipse: null,

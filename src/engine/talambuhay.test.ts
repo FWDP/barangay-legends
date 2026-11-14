@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { die } from "./death";
 import { buildContent, validateTalambuhay } from "./content";
-import type { GameState } from "./game";
+import { STATE_VERSION, type GameState } from "./game";
 import type { NamedVillager } from "./people";
 import { reconcilePeople } from "./people";
 import { ageResidents, lifeSpans } from "./population";
@@ -204,7 +204,7 @@ describe("old saves", () => {
     raw.remembered = [{ name: "Old One", cause: "age", at: 10 }];
     for (const v of raw.named) delete v.life;
     const back = parseSave(JSON.stringify(raw), content)!;
-    expect(back.version).toBe(31);
+    expect(back.version).toBe(STATE_VERSION);
     expect(back.remembered).toEqual([{ name: "Old One", cause: "age", at: 10 }]);
     expect(back.named).toHaveLength(2);
     expect(lifeStory(back, content, back.named[0]).children).toHaveLength(2);

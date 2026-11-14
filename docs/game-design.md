@@ -52,6 +52,11 @@ different form, and some (prestige and Dangal, export codes) isn't built yet.
   and then an elder teaches a child or a named apprentice a lesson (`rules.population.learning`),
   a dated line in their life story. Aklat entries: learning by family and apprenticeship, oral
   epics (the Darangen), baybayin.
+- **The moon:** drawn small and soft in the HUD beside Araw N (never over the map), with its
+  phases (`rules.dayNight.moonCycleDays`), darkened during the Bakunawa eclipse.
+- **Palayan fields:** a flat, muted paddy green with faint water lines (`src/ui/paddy.ts`), on
+  the map, visits, replays and the share card.
+- **No one walks on water:** every person sprite stands on land or a Tulay; crews stay in boats.
 - **Fit to the period:** world art and symbols are precolonial (no candles, steel axes,
   fishing reels, railway tracks or padlocks; see the S prompt and `docs/cultural-review.md`).
   The healer's hut is named by tradition (Babaylan, Katalonan, Healer), the balete's spirit is
@@ -144,7 +149,7 @@ Mythology is the game's hook, and it's earned through play, never sold. The play
 | Diwata's favor | Widespread (nature spirits) | Rice fields harvest instantly | Offer rice + wood, 15 min cooldown |
 | Anito ng Balete (was "Kapre's grove": see the Aklat on the colonial word) | Tagalog and other lowland belief | +50% wood for 5 min | Leave the old balete tree uncut |
 | Sarimanok's fortune | Maranao | A random bonus of rice, wood or gold | Rare: the bird crosses the map, click it |
-| Bakunawa eclipse (event) | Visayan | The moon darkens: tap the gongs to drive the serpent off. Success gives gold, failure costs rice | Random event after 30 villagers |
+| Bakunawa eclipse (event) | Visayan | The moon darkens: strike the gongs on the beat (a pulsing ring; mashing doesn't help; "hold to beat" for accessibility) to drive the serpent off. The strength needed grows with barangay level; each Kuta and Bahay ng Datu level adds villagers' strikes (`rules.eclipse`). Progress shows as the moon coming back. Success gives gold, failure costs rice | Random event after 30 villagers |
 | Tigbalang trickery (event) | Tagalog | Workers get lost for 1 min unless you solve a short riddle | Random event after first prestige |
 
 **Two choices made on purpose:**

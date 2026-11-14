@@ -327,6 +327,9 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
   // what they learned by the fire; both are new and optional, so older saves only change version.
   // Those already remembered keep their name and how they died.
   30: (raw) => ({ ...raw, version: 31 }),
+  // v31 → v32: the Bakunawa's rhythm (worship.ts). An eclipse under way keeps its taps as its
+  // strength (every tap counted fully before).
+  31: (raw) => ({ ...raw, version: 32, ...(isObject(raw.eclipse) && finiteNonNeg(raw.eclipse.taps) ? { eclipse: { ...raw.eclipse, strength: raw.eclipse.taps } } : {}) }),
 };
 
 // ---------- Frozen v15 bridge rule (for the v14 → v15 migration only) ----------
@@ -745,7 +748,12 @@ function parseWorship(data: RawSave, content: Content, state: GameState) {
     state.sarimanok = { from: { x: sv.from.x, y: sv.from.y }, to: { x: sv.to.x, y: sv.to.y }, at: sv.at, until: sv.until };
   }
   const ec = data.eclipse;
-  if (content.eclipse && isObject(ec) && finiteNonNeg(ec.endsAt) && finiteNonNeg(ec.taps)) state.eclipse = { endsAt: ec.endsAt, taps: Math.floor(ec.taps) };
+  if (content.eclipse && isObject(ec) && finiteNonNeg(ec.endsAt) && finiteNonNeg(ec.taps)) {
+    state.eclipse = { endsAt: ec.endsAt, taps: Math.floor(ec.taps) };
+    // Before v32 every tap counted fully: the strength is the taps.
+    state.eclipse.strength = finiteNonNeg(ec.strength) ? ec.strength : state.eclipse.taps;
+    if (finiteNonNeg(ec.lastAt)) state.eclipse.lastAt = ec.lastAt;
+  }
   const tk = data.tikbalang;
   if (content.trickery && isObject(tk) && content.trickery.riddles.some((r) => r.id === tk.riddle) && finiteNonNeg(tk.workers) && finiteNonNeg(tk.until)) {
     state.tikbalang = { riddle: tk.riddle as string, workers: Math.floor(tk.workers), until: tk.until, ...(tk.wrong === true ? { wrong: true } : {}) };

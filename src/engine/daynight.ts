@@ -21,6 +21,15 @@ export function isEveningAt(content: Content, time: number): boolean {
   return p >= nightFrom && p < nightFrom + (nightTo - nightFrom) * eveningShare;
 }
 
+/** The moon's phase (0 new, 0.5 full, back to 1) on a game time: one cycle every moonCycleDays Araw. */
+export function moonPhaseAt(content: Content, foundedAt: number, time: number): number {
+  const { daySeconds, moonCycleDays } = content.rules.dayNight;
+  const cycle = daySeconds * moonCycleDays;
+  // The barangay is founded at a half moon, waxing.
+  const p = (time - foundedAt) / cycle + 0.25;
+  return ((p % 1) + 1) % 1;
+}
+
 /** The share (0..1) of the span from `time` to `time + span` that is night. */
 export function nightShare(content: Content, time: number, span: number): number {
   if (span <= 0) return isNightAt(content, time) ? 1 : 0;

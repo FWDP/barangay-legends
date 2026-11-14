@@ -627,8 +627,8 @@ export function App() {
           content={content}
           game={ui.game}
           lang={lang}
-          onGong={() => {
-            dispatch({ type: "gong" });
+          onGong={(at, held) => {
+            dispatch({ type: "gong", at, held });
             sfx.click();
           }}
         />

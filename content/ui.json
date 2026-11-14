@@ -436,6 +436,26 @@
     "sarimanok": {
       "en": "The Sarimanok gave you {gift}!",
       "fil": "Binigyan ka ng Sarimanok ng {gift}!"
+    },
+    "beat": {
+      "en": "Strike when the ring glows",
+      "fil": "Paluin kapag lumiwanag ang bilog"
+    },
+    "hold": {
+      "en": "Hold to beat",
+      "fil": "Pindutin nang matagal"
+    },
+    "holdTip": {
+      "en": "Hold this down and the gong sounds on every beat for you",
+      "fil": "Pindutin ito nang matagal at kusang tutunog ang gong sa bawat kumpas"
+    },
+    "moonBack": {
+      "en": "{percent}% of the moon is back",
+      "fil": "Bumalik na ang {percent}% ng buwan"
+    },
+    "helping": {
+      "en": "Villagers strike too: +{n}",
+      "fil": "Pumapalo rin ang mga taga-barangay: +{n}"
     }
   },
   "build": {

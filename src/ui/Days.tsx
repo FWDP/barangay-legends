@@ -1,7 +1,9 @@
 // Days (Araw) since the barangay was founded, and whether it is day or night (the game's own
 // clock, not the device's), for the HUD, the history, the Balita, the Ranggo and the share card.
+import { Moon } from "./Moon";
+import { eclipseProgress } from "../engine/worship";
 import type { Content } from "../engine/content";
-import { dayAt, isNightAt } from "../engine/daynight";
+import { dayAt, isNightAt, moonPhaseAt } from "../engine/daynight";
 import type { GameState } from "../engine/game";
 import type { Lang } from "./settings";
 import { fill, type GameText } from "./uiContent";
@@ -24,7 +26,11 @@ export function DayChip(props: { state: GameState; content: Content; game: GameT
   return (
     <span title={tip} aria-label={tip} className={`items-center rounded-lg bg-black/25 text-amber-50 shadow-inner ${compact ? "flex-col px-1 py-0.5" : "gap-1 px-1.5 py-0.5"} ${className}`}>
       <span aria-hidden className="text-base leading-none">
-        {night ? "🌙" : "☀️"}
+        {night || state.eclipse ? (
+          <Moon phase={moonPhaseAt(content, state.foundedAt, state.time)} swallowed={state.eclipse ? 1 - eclipseProgress(state, content) : null} className="size-[1em] align-[-0.15em]" />
+        ) : (
+          "☀️"
+        )}
       </span>
       <span className={`leading-none whitespace-nowrap tabular-nums ${compact ? "text-[10px] text-amber-200/90" : "font-display text-sm"}`}>{fill(game.day.araw[lang], { n })}</span>
     </span>

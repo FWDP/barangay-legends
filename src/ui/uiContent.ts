@@ -174,7 +174,7 @@ export const GAME_TEXT = {
     fell: ["name"], capped: ["shown", "total"], arrived: ["barangay"], sailing: ["barangay", "time"], recent: [], none: [], close: [],
   },
   doors: { blocked: ["building"], plaza: [], joinHouse: ["percent"], housesNear: ["n"], moodTip: [] },
-  events: { eclipse: [], gong: [], gongs: ["taps", "needed"], eclipseWon: ["favor", "gold"], eclipseLost: ["rice"], tikbalang: ["n"], right: [], wrong: ["time"], sarimanok: ["gift"] },
+  events: { eclipse: [], gong: [], gongs: ["taps", "needed"], beat: [], hold: [], holdTip: [], moonBack: ["percent"], helping: ["n"], eclipseWon: ["favor", "gold"], eclipseLost: ["rice"], tikbalang: ["n"], right: [], wrong: ["time"], sarimanok: ["gift"] },
 } as const satisfies Record<string, Record<string, readonly string[]>>;
 
 export type GameText = { [G in keyof typeof GAME_TEXT]: { [K in keyof (typeof GAME_TEXT)[G]]: Localized } };

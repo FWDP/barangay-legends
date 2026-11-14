@@ -1,12 +1,14 @@
 // Worship and the spirits on screen: the Dambana (tradition, offerings, rituals, asking
 // permission), the Aklat ng Alamat, the Forest Balance leaf, and the bars for the beings who
 // come on their own (the Bakunawa eclipse, the tigbalang's riddle, the balete spirit's prank).
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RESOURCES, type Content, type Resource } from "../engine/content";
 import { aklatEntry, aklatProgress } from "../engine/aklat";
 import { forestStage, isPranked } from "../engine/forest";
 import type { Command, GameState } from "../engine/game";
-import { isActive, offeringFavor, ritualBlocker, traditionChangeCost, traditionOf, worshipBlocker } from "../engine/worship";
+import { eclipseAutoStrikes, eclipseProgress, isActive, offeringFavor, ritualBlocker, traditionChangeCost, traditionOf, worshipBlocker } from "../engine/worship";
+import { Moon } from "./Moon";
+import { useReducedMotion } from "./VillagerLayer";
 import { DAMBANA_ART } from "./buildingArt";
 import { clock } from "./EventBanners";
 import { costText, RESOURCE_ICON } from "./format";
@@ -383,26 +385,108 @@ export function DambanaDialog(props: {
   );
 }
 
-/** The eclipse: beat the gongs before the serpent swallows the moon. */
-export function EclipseBar({ state, content, game, lang, onGong }: { state: GameState; content: Content; game: GameText; lang: Lang; onGong: () => void }) {
+/**
+ * The eclipse: strike the gong on the beat (a ring pulses with it) to drive the Bakunawa off; the
+ * moon comes back as the strength grows (no count). Mashing doesn't help (engine/worship.ts).
+ * With reduced motion the ring doesn't pulse: it just lights on each beat. "Hold to beat" strikes
+ * on every beat by itself, for players who can't tap in rhythm.
+ */
+export function EclipseBar({ state, content, game, lang, onGong }: { state: GameState; content: Content; game: GameText; lang: Lang; onGong: (at: number, held: boolean) => void }) {
   const e = state.eclipse;
   const def = content.eclipse;
+  const reducedMotion = useReducedMotion();
+  // The game moves in steps; between them the moment of a tap is worked out from the clock.
+  const clockRef = useRef({ time: state.time, at: performance.now() });
+  if (clockRef.current.time !== state.time) clockRef.current = { time: state.time, at: performance.now() };
+  const gameNow = () => clockRef.current.time + Math.min(0.2, (performance.now() - clockRef.current.at) / 1000);
+  const [glow, setGlow] = useState(0);
+  const holding = useRef(false);
+  const lastBeat = useRef(-1);
+  const strike = useRef(onGong);
+  strike.current = onGong;
+  const beat = content.rules.eclipse.beatSeconds;
+  const start = e && def ? e.endsAt - def.durationSeconds : 0;
+  useEffect(() => {
+    if (!e) return;
+    let raf = 0;
+    const loop = () => {
+      const t = gameNow() - start;
+      const k = Math.floor(t / beat);
+      const into = t - k * beat;
+      // 1 on the beat, fading to 0 before the next.
+      setGlow(Math.max(0, 1 - Math.min(into, beat - into) / (beat / 2)));
+      if (holding.current && k !== lastBeat.current) {
+        lastBeat.current = k;
+        strike.current(start + k * beat, true);
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [!!e, start, beat]);
   if (!e || !def) return null;
-  const done = e.taps >= def.gongsNeeded;
+  const progress = eclipseProgress(state, content);
+  const done = progress >= 1;
+  const helping = Math.round(eclipseAutoStrikes(state, content));
+  const ring = reducedMotion ? 1 : 1 + glow * 0.35;
+  const hold = (on: boolean) => {
+    holding.current = on;
+    lastBeat.current = Math.floor((gameNow() - start) / beat);
+  };
   return (
-    <div role="alert" className="pointer-events-auto flex max-w-full items-center gap-2 rounded-xl border-2 border-red-950 bg-stone-900/90 py-1.5 pr-1.5 pl-3 text-amber-50 shadow-lg">
-      <span aria-hidden className="text-2xl leading-none">
-        🐉
-      </span>
-      <span className="min-w-0 text-xs leading-tight sm:text-sm">
-        {game.events.eclipse[lang]}
-        <span className="block text-amber-300 tabular-nums">
-          {fill(game.events.gongs[lang], { taps: Math.min(e.taps, def.gongsNeeded), needed: def.gongsNeeded })} · {clock(e.endsAt - state.time)}
+    <div role="alert" className="pointer-events-auto flex max-w-full flex-wrap items-center gap-2 rounded-xl border-2 border-red-950 bg-stone-900/90 py-1.5 pr-1.5 pl-3 text-amber-50 shadow-lg">
+      <span className="flex min-w-0 basis-full items-center gap-2 sm:basis-0 sm:flex-1">
+        <Moon phase={0.5} swallowed={1 - progress} className="size-8 shrink-0" />
+        <span className="min-w-0 text-xs leading-tight sm:text-sm">
+          {game.events.eclipse[lang]}
+          <span className="block text-amber-300">
+            <span className="sr-only">{fill(game.events.moonBack[lang], { percent: Math.round(progress * 100) })} · </span>
+            {game.events.beat[lang]} · <span className="tabular-nums">{clock(e.endsAt - state.time)}</span>
+            {helping > 0 && <span className="block text-[11px] text-amber-200/80">{fill(game.events.helping[lang], { n: helping })}</span>}
+          </span>
         </span>
       </span>
-      <button type="button" onClick={onGong} className={`${btn} shrink-0 border-amber-950 ${done ? "bg-lime-400" : "bg-amber-400"} text-amber-950 active:scale-95`}>
-        <GongIcon /> {game.events.gong[lang]}
-      </button>
+      <span className="ml-auto flex shrink-0 items-center gap-1.5">
+        {/* The beat: a ring that pulses (or, with reduced motion, steadily lights) on every beat. */}
+        <span aria-hidden className="relative flex size-9 items-center justify-center">
+          <span
+            className="absolute inset-0 rounded-full border-[3px] border-amber-300"
+            style={{ transform: `scale(${ring})`, opacity: 0.35 + glow * 0.65, boxShadow: glow > 0.7 ? "0 0 10px rgb(252 211 77 / 0.8)" : "none" }}
+          />
+          <span className="size-2.5 rounded-full bg-amber-300" style={{ opacity: 0.4 + glow * 0.6 }} />
+        </span>
+        <button
+          type="button"
+          onPointerDown={(ev) => {
+            ev.preventDefault();
+            onGong(gameNow(), false);
+          }}
+          onKeyDown={(ev) => {
+            if ((ev.key === "Enter" || ev.key === " ") && !ev.repeat) {
+              ev.preventDefault();
+              onGong(gameNow(), false);
+            }
+          }}
+          className={`${btn} border-amber-950 ${done ? "bg-lime-400" : "bg-amber-400"} text-amber-950 active:scale-95`}
+        >
+          <GongIcon /> {game.events.gong[lang]}
+        </button>
+        <button
+          type="button"
+          title={game.events.holdTip[lang]}
+          aria-label={`${game.events.hold[lang]}: ${game.events.holdTip[lang]}`}
+          onPointerDown={() => hold(true)}
+          onPointerUp={() => hold(false)}
+          onPointerLeave={() => hold(false)}
+          onPointerCancel={() => hold(false)}
+          onKeyDown={(ev) => (ev.key === "Enter" || ev.key === " ") && (ev.preventDefault(), hold(true))}
+          onKeyUp={(ev) => (ev.key === "Enter" || ev.key === " ") && hold(false)}
+          onBlur={() => hold(false)}
+          className="game-btn border-2 border-amber-950/60 bg-amber-200 px-2 py-1.5 text-xs font-semibold text-amber-950 select-none"
+        >
+          {game.events.hold[lang]}
+        </button>
+      </span>
     </div>
   );
 }

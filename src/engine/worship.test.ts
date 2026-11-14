@@ -196,8 +196,10 @@ describe("visitors", () => {
     expect(updateVisitors(shrine({ villagers: 29, time: night }), eager, night, night + 1).eclipse).toBeNull();
     let s = updateVisitors(shrine({ villagers: 30, time: night }), eager, night, night + 1);
     expect(s.eclipse).not.toBeNull();
-    s = { ...s, time: night + 1 };
-    for (let i = 0; i < eager.eclipse.gongsNeeded; i++) s = apply(s, eager, { type: "gong" });
+    // Strikes on the beat, one every beat.
+    const start = s.eclipse!.endsAt - eager.eclipse.durationSeconds;
+    const beat = content.rules.eclipse.beatSeconds;
+    for (let i = 1; i <= eager.eclipse.gongsNeeded; i++) s = apply({ ...s, time: start + i * beat }, eager, { type: "gong", at: start + i * beat });
     const after = updateVisitors(s, { ...eager, eclipse: { ...eager.eclipse, chancePerSecond: 0 } }, s.time, s.eclipse!.endsAt);
     expect(after.eclipse).toBeNull();
     expect(after.favor).toBe(s.favor + eager.eclipse.success.favor);
@@ -240,5 +242,77 @@ describe("visitors", () => {
     const ai = tick(shrine({ villagers: 30 }), aiContent(eager), 1);
     expect(ai.sarimanok).toBeNull();
     expect(ai.tikbalang).toBeNull();
+  });
+});
+
+describe("the Bakunawa challenge", () => {
+  const r = content.rules.eclipse;
+  const def = content.eclipse!;
+  /** A barangay in an eclipse that began at time 100, at a given renown (level) and buildings. */
+  const inEclipse = (patch: Partial<GameState> = {}): GameState => ({ ...shrine({ villagers: 30, time: 100, ...patch }), eclipse: { endsAt: 100 + def.durationSeconds, taps: 0, strength: 0 } });
+  const strikeAt = (s: GameState, at: number, held = false) => apply({ ...s, time: at }, content, { type: "gong", at, held });
+
+  it("needs more strength the higher the barangay's level", async () => {
+    const { renownForLevel } = await import("./kabantugan");
+    const { eclipseNeeded } = await import("./worship");
+    const at = (level: number) => eclipseNeeded(inEclipse({ kabantugan: renownForLevel(content, level) ?? 0 }), content);
+    expect(at(3)).toBeGreaterThan(at(1));
+    expect(at(16)).toBeGreaterThan(at(3) * 1.5);
+    expect(at(1)).toBe(def.gongsNeeded);
+  });
+
+  it("counts strikes on the beat fully, off the beat less, and mashing not at all", async () => {
+    const { eclipseStrength } = await import("./worship");
+    const base = inEclipse();
+    const strength = (s: GameState) => s.eclipse!.strength!;
+    const on = strikeAt(base, 100 + r.beatSeconds * 2);
+    const off = strikeAt(base, 100 + r.beatSeconds * 2.5);
+    expect(strength(on)).toBe(r.onBeat);
+    expect(strength(off)).toBe(r.offBeat);
+    expect(strength(on)).toBeGreaterThan(strength(off));
+    // Mashing: ten quick taps are worth less than four strikes on the beat.
+    let mash = base;
+    for (let i = 0; i < 10; i++) mash = strikeAt(mash, 101 + i * 0.05);
+    let rhythm = base;
+    for (let i = 2; i < 6; i++) rhythm = strikeAt(rhythm, 100 + i * r.beatSeconds);
+    expect(strength(mash)).toBeLessThan(strength(rhythm));
+    expect(eclipseStrength(rhythm, content)).toBeGreaterThan(0);
+  });
+
+  it("hold to beat: each held beat counts holdBeat", () => {
+    const held = strikeAt(inEclipse(), 100 + r.beatSeconds, true);
+    expect(held.eclipse!.strength).toBe(r.holdBeat);
+  });
+
+  it("adds the villagers' strikes for every Kuta level and Bahay ng Datu level", async () => {
+    const { eclipseAutoStrikes, eclipseStrength } = await import("./worship");
+    const plain = inEclipse({ datuLevel: 1 });
+    const prepared = inEclipse({ datuLevel: 3, buildings: [at("bahay-kubo", 5, 3), { ...at("kuta", 2, 6), level: 2 }] });
+    expect(eclipseAutoStrikes(plain, content)).toBe(r.autoPerDatuLevel);
+    expect(eclipseAutoStrikes(prepared, content)).toBe(3 * r.autoPerDatuLevel + 2 * r.autoStrikes.kuta);
+    // Spread over the event: half by halfway, all by the end.
+    const end = 100 + def.durationSeconds;
+    expect(eclipseStrength(prepared, content, 100 + def.durationSeconds / 2)).toBeCloseTo(eclipseAutoStrikes(prepared, content) / 2);
+    expect(eclipseStrength(prepared, content, end)).toBe(eclipseAutoStrikes(prepared, content));
+  });
+
+  it("the moon comes back as the strength grows (no count): progress from 0 to 1", async () => {
+    const { eclipseProgress } = await import("./worship");
+    let s = inEclipse({ datuLevel: 1 });
+    const p0 = eclipseProgress(s, content, 100);
+    for (let i = 1; i <= 8; i++) s = strikeAt(s, 100 + i * r.beatSeconds);
+    expect(p0).toBe(0);
+    expect(eclipseProgress(s, content)).toBeGreaterThan(p0);
+    expect(eclipseProgress(s, content)).toBeLessThanOrEqual(1);
+  });
+
+  it("an old save's eclipse keeps its taps as its strength", async () => {
+    const { parseSave } = await import("./save");
+    const s = inEclipse();
+    const raw = JSON.parse(JSON.stringify(s));
+    raw.version = 31;
+    raw.eclipse = { endsAt: raw.eclipse.endsAt, taps: 7 };
+    const back = parseSave(JSON.stringify(raw), content)!;
+    expect(back.eclipse).toMatchObject({ taps: 7, strength: 7 });
   });
 });

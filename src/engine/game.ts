@@ -80,7 +80,7 @@ import {
   type TikbalangTrick,
 } from "./worship";
 
-export const STATE_VERSION = 31;
+export const STATE_VERSION = 32;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -852,7 +852,8 @@ export type Command =
   | { type: "ritual"; ritual: string }
   | { type: "askPermission" }
   | { type: "catchSarimanok" }
-  | { type: "gong" }
+  /** A gong strike: when (game time, for the beat) and whether it's the "hold to beat" option. */
+  | { type: "gong"; at?: number; held?: boolean }
   | { type: "answerRiddle"; option: number }
   | { type: "replant"; x: number; y: number }
   | { type: "cancelReplant"; x: number; y: number }
@@ -950,7 +951,7 @@ function applyCommand(state: GameState, content: Content, command: Command): Gam
     case "catchSarimanok":
       return catchSarimanok(state, content);
     case "gong":
-      return gong(state, content);
+      return gong(state, content, command.at, command.held === true);
     case "answerRiddle":
       return answerRiddle(state, content, command.option);
     case "replant":

@@ -101,7 +101,19 @@ export interface Rules {
   staffing: StaffingRules;
   /** Resources the Gather buttons can give. */
   gatherable: Resource[];
-  dayNight: { daySeconds: number; nightFrom: number; nightTo: number; nightProductionFactor: number; eveningShare: number };
+  dayNight: { daySeconds: number; nightFrom: number; nightTo: number; nightProductionFactor: number; eveningShare: number; moonCycleDays: number };
+  /** The Bakunawa challenge's rhythm, scaling and the villagers' own strikes (worship.ts gong). */
+  eclipse: {
+    beatSeconds: number;
+    onBeatWindowSeconds: number;
+    onBeat: number;
+    offBeat: number;
+    holdBeat: number;
+    mashGapSeconds: number;
+    strengthPerLevel: number;
+    autoStrikes: Record<string, number>;
+    autoPerDatuLevel: number;
+  };
   worship: WorshipRules;
   forest: ForestRules;
   death: DeathRules;
@@ -1207,9 +1219,16 @@ export function validateRules(raw: unknown): Rules {
     if (typeof raw.happiness[key] !== "number" || !Number.isFinite(raw.happiness[key])) throw new Error(`rules: "happiness.${key}" must be a number`);
   }
   if ((raw.happiness.start as number) > 100) throw new Error('rules: "happiness.start" must be 0–100');
+  const ec = raw.eclipse;
+  if (!isObject(ec)) throw new Error('rules: missing "eclipse"');
+  checkNumbers(ec, ["beatSeconds"], "rules: eclipse", true);
+  checkNumbers(ec, ["onBeatWindowSeconds", "onBeat", "offBeat", "holdBeat", "mashGapSeconds", "strengthPerLevel", "autoPerDatuLevel"], "rules: eclipse");
+  if ((ec.onBeatWindowSeconds as number) * 2 > (ec.beatSeconds as number)) throw new Error("rules: eclipse.onBeatWindowSeconds must be at most half a beat");
+  if (!isObject(ec.autoStrikes)) throw new Error('rules: "eclipse.autoStrikes" must map building types to strikes per level');
+  checkNumbers(ec.autoStrikes, Object.keys(ec.autoStrikes), "rules: eclipse.autoStrikes");
   const dn = raw.dayNight;
   if (!isObject(dn)) throw new Error('rules: missing "dayNight"');
-  checkNumbers(dn, ["daySeconds"], "rules: dayNight", true);
+  checkNumbers(dn, ["daySeconds", "moonCycleDays"], "rules: dayNight", true);
   checkNumbers(dn, ["nightFrom", "nightTo", "nightProductionFactor", "eveningShare"], "rules: dayNight");
   if ((dn.eveningShare as number) > 1) throw new Error("rules: dayNight.eveningShare must be 0-1");
   if ((dn.nightProductionFactor as number) > 1) throw new Error("rules: dayNight.nightProductionFactor must be at most 1");

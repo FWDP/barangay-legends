@@ -1,6 +1,6 @@
 // The night over the map: soft pools of warm light (plaza fire, Bahay ng Datu, lived-in houses,
 // Kuta torches, the Dambana, resin torches at the docks, and villagers carrying torches), coming on one by one
-// at dusk and fading at dawn, with stars and the moon (dark red while the Bakunawa swallows it).
+// at dusk and fading at dawn, with stars (the moon is in the HUD, Moon.tsx, never over the map).
 // Display only. With reduced motion there's no flicker or twinkle: the glow is still.
 import { useEffect, useMemo, useRef, type RefObject } from "react";
 import type { Content } from "../engine/content";
@@ -116,25 +116,8 @@ export function NightLayer(props: {
         g.arc(st.x * v.w, st.y * v.h, st.r, 0, Math.PI * 2);
         g.fill();
       }
-      const mx = v.w * 0.84;
-      const my = Math.max(60, v.h * 0.16);
-      const mr = Math.max(10, Math.min(v.w, v.h) * 0.035);
-      g.globalAlpha = d;
-      const eclipse = s.eclipse !== null;
-      g.fillStyle = eclipse ? "#7f1d1d" : "#fef3c7";
-      g.shadowColor = eclipse ? "rgb(220 38 38 / 0.8)" : "rgb(254 243 199 / 0.9)";
-      g.shadowBlur = mr;
-      g.beginPath();
-      g.arc(mx, my, mr, 0, Math.PI * 2);
-      g.fill();
-      g.shadowBlur = 0;
-      if (eclipse) {
-        // The serpent's shadow across the moon.
-        g.fillStyle = "rgb(15 10 30 / 0.85)";
-        g.beginPath();
-        g.arc(mx + mr * 0.45, my - mr * 0.1, mr * 0.95, 0, Math.PI * 2);
-        g.fill();
-      }
+      // The moon is not drawn here: it sits small in the HUD beside Araw N (Moon.tsx), never over
+      // the map's tiles or buildings.
       if (fire) {
         // The fire itself: a small flickering orange glow, a fire, not a sun.
         const x = o.x + fire.x * T;
