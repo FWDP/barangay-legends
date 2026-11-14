@@ -121,7 +121,7 @@ export interface Rules {
   /** Rice the barangay holds with no Kamalig. */
   storage: { baseRice: number };
   /** Shares of women, children and elders among new residents (residents.ts). */
-  residents: { womanPercent: number; childPercent: number; elderPercent: number };
+  residents: { womanPercent: number; childPercent: number; elderPercent: number; classPercent: Record<SocialClass, number> };
   /** How many sick villagers a healer's hut holds (healing.ts). */
   healing: { hutCapacity: number };
   /** The Bahay ng Datu's footprint and the gathering spots around it (plaza.ts). */
@@ -289,6 +289,8 @@ export interface TraditionDef extends Heritage {
   burialLook: "jars" | "longon";
   /** How its Bahay ng Datu looks (presentation only): a large raised lowland house, or torogan-inspired. */
   houseStyle?: "lowland" | "torogan";
+  /** This tradition's names for the social classes (residents.ts); missing: general terms (ui.json classes). */
+  classes?: Record<SocialClass, { name: Text; about: Text }>;
   /** How villagers dress on the map: "malong" (the tube cloth, for women and men alike), or the default baro and tapis / bahag and kanggan (content/lore/precolonial-dress.json). */
   dress?: "malong";
   forestSpirit: { name: Text; stage1: Text; stage2: Text; sources: string[] };
@@ -454,6 +456,10 @@ export interface VillagerStory {
   first?: boolean;
 }
 
+/** Social classes, kept generic in code; each tradition names them (TraditionDef.classes). */
+export const SOCIAL_CLASSES = ["nobility", "warrior", "commoner", "dependent"] as const;
+export type SocialClass = (typeof SOCIAL_CLASSES)[number];
+
 export const VILLAGER_ROLES = ["villager", "farmer", "woodcutter", "fisher", "warrior"] as const;
 export type VillagerRole = (typeof VILLAGER_ROLES)[number];
 
@@ -466,6 +472,8 @@ export interface VillagerContent {
   /** Names for named villagers by gender (content/names.json "villagers"). */
   women: string[];
   men: string[];
+  /** Default datu names that are women's names (household.ts). */
+  datuWomen: string[];
   stories: VillagerStory[];
   /** Building that makes each role's work possible (no building: anyone). */
   roleBuildings: Partial<Record<VillagerRole, string>>;
@@ -1105,6 +1113,10 @@ export function validateRules(raw: unknown): Rules {
     if (typeof v !== "number" || v < 0 || v > 100) throw new Error(`rules: "residents.${key}" must be 0-100`);
   }
   if ((raw.residents.childPercent as number) + (raw.residents.elderPercent as number) > 100) throw new Error('rules: "residents" childPercent + elderPercent must be at most 100');
+  const cp = raw.residents.classPercent;
+  if (!isObject(cp) || !SOCIAL_CLASSES.every((c) => isNonNegNumber(cp[c])) || Math.abs(SOCIAL_CLASSES.reduce((n, c) => n + (cp[c] as number), 0) - 100) > 1e-6) {
+    throw new Error(`rules: "residents.classPercent" needs ${SOCIAL_CLASSES.join(", ")}, adding up to 100`);
+  }
   if (!isObject(raw.healing) || !Number.isInteger(raw.healing.hutCapacity) || (raw.healing.hutCapacity as number) < 1) throw new Error('rules: "healing.hutCapacity" must be a whole number >= 1');
   if (!isObject(raw.plaza)) throw new Error('rules: missing "plaza"');
   for (const key of ["bigFromLevel", "reserveFromLevel", "bigWidth", "bigHeight", "spotsPerTile", "gatherMax"]) {
@@ -1432,7 +1444,7 @@ export function questChain(quests: QuestDef[], buildingIds: Set<string>, seasonI
   return chain;
 }
 
-const NO_VILLAGERS: VillagerContent = { chance: 0, names: [], women: [], men: [], stories: [], roleBuildings: {} };
+const NO_VILLAGERS: VillagerContent = { chance: 0, names: [], women: [], men: [], datuWomen: [], stories: [], roleBuildings: {} };
 
 /** Checks content/villagers.json and the villager names in content/names.json. */
 export function validateVillagers(raw: unknown, rawNames: unknown, buildingIds: Set<string>): VillagerContent {
@@ -1452,6 +1464,10 @@ export function validateVillagers(raw: unknown, rawNames: unknown, buildingIds: 
   const men = list("men");
   const names = [...women, ...men];
   if (new Set(names).size !== names.length) throw new Error('names.json: a villager name is listed twice');
+  const dw = isObject(rawNames) ? rawNames.datuWomen : undefined;
+  const datuWomen = Array.isArray(dw) && dw.every((n) => typeof n === "string") ? (dw as string[]) : [];
+  const datu = isObject(rawNames) && Array.isArray(rawNames.datu) ? rawNames.datu : [];
+  for (const n of datuWomen) if (!datu.includes(n)) throw new Error(`names.json: "datuWomen" lists ${n}, which isn't in "datu"`);
   if (!Array.isArray(raw.stories) || raw.stories.length === 0) throw new Error(`${file}: "stories" must list at least one story`);
   const ids = new Set<string>();
   for (const st of raw.stories) {
@@ -1468,7 +1484,7 @@ export function validateVillagers(raw: unknown, rawNames: unknown, buildingIds: 
       throw new Error(`${file}: roleBuildings.${role} must name a building`);
     }
   }
-  return { chance: raw.chance, names, women, men, stories: raw.stories as unknown as VillagerStory[], roleBuildings: rb as VillagerContent["roleBuildings"] };
+  return { chance: raw.chance, names, women, men, datuWomen, stories: raw.stories as unknown as VillagerStory[], roleBuildings: rb as VillagerContent["roleBuildings"] };
 }
 
 /** Checks content/levels.json: one reward per level from 2 up, resources or a title. */
@@ -1530,6 +1546,12 @@ export function validateTradition(raw: unknown, file = "tradition"): TraditionDe
   if (raw.burialLook !== "jars" && raw.burialLook !== "longon") throw new Error(`${file}: "burialLook" must be "jars" or "longon"`);
   if (raw.houseStyle !== undefined && raw.houseStyle !== "lowland" && raw.houseStyle !== "torogan") throw new Error(`${file}: "houseStyle" must be "lowland" or "torogan"`);
   if (raw.dress !== undefined && raw.dress !== "malong") throw new Error(`${file}: "dress" must be "malong" when given`);
+  if (raw.classes !== undefined) {
+    const cl = raw.classes;
+    if (!isObject(cl) || !SOCIAL_CLASSES.every((c) => isObject(cl[c]) && isText(cl[c].name) && isText(cl[c].about))) {
+      throw new Error(`${file}: "classes" needs ${SOCIAL_CLASSES.join(", ")}, each with "name" and "about" in every language`);
+    }
+  }
   return raw as unknown as TraditionDef;
 }
 

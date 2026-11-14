@@ -106,7 +106,10 @@ export const GAME_TEXT = {
   },
   roles: { villager: [], farmer: [], woodcutter: [], fisher: [], warrior: [] },
   history: { named: ["story"], left: ["name"], leftHunger: ["name"], leftCrowded: ["name", "them"], fell: ["name"], task: ["task"], herThem: [], himThem: [], anyThem: [] },
-  villager: { sick: [], close: [], ledDefense: ["name"] },
+  villager: {
+    sick: [], close: [], ledDefense: ["name"], unnamed: [], child: [], elder: [], clearing: [], sickRole: [], datu: [], spouse: ["spouse"], wife: [], husband: [], attendant: [],
+    classLine: ["class", "role"],
+  },
   news: { taskDone: ["task", "reward"], next: ["task"], title: ["title"], moreSoon: [], firstNamed: ["story"] },
   share: { button: [], villagers: ["n"], datu: ["datu"], text: [], saved: [], failed: [] },
   aklat: { title: [], progress: ["found", "total"], tradition: ["tradition"], inGame: [], sources: [], locked: [], hint: ["hint"], review: [], open: [], found: ["name"] },
@@ -157,6 +160,7 @@ export const GAME_TEXT = {
   },
   stockpile: { label: [], tip: ["cap"], over: ["cap", "percent"], stop: ["stop"], stopLabel: [] },
   healing: { inside: ["n"], others: ["n"], none: [], home: ["n"], badge: ["n"] },
+  classes: { nobility: [], warrior: [], commoner: [], dependent: [], general: [] },
   kamalig: { level: ["level", "max"], badge: ["level"], stores: ["amount"], upgrade: ["level"], top: [], cost: ["cost"], damaged: [], full: [], fullTip: [] },
   notices: {
     more: ["n"], moreLabel: ["n"], soon: [], list: [], dismiss: [], show: [], eclipse: [], tikbalang: [], offer: ["barangay"], choice: [], expedition: ["barangay"], sailing: [],

@@ -36,6 +36,48 @@
   },
   "burialLook": "longon",
   "houseStyle": "lowland",
+  "classes": {
+    "nobility": {
+      "name": {
+        "en": "Tumao",
+        "fil": "Tumao"
+      },
+      "about": {
+        "en": "Nobility: the datu's kin and descendants.",
+        "fil": "Mga tumao: ang angkan at mga inapo ng datu."
+      }
+    },
+    "warrior": {
+      "name": {
+        "en": "Timawa",
+        "fil": "Timawa"
+      },
+      "about": {
+        "en": "Free retainers who followed the datu in war and at sea.",
+        "fil": "Malalayang tagasunod na sumasama sa datu sa digmaan at sa dagat."
+      }
+    },
+    "commoner": {
+      "name": {
+        "en": "Timawa",
+        "fil": "Timawa"
+      },
+      "about": {
+        "en": "Free people of the barangay who worked their own fields and served the datu when called.",
+        "fil": "Malalayang tao ng barangay na nagsasaka ng sariling bukid at naglilingkod sa datu kapag tinawag."
+      }
+    },
+    "dependent": {
+      "name": {
+        "en": "Oripun",
+        "fil": "Oripun"
+      },
+      "about": {
+        "en": "Dependents who owed labor or a share of the harvest to a master, by birth or debt; some kept their own households.",
+        "fil": "Mga may utang na paggawa o bahagi ng ani sa isang panginoon, dahil sa kapanganakan o utang; may ilang may sariling sambahayan."
+      }
+    }
+  },
   "forestSpirit": {
     "name": {
       "en": "The diwata of the forest",

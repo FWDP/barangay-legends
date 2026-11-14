@@ -1,7 +1,8 @@
 // Saving to the browser. The only engine module allowed to touch browser APIs,
 // and even here the storage is passed in so tests can use a fake.
-import { AGE_GROUPS, GENDERS, syncResidents, type AgeGroup, type Gender } from "./residents";
-import { REFUSAL_REASONS, RESOURCES, type BuildingDef, type Content, type RefusalReason, type Resource } from "./content";
+import { AGE_GROUPS, classFor, GENDERS, syncResidents, type AgeGroup, type Gender } from "./residents";
+import { makeHousehold } from "./household";
+import { REFUSAL_REASONS, RESOURCES, SOCIAL_CLASSES, type BuildingDef, type Content, type RefusalReason, type Resource, type SocialClass } from "./content";
 import { cleanName, newGame, placeAuto, STATE_VERSION, type ClearingJob, type GameState, type PlacedBuilding } from "./game";
 import {
   addCoast,
@@ -270,6 +271,9 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
   // Older villagers get theirs from the map's seed when the save is read (residents.ts), the
   // same way new arrivals do; named villagers from their name (content/names.json).
   25: (raw) => ({ ...raw, version: 26, residents: [], residentsNext: 1 }),
+  // v26 → v27: social classes and the datu's household. Residents without a class get theirs
+  // from the seed, and the household is made from the seed and the datu's name, when read.
+  26: (raw) => ({ ...raw, version: 27, household: null }),
 };
 
 // ---------- Frozen v15 bridge rule (for the v14 → v15 migration only) ----------
@@ -725,16 +729,26 @@ const count = (v: unknown) => (finiteNonNeg(v) ? Math.floor(v) : 0);
 function parseResidents(data: RawSave, content: Content, state: GameState, isPlayer: boolean) {
   state.residents = [];
   state.residentsNext = 1;
+  state.household = null;
   if (!isPlayer) return;
   const seen = new Set<number>();
   for (const p of Array.isArray(data.residents) ? data.residents.slice(0, state.villagers) : []) {
     if (!isObject(p) || !Number.isInteger(p.id) || (p.id as number) < 1 || seen.has(p.id as number)) continue;
     if (!GENDERS.includes(p.gender as Gender) || !AGE_GROUPS.includes(p.age as AgeGroup)) continue;
     seen.add(p.id as number);
-    state.residents.push({ id: p.id as number, gender: p.gender as Gender, age: p.age as AgeGroup });
+    // A v26 resident has no class yet: the seed gives it, as for a new arrival.
+    const cls = SOCIAL_CLASSES.includes(p.cls as SocialClass) ? (p.cls as SocialClass) : classFor(content, state.map.seed, p.id as number);
+    state.residents.push({ id: p.id as number, gender: p.gender as Gender, age: p.age as AgeGroup, cls });
   }
   if (Number.isInteger(data.residentsNext)) state.residentsNext = Math.max(1, data.residentsNext as number);
   Object.assign(state, syncResidents(state, content));
+  // The datu's household: stored, or made from the seed and the datu's name (older saves).
+  const h = data.household;
+  const sp = isObject(h) && isObject(h.spouse) ? h.spouse : null;
+  state.household =
+    isObject(h) && GENDERS.includes(h.datuGender as Gender) && sp && typeof sp.name === "string" && sp.name.length <= 30 && GENDERS.includes(sp.gender as Gender)
+      ? { datuGender: h.datuGender as Gender, spouse: { name: sp.name, gender: sp.gender as Gender } }
+      : makeHousehold(content, state.map.seed, state.barangay.datu);
 }
 
 /** Tasks done, named villagers, history and counters. Unknown tasks and stories are dropped. */

@@ -9,6 +9,8 @@ import type { Report } from "../engine/region";
 import { costText } from "./format";
 import { newsLine } from "./politicsText";
 import type { Lang } from "./settings";
+import type { Tapped } from "./villagers";
+import { householdOf } from "../engine/household";
 import { fill, type GameText } from "./uiContent";
 
 /** "🪵 10", "the title Datu ng Ilog", or both. */
@@ -102,6 +104,38 @@ export function datuWithTitle(state: GameState, content: Content, lang: Lang): s
 }
 
 /** A named villager's card: name, what they do, their story. */
+/**
+ * The card for anyone tapped on the map: their name (named villagers, the datu, the spouse),
+ * their class in the barangay's tradition's words, and what they do; a named villager's story.
+ */
+export function tappedCard(t: Tapped, state: GameState, content: Content, game: GameText, lang: Lang): { name: string; star: boolean; line: string; story: string | null; sick: string | null } {
+  const v = game.villager;
+  const tradition = content.traditions.find((x) => x.id === state.tradition);
+  const cls = t.look.cls ?? "commoner";
+  const className = tradition?.classes?.[cls].name[lang] ?? game.classes[cls][lang];
+  const home = householdOf(state, content);
+  const byBuilding = Object.entries(content.villagers.roleBuildings).find(([, b]) => b === t.place)?.[0] as keyof GameText["roles"] | undefined;
+  const role =
+    t.role === "datu" ? v.datu[lang]
+    : t.role === "spouse" ? fill(v.spouse[lang], { spouse: (home.spouse.gender === "woman" ? v.wife : v.husband)[lang] })
+    : t.role === "attendant" ? v.attendant[lang]
+    : t.role === "warrior" ? game.roles.warrior[lang]
+    : t.role === "clearing" ? v.clearing[lang]
+    : t.role === "sick" ? v.sickRole[lang]
+    : t.role === "work" ? (byBuilding ? game.roles[byBuilding][lang] : game.roles.villager[lang])
+    : t.look.age === "child" ? v.child[lang]
+    : t.look.age === "elder" ? v.elder[lang]
+    : game.roles.villager[lang];
+  const name = t.named?.name ?? (t.role === "datu" ? state.barangay.datu || v.datu[lang] : t.role === "spouse" ? home.spouse.name : v.unnamed[lang]);
+  return {
+    name,
+    star: !!t.named,
+    line: fill(v.classLine[lang], { class: className, role: t.named ? game.roles[t.named.role][lang] : role }),
+    story: t.named ? storyText(content, t.named, lang) : null,
+    sick: t.named?.sick ? v.sick[lang] : null,
+  };
+}
+
 export function villagerCard(v: NamedVillager, content: Content, game: GameText, lang: Lang): { name: string; role: string; story: string; sick: string | null } {
   return { name: v.name, role: game.roles[v.role][lang], story: storyText(content, v, lang), sick: v.sick ? game.villager.sick[lang] : null };
 }

@@ -57,7 +57,7 @@ import { shoreCoverage } from "../engine/defense";
 import { fill, type GameText } from "./uiContent";
 import type { Lang } from "./settings";
 import { useReducedMotion, VillagerLayer, type Clash, type NamedHit } from "./VillagerLayer";
-import type { NamedVillager } from "../engine/people";
+import type { Tapped } from "./villagers";
 import { dockPoint, riverPath, SAIL_SECONDS, waitIndex } from "./visitors";
 import { isClear, labelSize, placeLabel, type Rect } from "./labels";
 import { isPranked } from "../engine/forest";
@@ -126,7 +126,7 @@ export function BarangayMap(props: {
   /** A tap on a tile outside placing mode: building menu, fire, repair, clear land. (sx, sy) is the screen point. */
   onTapTile: (x: number, y: number, sx: number, sy: number) => void;
   /** A named villager was tapped. */
-  onVillager?: (v: NamedVillager) => void;
+  onVillager?: (v: Tapped) => void;
   /** Right-click on a building (desktop): open its menu. */
   onBuildingMenu: (x: number, y: number, sx: number, sy: number) => void;
   /** The player tapped a resting spirit (the kapre): show its lore note. */

@@ -37,6 +37,48 @@
   },
   "burialLook": "jars",
   "houseStyle": "lowland",
+  "classes": {
+    "nobility": {
+      "name": {
+        "en": "Maginoo",
+        "fil": "Maginoo"
+      },
+      "about": {
+        "en": "Nobility: the datu's family and kin, who led the barangay.",
+        "fil": "Mga maginoo: ang angkan at kamag-anak ng datu, na namumuno sa barangay."
+      }
+    },
+    "warrior": {
+      "name": {
+        "en": "Maharlika",
+        "fil": "Maharlika"
+      },
+      "about": {
+        "en": "A warrior class of free people who served the datu in war. Not nobles.",
+        "fil": "Uring mandirigma ng malalayang tao na naglilingkod sa datu sa digmaan. Hindi sila maginoo."
+      }
+    },
+    "commoner": {
+      "name": {
+        "en": "Timawa",
+        "fil": "Timawa"
+      },
+      "about": {
+        "en": "Free commoners: most of the barangay's farmers, fishers and woodcutters.",
+        "fil": "Malalayang karaniwang tao: karamihan ng mga magsasaka, mangingisda at mangangahoy ng barangay."
+      }
+    },
+    "dependent": {
+      "name": {
+        "en": "Alipin",
+        "fil": "Alipin"
+      },
+      "about": {
+        "en": "Dependents bound to a household by debt or service: namamahay with a house of their own, or sagigilid living in their master's house.",
+        "fil": "Mga nakatali sa isang sambahayan dahil sa utang o paglilingkod: namamahay na may sariling bahay, o sagigilid na nakatira sa bahay ng pinaglilingkuran."
+      }
+    }
+  },
   "forestSpirit": {
     "name": {
       "en": "The nuno and the spirits of the trees",

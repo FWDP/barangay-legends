@@ -118,6 +118,50 @@
     "ledDefense": {
       "en": "{name} led the defense.",
       "fil": "Si {name} ang nanguna sa pagtatanggol."
+    },
+    "unnamed": {
+      "en": "A villager",
+      "fil": "Isang taga-barangay"
+    },
+    "child": {
+      "en": "Child",
+      "fil": "Bata"
+    },
+    "elder": {
+      "en": "Elder",
+      "fil": "Matanda"
+    },
+    "clearing": {
+      "en": "Clearing forest",
+      "fil": "Naglilinis ng gubat"
+    },
+    "sickRole": {
+      "en": "Sick",
+      "fil": "May sakit"
+    },
+    "datu": {
+      "en": "The datu",
+      "fil": "Ang datu"
+    },
+    "spouse": {
+      "en": "The datu's {spouse}",
+      "fil": "{spouse} ng datu"
+    },
+    "wife": {
+      "en": "wife",
+      "fil": "Asawa"
+    },
+    "husband": {
+      "en": "husband",
+      "fil": "Asawa"
+    },
+    "attendant": {
+      "en": "Attends the datu",
+      "fil": "Kasama ng datu"
+    },
+    "classLine": {
+      "en": "{class} · {role}",
+      "fil": "{class} · {role}"
     }
   },
   "news": {
@@ -1524,6 +1568,28 @@
     "badge": {
       "en": "{n} sick inside",
       "fil": "{n} maysakit sa loob"
+    }
+  },
+  "classes": {
+    "nobility": {
+      "en": "Noble family",
+      "fil": "Angkan ng pinuno"
+    },
+    "warrior": {
+      "en": "Warrior class",
+      "fil": "Uring mandirigma"
+    },
+    "commoner": {
+      "en": "Free commoner",
+      "fil": "Malayang taga-barangay"
+    },
+    "dependent": {
+      "en": "Dependent (bound by debt or service)",
+      "fil": "Nakadepende (dahil sa utang o paglilingkod)"
+    },
+    "general": {
+      "en": "General terms until a historian reviews this tradition's.",
+      "fil": "Pangkalahatang tawag habang hindi pa nasusuri ng isang historyador ang sa tradisyong ito."
     }
   }
 }

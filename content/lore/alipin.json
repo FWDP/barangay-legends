@@ -1,0 +1,35 @@
+{
+  "id": "alipin",
+  "name": "Alipin and oripun: dependents, not property",
+  "description": "Alipin (Tagalog) and oripun (Visayan) were dependents bound to a household by debt, penalty, birth or capture. Plasencia distinguishes the aliping namamahay, with a house of their own, from the aliping sagigilid, who lived in the master's house. Their bondage could end, and it differed from chattel slavery.",
+  "tradition": "Tagalog, Visayan",
+  "sources": [
+    "Juan de Plasencia, Customs of the Tagalogs (1589), in Emma H. Blair and James A. Robertson, eds., The Philippine Islands, 1493–1898, vol. 7 (Arthur H. Clark, 1903)",
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+  ],
+  "aklat": {
+    "order": 20,
+    "icon": "🤝",
+    "name": {
+      "en": "Alipin: dependents, not property",
+      "fil": "Alipin: nakadepende, hindi ari-arian"
+    },
+    "lore": {
+      "en": "Alipin were people bound to a household by debt, as a penalty, by birth, or after capture in war. Plasencia describes two kinds among the Tagalogs. The aliping namamahay had their own house, family and fields; they gave their master a share of the harvest and helped when called, and could not be sold. The aliping sagigilid lived in their master's house and served there, and their service could pass to another household. Bondage could end: a debt could be paid and freedom bought, and a child's status depended on the terms of the parents. This is not the chattel slavery of the Atlantic world, where enslaved people were treated as property for life and their children were born into it. Among the Visayans, dependents were called oripun, in several grades with different obligations.",
+      "fil": "Ang alipin ay mga taong nakatali sa isang sambahayan dahil sa utang, parusa, kapanganakan, o pagkabihag sa digmaan. Dalawang uri ang inilalarawan ni Plasencia sa mga Tagalog. May sariling bahay, pamilya at bukid ang aliping namamahay; nagbibigay sila ng bahagi ng ani sa pinaglilingkuran at tumutulong kapag tinawag, at hindi sila maipagbibili. Nakatira naman sa bahay ng pinaglilingkuran ang aliping sagigilid at doon naglilingkod, at maaaring mailipat ang kanilang paglilingkod sa ibang sambahayan. Maaaring matapos ang pagkakatali: nababayaran ang utang at nabibili ang kalayaan, at nakasalalay ang katayuan ng anak sa kasunduan ng mga magulang. Hindi ito ang pang-aalipin sa mundong Atlantiko, kung saan itinuring na ari-arian habambuhay ang mga inalipin at isinisilang dito ang kanilang mga anak. Sa mga Bisaya, oripun ang tawag sa mga nakadepende, sa iba't ibang antas na may iba't ibang tungkulin."
+    },
+    "inGame": {
+      "en": "Dependents live near the households they serve, nearest the Bahay ng Datu for the noble families, and wear plain, undyed cloth. Two of them walk with the datu.",
+      "fil": "Nakatira ang mga nakadepende malapit sa sambahayang pinaglilingkuran, pinakamalapit sa Bahay ng Datu para sa mga angkang maginoo, at payak na telang hindi tinina ang suot nila. Dalawa sa kanila ang kasama ng datu sa paglalakad."
+    },
+    "hint": {
+      "en": "Tap one of the dependents, such as the datu's attendants.",
+      "fil": "Pindutin ang isang nakadepende, gaya ng mga kasama ng datu."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "met-dependent"
+    }
+  },
+  "reviewed": false
+}

@@ -1,7 +1,8 @@
 // Game state and rules. Pure functions only: no React, no browser APIs, and no unseeded
 // randomness or wall-clock time. Time is passed in; randomness comes from the RNG in the state.
 import { syncResidents, type Resident } from "./residents";
-import { RESOURCES, type BuildingDef, type Content, type Resource, type ResourceAmounts } from "./content";
+import { makeHousehold, type Household } from "./household";
+import { RESOURCES, SOCIAL_CLASSES, type BuildingDef, type Content, type Resource, type ResourceAmounts, type SocialClass } from "./content";
 import { isHungry, seasonMultiplier, updateEvents } from "./events";
 import {
   autoPlaceTile,
@@ -63,6 +64,7 @@ import {
   answerRiddle,
   askPermission,
   catchSarimanok,
+  addFlag,
   chooseTradition,
   gong,
   lostToTikbalang,
@@ -76,7 +78,7 @@ import {
   type TikbalangTrick,
 } from "./worship";
 
-export const STATE_VERSION = 26;
+export const STATE_VERSION = 27;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -191,6 +193,8 @@ export interface GameState {
   residents: Resident[];
   /** The next resident's id. */
   residentsNext: number;
+  /** The datu's household (household.ts): stored for the player's barangay, null for AI ones. */
+  household: Household | null;
   /** The barangay's history: named villagers coming and going, tasks done. Newest last. */
   history: HistoryEntry[];
   stats: Stats;
@@ -287,6 +291,7 @@ export function newGame(
     named: [],
     residents: [],
     residentsNext: 1,
+    household: null,
     history: [],
     stats: { raidsDefended: 0, rolls: 0, named: 0, replanted: 0, permittedClears: 0, deaths: 0, voyages: 0, trades: 0, bestTens: 0 },
     favor: 0,
@@ -315,7 +320,7 @@ export function newGame(
     expeditions: [],
     nextExpeditionId: 1,
   };
-  if (!content.ai) state = syncResidents(state, content);
+  if (!content.ai) state = { ...syncResidents(state, content), household: makeHousehold(content, seed, state.barangay.datu) };
   if (withRegion && content.neighbors.length > 0) state.region = createRegion(content, 0, seed, state.barangay.id);
   for (const def of content.buildings) {
     for (let i = 0; i < (start.buildings[def.id] ?? 0); i++) state = placeAuto(state, content, def.id);
@@ -805,6 +810,8 @@ export function setPaused(state: GameState, content: Content, x: number, y: numb
  */
 export type Command =
   | { type: "gather"; resource: Resource }
+  /** The player looked at a villager (tapped them): who they met, for the Aklat entries on dress and classes. */
+  | { type: "meet"; cls: SocialClass; datu?: boolean }
   | { type: "build"; building: string; x: number; y: number }
   | { type: "undo" }
   | { type: "move"; x: number; y: number; toX: number; toY: number }
@@ -865,6 +872,8 @@ function applyCommand(state: GameState, content: Content, command: Command): Gam
   switch (command.type) {
     case "gather":
       return gather(state, content, command.resource);
+    case "meet":
+      return meet(state, command.cls, command.datu === true);
     case "dev":
       return devCommand(state, content, command, (s, seconds) => tick(s, content, seconds));
     case "build":
@@ -1079,3 +1088,13 @@ function step(state: GameState, content: Content, dt: number): GameState {
   return content.ai ? doors : trackRanking(state, applyRenown(state, checkAklat(doors, content), content), content);
 }
 
+/**
+ * Meeting a villager (tapping them on the map): remembered as flags (met-villager, met-<class>,
+ * met-datu), which unlock the Aklat entries on dress and social classes.
+ */
+function meet(state: GameState, cls: SocialClass, datu: boolean): GameState {
+  if (!(SOCIAL_CLASSES as readonly string[]).includes(cls)) return state;
+  let s = addFlag(addFlag(state, "met-villager"), `met-${cls}`);
+  if (datu) s = addFlag(s, "met-datu");
+  return s;
+}

@@ -4,14 +4,14 @@ import { useState } from "react";
 import type { Content } from "../engine/content";
 import type { GameState } from "../engine/game";
 import { currentTask, earnedTitles, taskProgress } from "../engine/gawain";
-import type { NamedVillager } from "../engine/people";
 import { datuLevelNeeded, maxDatuLevel, nextDatuLevel } from "../engine/datu";
 import { datuHouseUrl, houseStyleFor } from "./datuHouseArt";
 import { asCost, canAfford } from "../engine/game";
 import { costText } from "./format";
 import type { Lang } from "./settings";
 import { useModal } from "./StoryDialogs";
-import { historyLine, rewardText, villagerCard } from "./stories";
+import { historyLine, rewardText, tappedCard } from "./stories";
+import type { Tapped } from "./villagers";
 import { fill, type GameText } from "./uiContent";
 
 const OPEN_KEY = "barangay-legends/gawain-open";
@@ -100,10 +100,10 @@ export function GawainPanel(props: { state: GameState; content: Content; game: G
 }
 
 /** A named villager's card: tap their sprite (the one with a star). */
-export function VillagerDialog(props: { villager: NamedVillager | null; content: Content; game: GameText; lang: Lang; onClose: () => void }) {
-  const { villager, content, game, lang, onClose } = props;
+export function VillagerDialog(props: { villager: Tapped | null; state: GameState; content: Content; game: GameText; lang: Lang; onClose: () => void }) {
+  const { villager, state, content, game, lang, onClose } = props;
   const dialog = useModal(!!villager);
-  const card = villager ? villagerCard(villager, content, game, lang) : null;
+  const card = villager ? tappedCard(villager, state, content, game, lang) : null;
   return (
     <dialog
       ref={dialog}
@@ -115,10 +115,10 @@ export function VillagerDialog(props: { villager: NamedVillager | null; content:
       {card && (
         <div className="mat-card space-y-2 p-4">
           <h2 id="villager-name" className="font-display text-xl text-amber-900">
-            <span aria-hidden>⭐</span> {card.name}
+            {card.star && <span aria-hidden>⭐</span>} {card.name}
           </h2>
-          <p className="text-xs font-semibold tracking-wide text-stone-500 uppercase">{card.role}</p>
-          <p className="text-sm leading-snug italic">“{card.story}”</p>
+          <p className="text-xs font-semibold tracking-wide text-stone-500 uppercase">{card.line}</p>
+          {card.story && <p className="text-sm leading-snug italic">“{card.story}”</p>}
           {card.sick && <p className="text-xs text-red-800">🤒 {card.sick}</p>}
           <div className="flex justify-end">
             <button type="button" autoFocus onClick={onClose} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-4 py-1.5 text-sm font-semibold text-amber-950">

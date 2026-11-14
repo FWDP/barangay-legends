@@ -1,0 +1,44 @@
+{
+  "id": "datu-nobility",
+  "name": "The datu and the nobility",
+  "description": "A barangay was led by a datu, whose standing rested on kin, followers, wealth and deeds. The datu's family and kin formed the nobility: maginoo among the Tagalogs, tumao among the Visayans.",
+  "tradition": "Tagalog, Visayan",
+  "sources": [
+    "Juan de Plasencia, Customs of the Tagalogs (1589), in Emma H. Blair and James A. Robertson, eds., The Philippine Islands, 1493–1898, vol. 7 (Arthur H. Clark, 1903)",
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+  ],
+  "aklat": {
+    "order": 17,
+    "icon": "🪶",
+    "name": {
+      "en": "The datu and the nobility",
+      "fil": "Ang datu at ang mga maginoo"
+    },
+    "lore": {
+      "en": "A barangay was led by a datu. A datu's standing rested on kin and followers, on wealth in goods and gold, and on deeds in war and at sea, more than on a fixed office. The datu's family and kin formed the nobility: the maginoo among the Tagalogs, the tumao among the Visayans. They married among themselves, judged disputes with the elders, and received guests and envoys at the datu's house.",
+      "fil": "Pinamumunuan ng datu ang barangay. Nakasalalay ang katayuan ng datu sa kamag-anak at mga tagasunod, sa yaman sa kalakal at ginto, at sa mga gawa sa digmaan at sa dagat, higit sa isang takdang tungkulin. Ang angkan at kamag-anak ng datu ang bumubuo sa mga maginoo sa mga Tagalog, tumao sa mga Bisaya. Nag-aasawahan sila sa isa't isa, humahatol sa mga alitan kasama ang matatanda, at tumatanggap ng mga panauhin at sugo sa bahay ng datu."
+    },
+    "inGame": {
+      "en": "The datu wears a red putong and gold, and walks with attendants; their spouse is often by the Bahay ng Datu. Noble families live nearest the house and wear gold ornaments. Tap any villager to see their class.",
+      "fil": "Nakaputong na pula at may ginto ang datu, at may mga kasama sa paglalakad; madalas nasa tabi ng Bahay ng Datu ang asawa. Pinakamalapit sa bahay nakatira ang mga angkang maginoo at may suot silang gintong palamuti. Pindutin ang sinumang taga-barangay upang makita ang kanilang uri."
+    },
+    "hint": {
+      "en": "Tap the datu, or someone of a noble family.",
+      "fil": "Pindutin ang datu, o isang taga-angkang maginoo."
+    },
+    "unlock": {
+      "type": "any",
+      "of": [
+        {
+          "type": "flag",
+          "flag": "met-datu"
+        },
+        {
+          "type": "flag",
+          "flag": "met-nobility"
+        }
+      ]
+    }
+  },
+  "reviewed": false
+}

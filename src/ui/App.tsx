@@ -32,8 +32,8 @@ import { useReducedMotion, type Clash } from "./VillagerLayer";
 import { BOAT_RETURN_MS, CLASH_MS, SAIL_SECONDS } from "./visitors";
 import { tradingPaused } from "../engine/region";
 import type { GameState } from "../engine/game";
-import type { NamedVillager } from "../engine/people";
 import { DatuDialog, GawainPanel, HistoryDialog, RememberedDialog, VillagerDialog } from "./Gawain";
+import type { Tapped } from "./villagers";
 import { shareBarangay } from "./share";
 import { awayPeopleLines, battleNames } from "./stories";
 import { AklatButton, AklatDialog, DambanaDialog, EclipseBar, ForestChip, PrankBar, ReplantBar, TikbalangBar } from "./Spirits";
@@ -402,7 +402,7 @@ export function App() {
   // Laying Daan footpaths (a placing mode of its own).
   const [roadMode, setRoadMode] = useState(false);
   // A named villager's card, and the barangay history.
-  const [villager, setVillager] = useState<NamedVillager | null>(null);
+  const [villager, setVillager] = useState<Tapped | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
   // The Dambana, the Aklat ng Alamat, the babaylan's ritual animation and a tile to replant.
   const [dambanaOpen, setDambanaOpen] = useState(false);
@@ -964,6 +964,8 @@ export function App() {
           onVillager={(v) => {
             sfx.click();
             setVillager(v);
+            // Meeting them may open an Aklat entry on dress or their class.
+            dispatch({ type: "meet", cls: v.look.cls ?? "commoner", datu: v.role === "datu" });
           }}
           onBuildingMenu={openMenu}
           onSpirit={(id) => {
@@ -1315,7 +1317,7 @@ export function App() {
           };
         }}
       />
-      <VillagerDialog villager={villager} content={content} game={ui.game} lang={lang} onClose={() => setVillager(null)} />
+      <VillagerDialog villager={villager} state={state} content={content} game={ui.game} lang={lang} onClose={() => setVillager(null)} />
       <HistoryDialog open={historyOpen} state={state} content={content} game={ui.game} lang={lang} onClose={() => setHistoryOpen(false)} />
       <ChoiceDialog state={state} content={content} open={choiceOpen && !raidComing} onClose={() => setChoiceOpen(false)} dispatch={dispatch} />
       <AwayDialog

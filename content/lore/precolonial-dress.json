@@ -25,12 +25,12 @@
       "fil": "Ganito ang suot ng mga taganayon sa mapa: baro at tapis ang mga babae, nakatali ang buhok; bahag at kanggan ang mga lalaki, at may ilang nakaputong. Sa barangay na Maranao, malong ang suot ng babae at lalaki. Mas maliliit ang mga bata at may tungkod ang matatanda. Mga lalaki muna ang iginuguhit na Mandirigma, hangga't wala pang talang may sanggunian tungkol sa mga babaeng mandirigma."
     },
     "hint": {
-      "en": "Watch your villagers about the barangay.",
-      "fil": "Pagmasdan ang mga taganayon sa barangay."
+      "en": "Tap a villager on the map.",
+      "fil": "Pindutin ang isang taga-barangay sa mapa."
     },
     "unlock": {
-      "type": "built",
-      "building": "bahay-kubo"
+      "type": "flag",
+      "flag": "met-villager"
     }
   },
   "reviewed": false

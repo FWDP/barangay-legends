@@ -25,6 +25,7 @@ import {
   stepWalker,
   type Appearance,
   type Role,
+  type Tapped,
   type VillagerPlan,
   type Walker,
 } from "./villagers";
@@ -52,7 +53,8 @@ import { hasDatuUnlock } from "../engine/datu";
 import { alliedDefenders } from "../engine/region";
 import { raidLanding } from "../engine/border";
 import { solidTiles } from "../engine/doors";
-import { houseFront } from "../engine/plaza";
+import { gatheringSpots, houseFront } from "../engine/plaza";
+import { householdOf } from "../engine/household";
 import { namedGender } from "../engine/people";
 import { datuHouseBox, datuHouseImage, eraseImage, houseStyleFor } from "./datuHouseArt";
 
@@ -128,7 +130,7 @@ export function useReducedMotion(): boolean {
   return reduced;
 }
 
-export type Look = Role | "leaving" | "raider" | "looter" | "datu" | "envoy" | "defender" | "ally";
+export type Look = Role | "leaving" | "raider" | "looter" | "datu" | "spouse" | "attendant" | "envoy" | "defender" | "ally";
 
 /** How long a mourning marker stays where someone died. */
 const MARKER_MS = 12000;
@@ -224,9 +226,12 @@ export function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, ti
   g.globalAlpha = (sick ? 0.85 : 1) * alpha;
   const skin = sick ? "#9cae7a" : SKIN[(id * 3) % SKIN.length];
   const raider = role === "raider" || role === "looter";
-  const special = role === "datu" ? "#7f1d1d" : role === "envoy" ? "#e7e5e4" : raider ? "#3b0a0a" : null;
+  // The datu's household dresses finer; dependents (alipin, oripun) in plain undyed cloth.
+  const fine = role === "datu" || role === "spouse";
+  const plain = look.cls === "dependent" && !fine;
+  const special = fine ? "#991b1b" : role === "envoy" ? "#e7e5e4" : raider ? "#3b0a0a" : plain ? "#b8a47e" : null;
   const cloth = sick ? "#7c9a5a" : special ?? CLOTH[id % CLOTH.length];
-  const wrap = sick ? "#6b8a4a" : TAPIS[(id * 5) % TAPIS.length];
+  const wrap = sick ? "#6b8a4a" : fine ? "#1e3a8a" : plain ? "#8b6b4a" : TAPIS[(id * 5) % TAPIS.length];
   const lean = elder ? s * 0.06 : 0;
 
   g.fillStyle = "rgb(0 0 0 / 0.25)";
@@ -263,7 +268,7 @@ export function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, ti
     g.fillRect(x - s * 0.19, y - s * 0.26, s * 0.38, s * 0.05);
     // The baro: a short blouse (under the malong's top edge if worn).
     if (!malong) {
-      g.fillStyle = sick ? cloth : special ?? BARO[id % BARO.length];
+      g.fillStyle = sick ? cloth : fine ? "#991b1b" : plain ? "#e7dcc0" : special ?? BARO[id % BARO.length];
       g.beginPath();
       g.roundRect(x - s * 0.16 + lean, top, s * 0.32, s * 0.4, s * 0.08);
       g.fill();
@@ -319,10 +324,23 @@ export function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, ti
     g.beginPath();
     g.arc(hx - s * 0.13, top - s * 0.17, s * 0.075, 0, Math.PI * 2);
     g.fill();
-  } else if (!raider && role !== "warrior" && role !== "defender" && role !== "ally" && role !== "datu" && !child && id % 3 === 0) {
-    // Some men wear a putong, a cloth wound round the head.
-    g.fillStyle = "#7c2d12";
+  } else if (!raider && role !== "warrior" && role !== "defender" && role !== "ally" && role !== "datu" && !child && (look.cls === "warrior" || id % 3 === 0)) {
+    // Some men wear a putong, a cloth wound round the head (the warrior class a red one).
+    g.fillStyle = look.cls === "warrior" ? "#991b1b" : "#7c2d12";
     g.fillRect(hx - s * 0.14, top - s * 0.21, s * 0.28, s * 0.06);
+  }
+  if ((look.cls === "nobility" || fine) && !child) {
+    // Gold: a necklace and ear ornaments, the mark of a noble family.
+    g.strokeStyle = "#facc15";
+    g.lineWidth = Math.max(1, s * 0.045);
+    g.beginPath();
+    g.arc(hx, top + s * 0.02, s * 0.09, 0.15 * Math.PI, 0.85 * Math.PI);
+    g.stroke();
+    g.fillStyle = "#facc15";
+    g.beginPath();
+    g.arc(hx - s * 0.13, top - s * 0.08, s * 0.035, 0, Math.PI * 2);
+    g.arc(hx + s * 0.13, top - s * 0.08, s * 0.035, 0, Math.PI * 2);
+    g.fill();
   }
   if (elder) {
     // A walking stick.
@@ -335,16 +353,19 @@ export function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, ti
   }
 
   if (role === "datu") {
-    // The datu: a gold-trimmed putong and a gold sash, a little taller in the crowd.
-    g.fillStyle = "#facc15";
-    g.fillRect(x - s * 0.16, top - s * 0.24, s * 0.32, s * 0.09);
-    g.fillRect(x - s * 0.17, top + s * 0.14, s * 0.34, s * 0.06);
+    // The datu: a red putong with its end standing up, a finer kanggan trimmed in gold, gold
+    // ornaments (above). A woman datu wears the red cloth over her hair and a red baro.
     g.fillStyle = "#b91c1c";
+    g.fillRect(hx - s * 0.16, top - s * 0.25, s * 0.32, s * 0.09);
     g.beginPath();
-    g.moveTo(x + s * 0.12, top - s * 0.24);
-    g.lineTo(x + s * 0.26, top - s * 0.34);
-    g.lineTo(x + s * 0.16, top - s * 0.15);
+    g.moveTo(hx + s * 0.12, top - s * 0.24);
+    g.lineTo(hx + s * 0.27, top - s * 0.36);
+    g.lineTo(hx + s * 0.17, top - s * 0.15);
     g.fill();
+    g.fillStyle = "#facc15";
+    g.fillRect(hx - s * 0.16, top - s * 0.18, s * 0.32, s * 0.025);
+    g.fillRect(x - s * 0.17 + lean, top + s * 0.33, s * 0.34, s * 0.04);
+    g.fillRect(x - s * 0.02 + lean, top, s * 0.04, s * 0.36);
   } else if (role === "envoy") {
     // An envoy carries a gift bundle.
     g.fillStyle = "#a16207";
@@ -506,7 +527,7 @@ export function drawSparks(g: CanvasRenderingContext2D, x: number, y: number, ti
  * villagers stand still at their spots and the canvas only redraws when the game changes.
  */
 /** Finds the named villager drawn at a point of the map view (px), or null. */
-export type NamedHit = (x: number, y: number) => NamedVillager | null;
+export type NamedHit = (x: number, y: number) => Tapped | null;
 
 export function VillagerLayer(props: {
   state: GameState;
@@ -542,6 +563,10 @@ export function VillagerLayer(props: {
   const leavers = useRef<Leaver[]>([]);
   // The datu walking their rounds, envoys coming to the Bahay ng Datu, and mourning markers.
   const datu = useRef<Villager | null>(null);
+  // The datu's attendants (walking with the datu) and spouse (by the house and at gatherings).
+  const household = useRef<Villager[]>([]);
+  /** Where the datu, attendants and spouse stand right now (map tiles), for tapping them. */
+  const householdSpots = useRef<{ datu: Point; attendants: (Point | undefined)[]; spouse?: Point } | null>(null);
   const envoys = useRef<{ key: string; walkers: Villager[] } | null>(null);
   const markers = useRef<{ p: Point; until: number }[]>([]);
   const allyRoutes = useRef(new Map<string, Point[]>());
@@ -602,7 +627,8 @@ export function VillagerLayer(props: {
         planned.current = { state: s, rally: rallyKey, plans, named: namedSprites(plans, s, content) };
       }
       const { plans, named } = planned.current;
-      const spots: { x: number; y: number; v: NamedVillager }[] = [];
+      const spots: { x: number; y: number; v: Tapped }[] = [];
+      const typeAt = new Map(s.buildings.map((b) => [`${b.x},${b.y}`, b.type]));
       // The game's own night (rules.dayNight), the same clock as the map's tint. Each villager
       // keeps their own moment (a few seconds apart), so they don't all head home at once.
       const nightFor = (id: number) => isNightAt(content, s.time + ((id * 7919) % 17) - 8);
@@ -850,17 +876,33 @@ export function VillagerLayer(props: {
             if (who) drawStar(g, at.x, at.y, T);
           },
         });
-        if (who) spots.push({ x: at.x, y: at.y, v: who });
+        spots.push({
+          x: at.x,
+          y: at.y,
+          v: { named: who ?? null, look: look ?? { gender: "man", age: "adult", malong: false }, role: plan.role, place: plan.place && plan.role === "work" ? (typeAt.get(`${plan.place.x},${plan.place.y}`) ?? null) : null },
+        });
       }
       for (const id of sprites.current.keys()) if (!seen.has(id)) sprites.current.delete(id);
       if (torches) torches.current = lit;
       if (hitRef) {
         const r = Math.max(10, T * 0.4);
         hitRef.current = (x, y) => {
-          let best: { d: number; v: NamedVillager } | null = null;
-          for (const sp of spots) {
+          let best: { d: number; v: Tapped } | null = null;
+          // The datu's household (where they stood last frame).
+          const hh = householdSpots.current;
+          const homeOf = householdOf(s, content);
+          const malong = content.traditions.find((q) => q.id === s.tradition)?.dress === "malong";
+          const extra: { x: number; y: number; v: Tapped }[] = [];
+          const add = (p: Point | undefined, v: Tapped) => p && extra.push({ x: o.x + p.x * T, y: o.y + p.y * T, v });
+          if (hh) {
+            add(hh.datu, { named: null, look: { gender: homeOf.datuGender, age: "adult", cls: "nobility", malong }, role: "datu", place: null });
+            add(hh.spouse, { named: null, look: { gender: homeOf.spouse.gender, age: "adult", cls: "nobility", malong }, role: "spouse", place: null });
+            hh.attendants.forEach((p, k) => add(p, { named: null, look: { gender: k ? "woman" : "man", age: "adult", cls: "dependent", malong }, role: "attendant", place: null }));
+          }
+          // Named villagers win a close call (they have a story to tell).
+          for (const sp of [...extra, ...spots]) {
             // The body is above the feet (the sprite's position).
-            const d = Math.hypot(sp.x - x, sp.y - Math.max(7, T * 0.32) * 0.5 - y);
+            const d = Math.hypot(sp.x - x, sp.y - Math.max(7, T * 0.32) * 0.5 - y) - (sp.v.named ? r * 0.3 : 0);
             if (d <= r && (!best || d < best.d)) best = { d, v: sp.v };
           }
           return best?.v ?? null;
@@ -910,8 +952,41 @@ export function VillagerLayer(props: {
           }
         }
         datu.current = d0;
+        const home = householdOf(s, content);
+        const malong = content.traditions.find((x) => x.id === s.tradition)?.dress === "malong";
+        const datuLook: Appearance = { gender: home.datuGender, age: "adult", cls: "nobility", malong };
         const at = visible(d0.p);
-        if (at) drawn.push({ x: at.x, y: at.y, f: () => drawPerson(g, at.x, at.y, T, 9000, "datu", d0, t) });
+        if (at) drawn.push({ x: at.x, y: at.y, f: () => drawPerson(g, at.x, at.y, T, 9000, "datu", d0, t, 1, datuLook) });
+        // Two attendants a step behind the datu, and the spouse: in front of the house, now and
+        // then at the gathering spots, by the fire at night.
+        const gathering = gatheringSpots(s, content);
+        const spouseTo = night || Math.floor(t / 40) % 3 !== 2 ? { x: front.x + 0.55, y: front.y + 0.05 } : (gathering.spots[1] ?? gathering.spots[0] ?? front);
+        // Never onto a building or the house: then they stand by the datu.
+        const free = (q: Point) => (blocked[Math.floor(q.y) * s.map.width + Math.floor(q.x)] ? { x: d0.p.x, y: d0.p.y + 0.15 } : q);
+        const targets = [free({ x: d0.p.x - 0.32, y: d0.p.y + 0.12 }), free({ x: d0.p.x + 0.32, y: d0.p.y + 0.14 }), spouseTo];
+        const looks: [Look, Appearance][] = [
+          ["attendant", { gender: "man", age: "adult", cls: "dependent", malong }],
+          ["attendant", { gender: "woman", age: "adult", cls: "dependent", malong }],
+          ["spouse", { gender: home.spouse.gender, age: "adult", cls: "nobility", malong }],
+        ];
+        targets.forEach((to2, k) => {
+          const h = household.current[k] ?? { p: { ...to2 }, moving: false, stride: k, walker: newWalker(to2) };
+          if (reducedMotion) h.p = to2;
+          else {
+            h.walker = stepWalker({ ...h.walker, p: h.p }, to2, s.map, k < 2 ? SPEED.idle * 1.1 : SPEED.idle, dt, roadSpeed, blocked);
+            h.p = h.walker.p;
+            h.moving = h.walker.moving;
+            if (h.moving) {
+              h.stride += dt * 9;
+              animating = true;
+            }
+          }
+          household.current[k] = h;
+          const v = visible(h.p);
+          const [role, lk] = looks[k];
+          if (v) drawn.push({ x: v.x, y: v.y, f: () => drawPerson(g, v.x, v.y, T, 9010 + k, role, h, t, 1, lk) });
+        });
+        householdSpots.current = { datu: d0.p, attendants: [household.current[0]?.p, household.current[1]?.p], spouse: household.current[2]?.p };
       }
       // ---- Envoys (Bahay ng Datu level 2+): from the docked bangka to the house, visual only ----
       const offerNow = s.region?.offer ?? null;

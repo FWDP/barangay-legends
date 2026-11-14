@@ -69,6 +69,19 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 13. **Women as Mandirigma**: the Mandirigma are drawn (and named) as men for now. Is there a
     sourced basis for showing women among a barangay's warriors? If so, please give the source
     and the game will add it.
+14. **Social classes** (`content/traditions/*.json` "classes", `content/lore/datu-nobility.json`,
+    `maharlika.json`, `timawa.json`, `alipin.json`): Tagalog maginoo, maharlika (a warrior class,
+    not nobles), timawa, alipin (namamahay, sagigilid); Visayan tumao, timawa, oripun. The Maranao
+    tradition uses general terms ("noble family", "warrior class", "free commoner", "dependent")
+    until a reviewer gives sourced ones. Class shows only in dress details and where people live
+    and work, never as a label over heads. Is the alipin entry accurate and respectful (dependents
+    bound by debt or service, not chattel), and are the shares of each class (a game setting in
+    `rules.json`, not a historical figure) acceptable? Should a binukot entry be added, and from
+    which source?
+15. **The datu's household**: the datu is drawn with a red putong, gold ornaments and a finer
+    kanggan, with two attendants (dependents); the spouse is named and appears by the house. A
+    datu whose name is on the women's list of default names is drawn as a woman with a husband.
+    Is a woman datu a reasonable option to allow?
 
 ### Entries
 
@@ -107,6 +120,11 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 | content/traditions/*.json "burialLook" | How each tradition's Libingan looks | Tagalog: jars, Visayan: longon, Maranao: jars | see questions 7–8 |
 | content/lore/dambana-art.json and src/ui/buildingArt.ts | Dambana art: generic form inspired by raised bamboo shrines (pinag-anituhan); needs a historical source and review; tradition-specific designs pending. | Widespread (generic) | Scott 1994; Plasencia 1589 |
 | content/lore/precolonial-dress.json and src/ui/VillagerLayer.tsx | Aklat entry and villager sprites: baro, tapis/patadyong, bahag, kanggan, putong; malong (Maranao) | Tagalog, Visayan; Maranao | Scott 1994; Boxer Codex (Souza and Turley 2016); Alcina 1668 (Kobak and Gutiérrez 2002); Wikipedia: Malong |
+| content/traditions/tagalog.json, visayan.json "classes" | Social class names and one-line descriptions | Tagalog, Visayan | Plasencia 1589; Scott 1994 |
+| content/lore/datu-nobility.json | Aklat entry: the datu and the nobility (maginoo, tumao) | Tagalog, Visayan | Plasencia 1589; Scott 1994 |
+| content/lore/maharlika.json | Aklat entry: the maharlika warrior class | Tagalog | Plasencia 1589; Scott 1994 |
+| content/lore/timawa.json | Aklat entry: timawa (Tagalog commoners, Visayan retainers) | Tagalog, Visayan | Plasencia 1589; Scott 1994 |
+| content/lore/alipin.json | Aklat entry: alipin and oripun, dependents (not chattel) | Tagalog, Visayan | Plasencia 1589; Scott 1994 |
 | content/names.json "villagers" | Named villagers' names, split into women's and men's (everyday Tagalog and Visayan words) | Tagalog, Visayan | made up for the game; see the file's note |
 | content/lore/kuta.json and src/ui/buildingArt.ts | Kuta art and lore note: precolonial fortifications (kuta/kota) drawn as a palisade with a gate and a thatched lookout; generic, the same for every tradition | Widespread | Scott 1994 |
 

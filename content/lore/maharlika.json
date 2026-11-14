@@ -1,0 +1,35 @@
+{
+  "id": "maharlika",
+  "name": "Maharlika",
+  "description": "Among the Tagalogs, the maharlika were a free class who served the datu in war, at their own expense, and followed the datu when called. Plasencia's account does not count them among the nobility (the maginoo).",
+  "tradition": "Tagalog",
+  "sources": [
+    "Juan de Plasencia, Customs of the Tagalogs (1589), in Emma H. Blair and James A. Robertson, eds., The Philippine Islands, 1493–1898, vol. 7 (Arthur H. Clark, 1903)",
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+  ],
+  "aklat": {
+    "order": 18,
+    "icon": "🛡️",
+    "name": {
+      "en": "Maharlika",
+      "fil": "Maharlika"
+    },
+    "lore": {
+      "en": "Among the Tagalogs, the maharlika were a free class whose duty was to serve the datu in war, arming themselves at their own expense and going with the datu when called; in return they owed no tribute. In Plasencia's account they are not the nobility: those were the maginoo. Today the word is often taken to mean 'noble', but in the sixteenth-century sources it names this warrior class. Among the Visayans, free retainers who followed the datu in war and at sea were called timawa.",
+      "fil": "Sa mga Tagalog, ang maharlika ay uri ng malalayang tao na tungkuling maglingkod sa datu sa digmaan, gamit ang sariling sandata at gastos, at sumasama sa datu kapag tinawag; kapalit nito, hindi sila nagbabayad ng buwis. Sa salaysay ni Plasencia, hindi sila ang maginoo. Madalas ngayong unawain ang salita bilang 'maharlikang dugo', ngunit sa mga sanggunian noong ika-16 na siglo, ang tinutukoy nito ay ang uring mandirigmang ito. Sa mga Bisaya, timawa ang tawag sa malalayang tagasunod na sumasama sa datu sa digmaan at sa dagat."
+    },
+    "inGame": {
+      "en": "The Mandirigma are drawn mostly from the warrior class, and its men wear a red putong.",
+      "fil": "Karamihan ng Mandirigma ay mula sa uring mandirigma, at nakaputong na pula ang mga lalaki nito."
+    },
+    "hint": {
+      "en": "Tap someone of the warrior class.",
+      "fil": "Pindutin ang isang taga-uring mandirigma."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "met-warrior"
+    }
+  },
+  "reviewed": false
+}

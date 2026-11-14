@@ -1,5 +1,5 @@
 {
-  "_comment": "Random default names on the title screen. Made-up names built from Tagalog and Visayan words; none is meant to be a real historical datu or place, and none repeats a neighbor in content/neighbors. Add more in a pull request (at most 30 characters each). 'villagers' are names for named villagers (content/villagers.json), split into 'women' and 'men' so a named villager's name fits their gender (engine/residents.ts); they are everyday Tagalog and Visayan words, not historical people.",
+  "_comment": "Random default names on the title screen. Made-up names built from Tagalog and Visayan words; none is meant to be a real historical datu or place, and none repeats a neighbor in content/neighbors. Add more in a pull request (at most 30 characters each). 'villagers' are names for named villagers (content/villagers.json), split into 'women' and 'men' so a named villager's name fits their gender (engine/residents.ts); they are everyday Tagalog and Visayan words, not historical people. 'datuWomen' marks which default datu names are women's names: a datu with one of them is drawn as a woman, with a husband (engine/household.ts); any other name, as a man with a wife.",
   "datu": [
     "Dakila",
     "Magiting",
@@ -21,6 +21,17 @@
     "Dumalo",
     "Sagisag",
     "Lakas"
+  ],
+  "datuWomen": [
+    "Amihan",
+    "Hiraya",
+    "Mayumi",
+    "Ligaya",
+    "Marikit",
+    "Tala",
+    "Bituin",
+    "Liwayway",
+    "Alon"
   ],
   "barangay": [
     "Sapang Bato",

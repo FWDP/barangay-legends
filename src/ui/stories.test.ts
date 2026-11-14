@@ -5,7 +5,7 @@ import type { NamedVillager } from "../engine/people";
 import type { Report } from "../engine/region";
 import { at, calm, content, withState } from "../engine/testUtils";
 import { advise, newModel, NEW_MEMORY, newEntries, NEWS_SECONDS, TIP_GAP_SECONDS } from "./advisor";
-import { awayPeopleLines, battleNames, datuWithTitle, historyLine, rewardText, taskNews, villagerCard } from "./stories";
+import { awayPeopleLines, battleNames, datuWithTitle, historyLine, rewardText, taskNews, villagerCard, tappedCard } from "./stories";
 import { shareBounds, shareFileName, shareLines, SHARE_URL } from "./share";
 import { loadUiContent, validateGameText } from "./uiContent";
 import { namedSprites, planVillagers } from "./villagers";
@@ -247,5 +247,34 @@ describe("deaths and the Bahay ng Datu in words", () => {
     const before = fresh({ time: 100 });
     const after = { ...before, time: 300, history: [{ at: 200, kind: "died" as const, cause: "sickness" as const, name: "Ulan" }] };
     expect(awayPeopleLines(before, after, content, game, "en")).toEqual(["Ulan died of a long sickness. The barangay remembers them."]);
+  });
+});
+
+describe("tapping any villager", () => {
+  it("shows their class in the tradition's words and what they do; the datu and spouse by name", () => {
+    const s = withState({ villagers: 6, tradition: "tagalog", barangay: { id: "b", region: { x: 0, y: 0 }, name: "Ilaya", datu: "Dakila" } });
+    const farmer = tappedCard({ named: null, look: { gender: "woman", age: "adult", cls: "commoner", malong: false }, role: "work", place: "palayan" }, s, content, game, "en");
+    expect(farmer.line).toBe(`Timawa · ${game.roles.farmer.en}`);
+    expect(farmer.name).toBe(game.villager.unnamed.en);
+    const dep = tappedCard({ named: null, look: { gender: "man", age: "adult", cls: "dependent", malong: false }, role: "attendant", place: null }, s, content, game, "en");
+    expect(dep.line).toContain("Alipin");
+    const datu = tappedCard({ named: null, look: { gender: "man", age: "adult", cls: "nobility", malong: false }, role: "datu", place: null }, s, content, game, "en");
+    expect(datu.name).toBe("Dakila");
+    expect(datu.line).toContain("Maginoo");
+    const spouse = tappedCard({ named: null, look: { gender: "woman", age: "adult", cls: "nobility", malong: false }, role: "spouse", place: null }, s, content, game, "en");
+    expect(spouse.name).toBe(s.household!.spouse.name);
+    // Before a tradition is chosen (and for Maranao), general terms.
+    const plain = tappedCard({ named: null, look: { gender: "man", age: "child", cls: "warrior", malong: false }, role: "idle", place: null }, { ...s, tradition: null }, content, game, "en");
+    expect(plain.line).toBe(`${game.classes.warrior.en} · ${game.villager.child.en}`);
+  });
+
+  it("noble families live nearest the Bahay ng Datu", () => {
+    const houses = Array.from({ length: 10 }, (_, i) => at("bahay-kubo", 1 + (i % 5), i < 5 ? 1 : 7));
+    const s = withState({ villagers: 20, buildings: houses, resources: { rice: 100, wood: 0, gold: 0 } });
+    const plans = planVillagers(s, content).filter((p) => p.homeDoor);
+    const d = (p: (typeof plans)[number]) => Math.hypot(p.home.x - s.map.plaza.x, p.home.y - s.map.plaza.y);
+    const nobles = plans.filter((p) => p.look?.cls === "nobility");
+    const commoners = plans.filter((p) => p.look?.cls === "commoner");
+    if (nobles.length && commoners.length) expect(Math.max(...nobles.map(d))).toBeLessThanOrEqual(Math.max(...commoners.map(d)));
   });
 });

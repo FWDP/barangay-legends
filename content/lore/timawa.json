@@ -1,0 +1,35 @@
+{
+  "id": "timawa",
+  "name": "Timawa",
+  "description": "Among the Tagalogs, the timawa were free commoners who worked their own land; among the Visayans the word named free retainers of the datu.",
+  "tradition": "Tagalog, Visayan",
+  "sources": [
+    "Juan de Plasencia, Customs of the Tagalogs (1589), in Emma H. Blair and James A. Robertson, eds., The Philippine Islands, 1493–1898, vol. 7 (Arthur H. Clark, 1903)",
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+  ],
+  "aklat": {
+    "order": 19,
+    "icon": "🌾",
+    "name": {
+      "en": "Timawa",
+      "fil": "Timawa"
+    },
+    "lore": {
+      "en": "Most people in a Tagalog barangay were timawa: free commoners who farmed, fished and worked their own crafts, owed the datu respect and some service, and could move to another datu's barangay. Among the Visayans the same word named free people who served the datu as retainers and warriors. The game uses 'free commoner' for this middle layer and lets each tradition name it.",
+      "fil": "Karamihan ng tao sa barangay na Tagalog ay timawa: malalayang karaniwang tao na nagsasaka, nangingisda at gumagawa ng sariling gawang-kamay, may paggalang at kaunting paglilingkod sa datu, at maaaring lumipat sa barangay ng ibang datu. Sa mga Bisaya, ang salita ring ito ang tawag sa malalayang naglilingkod sa datu bilang tagasunod at mandirigma. 'Malayang taga-barangay' ang gamit ng laro para sa gitnang uring ito, at bawat tradisyon ang nagbibigay ng pangalan."
+    },
+    "inGame": {
+      "en": "Free commoners do most of the work in the fields, at the docks and at the woodcutters' camps; women and men alike.",
+      "fil": "Ang malalayang taga-barangay ang gumagawa ng karamihan ng trabaho sa bukid, sa daungan at sa kampo ng mangangahoy; babae man o lalaki."
+    },
+    "hint": {
+      "en": "Tap a free commoner at work.",
+      "fil": "Pindutin ang isang malayang taga-barangay na nagtatrabaho."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "met-commoner"
+    }
+  },
+  "reviewed": false
+}

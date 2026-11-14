@@ -19,6 +19,9 @@ import type { Lang } from "./settings";
 import { fill, type GameText } from "./uiContent";
 import { drawBoat, drawPerson, drawSparks, useReducedMotion } from "./VillagerLayer";
 import { datuHouseBox, datuHouseImage, eraseImage, houseStyleFor, type HouseStyle } from "./datuHouseArt";
+import { householdOf } from "../engine/household";
+import { houseFront } from "../engine/plaza";
+import type { Appearance } from "./villagers";
 
 const noop = () => {};
 const FRAME_MS = 1000 / 30 - 2;
@@ -68,6 +71,26 @@ export function reportLines(e: Expedition, state: GameState, content: Content, g
   return lines;
 }
 
+/** One of the datu's household, standing still in a replay. */
+interface Figure {
+  p: Point;
+  role: "datu" | "spouse" | "attendant";
+  look: Appearance;
+}
+
+/** The datu, spouse and two attendants in front of the Bahay ng Datu (household.ts), as the map shows them. */
+function householdFigures(village: GameState, content: Content): Figure[] {
+  const home = householdOf(village, content);
+  const f = houseFront(village, content);
+  const malong = content.traditions.find((t) => t.id === village.tradition)?.dress === "malong";
+  return [
+    { p: { x: f.x, y: f.y }, role: "datu", look: { gender: home.datuGender, age: "adult", cls: "nobility", malong } },
+    { p: { x: f.x + 0.5, y: f.y + 0.05 }, role: "spouse", look: { gender: home.spouse.gender, age: "adult", cls: "nobility", malong } },
+    { p: { x: f.x - 0.35, y: f.y + 0.15 }, role: "attendant", look: { gender: "man", age: "adult", cls: "dependent", malong } },
+    { p: { x: f.x - 0.65, y: f.y + 0.1 }, role: "attendant", look: { gender: "woman", age: "adult", cls: "dependent", malong } },
+  ];
+}
+
 /** A label pill on a canvas: solid light background, thin light border, soft shadow under the pill only. */
 function drawChip(g: CanvasRenderingContext2D, text: string, x: number, y: number, fontPx: number): void {
   const w = g.measureText(text).width + fontPx * 1.1;
@@ -89,8 +112,8 @@ function drawChip(g: CanvasRenderingContext2D, text: string, x: number, y: numbe
 }
 
 /** The canvas: draws the script at its own pace (or one still), never re-rendering the map. */
-function ReplayLayer(props: { script: Script; house: { box: ReturnType<typeof datuHouseBox>; style: HouseStyle } | null; cam: Camera; view: View; still: number | null; onPhase: (p: Phase) => void; onEnd: () => void }) {
-  const { script, house, cam, view, still, onPhase, onEnd } = props;
+function ReplayLayer(props: { script: Script; house: { box: ReturnType<typeof datuHouseBox>; style: HouseStyle } | null; household: Figure[]; cam: Camera; view: View; still: number | null; onPhase: (p: Phase) => void; onEnd: () => void }) {
+  const { script, house, household, cam, view, still, onPhase, onEnd } = props;
   const canvas = useRef<HTMLCanvasElement>(null);
   const live = useRef({ cam, view, onPhase, onEnd });
   live.current = { cam, view, onPhase, onEnd };
@@ -124,7 +147,8 @@ function ReplayLayer(props: { script: Script; house: { box: ReturnType<typeof da
         const q = px(b.p);
         drawBoat(g, q.x, q.y, T, b.heading, b.kind, wall);
       }
-      const people = [...f.people].sort((a, b) => a.p.y - b.p.y);
+      // The datu's household stands with everyone else, sorted by where they stand.
+      const people = [...f.people, ...household.map((h, i) => ({ id: 9010 + i, p: h.p, look: h.role, moving: false, figure: h.look, label: undefined, bundle: false }))].sort((a, b) => a.p.y - b.p.y);
       // Those behind the Bahay ng Datu are hidden by it: once everyone behind its ground line is
       // drawn, cut its shape out (the house on the map shows through), then draw the rest.
       const img = house ? datuHouseImage(house.box.level, house.style) : null;
@@ -136,7 +160,7 @@ function ReplayLayer(props: { script: Script; house: { box: ReturnType<typeof da
       for (const p of people) {
         if (!erased && house && p.p.y > house.box.ground) erase();
         const q = px(p.p);
-        drawPerson(g, q.x, q.y, T, p.id, p.look, { p: p.p, moving: p.moving && still === null, stride: wall * 9 + p.id }, wall);
+        drawPerson(g, q.x, q.y, T, p.id, p.look, { p: p.p, moving: p.moving && still === null, stride: wall * 9 + p.id }, wall, 1, "figure" in p ? p.figure : undefined);
         if (p.bundle) {
           // Goods on the back: the trade's bundles, or the loot.
           g.fillStyle = "#a16207";
@@ -195,6 +219,8 @@ export function ReplayView(props: { expedition: Expedition; state: GameState; co
   const village = useMemo(() => villageOf(e, state, content), [e, content]);
   // The Bahay ng Datu, so people behind it are hidden by it on the canvas.
   const house = useMemo(() => (village ? { box: datuHouseBox(village, content), style: houseStyleFor(village, content) } : null), [village, content]);
+  // The datu, their spouse and two attendants, in front of the house to receive the visitors.
+  const household = useMemo(() => (village ? householdFigures(village, content) : []), [village, content]);
   const script = useMemo(() => (village ? buildReplay(e, village, content) : null), [e, village, content]);
   const [done, setDone] = useState(!script);
   const [phase, setPhase] = useState<Phase>("arrive");
@@ -219,7 +245,7 @@ export function ReplayView(props: { expedition: Expedition; state: GameState; co
           onBuildingMenu={noop}
           onSpirit={noop}
           visit={{ landing: null }}
-          overlay={(cam, view) => (done ? null : <ReplayLayer script={script} house={house} cam={cam} view={view} still={stillT} onPhase={setPhase} onEnd={() => setDone(true)} />)}
+          overlay={(cam, view) => (done ? null : <ReplayLayer script={script} house={house} household={household} cam={cam} view={view} still={stillT} onPhase={setPhase} onEnd={() => setDone(true)} />)}
         />
       )}
       <div data-map-overlay className="pointer-events-none absolute inset-x-2 top-2 z-10 flex justify-center">

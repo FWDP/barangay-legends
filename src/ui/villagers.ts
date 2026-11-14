@@ -9,9 +9,10 @@ import { cachedPath, isWalkable } from "../engine/paths";
 import { homeWarriors } from "../engine/region";
 import { doorOf, isSolid } from "../engine/doors";
 import { namedGender, type NamedVillager } from "../engine/people";
-import { gatheringSpots, gatherSpot } from "../engine/plaza";
+import { gatheringSpots, gatherSpot, houseFront } from "../engine/plaza";
 import { healerStays } from "../engine/healing";
 import { residentAt, type AgeGroup, type Gender, type Resident } from "../engine/residents";
+import type { SocialClass } from "../engine/content";
 
 /** Never draw more sprites than this, however big the barangay grows. Night comes from engine/daynight.ts. */
 export const MAX_SPRITES = 60;
@@ -40,10 +41,21 @@ export interface VillagerPlan {
   look?: Appearance;
 }
 
+/** Who was tapped on the map: any villager (named or not), the datu, their spouse or an attendant. */
+export interface Tapped {
+  named: NamedVillager | null;
+  look: Appearance;
+  role: Role | "datu" | "spouse" | "attendant";
+  /** The building they work at (its type), if any. */
+  place: string | null;
+}
+
 /** How a villager sprite looks: from their resident record and the barangay's tradition. */
 export interface Appearance {
   gender: Gender;
   age: AgeGroup;
+  /** Their family's social class: shown only in dress details and where they live and work. */
+  cls?: SocialClass;
   /** The malong, for women and men alike (a tradition with dress "malong"). */
   malong: boolean;
 }
@@ -151,27 +163,54 @@ function dressPlans(plans: VillagerPlan[], state: GameState, content: Content, t
   const malong = content.traditions.find((t) => t.id === state.tradition)?.dress === "malong";
   const n = plans.length;
   const folk = Array.from({ length: n }, (_, j) => residentAt(state, content, total > cap ? Math.floor((j * total) / cap) : j));
-  const pool = {
-    men: folk.filter((p) => p.age === "adult" && p.gender === "man"),
-    women: folk.filter((p) => p.age === "adult" && p.gender === "woman"),
-    elders: folk.filter((p) => p.age === "elder"),
-    children: folk.filter((p) => p.age === "child"),
-  };
-  const take = (...from: (keyof typeof pool)[]): Resident | null => {
-    for (const k of from) if (pool[k].length) return pool[k].shift()!;
+  /** The first resident matching any of the tests, in order of the tests; taken out of the pool. */
+  const take = (...tests: ((p: Resident) => boolean)[]): Resident | null => {
+    for (const ok of tests) {
+      const i = folk.findIndex(ok);
+      if (i >= 0) return folk.splice(i, 1)[0];
+    }
     return null;
   };
-  const look = (p: Resident | null, fallback: Appearance): Appearance => (p ? { gender: p.gender, age: p.age, malong } : fallback);
+  const adult = (g?: Gender) => (p: Resident) => p.age === "adult" && (!g || p.gender === g);
+  const look = (p: Resident | null, fallback: Appearance): Appearance => (p ? { gender: p.gender, age: p.age, cls: p.cls, malong } : fallback);
   let alt = 0;
   const order = (r: Role) => (r === "warrior" ? 0 : r === "work" || r === "clearing" ? 1 : r === "sick" ? 2 : 3);
   for (const plan of [...plans].sort((a, b) => order(a.role) - order(b.role) || a.id - b.id)) {
-    if (plan.role === "warrior") plan.look = { gender: "man", age: "adult", malong };
-    else if (plan.role === "work" || plan.role === "clearing") {
-      // Women and men both work the fields, the fishing and the crafts: alternate.
-      const first = alt++ % 2 === 0 ? (["women", "men"] as const) : (["men", "women"] as const);
-      plan.look = look(take(...first, "elders"), { gender: first[0] === "women" ? "woman" : "man", age: "adult", malong });
-    } else plan.look = look(take("children", "elders", "women", "men"), { gender: plan.id % 2 ? "man" : "woman", age: "adult", malong });
+    if (plan.role === "warrior") {
+      // Mostly from the warrior class (maharlika, timawa...), men for now.
+      const p = take((x) => adult("man")(x) && x.cls === "warrior", adult("man"));
+      plan.look = { gender: "man", age: "adult", cls: p?.cls ?? "warrior", malong };
+    } else if (plan.role === "work" || plan.role === "clearing") {
+      // Women and men both work the fields, the fishing and the crafts: alternate. Free
+      // commoners and dependents do most of it; the noble families least.
+      const g: Gender = alt++ % 2 === 0 ? "woman" : "man";
+      const other: Gender = g === "woman" ? "man" : "woman";
+      const worker = (x: Resident) => x.cls !== "nobility";
+      plan.look = look(
+        take((x) => adult(g)(x) && worker(x), (x) => adult(other)(x) && worker(x), adult(), (x) => x.age === "elder"),
+        { gender: g, age: "adult", cls: "commoner", malong },
+      );
+    } else plan.look = look(take((x) => x.age === "child", (x) => x.age === "elder", () => true), { gender: plan.id % 2 ? "man" : "woman", age: "adult", cls: "commoner", malong });
   }
+  houseByClass(plans, state, content);
+}
+
+/**
+ * Noble families live nearest the Bahay ng Datu, and dependents near them (in the households
+ * they serve); everyone else keeps the homes left over. Only homes that are houses are swapped.
+ */
+function houseByClass(plans: VillagerPlan[], state: GameState, content: Content): void {
+  const housed = plans.filter((p) => p.homeDoor);
+  if (housed.length < 2) return;
+  const front = houseFront(state, content);
+  const near = (h: Point) => Math.hypot(h.x + 0.5 - front.x, h.y + 0.5 - front.y);
+  const homes = housed.map((p) => ({ home: p.home, door: p.homeDoor })).sort((a, b) => near(a.home) - near(b.home));
+  const rank = (p: VillagerPlan) => (p.look?.cls === "nobility" ? 0 : p.look?.cls === "dependent" ? 1 : 2);
+  const ordered = [...housed].sort((a, b) => rank(a) - rank(b) || a.id - b.id);
+  ordered.forEach((p, i) => {
+    p.home = homes[i].home;
+    p.homeDoor = homes[i].door;
+  });
 }
 
 /**
