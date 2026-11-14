@@ -1,7 +1,7 @@
 // Saving to the browser. The only engine module allowed to touch browser APIs,
 // and even here the storage is passed in so tests can use a fake.
 import { AGE_GROUPS, classFor, GENDERS, syncResidents, type AgeGroup, type Gender, type Resident } from "./residents";
-import { linkNamed, parseLife } from "./talambuhay";
+import { linkNamed, parseLife, parseStory } from "./talambuhay";
 import { rollAt } from "./rng";
 import { makeHousehold } from "./household";
 import { clearingShape } from "./plaza";
@@ -323,6 +323,10 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
       : raw.residents;
     return { ...raw, version: 30, residents, births: 0 };
   },
+  // v30 → v31: life stories (talambuhay.ts). The remembered dead may keep their story and children
+  // what they learned by the fire; both are new and optional, so older saves only change version.
+  // Those already remembered keep their name and how they died.
+  30: (raw) => ({ ...raw, version: 31 }),
 };
 
 // ---------- Frozen v15 bridge rule (for the v14 → v15 migration only) ----------
@@ -713,7 +717,10 @@ function parseDatuAndDeaths(data: RawSave, content: Content, state: GameState) {
     state.remembered = data.remembered
       .filter((r): r is RawSave => isObject(r) && typeof r.name === "string" && r.name !== "" && r.name.length <= 30 && DEATH_CAUSES.includes(r.cause as string) && finiteNonNeg(r.at))
       .slice(-MAX_REMEMBERED)
-      .map((r) => ({ name: r.name as string, cause: r.cause as Remembered["cause"], at: r.at as number }));
+      .map((r) => {
+        const story = parseStory(r.story);
+        return { name: r.name as string, cause: r.cause as Remembered["cause"], at: r.at as number, ...(story ? { story } : {}) };
+      });
   }
 }
 
@@ -799,12 +806,14 @@ function parseResidents(data: RawSave, content: Content, state: GameState, isPla
     if (p.came === "born" || p.came === "arrived" || p.came === "founder") r.came = p.came;
     if (typeof p.why === "string" && p.why.length <= 40) r.why = p.why;
     if (typeof p.from === "string" && p.from.length <= 40) r.from = p.from;
+    const lessons = parseLife(p.lessons).filter((e) => e.kind === "learned");
+    if (lessons.length) r.lessons = lessons.slice(0, content.rules.population.learning.maxPerChild);
     state.residents.push(r);
   }
   if (Number.isInteger(data.residentsNext)) state.residentsNext = Math.max(1, data.residentsNext as number);
   Object.assign(state, syncResidents(state, content));
   // Named villagers are residents too (their family and life story): link any that aren't.
-  Object.assign(state, linkNamed(state));
+  Object.assign(state, linkNamed(state, content));
   // The datu's household: stored, or made from the seed and the datu's name (older saves).
   const h = data.household;
   const sp = isObject(h) && isObject(h.spouse) ? h.spouse : null;

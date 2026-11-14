@@ -60,6 +60,7 @@ import { devCommand, type DevAction } from "./dev";
 import { trackRanking, type AchievedAt } from "./ranking";
 import { markFallen, noteExpedition, type Expedition } from "./expeditions";
 import { updateDeaths, type Remembered } from "./death";
+import { teach } from "./talambuhay";
 import { advanceReplanting, afterClearing, cancelReplant, isPranked, newForest, replant, updateForest, updatePranks, type ForestState, type Prank, type ReplantJob } from "./forest";
 import {
   answerRiddle,
@@ -79,7 +80,7 @@ import {
   type TikbalangTrick,
 } from "./worship";
 
-export const STATE_VERSION = 30;
+export const STATE_VERSION = 31;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -1094,6 +1095,8 @@ function step(state: GameState, content: Content, dt: number): GameState {
     next = updateForest(next, content, dt, true);
     // Deaths come only with warning, and only while playing.
     next = updateDeaths(state, next, content, dt);
+    // Elders teach the children by the evening fire (talambuhay.ts).
+    next = teach(state, next, content);
   }
   next = reconcilePeople(state, next, content, crowded ? "crowded" : "other");
   next = markFallen(state, next);

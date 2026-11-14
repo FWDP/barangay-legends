@@ -7,7 +7,7 @@ import { syncResidents, type Gender, type Resident } from "./residents";
 import type { Content, VillagerRole, VillagerStory } from "./content";
 import type { GameState } from "./game";
 import { rollAt } from "./rng";
-import { linkNamed, startLife, type LifeEvent } from "./talambuhay";
+import { linkNamed, noteLifeEvents, startLife, type LifeEvent } from "./talambuhay";
 import { addMourning, remember } from "./death";
 
 export interface NamedVillager {
@@ -162,7 +162,7 @@ export function maybeName(state: GameState, content: Content, warrior: boolean, 
   [b, s] = roll(s, SALT_PICKNAME);
   const story = stories[Math.floor(a * stories.length)];
   const name = names[Math.floor(b * names.length)];
-  const v: NamedVillager = { id, name, story: story.id, role: story.role, since: s.time, gender, ...(resident ? { resident: resident.id, life: startLife(s, resident.id, s.time) } : {}) };
+  const v: NamedVillager = { id, name, story: story.id, role: story.role, since: s.time, gender, ...(resident ? { resident: resident.id, life: startLife(s, resident.id, s.time, content) } : {}) };
   s = { ...s, named: [...s.named, v], stats: { ...s.stats, named: s.stats.named + 1 } };
   return addHistory(s, { at: s.time, kind: "named", ...about(v) });
 }
@@ -203,6 +203,12 @@ function trim(state: GameState, warriorsLeft: number, othersLeft: number, cause:
  * new sickness may strike a named villager. Returns `next` itself if nothing changed.
  */
 export function reconcilePeople(prev: GameState, nextIn: GameState, content: Content, leftBecause: HistoryEntry["cause"] = "other"): GameState {
+  const s = reconcile(prev, nextIn, content, leftBecause);
+  // Life stories: who fell sick or was healed, who fought at a raid (talambuhay.ts).
+  return content.ai ? s : noteLifeEvents(prev, s, content);
+}
+
+function reconcile(prev: GameState, nextIn: GameState, content: Content, leftBecause: HistoryEntry["cause"]): GameState {
   // Every villager as a person (residents.ts): arrivals added, the newest leave first.
   const next = content.ai ? nextIn : syncResidents(nextIn, content);
   // Deaths already handled (death.ts) aren't departures.
@@ -226,7 +232,7 @@ export function reconcilePeople(prev: GameState, nextIn: GameState, content: Con
     if (!hungry) {
       // Fallen in battle: deaths, remembered by name, and mourned.
       const fallen = before.filter((v) => isWarrior(v) && !s.named.includes(v));
-      for (const v of fallen) s = remember(s, v, "raid", s.time);
+      for (const v of fallen) s = remember(s, content, v, "raid", s.time);
       if (warriorLoss > fallen.length) s = addHistory(s, { at: s.time, kind: "died", cause: "raid", count: warriorLoss - fallen.length });
       s = addMourning({ ...s, stats: { ...s.stats, deaths: s.stats.deaths + warriorLoss } }, content, warriorLoss);
     }
@@ -251,7 +257,7 @@ export function reconcilePeople(prev: GameState, nextIn: GameState, content: Con
   }
   for (let i = 0; i < newWarriors; i++) s = maybeName(s, content, true);
   // Named villagers are residents too: a new Mandirigma is one of the grown men (talambuhay.ts).
-  if (!content.ai) s = linkNamed(s);
+  if (!content.ai) s = linkNamed(s, content);
   // Sickness: a new case may be a named villager; recoveries clear the oldest marks first.
   for (let i = 0; i < sickChange; i++) {
     const healthy = s.named.filter((v) => !v.sick && !isWarrior(v));

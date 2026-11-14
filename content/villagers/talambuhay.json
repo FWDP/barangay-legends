@@ -1,0 +1,71 @@
+{
+  "_comment": "Life stories (talambuhay) of named villagers (engine/talambuhay.ts, ui/talambuhay.ts). Each named villager gets one skill and one personal detail, picked from the seed and their id. A skill with 'roles' only goes to villagers in those roles (no roles: anyone); every skill is open to women and men alike, except that fighting goes only to the Mandirigma, who are men for now (content/lore/precolonial-dress.json). Avoid stereotypes: no skill or detail depends on gender. Sentences use {name} and, for family, {parents}, {spouse}, {children}, {barangay}, {n}. 'events' are the dated lines of the timeline: {other} is the other person in it, {barangay} where (a raid: the barangay raided; a defense: where the raiders came from), {lesson} what they learned. 'lessons' are what elders teach children by the fire (the evening fire, engine/talambuhay.ts teach). Contributors: add skills, details and lessons freely; keep both languages.",
+  "skills": [
+    { "id": "farming", "roles": ["farmer", "villager"], "text": { "en": "{name} has a sure hand with rice seedlings and always knows when the fields need water.", "fil": "May tiyak na kamay si {name} sa punla ng palay at laging alam kung kailan kailangan ng tubig ang bukid." } },
+    { "id": "fishing", "roles": ["fisher", "villager"], "text": { "en": "{name} reads the river like a story and seldom comes home with an empty net.", "fil": "Nababasa ni {name} ang ilog na parang kuwento at bihirang umuwing walang laman ang lambat." } },
+    { "id": "boat-building", "roles": ["fisher", "woodcutter", "villager"], "text": { "en": "{name} builds bangka that sit light on the water, fitting every plank without a nail.", "fil": "Gumagawa si {name} ng bangkang magaan sa tubig, pinagdudugtong ang bawat tabla nang walang pako." } },
+    { "id": "timber", "roles": ["woodcutter"], "text": { "en": "{name} knows which trees may be cut and which must be left standing.", "fil": "Alam ni {name} kung aling puno ang maaaring putulin at alin ang dapat iwang nakatayo." } },
+    { "id": "weaving", "text": { "en": "{name} weaves fine cloth of abaca and cotton, with patterns learned from an elder.", "fil": "Humahabi si {name} ng pinong tela ng abaka at bulak, na may disenyong natutunan sa isang matanda." } },
+    { "id": "healing", "text": { "en": "{name} knows the herbs that ease a fever and is often called to sit with the sick.", "fil": "Alam ni {name} ang mga halamang nagpapababa ng lagnat at madalas tawagin upang samahan ang maysakit." } },
+    { "id": "singing", "text": { "en": "{name} sings the old songs at harvest, and the children follow along.", "fil": "Inaawit ni {name} ang mga lumang awit tuwing anihan, at sumasabay ang mga bata." } },
+    { "id": "pottery", "text": { "en": "{name} shapes clay jars that keep rice dry through the rains.", "fil": "Humuhubog si {name} ng mga bangang luwad na nagpapanatiling tuyo ng bigas sa tag-ulan." } },
+    { "id": "fighting", "roles": ["warrior"], "text": { "en": "{name} is steady with spear and shield, and calm when the gongs warn of raiders.", "fil": "Matatag si {name} sa sibat at kalasag, at mahinahon kapag nagbababala ang mga gong ng paparating na mananalakay." } }
+  ],
+  "details": [
+    { "id": "dawn-river", "kind": "habit", "text": { "en": "Every dawn, {name} washes at the river before anyone else is awake.", "fil": "Tuwing madaling-araw, naliligo si {name} sa ilog bago pa magising ang iba." } },
+    { "id": "betel", "kind": "habit", "text": { "en": "{name} always carries betel to share with visitors.", "fil": "Laging may dalang nganga si {name} na ibinabahagi sa mga panauhin." } },
+    { "id": "stars", "kind": "habit", "text": { "en": "{name} names the stars for anyone who will listen.", "fil": "Pinapangalanan ni {name} ang mga bituin para sa sinumang makikinig." } },
+    { "id": "storms", "kind": "fear", "text": { "en": "{name} has feared storms since a typhoon took the family's first house.", "fil": "Takot si {name} sa bagyo mula nang tangayin ng isang bagyo ang unang bahay ng kanilang pamilya." } },
+    { "id": "deep-forest", "kind": "fear", "text": { "en": "{name} will not walk the deep forest after dark.", "fil": "Ayaw maglakad ni {name} sa kalaliman ng gubat kapag madilim na." } },
+    { "id": "sea-voyage", "kind": "dream", "text": { "en": "{name} dreams of sailing on a balangay to islands no one here has seen.", "fil": "Pangarap ni {name} na maglayag sakay ng balangay patungo sa mga pulong hindi pa nakikita ng sinuman dito." } },
+    { "id": "own-field", "kind": "dream", "text": { "en": "{name} hopes one day to clear a field of their own near the river.", "fil": "Umaasa si {name} na balang-araw ay makapaghawan ng sariling bukid malapit sa ilog." } },
+    { "id": "old-balete", "kind": "place", "text": { "en": "{name}'s favorite place is the shade of the old balete, where it is always cool.", "fil": "Ang paboritong lugar ni {name} ay ang lilim ng matandang balete, kung saan laging malamig." } },
+    { "id": "fireside", "kind": "place", "text": { "en": "{name} likes best the evenings by the fire at the datu's house.", "fil": "Pinakagusto ni {name} ang mga gabi sa tabi ng apoy sa bahay ng datu." } },
+    { "id": "riverbank", "kind": "place", "text": { "en": "{name} is happiest on the riverbank where the bangka are drawn up.", "fil": "Pinakamasaya si {name} sa pampang ng ilog kung saan nakahimpil ang mga bangka." } }
+  ],
+  "family": {
+    "born": { "en": "{name} was born in the barangay to {parents}.", "fil": "Isinilang si {name} sa barangay, anak nina {parents}." },
+    "bornNoParents": { "en": "{name} was born in the barangay.", "fil": "Isinilang si {name} sa barangay." },
+    "arrived": { "en": "{name} came to the barangay from {barangay}.", "fil": "Dumating si {name} sa barangay mula sa {barangay}." },
+    "arrivedNoPlace": { "en": "{name} came to the barangay from upriver.", "fil": "Dumating si {name} sa barangay mula sa itaas ng ilog." },
+    "founder": { "en": "{name} was among the families who cleared the first land here.", "fil": "Kabilang si {name} sa mga pamilyang naghawan ng unang lupa rito." },
+    "spouse": { "en": "{name} is married to {spouse}.", "fil": "Asawa ni {name} si {spouse}." },
+    "child": { "en": "{name} has a child: {children}.", "fil": "May isang anak si {name}: si {children}." },
+    "children": { "en": "{name} has {n} children: {children}.", "fil": "May {n} anak si {name}: sina {children}." },
+    "and": { "en": " and ", "fil": " at " }
+  },
+  "events": {
+    "born": { "en": "Born in the barangay", "fil": "Isinilang sa barangay" },
+    "arrived": { "en": "Came to the barangay", "fil": "Dumating sa barangay" },
+    "arrivedFrom": { "en": "Came to the barangay from {barangay}", "fil": "Dumating sa barangay mula sa {barangay}" },
+    "married": { "en": "Married {other}", "fil": "Ikinasal kay {other}" },
+    "parent": { "en": "Became a parent: {other} was born", "fil": "Naging magulang: isinilang si {other}" },
+    "grewUp": { "en": "Came of age", "fil": "Nagdalaga o nagbinata" },
+    "elder": { "en": "Became an elder", "fil": "Naging matanda ng barangay" },
+    "raidWon": { "en": "Raided {barangay}: the raid succeeded", "fil": "Sumalakay sa {barangay}: nagtagumpay ang pagsalakay" },
+    "raidLost": { "en": "Fought at {barangay}: the raiders won", "fil": "Lumaban sa {barangay}: nanalo ang mga mananalakay" },
+    "defendedWon": { "en": "Fought raiders from {barangay} at home: they were beaten off", "fil": "Hinarap ang mga mananalakay mula sa {barangay}: naitaboy sila" },
+    "defendedLost": { "en": "Fought raiders from {barangay} at home: the raiders won", "fil": "Hinarap ang mga mananalakay mula sa {barangay}: nanalo ang mga mananalakay" },
+    "sick": { "en": "Fell sick", "fil": "Nagkasakit" },
+    "healed": { "en": "Was sick and healed", "fil": "Nagkasakit at gumaling" },
+    "learned": { "en": "Learned {lesson} from {other}", "fil": "Natutunan ang {lesson} kay {other}" },
+    "learnedAlone": { "en": "Learned {lesson} from the elders", "fil": "Natutunan ang {lesson} mula sa mga matatanda" },
+    "died": { "en": "Died ({cause}); remembered by the barangay", "fil": "Pumanaw ({cause}); inaalala ng barangay" },
+    "day": { "en": "Araw {n}", "fil": "Araw {n}" }
+  },
+  "causes": {
+    "age": { "en": "of old age", "fil": "sa katandaan" },
+    "sickness": { "en": "of sickness", "fil": "sa sakit" },
+    "raid": { "en": "defending the barangay", "fil": "sa pagtatanggol sa barangay" },
+    "hunger": { "en": "in the hunger", "fil": "sa gutom" }
+  },
+  "lessons": [
+    { "id": "old-songs", "text": { "en": "the old songs", "fil": "ang mga lumang awit" } },
+    { "id": "baybayin", "text": { "en": "to write in baybayin", "fil": "ang pagsulat sa baybayin" } },
+    { "id": "epic", "text": { "en": "the long epic chanted by the fire", "fil": "ang mahabang epikong inaawit sa tabi ng apoy" } },
+    { "id": "herbs", "text": { "en": "the healing herbs", "fil": "ang mga halamang-gamot" } },
+    { "id": "stars", "text": { "en": "to read the stars for planting", "fil": "ang pagbasa ng mga bituin para sa pagtatanim" } },
+    { "id": "weaving", "text": { "en": "to weave", "fil": "ang paghahabi" } },
+    { "id": "boats", "text": { "en": "how a bangka is built", "fil": "kung paano gumawa ng bangka" } }
+  ]
+}

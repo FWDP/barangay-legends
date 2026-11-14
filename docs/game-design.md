@@ -41,6 +41,12 @@ different form, and some (prestige and Dangal, export codes) isn't built yet.
   with a reason (land, marriage, alliance, a trader who stays, kin from a raided ally), told in
   the Balita; children grow up after `rules.population.childDays`, don't work and eat less;
   elders work less. AI barangays keep the simple arrivals. Tuned with `npm run simulate`.
+- **Life stories (talambuhay):** every named villager has a 3-5 sentence story from
+  `content/villagers/talambuhay.json` (family linked to real villagers, a skill that fits their
+  role, a personal detail, all from the seed) and a dated timeline: born or arrived, married,
+  became a parent, came of age, fought at a raid, sick and healed, learned from an elder, became
+  an elder, died. Tap a named villager for their card (portrait, class and role, family links to
+  open, timeline); the Libingan keeps the stories of the dead (v31).
 - **Fit to the period:** world art and symbols are precolonial (no candles, steel axes,
   fishing reels, railway tracks or padlocks; see the S prompt and `docs/cultural-review.md`).
   The healer's hut is named by tradition (Babaylan, Katalonan, Healer), the balete's spirit is

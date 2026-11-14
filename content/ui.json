@@ -164,6 +164,48 @@
       "fil": "{class} · {role}"
     }
   },
+  "talambuhay": {
+    "title": {
+      "en": "Life story",
+      "fil": "Talambuhay"
+    },
+    "family": {
+      "en": "Family",
+      "fil": "Pamilya"
+    },
+    "parents": {
+      "en": "Parents",
+      "fil": "Mga magulang"
+    },
+    "spouse": {
+      "en": "Spouse",
+      "fil": "Asawa"
+    },
+    "children": {
+      "en": "Children",
+      "fil": "Mga anak"
+    },
+    "timeline": {
+      "en": "Their life",
+      "fil": "Ang kanilang buhay"
+    },
+    "open": {
+      "en": "Open the life story",
+      "fil": "Buksan ang talambuhay"
+    },
+    "gone": {
+      "en": "Remembered at the Libingan",
+      "fil": "Inaalala sa Libingan"
+    },
+    "back": {
+      "en": "Back",
+      "fil": "Bumalik"
+    },
+    "remembered": {
+      "en": "Tap a name to read their life story.",
+      "fil": "Pindutin ang pangalan upang basahin ang talambuhay."
+    }
+  },
   "news": {
     "taskDone": {
       "en": "Task done: {task}! {reward}",

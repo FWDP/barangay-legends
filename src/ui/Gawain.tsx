@@ -1,6 +1,6 @@
 // Mga Gawain (the task chain), named villagers' cards and the barangay history.
 import { onArawText } from "./Days";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Content } from "../engine/content";
 import type { GameState } from "../engine/game";
 import { currentTask, earnedTitles, taskProgress } from "../engine/gawain";
@@ -13,6 +13,8 @@ import { useModal } from "./StoryDialogs";
 import { historyLine, rewardText, tappedCard } from "./stories";
 import type { Tapped } from "./villagers";
 import { fill, type GameText } from "./uiContent";
+import { LifeStoryView, tappedFor } from "./LifeStory";
+import { lifeStory } from "../engine/talambuhay";
 
 const OPEN_KEY = "barangay-legends/gawain-open";
 
@@ -99,29 +101,63 @@ export function GawainPanel(props: { state: GameState; content: Content; game: G
   );
 }
 
-/** A named villager's card: tap their sprite (the one with a star). */
+/** A villager's card: tap their sprite. A named one (with a star) opens their life story. */
 export function VillagerDialog(props: { villager: Tapped | null; state: GameState; content: Content; game: GameText; lang: Lang; onClose: () => void }) {
-  const { villager, state, content, game, lang, onClose } = props;
-  const dialog = useModal(!!villager);
-  const card = villager ? tappedCard(villager, state, content, game, lang) : null;
+  const { state, content, game, lang, onClose } = props;
+  // A relative opened from the family list replaces the card (Back returns).
+  const [trail, setTrail] = useState<Tapped[]>([]);
+  useEffect(() => setTrail([]), [props.villager]);
+  const villager = trail.at(-1) ?? props.villager;
+  const dialog = useModal(!!props.villager);
+  const close = () => {
+    setTrail([]);
+    onClose();
+  };
+  // The named villager as they are now (sick, family), if they're still here.
+  const named = villager?.named ? (state.named.find((v) => v.id === villager.named!.id) ?? villager.named) : null;
+  const card = villager ? tappedCard(named ? { ...villager, named } : villager, state, content, game, lang) : null;
+  const openRelative = (id: number) => {
+    const v = state.named.find((x) => x.id === id);
+    if (v) setTrail([...trail, tappedFor(state, content, v)]);
+  };
   return (
     <dialog
       ref={dialog}
       aria-labelledby="villager-name"
-      onClose={onClose}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
-      className="m-auto w-[calc(100%-1.5rem)] max-w-xs rounded-2xl border-4 border-amber-950/70 p-0 text-stone-800 shadow-2xl backdrop:bg-stone-900/50"
+      onClose={close}
+      onClick={(e) => e.target === e.currentTarget && close()}
+      className="m-auto w-[calc(100%-1.5rem)] max-w-sm rounded-2xl border-4 border-amber-950/70 p-0 text-stone-800 shadow-2xl backdrop:bg-stone-900/50"
     >
-      {card && (
-        <div className="mat-card space-y-2 p-4">
-          <h2 id="villager-name" className="font-display text-xl text-amber-900">
-            {card.star && <span aria-hidden>⭐</span>} {card.name}
-          </h2>
-          <p className="text-xs font-semibold tracking-wide text-stone-500 uppercase">{card.line}</p>
-          {card.story && <p className="text-sm leading-snug italic">“{card.story}”</p>}
-          {card.sick && <p className="text-xs text-red-800">🤒 {card.sick}</p>}
-          <div className="flex justify-end">
-            <button type="button" autoFocus onClick={onClose} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-4 py-1.5 text-sm font-semibold text-amber-950">
+      {card && villager && (
+        <div className="mat-card flex max-h-[85dvh] flex-col gap-2 overflow-y-auto p-4">
+          {named ? (
+            <LifeStoryView
+              story={lifeStory(state, content, named)}
+              state={state}
+              content={content}
+              game={game}
+              lang={lang}
+              look={villager.look}
+              role={villager.role}
+              line={card.line}
+              sick={card.sick}
+              onOpen={openRelative}
+            />
+          ) : (
+            <>
+              <h2 id="villager-name" className="font-display text-xl text-amber-900">
+                {card.name}
+              </h2>
+              <p className="text-xs font-semibold tracking-wide text-stone-500 uppercase">{card.line}</p>
+            </>
+          )}
+          <div className="flex justify-end gap-2">
+            {trail.length > 0 && (
+              <button type="button" onClick={() => setTrail(trail.slice(0, -1))} className="game-btn border-2 border-amber-950/60 bg-amber-100 px-4 py-1.5 text-sm font-semibold text-amber-950">
+                {game.talambuhay.back[lang]}
+              </button>
+            )}
+            <button type="button" autoFocus onClick={close} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-4 py-1.5 text-sm font-semibold text-amber-950">
               {game.villager.close[lang]}
             </button>
           </div>
@@ -172,7 +208,7 @@ export function HistoryDialog(props: { open: boolean; state: GameState; content:
             ))}
           </ul>
           <div className="flex justify-end">
-            <button type="button" autoFocus onClick={onClose} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-4 py-1.5 text-sm font-semibold text-amber-950">
+            <button type="button" autoFocus onClick={close} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-4 py-1.5 text-sm font-semibold text-amber-950">
               {game.villager.close[lang]}
             </button>
           </div>
@@ -253,15 +289,52 @@ export function RememberedDialog(props: { open: boolean; state: GameState; conte
   const t = game.death;
   const look = content.traditions.find((x) => x.id === state.tradition)?.burialLook ?? "jars";
   const others = Math.max(0, state.stats.deaths - state.remembered.length);
+  // A remembered villager's story, opened from the list (Back returns to it).
+  const [reading, setReading] = useState<number | null>(null);
+  const [living, setLiving] = useState<Tapped | null>(null);
+  const story = reading !== null ? state.remembered[reading]?.story : undefined;
+  const close = () => {
+    setReading(null);
+    setLiving(null);
+    onClose();
+  };
+  if (living) return <VillagerDialog villager={living} state={state} content={content} game={game} lang={lang} onClose={close} />;
   return (
     <dialog
       ref={dialog}
-      aria-labelledby="remembered-title"
-      onClose={onClose}
-      onClick={(e) => e.target === e.currentTarget && onClose()}
+      aria-labelledby={story ? "villager-name" : "remembered-title"}
+      onClose={close}
+      onClick={(e) => e.target === e.currentTarget && close()}
       className="m-auto w-[calc(100%-1.5rem)] max-w-sm rounded-2xl border-4 border-amber-950/70 p-0 text-stone-800 shadow-2xl backdrop:bg-stone-900/50"
     >
-      {open && (
+      {open && story && (
+        <div className="mat-card flex max-h-[85dvh] flex-col gap-2 overflow-y-auto p-4 text-sm">
+          <LifeStoryView
+            story={story}
+            state={state}
+            content={content}
+            game={game}
+            lang={lang}
+            look={{ gender: story.gender, age: story.life.some((e) => e.kind === "elder") ? "elder" : "adult", malong: content.traditions.find((x) => x.id === state.tradition)?.dress === "malong" }}
+            role={story.role === "warrior" ? "warrior" : "idle"}
+            line={game.roles[story.role][lang]}
+            gone
+            onOpen={(id) => {
+              const v = state.named.find((x) => x.id === id);
+              if (v) setLiving(tappedFor(state, content, v));
+            }}
+          />
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => setReading(null)} className="game-btn border-2 border-amber-950/60 bg-amber-100 px-4 py-1.5 text-sm font-semibold text-amber-950">
+              {game.talambuhay.back[lang]}
+            </button>
+            <button type="button" autoFocus onClick={close} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-4 py-1.5 text-sm font-semibold text-amber-950">
+              {game.villager.close[lang]}
+            </button>
+          </div>
+        </div>
+      )}
+      {open && !story && (
         <div className="mat-card flex max-h-[80dvh] flex-col gap-2 p-4 text-sm">
           <h2 id="remembered-title" className="font-display text-xl text-amber-900">
             <span aria-hidden>{look === "longon" ? "⚰️" : "⚱️"}</span> {t.remembered[lang]}
@@ -269,15 +342,24 @@ export function RememberedDialog(props: { open: boolean; state: GameState; conte
           <p className="text-xs text-stone-500">{t[look][lang]}</p>
           <ul className="min-h-0 flex-1 space-y-1 overflow-y-auto">
             {state.remembered.length === 0 && others === 0 && <li className="text-stone-500">{t.none[lang]}</li>}
+            {state.remembered.some((r) => r.story) && <li className="text-xs text-stone-500">{game.talambuhay.remembered[lang]}</li>}
             {[...state.remembered].reverse().map((r, i) => (
               <li key={`${r.name}-${r.at}-${i}`} className="border-b border-amber-900/10 pb-1">
-                ⚱️ <b>{r.name}</b> <span className="text-xs text-stone-500">· {t[r.cause][lang]}</span>
+                ⚱️{" "}
+                {r.story ? (
+                  <button type="button" onClick={() => setReading(state.remembered.length - 1 - i)} className="font-bold text-amber-900 underline underline-offset-2">
+                    {r.name}
+                  </button>
+                ) : (
+                  <b>{r.name}</b>
+                )}{" "}
+                <span className="text-xs text-stone-500">· {t[r.cause][lang]}</span>
               </li>
             ))}
             {others > 0 && <li className="text-xs text-stone-500 italic">{fill(t.others[lang], { count: others })}</li>}
           </ul>
           <div className="flex justify-end">
-            <button type="button" autoFocus onClick={onClose} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-4 py-1.5 text-sm font-semibold text-amber-950">
+            <button type="button" autoFocus onClick={close} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-4 py-1.5 text-sm font-semibold text-amber-950">
               {game.villager.close[lang]}
             </button>
           </div>

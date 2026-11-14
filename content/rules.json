@@ -274,7 +274,12 @@
     "newcomerChildPercent": 5,
     "newcomerElderPercent": 5,
     "familyMax": 3,
-    "balitaMax": 8
+    "balitaMax": 8,
+    "learning": {
+      "_comment": "How children learned (engine/talambuhay.ts teach): no school; each evening (as night falls, rules.dayNight.nightFrom) the elders sit with the children by the fire at the datu's gathering place. With chancePerEvening an elder teaches one learner (a child, or a named villager as an apprentice) a lesson from content/villagers/talambuhay.json; it is a dated line in their life story. Children keep at most maxPerChild lessons for when they grow up and are named. Playtest guesses.",
+      "chancePerEvening": 0.5,
+      "maxPerChild": 3
+    }
   },
   "residents": {
     "_comment": "Every villager as a person (engine/residents.ts): the share of women, children and elders among new arrivals and births, and of each social class (classPercent: nobility, the warrior class, free commoners, dependents; each tradition names them, content/traditions 'classes'), rolled from the map's seed. Display only (the map's sprites, where they live and work, the villager card); every villager still counts the same in the economy. Class shares are playtest guesses, not historical figures.",

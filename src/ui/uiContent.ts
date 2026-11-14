@@ -110,6 +110,7 @@ export const GAME_TEXT = {
     sick: [], close: [], ledDefense: ["name"], unnamed: [], child: [], elder: [], clearing: [], sickRole: [], datu: [], spouse: ["spouse"], wife: [], husband: [], attendant: [],
     classLine: ["class", "role"],
   },
+  talambuhay: { title: [], family: [], parents: [], spouse: [], children: [], timeline: [], open: [], gone: [], back: [], remembered: [] },
   news: { taskDone: ["task", "reward"], next: ["task"], title: ["title"], moreSoon: [], firstNamed: ["story"] },
   share: { button: [], villagers: ["n"], datu: ["datu"], text: [], saved: [], failed: [] },
   aklat: { title: [], progress: ["found", "total"], tradition: ["tradition"], inGame: [], sources: [], locked: [], hint: ["hint"], review: [], open: [], found: ["name"] },

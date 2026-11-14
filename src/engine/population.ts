@@ -103,11 +103,12 @@ export function ageResidents(state: GameState, content: Content): GameState {
   });
   if (!changed) return state;
   let s: GameState = { ...state, residents: changed };
-  for (const id of grew) s = noteLife(s, content, id, { kind: "grewUp" });
-  // A child of the barangay may be named as they come of age (people.ts: the usual chance).
+  // A child of the barangay may be named as they come of age (people.ts: the usual chance); their
+  // story then begins with their birth and what they learned as a child, and their coming of age.
   for (const id of grew) {
     const r = s.residents.find((x) => x.id === id);
     if (r && !s.named.some((v) => v.resident === id)) s = maybeName(s, content, false, r);
+    s = noteLife(s, content, id, { kind: "grewUp" });
   }
   for (const id of aged) s = noteLife(s, content, id, { kind: "elder" });
   return s;

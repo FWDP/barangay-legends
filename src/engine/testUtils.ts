@@ -72,7 +72,7 @@ export function withState(patch: Omit<Partial<GameState>, "resources"> & { build
 export function asLoaded(s: GameState): GameState {
   const synced = syncResidents(s, content);
   // Named villagers are linked to residents as a save loads them (talambuhay.ts).
-  return linkNamed({ ...synced, named: synced.named.map((v) => (v.gender ? v : { ...v, gender: namedGender(content, v, synced.map.seed) })) });
+  return linkNamed({ ...synced, named: synced.named.map((v) => (v.gender ? v : { ...v, gender: namedGender(content, v, synced.map.seed) })) }, content);
 }
 
 /** The state with every building's entrance worked out (doors.ts). */

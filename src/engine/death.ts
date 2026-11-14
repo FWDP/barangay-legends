@@ -14,6 +14,7 @@ import type { Content } from "./content";
 import type { GameState } from "./game";
 import { addHistory, type HistoryEntry, type NamedVillager } from "./people";
 import { rollAt } from "./rng";
+import { finalStory, type LifeStory } from "./talambuhay";
 
 export type DeathCause = "age" | "sickness" | "hunger" | "raid";
 
@@ -22,6 +23,8 @@ export interface Remembered {
   name: string;
   cause: DeathCause;
   at: number;
+  /** Their life story as it was when they died (named villagers since v31). */
+  story?: LifeStory;
 }
 
 export const MAX_REMEMBERED = 200;
@@ -37,8 +40,9 @@ export function addMourning(state: GameState, content: Content, deaths: number):
 }
 
 /** Remembers a named villager who died. */
-export function remember(state: GameState, v: { name: string }, cause: DeathCause, at: number): GameState {
-  return { ...state, remembered: [...state.remembered, { name: v.name, cause, at }].slice(-MAX_REMEMBERED) };
+export function remember(state: GameState, content: Content, v: NamedVillager, cause: DeathCause, at: number): GameState {
+  const story = content.ai ? undefined : finalStory(state, content, v, cause);
+  return { ...state, remembered: [...state.remembered, { name: v.name, cause, at, ...(story ? { story } : {}) }].slice(-MAX_REMEMBERED) };
 }
 
 /**
@@ -57,8 +61,12 @@ export function die(state: GameState, content: Content, cause: DeathCause, opts:
   let sick = state.sick;
   if (opts.sick && sick.length > 0) sick = sick.slice(1);
   sick = sick.slice(0, villagers);
-  let s: GameState = {
-    ...state,
+  // Their life story is kept at the Libingan, as it was (family still linked).
+  let s: GameState = who ? remember(state, content, who, cause, state.time) : state;
+  s = {
+    ...s,
+    // The one who died leaves (not the newest villager, which syncResidents would drop).
+    residents: who?.resident !== undefined ? s.residents.filter((r) => r.id !== who.resident) : s.residents,
     villagers,
     warriors: Math.min(state.warriors, villagers),
     sick,
@@ -67,7 +75,6 @@ export function die(state: GameState, content: Content, cause: DeathCause, opts:
   };
   const entry: HistoryEntry = { at: state.time, kind: "died", cause, ...(who ? { name: who.name, story: who.story, ...(who.gender ? { gender: who.gender } : {}) } : {}) };
   s = addHistory(s, entry);
-  if (who) s = remember(s, who, cause, state.time);
   return addMourning(s, content, 1);
 }
 

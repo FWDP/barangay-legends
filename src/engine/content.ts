@@ -478,6 +478,8 @@ export interface PopulationRules {
   newcomerElderPercent: number;
   familyMax: number;
   balitaMax: number;
+  /** Elders teaching by the evening fire (talambuhay.ts teach). */
+  learning: { chancePerEvening: number; maxPerChild: number };
 }
 
 /** When a newcomer's reason can come up (content/villagers/arrivals.json). */
@@ -495,6 +497,32 @@ export interface ArrivalReason {
   /** How many come together: [fewest, most]. */
   size: [number, number];
   text: Text;
+}
+
+/** Life-story templates (content/villagers/talambuhay.json; engine/talambuhay.ts, ui/talambuhay.ts). */
+export interface TalambuhaySkill {
+  id: string;
+  /** Only villagers in these roles get it (none: anyone). */
+  roles?: VillagerRole[];
+  text: Text;
+}
+export const DETAIL_KINDS = ["habit", "fear", "dream", "place"] as const;
+export interface TalambuhayDetail {
+  id: string;
+  kind: (typeof DETAIL_KINDS)[number];
+  text: Text;
+}
+export interface TalambuhayContent {
+  skills: TalambuhaySkill[];
+  details: TalambuhayDetail[];
+  /** Family sentences: born, bornNoParents, arrived, arrivedNoPlace, founder, spouse, child, children, and. */
+  family: Record<string, Text>;
+  /** Timeline lines by event (born, arrived, married, ...), and "day". */
+  events: Record<string, Text>;
+  /** How someone died (the "died" line). */
+  causes: Record<string, Text>;
+  /** What elders teach children by the fire. */
+  lessons: { id: string; text: Text }[];
 }
 
 /** Births and arrivals (content/villagers/arrivals.json). */
@@ -897,6 +925,7 @@ export interface Content {
   quests: QuestDef[];
   villagers: VillagerContent;
   arrivals: ArrivalContent;
+  talambuhay: TalambuhayContent;
   traditions: TraditionDef[];
   rituals: RitualDef[];
   visitor: VisitorDef | null;
@@ -1168,6 +1197,10 @@ export function validateRules(raw: unknown): Rules {
   if (!isObject(raw.population)) throw new Error('rules: missing "population"');
   checkNumbers(raw.population, ["birthMinHappiness", "childRicePercent", "elderWorkPercent", "newcomerChildPercent", "newcomerElderPercent"], "rules: population");
   checkNumbers(raw.population, ["secondsPerNewcomer", "secondsPerBirth", "childDays", "elderAfterDays", "familyMax", "balitaMax"], "rules: population", true);
+  const learning = raw.population.learning;
+  if (!isObject(learning)) throw new Error('rules: missing "population.learning"');
+  checkNumbers(learning, ["chancePerEvening", "maxPerChild"], "rules: population.learning");
+  if ((learning.chancePerEvening as number) > 1) throw new Error("rules: population.learning.chancePerEvening must be 0-1");
   if ((raw.population.newcomerChildPercent as number) + (raw.population.newcomerElderPercent as number) > 100) throw new Error("rules: population newcomer shares add up to more than 100");
   checkNumbers(raw.happiness, ["start", "maxEffectPercent", "pointsPerSecond", "plazaRadius", "perHouseNearPlaza", "maxFromHouses"], "rules: happiness");
   for (const key of ["hungry", "perSick", "maxFromSick"]) {
@@ -1497,6 +1530,57 @@ const NO_ARRIVALS: ArrivalContent = {
   birth: { en: "A child was born to {mother} and {father}: {child}.", fil: "Isinilang ang anak nina {mother} at {father}: si {child}." },
   reasons: [{ id: "land", weight: 1, size: [1, 1], text: { en: "{names} came looking for land.", fil: "Dumating si {names} upang maghanap ng lupa." } }],
 };
+
+const FAMILY_KEYS = ["born", "bornNoParents", "arrived", "arrivedNoPlace", "founder", "spouse", "child", "children", "and"];
+const EVENT_KEYS = ["born", "arrived", "arrivedFrom", "married", "parent", "grewUp", "elder", "raidWon", "raidLost", "defendedWon", "defendedLost", "sick", "healed", "learned", "learnedAlone", "died", "day"];
+const CAUSE_KEYS = ["age", "sickness", "raid", "hunger"];
+
+/** No life-story file (hand-made test content): one plain skill and detail, plain words. */
+const t = (en: string): Text => ({ en, fil: en });
+const NO_TALAMBUHAY: TalambuhayContent = {
+  skills: [{ id: "farming", text: t("{name} works the fields.") }],
+  details: [{ id: "river", kind: "place", text: t("{name} likes the river.") }],
+  family: Object.fromEntries(FAMILY_KEYS.map((k) => [k, t(k === "and" ? " and " : `{name} (${k}).`)])),
+  events: Object.fromEntries(EVENT_KEYS.map((k) => [k, t(k === "day" ? "Araw {n}" : k)])),
+  causes: Object.fromEntries(CAUSE_KEYS.map((k) => [k, t(k)])),
+  lessons: [{ id: "old-songs", text: t("the old songs") }],
+};
+
+/** Checks content/villagers/talambuhay.json. */
+export function validateTalambuhay(raw: unknown): TalambuhayContent {
+  if (raw === undefined) return NO_TALAMBUHAY;
+  const file = "villagers/talambuhay.json";
+  if (!isObject(raw)) throw new Error(`${file}: must be a JSON object`);
+  const list = <T>(key: string, each: (o: Record<string, unknown>, at: string) => T): T[] => {
+    const l = raw[key];
+    if (!Array.isArray(l) || l.length === 0) throw new Error(`${file}: "${key}" must list at least one entry`);
+    const seen = new Set<string>();
+    return l.map((o, i) => {
+      const at = `${file}: ${key} ${i + 1}`;
+      if (!isObject(o) || typeof o.id !== "string" || o.id === "" || o.id.length > 40 || seen.has(o.id)) throw new Error(`${at}: needs a unique "id"`);
+      seen.add(o.id);
+      if (!isText(o.text)) throw new Error(`${at}: "text" needs en and fil`);
+      return each(o, at);
+    });
+  };
+  const skills = list("skills", (o, at): TalambuhaySkill => {
+    if (o.roles !== undefined && (!Array.isArray(o.roles) || !o.roles.every((r) => (VILLAGER_ROLES as readonly unknown[]).includes(r)))) throw new Error(`${at}: "roles" must list roles (${VILLAGER_ROLES.join(", ")})`);
+    return { id: o.id as string, text: o.text as Text, ...(o.roles ? { roles: o.roles as VillagerRole[] } : {}) };
+  });
+  for (const role of VILLAGER_ROLES) if (!skills.some((s) => !s.roles || s.roles.includes(role))) throw new Error(`${file}: no skill fits the role "${role}"`);
+  const details = list("details", (o, at): TalambuhayDetail => {
+    if (!(DETAIL_KINDS as readonly unknown[]).includes(o.kind)) throw new Error(`${at}: "kind" must be one of ${DETAIL_KINDS.join(", ")}`);
+    return { id: o.id as string, kind: o.kind as TalambuhayDetail["kind"], text: o.text as Text };
+  });
+  const lessons = list("lessons", (o) => ({ id: o.id as string, text: o.text as Text }));
+  const texts = (key: string, keys: string[]): Record<string, Text> => {
+    const o = raw[key];
+    if (!isObject(o)) throw new Error(`${file}: "${key}" must be an object`);
+    for (const k of keys) if (!isText(o[k])) throw new Error(`${file}: "${key}.${k}" needs en and fil`);
+    return Object.fromEntries(keys.map((k) => [k, o[k] as Text]));
+  };
+  return { skills, details, lessons, family: texts("family", FAMILY_KEYS), events: texts("events", EVENT_KEYS), causes: texts("causes", CAUSE_KEYS) };
+}
 
 export function validateArrivals(raw: unknown): ArrivalContent {
   if (raw === undefined) return NO_ARRIVALS;
@@ -1863,6 +1947,7 @@ export function buildContent(
   );
   const villagers = validateVillagers(extra.villagers, extra.names, ids);
   const arrivals = validateArrivals(Object.entries(extra.villagerFiles ?? {}).find(([f]) => f.endsWith("arrivals.json"))?.[1]);
+  const talambuhay = validateTalambuhay(Object.entries(extra.villagerFiles ?? {}).find(([f]) => f.endsWith("talambuhay.json"))?.[1]);
   const islandsRaw = extra.islands;
   const islands = isObject(islandsRaw) && Array.isArray(islandsRaw.names) ? islandsRaw.names.filter((n): n is string => typeof n === "string" && n !== "") : [];
   if (extra.islands !== undefined && islands.length < rules.archipelago.maxIslands) throw new Error(`islands.json: needs at least ${rules.archipelago.maxIslands} names`);
@@ -1871,7 +1956,7 @@ export function buildContent(
     .map(([file, raw]) => validatePolitics(raw, file));
   for (const n of neighbors) if (n.tradition && !traditions.some((t) => t.id === n.tradition)) throw new Error(`${n.id}: unknown tradition "${n.tradition}"`);
   const levels = validateLevels(extra.levels, rules);
-  return { buildings, rules, events, lore, groves, neighbors, choices, quests, villagers, arrivals, traditions, rituals, visitor, eclipse, trickery, aklat, datuHouse, islands, politics, levels };
+  return { buildings, rules, events, lore, groves, neighbors, choices, quests, villagers, arrivals, talambuhay, traditions, rituals, visitor, eclipse, trickery, aklat, datuHouse, islands, politics, levels };
 }
 
 /** Loads every JSON file in content/ at build time (Vite bundles them). */

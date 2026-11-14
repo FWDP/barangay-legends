@@ -3,6 +3,7 @@
 // arrival from the map's seed and the person's id (rollAt), so it is deterministic and doesn't
 // touch the game's other rolls. Kept in step with the villager count: arrivals are added, and
 // when the barangay shrinks the newest leave first. Pure: no React, no browser APIs.
+import type { LifeEvent } from "./talambuhay";
 import { SOCIAL_CLASSES, type Content, type SocialClass } from "./content";
 import type { GameState } from "./game";
 import { rollAt } from "./rng";
@@ -28,6 +29,8 @@ export interface Resident {
   why?: string;
   /** Where they came from (arrived): a barangay id. */
   from?: string;
+  /** What they learned as a child by the evening fire (talambuhay.ts teach), for their life story. */
+  lessons?: LifeEvent[];
 }
 
 export const GENDERS: readonly Gender[] = ["woman", "man"];

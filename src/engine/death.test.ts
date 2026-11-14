@@ -91,7 +91,9 @@ describe("deaths", () => {
     const gone = updateDeaths(old, { ...old, time: old.time + 1 }, sure, 1);
     expect(gone.villagers).toBe(4);
     expect(gone.named).toEqual([]);
-    expect(gone.remembered).toEqual([{ name: "N1", cause: "age", at: old.time + 1 }]);
+    expect(gone.remembered).toMatchObject([{ name: "N1", cause: "age", at: old.time + 1 }]);
+    // Their life story is kept at the Libingan, ending with how they died.
+    expect(gone.remembered[0].story?.life.at(-1)).toMatchObject({ kind: "died", cause: "age" });
     const fresh = withState({ villagers: 5, named: [v(1, { since: 100 })], time: 100 });
     expect(updateDeaths(fresh, { ...fresh, time: 101 }, sure, 1).villagers).toBe(5);
   });
