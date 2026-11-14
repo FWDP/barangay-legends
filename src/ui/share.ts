@@ -8,6 +8,7 @@ import type { Lang } from "./settings";
 import { datuWithTitle } from "./stories";
 import { datuHouseUrl, houseStyleFor } from "./datuHouseArt";
 import { ART_TYPES, buildingArtUrl, mapIcon } from "./buildingArt";
+import { drawPaddy } from "./paddy";
 import { barangayLevel } from "../engine/kabantugan";
 import { arawText } from "./Days";
 
@@ -122,6 +123,8 @@ export function drawShareCard(state: GameState, content: Content, game: GameText
     const y = oy + (bl.y - b.y0 + 0.5) * tile;
     if (x < ox || y < oy || x > ox + tile * b.size || y > oy + tile * b.size) continue;
     g.globalAlpha = bl.damaged ? 0.5 : 1;
+    // A rice field: the same flat paddy green as on the map, under its icon.
+    if ((content.buildings.find((d) => d.id === bl.type)?.produces?.rice ?? 0) > 0) drawPaddy(g, x - tile * 0.44, y - tile * 0.44, tile * 0.88, tile * 0.88);
     const picture = art?.[bl.type];
     if (picture) g.drawImage(picture, x - tile * 0.5, y - tile * 0.55, tile, tile);
     else {

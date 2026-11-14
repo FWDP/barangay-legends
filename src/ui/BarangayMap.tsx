@@ -1,3 +1,4 @@
+import { PADDY_STYLE } from "./paddy";
 import { Bolo } from "./Bolo";
 import { closesPlaza, entrancesBlockedBy, wouldHaveEntrance } from "../engine/doors";
 import {
@@ -1208,7 +1209,7 @@ const Cell = memo(function Cell(props: {
         </div>
       )}
       {paddy && (
-        <div className="absolute inset-[6%] rounded-sm bg-linear-to-br from-lime-300 via-lime-200 to-cyan-200 shadow-inner" />
+        <div className="absolute inset-[6%] rounded-sm" style={PADDY_STYLE} />
       )}
       {valid && (
         <div
