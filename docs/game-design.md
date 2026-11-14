@@ -28,6 +28,10 @@ different form, and some (prestige and Dangal, export codes) isn't built yet.
   and the Aklat ng Alamat.
 - **Bahay ng Datu:** five levels, each needing a minimum barangay level (3, 6, 9, 12). It unlocks
   envoys, the Balangay and alliances.
+  From level 3 it stands on 2×2 tiles (`rules.plaza`); those tiles are kept free from level 2,
+  and an old save with buildings there keeps the one-tile house. The house is solid: people
+  gather on open tiles around it (at most `gatherMax`, the rest wait further out), and anyone
+  behind it is hidden by it, on the player's map, in visits and in replays.
 - **The archipelago:** 4–5 islands of AI barangays with trade (accept, counter or refuse),
   grudges and Handog, marriage alliances, sandugo, raids and defense, tributaries, sea travel by
   Balangay, alliance blocs and wars, and the Balita news feed.

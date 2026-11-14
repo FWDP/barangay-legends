@@ -18,6 +18,7 @@ import { buildReplay, sampleReplay, type Phase, type Script } from "./replay";
 import type { Lang } from "./settings";
 import { fill, type GameText } from "./uiContent";
 import { drawBoat, drawPerson, drawSparks, useReducedMotion } from "./VillagerLayer";
+import { datuHouseBox, datuHouseImage, eraseImage, houseStyleFor, type HouseStyle } from "./datuHouseArt";
 
 const noop = () => {};
 const FRAME_MS = 1000 / 30 - 2;
@@ -68,8 +69,8 @@ export function reportLines(e: Expedition, state: GameState, content: Content, g
 }
 
 /** The canvas: draws the script at its own pace (or one still), never re-rendering the map. */
-function ReplayLayer(props: { script: Script; cam: Camera; view: View; still: number | null; onPhase: (p: Phase) => void; onEnd: () => void }) {
-  const { script, cam, view, still, onPhase, onEnd } = props;
+function ReplayLayer(props: { script: Script; house: { box: ReturnType<typeof datuHouseBox>; style: HouseStyle } | null; cam: Camera; view: View; still: number | null; onPhase: (p: Phase) => void; onEnd: () => void }) {
+  const { script, house, cam, view, still, onPhase, onEnd } = props;
   const canvas = useRef<HTMLCanvasElement>(null);
   const live = useRef({ cam, view, onPhase, onEnd });
   live.current = { cam, view, onPhase, onEnd };
@@ -104,7 +105,16 @@ function ReplayLayer(props: { script: Script; cam: Camera; view: View; still: nu
         drawBoat(g, q.x, q.y, T, b.heading, b.kind, wall);
       }
       const people = [...f.people].sort((a, b) => a.p.y - b.p.y);
+      // Those behind the Bahay ng Datu are hidden by it: once everyone behind its ground line is
+      // drawn, cut its shape out (the house on the map shows through), then draw the rest.
+      const img = house ? datuHouseImage(house.box.level, house.style) : null;
+      let erased = !img;
+      const erase = () => {
+        erased = true;
+        if (img && house) eraseImage(g, img, o.x + house.box.cx * T, o.y + house.box.bottom * T, house.box.size * T);
+      };
       for (const p of people) {
+        if (!erased && house && p.p.y > house.box.ground) erase();
         const q = px(p.p);
         drawPerson(g, q.x, q.y, T, p.id, p.look, { p: p.p, moving: p.moving && still === null, stride: wall * 9 + p.id }, wall);
         if (p.bundle) {
@@ -115,6 +125,7 @@ function ReplayLayer(props: { script: Script; cam: Camera; view: View; still: nu
           g.fill();
         }
       }
+      if (!erased) erase();
       if (f.sparks) {
         const q = px(f.sparks);
         drawSparks(g, q.x, q.y, T, still === null ? wall : 0.4);
@@ -164,6 +175,8 @@ export function ReplayView(props: { expedition: Expedition; state: GameState; co
   const reduced = useReducedMotion();
   // The village as it is now (the replay doesn't depend on later changes to the player's state).
   const village = useMemo(() => villageOf(e, state, content), [e, content]);
+  // The Bahay ng Datu, so people behind it are hidden by it on the canvas.
+  const house = useMemo(() => (village ? { box: datuHouseBox(village, content), style: houseStyleFor(village, content) } : null), [village, content]);
   const script = useMemo(() => (village ? buildReplay(e, village, content) : null), [e, village, content]);
   const [done, setDone] = useState(!script);
   const [phase, setPhase] = useState<Phase>("arrive");
@@ -188,7 +201,7 @@ export function ReplayView(props: { expedition: Expedition; state: GameState; co
           onBuildingMenu={noop}
           onSpirit={noop}
           visit={{ landing: null }}
-          overlay={(cam, view) => (done ? null : <ReplayLayer script={script} cam={cam} view={view} still={stillT} onPhase={setPhase} onEnd={() => setDone(true)} />)}
+          overlay={(cam, view) => (done ? null : <ReplayLayer script={script} house={house} cam={cam} view={view} still={stillT} onPhase={setPhase} onEnd={() => setDone(true)} />)}
         />
       )}
       <div data-map-overlay className="pointer-events-none absolute inset-x-2 top-2 z-10 flex justify-center">

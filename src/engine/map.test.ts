@@ -348,6 +348,8 @@ describe("auto-placement", () => {
     const map: MapState = mapFrom(["~.....", "~..P..", "~....."]);
     const s = withState({ map, buildings: [] });
     expect(autoPlaceTile(s, content, def("bahay-kubo"))).toEqual({ x: 3, y: 0 });
+    // Once the tiles for the big Bahay ng Datu are kept (plaza.ts: (3..4, 0..1) here), beside them.
+    expect(autoPlaceTile({ ...s, datuLevel: content.rules.plaza.reserveFromLevel }, content, def("bahay-kubo"))).toEqual({ x: 2, y: 1 });
     expect(autoPlaceTile(s, content, def("palayan"))).toEqual({ x: 1, y: 1 });
   });
 

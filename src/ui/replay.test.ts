@@ -4,6 +4,7 @@ import { createRegion, neighborDef, type NeighborState } from "../engine/region"
 import { generateVillage } from "../engine/village";
 import { nextRandom } from "../engine/rng";
 import { isWalkable } from "../engine/paths";
+import { solidTiles } from "../engine/doors";
 import type { Expedition } from "../engine/expeditions";
 import { acquainted, at, calm, withState } from "../engine/testUtils";
 import { buildReplay, sampleReplay, share } from "./replay";
@@ -110,6 +111,19 @@ describe("expedition replays", () => {
     }
     expect(frames(script).some((f) => f.people.some((p) => p.bundle))).toBe(true);
     expect(sampleReplay(script, script.duration + 1).people).toHaveLength(0);
+  });
+
+  it("envoys stand around the Bahay ng Datu, never on it or on a building, at any level", () => {
+    for (const datuLevel of [1, 5]) {
+      const s = world();
+      const after = apply(s, calm, { type: "trade", neighbor: "malinaw", give: "rice" });
+      const e = after.expeditions.at(-1)!;
+      const village = { ...generateVillage(calm, nb(s, "malinaw"), neighborDef(calm, "malinaw")!, s.time), datuLevel };
+      const solid = solidTiles(village, calm);
+      for (const f of frames(buildReplay(e, village, calm))) {
+        for (const p of f.people) if (!p.moving) expect(solid[Math.floor(p.p.y) * village.map.width + Math.floor(p.p.x)]).toBe(0);
+      }
+    }
   });
 
   it("replay raids on the player in the player's own village", () => {

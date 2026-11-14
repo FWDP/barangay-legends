@@ -9,6 +9,7 @@ import { cachedPath, isWalkable } from "../engine/paths";
 import { homeWarriors } from "../engine/region";
 import { doorOf, isSolid } from "../engine/doors";
 import type { NamedVillager } from "../engine/people";
+import { gatheringSpots, gatherSpot } from "../engine/plaza";
 
 /** Never draw more sprites than this, however big the barangay grows. Night comes from engine/daynight.ts. */
 export const MAX_SPRITES = 60;
@@ -28,6 +29,11 @@ export interface VillagerPlan {
   placeDoor?: Point | null;
   /** A part-time warrior on night watch at a Kuta (its doorway). */
   watch?: Point | null;
+  /**
+   * Where this villager stands when they gather at the Bahay ng Datu: an open spot around the
+   * house and fire (engine/plaza.ts), or a waiting spot further out once the crowd is full.
+   */
+  gather?: Point | null;
 }
 
 /** Where a villager is going, and whether they go inside when they get there. */
@@ -96,15 +102,20 @@ export function planVillagers(state: GameState, content: Content, cap = MAX_SPRI
     }
     return doors.get(key)!;
   };
+  // Gathering spots at the Bahay ng Datu, never on the house (plaza.ts); villagers with no house
+  // of their own stay about their gathering spot instead of the plaza tile.
+  const gathering = gatheringSpots(state, content);
+  const gatherMax = content.rules.plaza.gatherMax;
   // Part-time warriors keep watch at the Kuta at night: up to two a Kuta (the rest sleep).
   const watchers = Math.min(guards > 0 ? 0 : homeWarriors(state), forts.length * 2);
   let watching = 0;
   for (let j = 0; j < n; j++) {
     const i = total > cap ? Math.floor((j * total) / cap) : j;
     const r = roles[i] ?? { role: "idle" as const, place: null };
-    const home = homes[i] ?? plaza;
+    const gather = gatherSpot(gathering, j, gatherMax);
+    const home = homes[i] ?? (gather ? { x: Math.floor(gather.x), y: Math.floor(gather.y) } : plaza);
     const onWatch = r.role === "work" && watching < watchers ? forts[watching++ % forts.length] : null;
-    plans.push({ id: j, role: r.role, home, place: r.place, homeDoor: door(home === plaza ? null : home), placeDoor: r.role === "clearing" ? null : door(r.place), watch: onWatch ? door(onWatch) ?? onWatch : null });
+    plans.push({ id: j, role: r.role, home, place: r.place, homeDoor: door(homes[i] ? home : null), placeDoor: r.role === "clearing" ? null : door(r.place), watch: onWatch ? door(onWatch) ?? onWatch : null, gather });
   }
   return plans;
 }
@@ -129,25 +140,36 @@ export function goal(plan: VillagerPlan, t: number, night: boolean, plaza: Point
   const fireside = plan.id % 6 === 0;
   if (night && plan.role !== "warrior" && plan.role !== "sick") {
     if (plan.watch) return { p: { x: plan.watch.x + 0.5 + o.x * 0.4, y: plan.watch.y + 0.5 + o.y * 0.3 }, inside: false };
-    if (fireside) return { p: square(plaza, o), inside: false };
+    if (fireside) return { p: gatherAt(plan, plaza, o), inside: false };
     return { p: at(plan.home, plan.homeDoor, 0.3), inside: !!plan.homeDoor };
   }
   const cycle = (t / 80 + ((plan.id * 0.618) % 1)) % 1;
   switch (plan.role) {
     case "warrior":
-      return { p: plan.place ? at(plan.place, plan.placeDoor, 0.35) : square(plaza, o), inside: false };
+      return { p: plan.place ? at(plan.place, plan.placeDoor, 0.35) : gatherAt(plan, plaza, o), inside: false };
     case "sick":
       return plan.place ? { p: at(plan.place, plan.placeDoor, 0.4), inside: false } : { p: at(plan.home, plan.homeDoor, 0.3), inside: night && !!plan.homeDoor };
     case "clearing":
       return { p: destinationAt(plan.place!, o, 0.3), inside: false };
     case "work":
-      if (hungry) return { p: square(plaza, o), inside: false };
+      if (hungry) return { p: gatherAt(plan, plaza, o), inside: false };
       // Most of the day at work, a short break at the plaza.
-      return { p: cycle < 0.9 ? at(plan.place!, plan.placeDoor) : square(plaza, o), inside: false };
+      return { p: cycle < 0.9 ? at(plan.place!, plan.placeDoor) : gatherAt(plan, plaza, o), inside: false };
     case "idle":
       // Mostly about their home, some time at the plaza.
-      return { p: cycle < 0.7 ? at(plan.home, plan.homeDoor, 0.3) : square(plaza, o), inside: false };
+      return { p: cycle < 0.7 ? at(plan.home, plan.homeDoor, 0.3) : gatherAt(plan, plaza, o), inside: false };
   }
+}
+
+/**
+ * A villager's place at a gathering: their own spot around the Bahay ng Datu (a little jitter,
+ * kept on its tile), or for a plan without one the plaza's 3 × 3 crowd (tests, old callers).
+ */
+function gatherAt(plan: VillagerPlan, plaza: Point, o: Point): Point {
+  const g = plan.gather;
+  if (!g) return square(plaza, o);
+  const keep = (v: number, base: number) => Math.min(base + 0.92, Math.max(base + 0.08, v));
+  return { x: keep(g.x + o.x * 0.15, Math.floor(g.x)), y: keep(g.y + o.y * 0.15, Math.floor(g.y)) };
 }
 
 /** A crowd around the fire, within the plaza's own 3 × 3 (always cleared land). */

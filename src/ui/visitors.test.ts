@@ -75,7 +75,8 @@ describe("raiders at the border", () => {
     const s = withState({ map: m, buildings: [at("palayan", 0, 4), at("palayan", 2, 4)] });
     expect(content.rules.diplomacy.aiRaid.lootTargets[0]).toBe("kamalig");
     expect(lootTarget(s, content, { x: 3, y: 4 })).toMatchObject({ x: 2, y: 4 });
-    expect(lootTarget(withState({ map: m, buildings: [] }), content, { x: 3, y: 4 })).toEqual(m.plaza);
+    // Nothing to loot: the Bahay ng Datu's doorstep, not the house itself.
+    expect(lootTarget(withState({ map: m, buildings: [] }), content, { x: 3, y: 4 })).toEqual({ x: m.plaza.x, y: m.plaza.y + 1 });
   });
 
   it("now that the Kamalig exists, winners walk to the nearest Kamalig before any field", () => {

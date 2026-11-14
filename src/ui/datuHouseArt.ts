@@ -6,6 +6,7 @@
 // One source, used everywhere the house appears (map, build toolbar, share card).
 import type { Content } from "../engine/content";
 import type { GameState } from "../engine/game";
+import { isBigHouse } from "../engine/plaza";
 
 export type HouseStyle = "lowland" | "torogan";
 
@@ -145,4 +146,50 @@ export function datuHouseUrl(level: number, style: HouseStyle): string {
     urls.set(key, url);
   }
   return url;
+}
+
+/**
+ * Where the house is drawn on the map, in tile units: centred on its footprint (engine/plaza.ts),
+ * standing on the footprint's front edge (`ground`, used for depth sorting), the image's bottom
+ * a little below it (its shadow), and `size` tiles square. On the big footprint the roof spans
+ * the footprint's width; a high level kept on one tile (an old save) is drawn at the one-tile
+ * size, within its tile.
+ */
+export function datuHouseBox(state: GameState, content: Content): { cx: number; ground: number; bottom: number; size: number; level: number } {
+  const level = clampLevel(state.datuLevel ?? 1);
+  const { plaza } = state.map;
+  const ground = plaza.y + 1;
+  if (isBigHouse(state, content)) {
+    const w = content.rules.plaza.bigWidth;
+    // The art's roof is 66 + 9 × level of the box's 120 units wide: make it the footprint's width.
+    return { cx: plaza.x + w / 2, ground, bottom: ground + 0.04, size: (0.95 * w * 120) / (66 + 9 * level), level };
+  }
+  const shown = Math.min(level, content.rules.plaza.bigFromLevel - 1);
+  return { cx: plaza.x + 0.5, ground, bottom: ground + 0.04, size: (105 + shown * 11) / 100, level };
+}
+
+const images = new Map<string, HTMLImageElement>();
+/** The house as a loaded image for a canvas (null until it has loaded). */
+export function datuHouseImage(level: number, style: HouseStyle): HTMLImageElement | null {
+  if (typeof Image === "undefined") return null;
+  const key = `${clampLevel(level)}:${style}`;
+  let img = images.get(key);
+  if (!img) {
+    img = new Image();
+    img.src = datuHouseUrl(level, style);
+    images.set(key, img);
+  }
+  return img.complete && img.naturalWidth > 0 ? img : null;
+}
+
+/**
+ * Cuts an image's shape out of what a canvas holds so far (`cx`, `bottom` and `size` in canvas
+ * pixels): whatever was drawn behind the house disappears where the house is, and the house on
+ * the map underneath shows through.
+ */
+export function eraseImage(g: CanvasRenderingContext2D, img: CanvasImageSource, cx: number, bottom: number, size: number): void {
+  g.save();
+  g.globalCompositeOperation = "destination-out";
+  g.drawImage(img, cx - size / 2, bottom - size, size, size);
+  g.restore();
 }

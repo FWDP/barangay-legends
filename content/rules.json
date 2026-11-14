@@ -262,6 +262,15 @@
     "slowPercent": 80,
     "stopMultiple": 1.5
   },
+  "plaza": {
+    "_comment": "The Bahay ng Datu's footprint and the gatherings around it (engine/plaza.ts). From bigFromLevel the house takes bigWidth × bigHeight tiles (the plaza tile is its front-left corner: it grows right and back); from reserveFromLevel those extra tiles are kept free of new buildings, Daan and replanting (before that they are ordinary land). A save whose buildings already stand there keeps the one-tile house (the art is drawn within it) until they are gone. Gatherings at the house (idle villagers, workers on a break, warriors called to arms with no Kuta, envoys) stand on open tiles around the house, spotsPerTile to a tile, at most gatherMax at once; the rest wait one tile further out. Display layout, not balance.",
+    "bigFromLevel": 3,
+    "reserveFromLevel": 2,
+    "bigWidth": 2,
+    "bigHeight": 2,
+    "spotsPerTile": 2,
+    "gatherMax": 12
+  },
   "aiGrowth": {
     "_comment": "AI barangays clear forest when no free tile is left near their plaza: clearTiles at a time (the same clearing rules and costs as the player). Playtest guess.",
     "clearTiles": 3

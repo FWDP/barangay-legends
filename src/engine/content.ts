@@ -120,6 +120,8 @@ export interface Rules {
   mourning: { seconds: number; maxSeconds: number; happiness: number };
   /** Rice the barangay holds with no Kamalig. */
   storage: { baseRice: number };
+  /** The Bahay ng Datu's footprint and the gathering spots around it (plaza.ts). */
+  plaza: { bigFromLevel: number; reserveFromLevel: number; bigWidth: number; bigHeight: number; spotsPerTile: number; gatherMax: number };
   /** The wood and gold soft cap (stockpile.ts): multiple × the next big purchase, at least minimum; above it production is slowPercent lower, and above stopMultiple × the cap none comes in. */
   stockpile: { multiple: number; minimum: Partial<Record<Resource, number>>; slowPercent: number; stopMultiple: number };
   /** AI barangays: how many forest tiles they queue at a time when they run out of room. */
@@ -1087,6 +1089,10 @@ export function validateRules(raw: unknown): Rules {
   if (!isObject(raw.storage) || !isNonNegNumber(raw.storage.baseRice)) throw new Error('rules: "storage.baseRice" must be a number >= 0');
   if (!isObject(raw.stockpile) || !isNonNegNumber(raw.stockpile.multiple) || !isNonNegNumber(raw.stockpile.slowPercent) || (raw.stockpile.slowPercent as number) > 100 || typeof raw.stockpile.stopMultiple !== "number" || (raw.stockpile.stopMultiple as number) < 1) throw new Error('rules: "stockpile" needs "multiple", "slowPercent" (0-100) and "stopMultiple" (>= 1)');
   checkAmounts(raw.stockpile.minimum, "rules: stockpile.minimum");
+  if (!isObject(raw.plaza)) throw new Error('rules: missing "plaza"');
+  for (const key of ["bigFromLevel", "reserveFromLevel", "bigWidth", "bigHeight", "spotsPerTile", "gatherMax"]) {
+    if (!Number.isInteger(raw.plaza[key]) || (raw.plaza[key] as number) < 1) throw new Error(`rules: "plaza.${key}" must be a whole number >= 1`);
+  }
   if (!isObject(raw.aiGrowth) || !Number.isInteger(raw.aiGrowth.clearTiles) || (raw.aiGrowth.clearTiles as number) < 1) throw new Error('rules: "aiGrowth.clearTiles" must be a whole number >= 1');
   if (!isObject(raw.happiness)) throw new Error('rules: missing "happiness"');
   checkNumbers(raw.happiness, ["start", "maxEffectPercent", "pointsPerSecond", "plazaRadius", "perHouseNearPlaza", "maxFromHouses"], "rules: happiness");

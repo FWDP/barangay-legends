@@ -14,6 +14,7 @@ import { newGame, unreachableWorkplaces, warriorCap, type GameState, type Placed
 import { levelForRenown } from "./kabantugan";
 import type { VillageBand } from "./content";
 import { entranceOf, solidTiles, updateDoors, walkReach } from "./doors";
+import { isReserved } from "./plaza";
 import { canPlace, isPlaza, isReachable, setTiles, tileAt, type Point } from "./map";
 import { findPath } from "./paths";
 import { chooseLanding, kutaCovers } from "./border";
@@ -130,7 +131,7 @@ function layPaths(state: GameState, content: Content, band: VillageBand): GameSt
     if (!door) continue;
     // One at a time on the map so far: later paths follow the Daan already laid (it's the quickest ground).
     const changes = (findPath(map, map.plaza, door, solid) ?? [])
-      .filter((p) => tileAt(map, p.x, p.y) === "cleared" && !taken.has(`${p.x},${p.y}`) && !isPlaza(map, p.x, p.y))
+      .filter((p) => tileAt(map, p.x, p.y) === "cleared" && !taken.has(`${p.x},${p.y}`) && !isReserved(state, content, p.x, p.y))
       .map((p) => ({ ...p, tile: "daan" as const }));
     if (changes.length) map = setTiles(map, changes);
   }

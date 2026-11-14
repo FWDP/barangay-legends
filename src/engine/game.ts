@@ -950,7 +950,7 @@ export function buildRoad(state: GameState, content: Content, tiles: Point[]): G
   const seen = new Set<string>();
   for (const t of Array.isArray(tiles) ? tiles.slice(0, 200) : []) {
     const key = `${t?.x},${t?.y}`;
-    if (seen.has(key) || !Number.isInteger(t?.x) || !Number.isInteger(t?.y) || !canPlaceRoad(s, t.x, t.y)) continue;
+    if (seen.has(key) || !Number.isInteger(t?.x) || !Number.isInteger(t?.y) || !canPlaceRoad(s, content, t.x, t.y)) continue;
     if (!canAfford(s, cost)) break;
     seen.add(key);
     laid.push({ x: t.x, y: t.y, tile: "daan" });

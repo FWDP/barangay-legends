@@ -40,6 +40,7 @@ import { AklatButton, AklatDialog, DambanaDialog, EclipseBar, ForestChip, PrankB
 import { shrines, standingShrine } from "../engine/worship";
 import { canReplant } from "../engine/forest";
 import { isPlaza } from "../engine/map";
+import { inHouse } from "../engine/plaza";
 import { villageKey, villageSnapshot } from "../engine/village";
 import { neighborDef } from "../engine/region";
 import { VisitView } from "./VisitView";
@@ -724,14 +725,14 @@ export function App() {
       return;
     }
     const tile = tileAt(state.map, x, y);
-    // The plaza: the Bahay ng Datu.
-    if (isPlaza(state.map, x, y)) {
+    // The plaza: the Bahay ng Datu (any tile of its footprint, engine/plaza.ts).
+    if (inHouse(state, content, x, y)) {
       sfx.click();
       setDatuOpen(true);
       return;
     }
     // Empty cleared land (or land growing back): offer to replant it.
-    if (tile === "cleared" && !isPlaza(state.map, x, y) && (canReplant(state, x, y) || state.replanting.some((j) => j.x === x && j.y === y))) {
+    if (tile === "cleared" && !isPlaza(state.map, x, y) && (canReplant(state, content, x, y) || state.replanting.some((j) => j.x === x && j.y === y))) {
       sfx.click();
       setReplantAsk({ x, y });
       return;
@@ -1107,7 +1108,7 @@ export function App() {
             replantAsk &&
             !placing &&
             !roadMode &&
-            (canReplant(state, replantAsk.x, replantAsk.y) || state.replanting.some((j) => j.x === replantAsk.x && j.y === replantAsk.y)) && (
+            (canReplant(state, content, replantAsk.x, replantAsk.y) || state.replanting.some((j) => j.x === replantAsk.x && j.y === replantAsk.y)) && (
             <ReplantBar
               state={state}
               content={content}

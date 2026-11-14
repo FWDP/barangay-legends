@@ -7,6 +7,7 @@
 import type { Content } from "./content";
 import type { GameState, PlacedBuilding } from "./game";
 import { inBounds, NEIGHBOURS, TILE_CODE, type MapState, type Point } from "./map";
+import { houseFootprint } from "./plaza";
 
 /** Tiles people walk on: cleared land, Daan and bridges (forest, balete and water aren't). Made on first use (map.ts imports this module). */
 let footCodes: Set<string> | null = null;
@@ -30,22 +31,49 @@ function bridges(content: Content): Set<string> {
 /** Does this building take up its tile (everything except bridges)? */
 export const isSolid = (content: Content, b: { type: string }) => !bridges(content).has(b.type);
 
-const solidCache = new WeakMap<PlacedBuilding[], Map<number, Uint8Array>>();
+const solidCache = new WeakMap<PlacedBuilding[], Map<string, Uint8Array>>();
 
-/** Tiles taken by solid buildings (1 = blocked). Cached per buildings list. */
+/**
+ * Tiles taken by solid buildings and the Bahay ng Datu's footprint (1 = blocked). Cached per
+ * buildings list and footprint. The plaza tile is under the house too: people walk out from
+ * it (it is where every way starts) but never stand on it.
+ */
 export function solidTiles(state: GameState, content: Content): Uint8Array {
   const W = state.map.width;
   let byW = solidCache.get(state.buildings);
   if (!byW) solidCache.set(state.buildings, (byW = new Map()));
-  const key = W * 100000 + state.map.height;
+  const house = houseFootprint(state, content);
+  const key = `${W}x${state.map.height}:${house.map((p) => `${p.x},${p.y}`).join(";")}`;
   let s = byW.get(key);
   if (!s) {
     s = new Uint8Array(W * state.map.height);
     for (const b of state.buildings) if (isSolid(content, b) && inBounds(state.map, b.x, b.y)) s[b.y * W + b.x] = 1;
+    for (const p of house) if (inBounds(state.map, p.x, p.y)) s[p.y * W + p.x] = 1;
     byW.set(key, s);
   }
   return s;
 }
+
+/** Is tile index j the plaza (under the house: reachable as the root, but no one's doorway)? */
+const isPlazaIndex = (map: MapState, j: number) => j === map.plaza.y * map.width + map.plaza.x;
+
+/**
+ * Tiles taken by solid buildings and the plaza tile alone (the one-tile house), whatever the
+ * house's level: what plaza.ts compares the big footprint against before the house may grow.
+ */
+export function buildingSolid(state: GameState, content: Content): Uint8Array {
+  const W = state.map.width;
+  const s = new Uint8Array(W * state.map.height);
+  for (const b of state.buildings) if (isSolid(content, b) && inBounds(state.map, b.x, b.y)) s[b.y * W + b.x] = 1;
+  if (inBounds(state.map, state.map.plaza.x, state.map.plaza.y)) s[state.map.plaza.y * W + state.map.plaza.x] = 1;
+  return s;
+}
+
+/** Tiles reachable on foot from the plaza with `solid` in the way (1 = yes). */
+export const reachWith = (map: MapState, solid: Uint8Array) => floodWalk(map, solid);
+
+/** Does a building at (x, y) have a reachable side tile other than the plaza? */
+export const hasReachableSide = (map: MapState, reach: Uint8Array, x: number, y: number) => bestDoor(map, reach, x, y) !== null;
 
 /** Flood fill from the plaza over foot tiles not blocked by `solid`. */
 function floodWalk(map: MapState, solid: Uint8Array): Uint8Array {
@@ -107,7 +135,7 @@ function bestDoor(map: MapState, reach: Uint8Array, x: number, y: number, skip =
     const ny = y + SIDES[k][1];
     if (nx < 0 || ny < 0 || nx >= W || ny >= map.height) continue;
     const j = ny * W + nx;
-    if (j === skip || !reach[j]) continue;
+    if (j === skip || !reach[j] || isPlazaIndex(map, j)) continue;
     const daan = map.tiles[j] === TILE_CODE.daan ? 0 : 1;
     const score = daan * 1e6 + (Math.abs(nx - map.plaza.x) + Math.abs(ny - map.plaza.y)) * 10 + k;
     if (score < bestScore) [bx, by, bestScore] = [nx, ny, score];
@@ -305,7 +333,7 @@ function sidesOf(map: MapState, reach: Uint8Array, b: { x: number; y: number }):
     const ny = b.y + dy;
     if (nx < 0 || ny < 0 || nx >= map.width || ny >= map.height) continue;
     const j = ny * map.width + nx;
-    if (reach[j]) out.push(j);
+    if (reach[j] && !isPlazaIndex(map, j)) out.push(j);
   }
   return out;
 }
@@ -320,7 +348,7 @@ function buildingIndex(state: GameState): Map<number, PlacedBuilding> {
 /** Would a new building at (x, y) have a way in (a reachable side tile once it stands)? */
 export function wouldHaveEntrance(state: GameState, content: Content, x: number, y: number): boolean {
   const reach = walkReach(state, content);
-  return SIDES.some(([dx, dy]) => inBounds(state.map, x + dx, y + dy) && reach[(y + dy) * state.map.width + x + dx] === 1);
+  return SIDES.some(([dx, dy]) => inBounds(state.map, x + dx, y + dy) && reach[(y + dy) * state.map.width + x + dx] === 1 && !isPlazaIndex(state.map, (y + dy) * state.map.width + x + dx));
 }
 
 /**

@@ -50,6 +50,8 @@ import { hasDatuUnlock } from "../engine/datu";
 import { alliedDefenders } from "../engine/region";
 import { raidLanding } from "../engine/border";
 import { solidTiles } from "../engine/doors";
+import { houseFront } from "../engine/plaza";
+import { datuHouseBox, datuHouseImage, eraseImage, houseStyleFor } from "./datuHouseArt";
 
 /** A battle at the Kuta being shown right now (see App): who won, and when it ends (ms). */
 export interface Clash {
@@ -459,7 +461,7 @@ export function VillagerLayer(props: {
       if (k < MAX_SPRITES) sprites.current.delete(id);
       if (died > 0) {
         died--;
-        markers.current.push({ p: from ? { ...from.p } : { x: state.map.plaza.x + 0.5, y: state.map.plaza.y + 0.8 }, until: performance.now() + MARKER_MS });
+        markers.current.push({ p: from ? { ...from.p } : houseFront(state, content), until: performance.now() + MARKER_MS });
         continue;
       }
       if (!goingAway || !from || leavers.current.length > 12) continue;
@@ -520,6 +522,8 @@ export function VillagerLayer(props: {
       const path = river.current.path;
       const now = performance.now();
       const plaza = s.map.plaza;
+      // In front of the Bahay ng Datu's doorway: where the datu stands and envoys come.
+      const front = houseFront(s, content);
       if (path.length > 2) {
         const offer = s.region?.offer ?? null;
         const offers = content.rules.diplomacy.offers;
@@ -783,7 +787,8 @@ export function VillagerLayer(props: {
         const stops: Point[] = [plaza, ...(fields.length ? [fields[0]] : []), ...(shrine ? [shrine] : []), plaza];
         const leg = Math.floor(t / 25) % stops.length;
         const stop = night ? plaza : stops[leg];
-        const to = { x: stop.x + 0.5, y: stop.y + (stop === plaza ? 0.95 : 0.7) };
+        // At the house: in front of its doorway, never on it (plaza.ts).
+        const to = stop === plaza ? front : { x: stop.x + 0.5, y: stop.y + 0.7 };
         const d0 = datu.current ?? { p: to, moving: false, stride: 0, walker: newWalker(to) };
         if (reducedMotion) {
           d0.p = to;
@@ -809,7 +814,7 @@ export function VillagerLayer(props: {
         const start = dockPoint(path, plaza);
         if (envoys.current?.key !== key) envoys.current = { key, walkers: [0, 1].map((i) => ({ p: { x: start.x + i * 0.2, y: start.y }, moving: true, stride: i, walker: newWalker({ x: start.x + i * 0.2, y: start.y }) })) };
         envoys.current.walkers.forEach((w, i) => {
-          const to = { x: plaza.x + 0.25 + i * 0.5, y: plaza.y + 1.1 };
+          const to = { x: front.x - 0.25 + i * 0.5, y: front.y };
           if (reducedMotion) w.p = to;
           else {
             w.walker = stepWalker({ ...w.walker, p: w.p }, to, s.map, SPEED.work, dt, roadSpeed, blocked);
@@ -878,6 +883,15 @@ export function VillagerLayer(props: {
       for (const key of decks) {
         const [x, y] = key.split(",").map(Number);
         drawn.push({ x: o.x + (x + 0.5) * T, y: o.y + (y + 0.5) * T, r: T, layer: 1, f: () => drawDeck(g, o.x + x * T, o.y + y * T, T, deckDirs.get(key)?.dir ?? "h") });
+      }
+      // The Bahay ng Datu stands in front of whoever is behind it: at its ground line, cut its
+      // shape out of everything drawn so far, so the house on the map shows through.
+      const house = datuHouseBox(s, content);
+      const houseImg = datuHouseImage(house.level, houseStyleFor(s, content));
+      if (houseImg) {
+        const hx = o.x + house.cx * T;
+        const hy = o.y + house.bottom * T;
+        drawn.push({ x: hx, y: o.y + house.ground * T, r: 0, f: () => eraseImage(g, houseImg, hx, hy, house.size * T) });
       }
       drawn.sort((a, b) => (a.layer ?? 2) - (b.layer ?? 2) || a.y - b.y);
       for (const d of drawn) d.f();

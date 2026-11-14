@@ -7,6 +7,7 @@ import type { GameState } from "../engine/game";
 import type { Expedition } from "../engine/expeditions";
 import { closestLandings } from "../engine/border";
 import { doorOf, solidTiles } from "../engine/doors";
+import { gatheringSpots, gatherSpot, houseFront } from "../engine/plaza";
 import { inBounds, type Point } from "../engine/map";
 import { isWalkable } from "../engine/paths";
 import { edgeTile, routeTo } from "./villagers";
@@ -180,13 +181,15 @@ function tradeScript(e: Expedition, village: GameState, content: Content, cap: n
   const sailEnd = lastT(boatIn);
   const dock = lastP(boatIn);
   const shore = landNear(village, dock, blocked);
+  const gathering = gatheringSpots(village, content);
   const n = Math.min(e.party.count, cap);
   const actors: Actor[] = [];
   let atDatu = sailEnd;
   let back = sailEnd;
   for (let i = 0; i < n; i++) {
-    // To the Bahay ng Datu at the plaza, along the Daan where there is one.
-    const spot = { x: plaza.x + 0.25 + (i % 3) * 0.25, y: plaza.y + 1.1 + Math.floor(i / 3) * 0.2 };
+    // To the Bahay ng Datu at the plaza, along the Daan where there is one: each to an open spot
+    // around the house (engine/plaza.ts), never on it; past the crowd's limit they wait further out.
+    const spot = gatherSpot(gathering, i, content.rules.plaza.gatherMax) ?? houseFront(village, content);
     const out = timed([dock, ...walkLine(village, shore, spot, blocked)], sailEnd + i * 0.3);
     const arrive = lastT(out);
     const home = timed([...walkLine(village, spot, shore, blocked), dock], arrive + PAUSE);

@@ -6,7 +6,8 @@
 // replanting cleared land. AI barangays don't track it. Pure and deterministic.
 import type { Content } from "./content";
 import { asCost, canAfford, type GameState } from "./game";
-import { buildingAt, isFootReachable, isPlaza, setTiles, tileAt, type MapState } from "./map";
+import { buildingAt, isFootReachable, setTiles, tileAt, type MapState } from "./map";
+import { isReserved } from "./plaza";
 import { addHistory } from "./people";
 import { rollAt } from "./rng";
 import { addFlag } from "./worship";
@@ -158,10 +159,10 @@ export function updatePranks(state: GameState, content: Content, t0: number, t1:
 // ---------- Replanting (Magtanim) ----------
 
 /** Can this tile be replanted: cleared land (not the plaza, not a path), empty, reachable, not already growing? */
-export function canReplant(state: GameState, x: number, y: number): boolean {
+export function canReplant(state: GameState, content: Content, x: number, y: number): boolean {
   return (
     tileAt(state.map, x, y) === "cleared" &&
-    !isPlaza(state.map, x, y) &&
+    !isReserved(state, content, x, y) &&
     !buildingAt(state, x, y) &&
     isFootReachable(state.map, x, y) &&
     !state.replanting.some((j) => j.x === x && j.y === y)
@@ -172,7 +173,7 @@ export function canReplant(state: GameState, x: number, y: number): boolean {
 export function replant(state: GameState, content: Content, x: number, y: number): GameState {
   const r = content.rules.forest.replant;
   const cost = asCost(r.cost);
-  if (!Number.isInteger(x) || !Number.isInteger(y) || !canReplant(state, x, y) || !canAfford(state, cost)) return state;
+  if (!Number.isInteger(x) || !Number.isInteger(y) || !canReplant(state, content, x, y) || !canAfford(state, cost)) return state;
   const resources = { ...state.resources };
   for (const k of Object.keys(cost) as (keyof typeof cost)[]) resources[k] -= cost[k];
   return { ...state, resources, replanting: [...state.replanting, { x, y, progress: 0, seconds: r.seconds }] };

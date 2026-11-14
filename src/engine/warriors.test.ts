@@ -14,7 +14,8 @@ const village = (patch: Partial<GameState> = {}) =>
   withState({
     villagers: 6,
     warriors: 4,
-    resources: { rice: 1000, wood: 1000, gold: 0 },
+    // Wood under the stockpile limit (stockpile.ts), so the camp's work shows in the rates.
+    resources: { rice: 1000, wood: 300, gold: 0 },
     buildings: [at("bahay-kubo", 5, 3), at("palayan", 1, 1), at("woodcutter-camp", 7, 1), at("kuta", 3, 6)],
     region: region(),
     ...patch,

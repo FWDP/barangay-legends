@@ -3,6 +3,7 @@
 // forest and bridging the river. Pure and deterministic, like the rest of the engine.
 import { curveFactor } from "./curve";
 import { closesPlaza, cutsOffLand, entrancesBlockedBy, wouldHaveEntrance } from "./doors";
+import { isReserved } from "./plaza";
 import type { BuildingDef, Content, GroveBlessing, Resource } from "./content";
 import type { GameState, PlacedBuilding } from "./game";
 import { rollAt, Rng } from "./rng";
@@ -320,9 +321,9 @@ export function isConnected(map: MapState, x: number, y: number): boolean {
   });
 }
 
-/** Can a Daan go here? Cleared land the barangay can reach, free of buildings, not the plaza. */
-export function canPlaceRoad(state: GameState, x: number, y: number): boolean {
-  return tileAt(state.map, x, y) === "cleared" && !isPlaza(state.map, x, y) && !buildingAt(state, x, y) && isReachable(state.map, x, y) && !state.replanting.some((j) => j.x === x && j.y === y);
+/** Can a Daan go here? Cleared land the barangay can reach, free of buildings, not kept for the Bahay ng Datu (plaza.ts). */
+export function canPlaceRoad(state: GameState, content: Content, x: number, y: number): boolean {
+  return tileAt(state.map, x, y) === "cleared" && !isReserved(state, content, x, y) && !buildingAt(state, x, y) && isReachable(state.map, x, y) && !state.replanting.some((j) => j.x === x && j.y === y);
 }
 
 /** Is this building available yet (from the start, or at a villager count)? */
@@ -440,7 +441,7 @@ export function canPlace(state: GameState, _content: Content, def: BuildingDef, 
     const { building, radius } = def.requiresNear;
     if (!state.buildings.some((b) => b.type === building && !b.damaged && (b.x - x) ** 2 + (b.y - y) ** 2 <= radius * radius)) return false;
   }
-  if (tileAt(state.map, x, y) !== "cleared" || isPlaza(state.map, x, y) || !isReachable(state.map, x, y)) return false;
+  if (tileAt(state.map, x, y) !== "cleared" || isReserved(state, _content, x, y) || !isReachable(state.map, x, y)) return false;
   // Never shut every way into a building already there, nor the plaza in.
   return !closesPlaza(state, _content, x, y) && entrancesBlockedBy(state, _content, x, y).length === 0;
 }

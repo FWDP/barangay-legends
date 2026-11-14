@@ -3,6 +3,9 @@ import { isNightAt } from "../engine/daynight";
 import { newGame } from "../engine/game";
 import { tileAt } from "../engine/map";
 import { at, content, mapFrom, withState } from "../engine/testUtils";
+import { solidTiles } from "../engine/doors";
+import { houseFootprint } from "../engine/plaza";
+import type { GameState } from "../engine/game";
 import { destination, goal, edgeTile, exitPoint, MAX_SPRITES, newWalker, planVillagers, SPEED, stepWalker, walk } from "./villagers";
 
 const fed = { resources: { rice: 100, wood: 0, gold: 0 } };
@@ -36,11 +39,13 @@ describe("villager sprites", () => {
     expect(called.find((p) => p.role === "warrior")!.place).toMatchObject({ x: 2, y: 2 });
   });
 
-  it("houses villagers in their Bahay Kubo, the rest by the plaza", () => {
+  it("houses villagers in their Bahay Kubo, the rest about their gathering spot by the house (never on it)", () => {
     const s = withState({ ...fed, villagers: 4 });
     const plans = planVillagers(s, content);
     expect(plans[0].home).toMatchObject({ x: 5, y: 3 });
-    expect(plans[3].home).toEqual(s.map.plaza);
+    const g = plans[3].gather!;
+    expect(plans[3].home).toEqual({ x: Math.floor(g.x), y: Math.floor(g.y) });
+    expect(plans[3].home).not.toEqual(s.map.plaza);
   });
 
   it("works at the doorway by day, goes home and inside at night, except warriors on watch", () => {
@@ -151,6 +156,37 @@ describe("walking along paths", () => {
     for (const plan of planVillagers(s, content)) {
       const d = destination(plan, 0, true, s.map.plaza, false);
       expect(tileAt(s.map, Math.floor(d.x), Math.floor(d.y))).not.toBe("river");
+    }
+  });
+
+  it("never puts anyone inside a building's or the Bahay ng Datu's footprint: day, night, hungry, called to arms", () => {
+    const region = newGame(content, 5).region!;
+    const raid = (st: GameState): GameState => ({ ...st, region: { ...region, incomingRaid: { from: "batong-buhay", strikeAt: st.time + 60 } } });
+    const houses = [at("bahay-kubo", 2, 2), at("bahay-kubo", 3, 2), at("palayan", 8, 7), at("woodcutter-camp", 1, 6), at("bahay-kubo", 4, 5)];
+    const states = [
+      // The big house, more villagers than homes (the rest stay by the house), no Kuta (warriors muster at the house).
+      withState({ ...fed, datuLevel: 5, villagers: 40, warriors: 4, buildings: houses }),
+      raid(withState({ ...fed, datuLevel: 5, villagers: 40, warriors: 4, buildings: houses })),
+      // An old save keeping the one-tile house at level 4.
+      withState({ ...fed, datuLevel: 4, villagers: 30, buildings: [...houses, at("bahay-kubo", 6, 4)] }),
+      withState({ ...fed, datuLevel: 1, villagers: 12, buildings: houses }),
+    ];
+    for (const s of states) {
+      const solid = solidTiles(s, content);
+      const fp = houseFootprint(s, content);
+      for (const p of fp) expect(solid[p.y * s.map.width + p.x]).toBe(1);
+      const plans = planVillagers(s, content);
+      expect(plans.length).toBeGreaterThan(10);
+      for (const hungry of [false, true]) {
+        for (const night of [false, true]) {
+          for (let t = 0; t < 160; t += 7) {
+            for (const plan of plans) {
+              const g = goal(plan, t, night, s.map.plaza, hungry);
+              expect(solid[Math.floor(g.p.y) * s.map.width + Math.floor(g.p.x)]).toBe(0);
+            }
+          }
+        }
+      }
     }
   });
 });

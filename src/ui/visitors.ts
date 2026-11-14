@@ -141,7 +141,8 @@ export function bandAt(landing: Point, count: number): Point[] {
 /**
  * Where winning raiders go for loot: the nearest building of the first type in
  * rules.diplomacy.aiRaid.lootTargets the barangay has (the list may name buildings that don't
- * exist yet; they're skipped), or the plaza.
+ * exist yet; they're skipped), or the Bahay ng Datu's doorstep (the tile in front of it, never
+ * the house itself).
  */
 export function lootTarget(state: GameState, content: Content, from: Point): Point {
   for (const type of content.rules.diplomacy.aiRaid.lootTargets) {
@@ -149,7 +150,7 @@ export function lootTarget(state: GameState, content: Content, from: Point): Poi
     if (found.length === 0) continue;
     return found.reduce((a, b) => (Math.hypot(b.x - from.x, b.y - from.y) < Math.hypot(a.x - from.x, a.y - from.y) ? b : a));
   }
-  return state.map.plaza;
+  return { x: state.map.plaza.x, y: state.map.plaza.y + 1 };
 }
 
 /** The raiders' walk from the landing to their loot over land (A*), through tile centres. */

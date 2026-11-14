@@ -134,7 +134,7 @@ describe("old saves keep their old rule until the map changes", () => {
     // Gathering doesn't change the map: still the old rule.
     expect(apply(s, calm, { type: "gather", resource: "rice" }).legacyReach).toBe(true);
     // Laying a path does: now the new rule applies.
-    const after = apply(s, calm, { type: "road", tiles: [{ x: 2, y: 2 }] });
+    const after = apply(s, calm, { type: "road", tiles: [{ x: 3, y: 2 }] });
     expect(after.legacyReach).toBe(false);
     expect(rates(after, calm).produced.wood).toBe(0);
   });
@@ -150,20 +150,25 @@ describe("Daan", () => {
 
   it("is laid on cleared land only, paid per tile", () => {
     const s = base();
-    const after = apply(s, calm, { type: "road", tiles: [{ x: 2, y: 2 }, { x: 3, y: 2 }, { x: 4, y: 2 }, { x: 1, y: 2 }, { x: 0, y: 0 }, { x: 3, y: 2 }] });
+    const after = apply(s, calm, { type: "road", tiles: [{ x: 2, y: 2 }, { x: 3, y: 2 }, { x: 3, y: 3 }, { x: 4, y: 2 }, { x: 1, y: 2 }, { x: 0, y: 0 }, { x: 3, y: 2 }] });
     expect(tileAt(after.map, 2, 2)).toBe("daan");
+    // Once kept for the big Bahay ng Datu (plaza.ts), no Daan there.
+    const kept = apply({ ...s, datuLevel: calm.rules.plaza.reserveFromLevel }, calm, { type: "road", tiles: [{ x: 2, y: 2 }] });
+    expect(tileAt(kept.map, 2, 2)).toBe("cleared");
     expect(tileAt(after.map, 3, 2)).toBe("daan");
+    expect(tileAt(after.map, 3, 3)).toBe("daan");
     expect(tileAt(after.map, 4, 2)).toBe("bridge"); // not on the bridge
     expect(tileAt(after.map, 1, 2)).toBe("cleared"); // not on the plaza
     expect(tileAt(after.map, 0, 0)).toBe("cleared"); // not under a building
-    expect(after.resources.wood).toBe(s.resources.wood - 2 * wood());
+    expect(after.resources.wood).toBe(s.resources.wood - 3 * wood());
     expect(apply(s, calm, { type: "road", tiles: [{ x: 4, y: 0 }] })).toBe(s); // not on water
   });
 
   it("stops when the wood runs out", () => {
     const s = { ...base(), resources: { rice: 100, wood: wood() * 2, gold: 0 } };
-    const after = apply(s, calm, { type: "road", tiles: [{ x: 0, y: 1 }, { x: 1, y: 1 }, { x: 2, y: 1 }] });
-    expect(tileAt(after.map, 2, 1)).toBe("cleared");
+    const after = apply(s, calm, { type: "road", tiles: [{ x: 0, y: 1 }, { x: 0, y: 2 }, { x: 0, y: 3 }] });
+    expect(tileAt(after.map, 0, 2)).toBe("daan");
+    expect(tileAt(after.map, 0, 3)).toBe("cleared");
     expect(after.resources.wood).toBe(0);
   });
 

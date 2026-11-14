@@ -62,7 +62,8 @@ import { dockPoint, riverPath, SAIL_SECONDS, waitIndex } from "./visitors";
 import { isClear, labelSize, placeLabel, type Rect } from "./labels";
 import { isPranked } from "../engine/forest";
 import { sarimanokAt } from "../engine/worship";
-import { datuHouseUrl, houseStyleFor, type HouseStyle } from "./datuHouseArt";
+import { datuHouseBox, datuHouseUrl, houseStyleFor, type HouseStyle } from "./datuHouseArt";
+import { firePit, hasFirePit, houseFootprint } from "../engine/plaza";
 import { buildingArtUrl, mapIcon } from "./buildingArt";
 
 const INCOME_EVERY_MS = 3000;
@@ -449,7 +450,7 @@ export function BarangayMap(props: {
     if (tileAt(map, t.x, t.y) === null) return;
     if (road) {
       if (tileAt(map, t.x, t.y) === "daan") road.onRemove(t.x, t.y);
-      else if (canPlaceRoad(state, t.x, t.y)) road.onLay([t]);
+      else if (canPlaceRoad(state, content, t.x, t.y)) road.onLay([t]);
       return;
     }
     if (placing) {
@@ -574,7 +575,7 @@ export function BarangayMap(props: {
     }
     if (pointers.current.size === 0 && g?.painting) {
       // A drag lays the whole line; a click is a normal tap (lay or take up one tile).
-      if (e.type === "pointerup" && g.moved && road) road.onLay(paint.filter((t) => canPlaceRoad(state, t.x, t.y)));
+      if (e.type === "pointerup" && g.moved && road) road.onLay(paint.filter((t) => canPlaceRoad(state, content, t.x, t.y)));
       else if (e.type === "pointerup") {
         const p = local(e);
         tapAt(p.x, p.y, e.clientX, e.clientY);
@@ -720,6 +721,10 @@ export function BarangayMap(props: {
   const cells: ReactNode[] = [];
   if (cam && range) {
     const jobs = new Map(state.clearing.map((j) => [`${j.x},${j.y}`, j]));
+    // The Bahay ng Datu: its footprint (engine/plaza.ts), where it is drawn and its fire pit.
+    const houseTiles = new Set(houseFootprint(state, content).map((p) => `${p.x},${p.y}`));
+    const house = datuHouseBox(state, content);
+    const fire = hasFirePit(state, content) ? firePit(state, content) : null;
     const working = new Set(activeJobs(state, content).map((j) => `${j.x},${j.y}`));
     const picked = new Map(selection.map((t, i) => [`${t.x},${t.y}`, i]));
     const r = dragArea;
@@ -735,7 +740,7 @@ export function BarangayMap(props: {
         const hovered = hover?.x === x && hover?.y === y;
         const clearable = !placing && !road && !visit && isClearable(map, x, y);
         const painted = paint.some((t) => t.x === x && t.y === y);
-        const roadTarget = road ? (tile === "daan" || canPlaceRoad(state, x, y) ? 0 : "blocked") : null;
+        const roadTarget = road ? (tile === "daan" || canPlaceRoad(state, content, x, y) ? 0 : "blocked") : null;
         cells.push(
           <Cell
             key={key}
@@ -743,6 +748,11 @@ export function BarangayMap(props: {
             y={y}
             tile={tile}
             plaza={isPlaza(map, x, y)}
+            underHouse={!isPlaza(map, x, y) && houseTiles.has(key)}
+            houseAt={isPlaza(map, x, y) ? house.cx - x : undefined}
+            houseSize={isPlaza(map, x, y) ? house.size : undefined}
+            fireX={isPlaza(map, x, y) && fire ? fire.x - x : undefined}
+            fireY={isPlaza(map, x, y) && fire ? fire.y - y : undefined}
             beach={tile !== "sea" && tile !== "river" && tile !== "bridge" && NEIGHBOURS.some(([dx, dy]) => tileAt(map, x + dx, y + dy) === "sea")}
             datuLevel={isPlaza(map, x, y) ? state.datuLevel : undefined}
             houseStyle={isPlaza(map, x, y) ? houseStyleFor(state, content) : undefined}
@@ -750,7 +760,7 @@ export function BarangayMap(props: {
             fresh={building ? fresh.has(building.key) : false}
             lifted={moveFrom?.x === x && moveFrom?.y === y}
             target={roadTarget ?? (placement ? (placement.has(key) ? totalBonus(placement.get(key)!) : "blocked") : null)}
-            pathPreview={painted && canPlaceRoad(state, x, y)}
+            pathPreview={painted && canPlaceRoad(state, content, x, y)}
             ghost={
               placing && hovered && placement?.has(key)
                 ? { def: placing, ...placement.get(key)!, groveName: grove?.name ?? "" }
@@ -779,7 +789,7 @@ export function BarangayMap(props: {
                 : road && hovered
                 ? tile === "daan"
                   ? "Tap to take up the path (free)"
-                  : canPlaceRoad(state, x, y)
+                  : canPlaceRoad(state, content, x, y)
                     ? `🛤️ Daan · ${road.costText}`
                     : null
                 : clearable && hovered
@@ -1057,6 +1067,14 @@ const Cell = memo(function Cell(props: {
   /** The Bahay ng Datu's level and style (drawn on the plaza). */
   datuLevel?: number;
   houseStyle?: HouseStyle;
+  /** On the plaza: the house's centre (tiles right of this tile's left edge) and size (tiles), see datuHouseArt.datuHouseBox. */
+  houseAt?: number;
+  houseSize?: number;
+  /** On the plaza: the fire pit, in tiles from this tile's top-left corner (none if built over). */
+  fireX?: number;
+  fireY?: number;
+  /** Under the big Bahay ng Datu (not the plaza tile itself, which draws it). */
+  underHouse?: boolean;
   x: number;
   y: number;
   tile: Tile;
@@ -1099,7 +1117,7 @@ const Cell = memo(function Cell(props: {
   /** Land by the sea: drawn as sandy beach. */
   beach?: boolean;
 }) {
-  const { x, y, tile, plaza, datuLevel, houseStyle, building, fresh, lifted, target, ghost, glow, spirit, onSpiritKey, clearable, hint, progress, onActivate, pathPreview, waiting, picked, guard, deck, deckPreview, cantCross, beach, warn, shore, shoreText } = props;
+  const { x, y, tile, plaza, datuLevel, houseStyle, houseAt, houseSize, fireX, fireY, underHouse, building, fresh, lifted, target, ghost, glow, spirit, onSpiritKey, clearable, hint, progress, onActivate, pathPreview, waiting, picked, guard, deck, deckPreview, cantCross, beach, warn, shore, shoreText } = props;
   const h = hash(x, y);
   const valid = typeof target === "number";
   const paddy = building?.def.produces?.rice;
@@ -1149,12 +1167,12 @@ const Cell = memo(function Cell(props: {
           🌳
         </span>
       )}
-      {tile === "cleared" && !building && !plaza && h < 14 && (
+      {tile === "cleared" && !building && !plaza && !underHouse && h < 14 && (
         <span aria-hidden className="pointer-events-none text-[0.4em] leading-none opacity-60">
           🌱
         </span>
       )}
-      {plaza && <DatuHouse level={datuLevel ?? 1} style={houseStyle ?? "lowland"} />}
+      {plaza && <DatuHouse level={datuLevel ?? 1} style={houseStyle ?? "lowland"} at={houseAt ?? 0.5} size={houseSize ?? 1.16} fire={fireX !== undefined && fireY !== undefined ? { x: fireX, y: fireY } : null} />}
       {clearable && progress === null && (
         <div aria-hidden className="pointer-events-none absolute inset-[4%] rounded-md border border-dashed border-lime-200/40" />
       )}
@@ -1246,31 +1264,34 @@ function ClearingProgress({ progress, waiting }: { progress: number; waiting: bo
  * The plaza: the Bahay ng Datu, a larger raised house at its center (bigger with each level),
  * with the fire pit beside it, where the barangay gathers. Tap it for the house.
  */
-function DatuHouse({ level, style }: { level: number; style: HouseStyle }) {
-  // Bigger with each level; its ground line sits on the tile's bottom edge.
-  const size = 105 + level * 11;
+function DatuHouse({ level, style, at, size: tiles, fire }: { level: number; style: HouseStyle; at: number; size: number; fire: Point | null }) {
+  // Bigger with each level, centred on its footprint (the big house spans more than this tile);
+  // its ground line sits on the footprint's front edge, this tile's bottom.
+  const size = tiles * 100;
   return (
     <div title={`Bahay ng Datu (level ${level}) and the plaza's fire`} className="pointer-events-none absolute inset-0">
       <img
         src={datuHouseUrl(level, style)}
         alt=""
         draggable={false}
-        className="absolute left-1/2 max-w-none -translate-x-1/2 drop-shadow-[0_2px_1px_rgb(0_0_0_/_0.35)]"
-        style={{ width: `${size}%`, height: `${size}%`, bottom: "-4%" }}
+        className="absolute max-w-none -translate-x-1/2 drop-shadow-[0_2px_1px_rgb(0_0_0_/_0.35)]"
+        style={{ left: `${at * 100}%`, width: `${size}%`, height: `${size}%`, bottom: "-4%" }}
       />
       {/* The level, on the ground below the house (never over it). */}
       {level > 1 && (
-        <span aria-hidden className="absolute bottom-[-24%] left-1/2 -translate-x-1/2 rounded-full border-[0.03em] border-amber-900 bg-amber-300 px-[0.2em] text-[0.2em] leading-tight font-bold text-amber-950 shadow">
+        <span aria-hidden style={{ left: `${at * 100}%` }} className="absolute bottom-[-24%] -translate-x-1/2 rounded-full border-[0.03em] border-amber-900 bg-amber-300 px-[0.2em] text-[0.2em] leading-tight font-bold text-amber-950 shadow">
           Lv {level}
         </span>
       )}
-      <span
-        aria-hidden
-        className="absolute bottom-[-8%] flex size-[0.42em] items-center justify-center rounded-full border-[0.05em] border-dotted border-stone-500 bg-amber-200/80 shadow-inner"
-        style={{ right: `${-14 - level * 6}%` }}
-      >
-        <span className="text-[0.26em] leading-none">🔥</span>
-      </span>
+      {fire && (
+        <span
+          aria-hidden
+          className="absolute flex size-[0.42em] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border-[0.05em] border-dotted border-stone-500 bg-amber-200/80 shadow-inner"
+          style={{ left: `${fire.x * 100}%`, top: `${fire.y * 100}%` }}
+        >
+          <span className="text-[0.26em] leading-none">🔥</span>
+        </span>
+      )}
     </div>
   );
 }
