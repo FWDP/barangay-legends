@@ -10,6 +10,7 @@ import { homeWarriors } from "../engine/region";
 import { doorOf, isSolid } from "../engine/doors";
 import type { NamedVillager } from "../engine/people";
 import { gatheringSpots, gatherSpot } from "../engine/plaza";
+import { healerStays } from "../engine/healing";
 
 /** Never draw more sprites than this, however big the barangay grows. Night comes from engine/daynight.ts. */
 export const MAX_SPRITES = 60;
@@ -80,8 +81,8 @@ export function planVillagers(state: GameState, content: Content, cap = MAX_SPRI
       for (let k = 0; k < content.rules.clearing.workers; k++) roles.push({ role: "clearing", place: job });
     }
   }
-  const healer = state.buildings.find((b) => defs.get(b.type)?.heals && !b.damaged) ?? null;
-  for (let k = 0; k < state.sick.length; k++) roles.push({ role: "sick", place: healer });
+  // The sick: a hut is chosen for them below, once their homes are known (healing.ts).
+  for (let k = 0; k < state.sick.length; k++) roles.push({ role: "sick", place: null });
   const forts = state.buildings.filter((b) => (defs.get(b.type)?.defense ?? 0) > 0 && !b.damaged);
   // Part-time warriors: between raids they're among the workers above. Called to arms (a raid
   // is coming) they leave work and go to meet it.
@@ -117,7 +118,37 @@ export function planVillagers(state: GameState, content: Content, cap = MAX_SPRI
     const onWatch = r.role === "work" && watching < watchers ? forts[watching++ % forts.length] : null;
     plans.push({ id: j, role: r.role, home, place: r.place, homeDoor: door(homes[i] ? home : null), placeDoor: r.role === "clearing" ? null : door(r.place), watch: onWatch ? door(onWatch) ?? onWatch : null, gather });
   }
+  sendSickInside(plans, state, content, door);
   return plans;
+}
+
+/**
+ * The sick go into a healer's hut: as many sprites as the share of the sick who are inside a hut
+ * (healing.ts), each to the nearest hut from their home that still has room for its share. The
+ * rest have no place: they wait inside their own homes.
+ */
+function sendSickInside(plans: VillagerPlan[], state: GameState, content: Content, door: (p: Point | null) => Point | null): void {
+  const sick = plans.filter((p) => p.role === "sick");
+  if (sick.length === 0 || state.sick.length === 0) return;
+  const stays = healerStays(state, content).filter((h) => h.count > 0);
+  const inside = stays.reduce((n, h) => n + h.count, 0);
+  const share = sick.length / state.sick.length;
+  const room = stays.map((h) => Math.ceil(h.count * share));
+  let budget = Math.round(inside * share);
+  for (const plan of sick) {
+    if (budget <= 0) break;
+    let best = -1;
+    let bestD = Infinity;
+    stays.forEach((h, k) => {
+      const d = Math.abs(h.hut.x - plan.home.x) + Math.abs(h.hut.y - plan.home.y);
+      if (room[k] > 0 && d < bestD) [best, bestD] = [k, d];
+    });
+    if (best < 0) break;
+    room[best]--;
+    budget--;
+    plan.place = { x: stays[best].hut.x, y: stays[best].hut.y };
+    plan.placeDoor = door(plan.place);
+  }
 }
 
 /** A spot just in front of a doorway, leaning toward the building (people go in here). */
@@ -148,7 +179,8 @@ export function goal(plan: VillagerPlan, t: number, night: boolean, plaza: Point
     case "warrior":
       return { p: plan.place ? at(plan.place, plan.placeDoor, 0.35) : gatherAt(plan, plaza, o), inside: false };
     case "sick":
-      return plan.place ? { p: at(plan.place, plan.placeDoor, 0.4), inside: false } : { p: at(plan.home, plan.homeDoor, 0.3), inside: night && !!plan.homeDoor };
+      // Into the healer's hut, or (no room there) inside their own home; never a crowd outside.
+      return plan.place ? { p: at(plan.place, plan.placeDoor, 0.4), inside: !!plan.placeDoor } : { p: at(plan.home, plan.homeDoor, 0.3), inside: !!plan.homeDoor };
     case "clearing":
       return { p: destinationAt(plan.place!, o, 0.3), inside: false };
     case "work":
@@ -186,8 +218,8 @@ function destinationAt(p: Point, o: Point, dy: number): Point {
   return { x: inTile(p.x + 0.5 + o.x, p.x), y: inTile(p.y + 0.5 + dy + o.y, p.y) };
 }
 
-/** Does this villager carry a torch when walking in the dark? About one in four. */
-export const carriesTorch = (plan: VillagerPlan) => plan.id % 4 === 1;
+/** Does this villager carry a torch when walking in the dark? About one in four; never the sick. */
+export const carriesTorch = (plan: VillagerPlan) => plan.id % 4 === 1 && plan.role !== "sick";
 
 /** Where a villager is heading at time t (see goal). */
 export function destination(plan: VillagerPlan, t: number, night: boolean, plaza: Point, hungry: boolean): Point {

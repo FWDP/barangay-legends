@@ -156,6 +156,7 @@ export const GAME_TEXT = {
     wonCovered: [], won: [], lateUncovered: [], uncovered_: [], late: [], lostCovered: [], outnumbered: [],
   },
   stockpile: { label: [], tip: ["cap"], over: ["cap", "percent"], stop: ["stop"], stopLabel: [] },
+  healing: { inside: ["n"], others: ["n"], none: [], home: ["n"], badge: ["n"] },
   kamalig: { level: ["level", "max"], badge: ["level"], stores: ["amount"], upgrade: ["level"], top: [], cost: ["cost"], damaged: [], full: [], fullTip: [] },
   notices: {
     more: ["n"], moreLabel: ["n"], soon: [], list: [], dismiss: [], show: [], eclipse: [], tikbalang: [], offer: ["barangay"], choice: [], expedition: ["barangay"], sailing: [],

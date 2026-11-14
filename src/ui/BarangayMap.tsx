@@ -64,6 +64,7 @@ import { isPranked } from "../engine/forest";
 import { sarimanokAt } from "../engine/worship";
 import { datuHouseBox, datuHouseUrl, houseStyleFor, type HouseStyle } from "./datuHouseArt";
 import { firePit, hasFirePit, houseFootprint } from "../engine/plaza";
+import { healerStays } from "../engine/healing";
 import { buildingArtUrl, mapIcon } from "./buildingArt";
 
 const INCOME_EVERY_MS = 3000;
@@ -105,6 +106,8 @@ interface BuildingInfo {
   repairText: string;
   /** A Libingan's look, from the barangay's tradition. */
   burialLook: "jars" | "longon";
+  /** A healer's hut: how many sick villagers rest inside (engine/healing.ts). */
+  inside: number;
 }
 
 export function BarangayMap(props: {
@@ -254,6 +257,7 @@ export function BarangayMap(props: {
     const defs = new Map(content.buildings.map((d) => [d.id, d]));
     const byTile = new Map<string, BuildingInfo>();
     const look = content.traditions.find((t) => t.id === state.tradition)?.burialLook ?? "jars";
+    const insideAt = new Map(healerStays(state, content).map((h) => [h.index, h.count]));
     state.buildings.forEach((b, i) => {
       const def = defs.get(b.type);
       if (!def) return;
@@ -271,10 +275,11 @@ export function BarangayMap(props: {
         burning: b.burningSince !== undefined,
         repairText: repair || "free",
         burialLook: look,
+        inside: insideAt.get(i) ?? 0,
       });
     });
     return byTile;
-  }, [state.buildings, map, content, state.legacyReach, state.clearing, state.villagers, state.sick.length, state.resources.rice > 0, state.tradition]);
+  }, [state.buildings, map, content, state.legacyReach, state.clearing, state.villagers, state.sick.length, state.named, state.resources.rice > 0, state.tradition]);
 
   // The scenic drift moves the view up to SCENIC_DRIFT tiles, so draw that much more around it.
   // Bridge decks: which way each bridge tile runs and where its banks are, so the whole bridge
@@ -1405,7 +1410,7 @@ function Building(props: {
   onActivate: (x: number, y: number, el: Element) => void;
 }) {
   const { x, y, info, fresh, lifted, onActivate } = props;
-  const { def, bonus, damaged, burning, repairText, connected, noPath, paused, lent, burialLook, level } = info;
+  const { def, bonus, damaged, burning, repairText, connected, noPath, paused, lent, burialLook, level, inside } = info;
   // Decided once, at mount: only buildings that were just built bounce in.
   const [bounce] = useState(fresh);
   const label = burning
@@ -1501,6 +1506,15 @@ function Building(props: {
       {bonus > 0 && !damaged && (
         <span aria-hidden className="pointer-events-none absolute top-0 right-0.5 text-[0.3em] leading-none">
           ✨
+        </span>
+      )}
+      {/* A healer's hut: how many sick rest inside (tap the hut for their names). */}
+      {inside > 0 && !damaged && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute top-0 right-0 flex items-center gap-[0.05em] rounded-full border-[0.03em] border-emerald-950/40 bg-emerald-50 px-[0.18em] text-[0.24em] leading-tight font-bold text-emerald-900 shadow-sm"
+        >
+          🌿{inside}
         </span>
       )}
       {/* A raised building's level, on the ground below it (like the Bahay ng Datu's). */}

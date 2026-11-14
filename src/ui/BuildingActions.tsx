@@ -1,6 +1,7 @@
 // Changing your mind about a building: the menu on a placed building (Move, Demolish), the
 // demolish confirmation with its warnings, and the short-lived Undo button after building.
 import { ART_LORE, buildingArtUrl } from "./buildingArt";
+import { healerStays, sickPlaces } from "../engine/healing";
 import { boatCap, boatCost } from "../engine/sea";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Content } from "../engine/content";
@@ -109,6 +110,21 @@ export function BuildingMenu(props: {
         </span>
         {def.name}
       </p>
+      {def.heals && game && (() => {
+        // Who rests inside (healing.ts): named villagers first, then how many others.
+        const t = game.healing;
+        const stay = healerStays(state, content).find((h) => h.index === index);
+        const away = sickPlaces(state, content).home;
+        if (!stay || stay.count === 0) return <p className="px-1 pb-1.5 text-xs text-stone-600">{t.none[lang]}</p>;
+        const others = stay.count - stay.named.length;
+        return (
+          <div className="px-1 pb-1.5 text-xs text-stone-700">
+            <p className="font-semibold text-emerald-900">{fill(t.inside[lang], { n: stay.count })}</p>
+            {stay.named.length > 0 && <p>{stay.named.map((v) => v.name).join(", ")}{others > 0 ? ` ${fill(t.others[lang], { n: others })}` : ""}</p>}
+            {away > 0 && <p className="mt-0.5 text-stone-500">{fill(t.home[lang], { n: away })}</p>}
+          </div>
+        );
+      })()}
       {slots > 0 && (
         <p className="px-1 pb-1.5 text-xs text-stone-600">
           👥 {working} of {slots} workers

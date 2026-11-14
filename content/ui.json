@@ -1491,5 +1491,27 @@
       "en": "full",
       "fil": "puno"
     }
+  },
+  "healing": {
+    "inside": {
+      "en": "🌿 {n} sick resting inside",
+      "fil": "🌿 {n} maysakit na nagpapahinga sa loob"
+    },
+    "others": {
+      "en": "and {n} more",
+      "fil": "at {n} pa"
+    },
+    "none": {
+      "en": "🌿 No one is sick here now.",
+      "fil": "🌿 Walang maysakit dito ngayon."
+    },
+    "home": {
+      "en": "No room for {n} more: they rest at home.",
+      "fil": "Wala nang puwang para sa {n} pa: nagpapahinga sila sa bahay."
+    },
+    "badge": {
+      "en": "{n} sick inside",
+      "fil": "{n} maysakit sa loob"
+    }
   }
 }

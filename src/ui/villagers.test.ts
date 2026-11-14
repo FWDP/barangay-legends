@@ -6,7 +6,7 @@ import { at, content, mapFrom, withState } from "../engine/testUtils";
 import { solidTiles } from "../engine/doors";
 import { houseFootprint } from "../engine/plaza";
 import type { GameState } from "../engine/game";
-import { destination, goal, edgeTile, exitPoint, MAX_SPRITES, newWalker, planVillagers, SPEED, stepWalker, walk } from "./villagers";
+import { carriesTorch, destination, goal, edgeTile, exitPoint, MAX_SPRITES, newWalker, planVillagers, SPEED, stepWalker, walk } from "./villagers";
 
 const fed = { resources: { rice: 100, wood: 0, gold: 0 } };
 
@@ -188,5 +188,37 @@ describe("walking along paths", () => {
         }
       }
     }
+  });
+});
+
+describe("the sick", () => {
+  const sick = (n: number) => Array.from({ length: n }, () => 60);
+  const base = { resources: { rice: 100, wood: 0, gold: 0 }, buildings: [at("bahay-kubo", 2, 2), at("bahay-kubo", 3, 2), at("bahay-kubo", 2, 6), at("babaylan-hut", 7, 6)] };
+
+  it("walk to the hut and go inside (not drawn there), day and night, and carry no torch", () => {
+    const s = withState({ ...base, villagers: 8, sick: sick(3) });
+    const plans = planVillagers(s, content).filter((p) => p.role === "sick");
+    expect(plans).toHaveLength(3);
+    for (const p of plans) {
+      expect(p.place).toEqual({ x: 7, y: 6 });
+      for (const night of [false, true]) {
+        const g = goal(p, 0, night, s.map.plaza, false);
+        expect(g.inside).toBe(true);
+        // At the hut's doorway, not on the hut.
+        expect(Math.hypot(g.p.x - 7.5, g.p.y - 6.5)).toBeLessThan(1.5);
+        expect(Math.floor(g.p.x) === 7 && Math.floor(g.p.y) === 6).toBe(false);
+      }
+      expect(carriesTorch(p)).toBe(false);
+    }
+  });
+
+  it("beyond the hut's room, wait inside their homes instead of crowding outside", () => {
+    const cap = content.rules.healing.hutCapacity;
+    const s = withState({ ...base, villagers: 9, sick: sick(cap + 2) });
+    const plans = planVillagers(s, content).filter((p) => p.role === "sick");
+    expect(plans.filter((p) => p.place).length).toBe(cap);
+    const home = plans.filter((p) => !p.place);
+    expect(home).toHaveLength(2);
+    for (const p of home) expect(goal(p, 0, false, s.map.plaza, false).inside).toBe(!!p.homeDoor);
   });
 });
