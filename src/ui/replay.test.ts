@@ -8,6 +8,7 @@ import { solidTiles } from "../engine/doors";
 import type { Expedition } from "../engine/expeditions";
 import { acquainted, at, calm, withState } from "../engine/testUtils";
 import { buildReplay, sampleReplay, share } from "./replay";
+import { onLand } from "./villagers";
 
 function seedWhere(pred: (roll: number) => boolean): number {
   for (let seed = 1; ; seed++) if (pred(nextRandom(seed)[0])) return seed;
@@ -90,8 +91,19 @@ describe("expedition replays", () => {
     const { e, village } = raidOn(true);
     const script = buildReplay(e, village, calm);
     for (const a of script.actors) {
-      // Every point they walk through after stepping ashore (until boarding again) is on walkable ground.
-      for (const k of a.keys.slice(2, a.look === "warrior" ? -1 : undefined)) expect(isWalkable(village.map, Math.floor(k.p.x), Math.floor(k.p.y)) || a.look === "ally").toBe(true);
+      // Every point they walk through is on walkable ground: they step off the boat at the landing.
+      for (const k of a.keys) expect(isWalkable(village.map, Math.floor(k.p.x), Math.floor(k.p.y))).toBe(true);
+    }
+  });
+
+  it("never show anyone standing on water: people are on land or a Tulay at every moment, crews in their boats", () => {
+    const scripts = [raidOn(true), raidOn(false)].map(({ e, village }) => ({ village, script: buildReplay(e, village, calm) }));
+    const s = world();
+    const after = apply(s, calm, { type: "trade", neighbor: "malinaw", give: "rice" });
+    const village = generateVillage(calm, nb(s, "malinaw"), neighborDef(calm, "malinaw")!, s.time);
+    scripts.push({ village, script: buildReplay(after.expeditions.at(-1)!, village, calm) });
+    for (const { village: v, script } of scripts) {
+      for (const f of frames(script)) for (const p of f.people) expect(onLand(v.map, p.p), `${p.look} at ${p.p.x.toFixed(2)},${p.p.y.toFixed(2)}`).toBe(true);
     }
   });
 
@@ -135,7 +147,7 @@ describe("expedition replays", () => {
     const e = after.expeditions.at(-1)!;
     const before = JSON.stringify(after);
     const script = buildReplay(e, after, calm);
-    frames(script);
+    for (const f of frames(script)) for (const p of f.people) expect(onLand(after.map, p.p)).toBe(true);
     expect(JSON.stringify(after)).toBe(before);
     expect(script.actors.filter((a) => a.look === "raider").length).toBe(6);
     expect(script.actors.some((a) => a.look === "warrior")).toBe(true);

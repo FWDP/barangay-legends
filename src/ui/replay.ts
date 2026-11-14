@@ -10,7 +10,7 @@ import { doorOf, solidTiles } from "../engine/doors";
 import { gatheringSpots, gatherSpot, houseFront } from "../engine/plaza";
 import { inBounds, type Point } from "../engine/map";
 import { isWalkable } from "../engine/paths";
-import { edgeTile, routeTo } from "./villagers";
+import { edgeTile, keepOnLand, routeTo } from "./villagers";
 import { bandAt, dockIndex, dockPoint, lootTarget, reach, riverPath, sailToLanding } from "./visitors";
 
 export type ActorLook = "envoy" | "raider" | "warrior" | "defender" | "ally";
@@ -190,9 +190,11 @@ function tradeScript(e: Expedition, village: GameState, content: Content, cap: n
     // To the Bahay ng Datu at the plaza, along the Daan where there is one: each to an open spot
     // around the house (engine/plaza.ts), never on it; past the crowd's limit they wait further out.
     const spot = gatherSpot(gathering, i, content.rules.plaza.gatherMax) ?? houseFront(village, content);
-    const out = timed([dock, ...walkLine(village, shore, spot, blocked)], sailEnd + i * 0.3);
+    // They step off the bangka onto the bank and back on again: never on the water (the boat
+    // carries them; its crew is drawn inside it).
+    const out = timed(walkLine(village, shore, spot, blocked), sailEnd + i * 0.3);
     const arrive = lastT(out);
-    const home = timed([...walkLine(village, spot, shore, blocked), dock], arrive + PAUSE);
+    const home = timed(walkLine(village, spot, shore, blocked), arrive + PAUSE);
     atDatu = Math.max(atDatu, arrive);
     back = Math.max(back, lastT(home));
     actors.push({ id: i, look: "envoy", label: e.party.named[i]?.name, keys: [...out, ...home], start: sailEnd, end: lastT(home), bundleFrom: arrive + PAUSE * 0.5 });
@@ -241,7 +243,6 @@ function raidScript(e: Expedition, village: GameState, content: Content, cap: nu
   const line = waterIn(village, landing, false);
   const boatIn = timed(line, 0, 0, SAIL);
   const sailEnd = lastT(boatIn);
-  const beach = lastP(boatIn);
   const ashore = sailEnd + 1.2;
   // Defenders face the raiders from the village side of the landing.
   const toward = (() => {
@@ -269,7 +270,8 @@ function raidScript(e: Expedition, village: GameState, content: Content, cap: nu
 
   const actors: Actor[] = [];
   const band = bandAt(landing, Math.max(1, aN));
-  const attackers: Actor[] = band.slice(0, aN).map((p, i) => ({ id: i, look: attackLook, label: aLabels[i], keys: [{ t: sailEnd, p: beach }, { t: ashore, p }], start: sailEnd, end: 0 }));
+  // They step ashore at the landing (the boat is beached beside it) and spread out on it.
+  const attackers: Actor[] = band.slice(0, aN).map((p, i) => ({ id: i, look: attackLook, label: aLabels[i], keys: [{ t: sailEnd, p: L }, { t: ashore, p }], start: sailEnd, end: 0 }));
 
   // Defenders walk out from their Kuta (its doorway) to the landing; allies come from the edge or by sea.
   const defenders: Actor[] = [];
@@ -299,7 +301,9 @@ function raidScript(e: Expedition, village: GameState, content: Content, cap: nu
         const from = { x: L.x + (j % 2 ? 1.5 : -1.5), y: map.height + 1.5 };
         const shore = { x: spot.x, y: Math.min(map.height - 0.5, spot.y + 0.8) };
         if (i === 0) allyBoats.push({ kind: "bangka", keys: timed([from, shore], 0, 0, SAIL), start: 0, end: Infinity });
-        defenders.push({ id: 3000 + k, look: "ally", keys: [...timed([from, shore], 0, 0, SAIL), { t: SAIL + 0.8, p: spot }], start: SAIL, end: 0 });
+        // Rowed in (inside the boat), they step off onto the nearest land and walk to their place.
+        const bank = keepOnLand(map, shore);
+        defenders.push({ id: 3000 + k, look: "ally", keys: timed(walkLine(village, bank, spot, blocked), SAIL, WALK, 1.5), start: SAIL, end: 0 });
       } else {
         const edge = edgeTile(map, spot);
         const keys = timed(walkLine(village, { x: edge.x + 0.5, y: edge.y + 0.5 }, spot, blocked), 0, WALK, ashore);
@@ -320,7 +324,7 @@ function raidScript(e: Expedition, village: GameState, content: Content, cap: nu
   late.forEach((post, j) => {
     const start = fromPost(post.from);
     for (let i = 0; i < lateCounts[j]; i++, k++) {
-      const spot = { x: front.x + ((i % 3) - 1) * 0.3, y: front.y + 0.3 };
+      const spot = keepOnLand(map, { x: front.x + ((i % 3) - 1) * 0.3, y: front.y + 0.3 });
       const walk = walkLine(village, start, spot, blocked);
       const keys = timed(walk, clashStart, WALK, CLASH + 1.5);
       defenders.push({ id: 5000 + k, look: defendLook, keys, start: clashStart, end: 0 });
@@ -339,7 +343,8 @@ function raidScript(e: Expedition, village: GameState, content: Content, cap: nu
       const from = lastP(a.keys);
       const out = timed(walkLine(village, from, goal, blocked), clashEnd + i * 0.15);
       const arrive = lastT(out);
-      const home = timed([...walkLine(village, goal, L, blocked), beach], arrive + 1.2);
+      // Back to the landing with the loot, and into the boat.
+      const home = timed(walkLine(village, goal, L, blocked), arrive + 1.2);
       a.keys = [...a.keys, ...out, ...home];
       a.bundleFrom = arrive + 0.6;
       a.end = lastT(home);
@@ -347,7 +352,8 @@ function raidScript(e: Expedition, village: GameState, content: Content, cap: nu
     });
   } else {
     survivors.forEach((a) => {
-      const run = timed([lastP(a.keys), beach], clashEnd, 3.5);
+      // Back to the landing at a run, and into the boat.
+      const run = timed([lastP(a.keys), L], clashEnd, 3.5);
       a.keys = [...a.keys, ...run];
       a.end = lastT(run);
       back = Math.max(back, a.end);

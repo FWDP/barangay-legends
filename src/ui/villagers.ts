@@ -416,6 +416,47 @@ export function stepWalker(w: Walker, to: Point, map: MapState, speed: number, d
   return { p, route: rest, goal, map, blocked, moving: rest.length > 0 };
 }
 
+// ---------- No one walks on water ----------
+
+/**
+ * Can someone stand here: on land or a Tulay, never on open river or sea. Off the map counts as
+ * yes (newcomers walk in from beyond the edge and leavers walk out past it).
+ */
+export function onLand(map: MapState, p: Point): boolean {
+  const x = Math.floor(p.x);
+  const y = Math.floor(p.y);
+  if (x < 0 || y < 0 || x >= map.width || y >= map.height) return true;
+  return isWalkable(map, x, y);
+}
+
+/**
+ * The point itself if someone can stand there, otherwise the nearest spot on land or a Tulay
+ * (kept just inside that tile). The last guard before a person is drawn: every walk already
+ * follows the pathfinding routes, so this only catches a spread or offset that would step off a
+ * bank.
+ */
+export function keepOnLand(map: MapState, p: Point): Point {
+  if (onLand(map, p)) return p;
+  const cx = Math.floor(p.x);
+  const cy = Math.floor(p.y);
+  const inTile = (v: number, base: number) => Math.min(base + 0.9, Math.max(base + 0.1, v));
+  let best: Point | null = null;
+  let bestD = Infinity;
+  for (let r = 1; r <= Math.max(map.width, map.height); r++) {
+    for (let y = cy - r; y <= cy + r; y++) {
+      for (let x = cx - r; x <= cx + r; x++) {
+        if (Math.max(Math.abs(x - cx), Math.abs(y - cy)) !== r || !isWalkable(map, x, y)) continue;
+        const q = { x: inTile(p.x, x), y: inTile(p.y, y) };
+        const d = Math.hypot(q.x - p.x, q.y - p.y);
+        if (d < bestD) [best, bestD] = [q, d];
+      }
+    }
+    // Anything further out than the next ring can't be nearer than what was found.
+    if (best && bestD <= r) return best;
+  }
+  return best ?? p;
+}
+
 /** The nearest walkable tile on the map's edge: where newcomers come in and leavers go out. */
 export function edgeTile(map: MapState, from: Point): Point {
   let best: Point = { x: 0, y: 0 };

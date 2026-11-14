@@ -13,6 +13,8 @@ import {
   carriesTorch,
   goal,
   edgeTile,
+  keepOnLand,
+  onLand,
   exitPoint,
   MAX_SPRITES,
   namedSprites,
@@ -651,6 +653,10 @@ export function VillagerLayer(props: {
         const y = o.y + p.y * T;
         return x > -T && y > -T && x < v.w + T && y < v.h + T ? { x, y } : null;
       };
+      // Where a person is drawn: never on open river or sea (only on land or a Tulay; boat crews
+      // are drawn inside their boats by drawBoat). Walks follow the A* routes already; this is the
+      // last guard for spreads and offsets near a bank.
+      const person = (p: Point) => visible(keepOnLand(s.map, p));
 
       // Layers, bottom to top: boats (0), bridge decks over them (1), everything on land (2).
       const drawn: { x: number; y: number; r?: number; layer?: number; f: () => void }[] = [];
@@ -766,10 +772,10 @@ export function VillagerLayer(props: {
                 else raid.current = null;
               }
             } else {
-              // Beaten: they run for the boat and row away.
+              // Beaten: they run back to the landing and climb into the boat (drawn inside it), then row away.
               const run = since / FLEE_SECONDS;
               if (run < 1) {
-                const to = beached.p;
+                const to = { x: r.landing.x + 0.5, y: r.landing.y + 0.5 };
                 scene = { karakoa: beached, raiders: band.map((p) => ({ x: p.x + (to.x - p.x) * run, y: p.y + (to.y - p.y) * run })), look: "raider", sparks: null };
               } else if (run < 1 + LEAVE_SECONDS / FLEE_SECONDS) {
                 scene = { karakoa: along([...r.sail].reverse(), (since - FLEE_SECONDS) / LEAVE_SECONDS), raiders: [], look: "raider", sparks: null };
@@ -785,7 +791,7 @@ export function VillagerLayer(props: {
             drawn.push({ x: k.x, y: k.y, r: T * 1.1, layer: 0, f: () => drawBoat(g, k.x, k.y, T, heading, "karakoa", t) });
           }
           scene.raiders.forEach((p, i) => {
-            const at = visible(p);
+            const at = person(p);
             const look = scene!.look;
             const sprite: Sprite = { p, moving: !reducedMotion && !scene!.sparks, stride: t * 9 + i };
             if (at) drawn.push({ x: at.x, y: at.y, f: () => drawPerson(g, at.x, at.y, T, 2000 + i, look, sprite, t) });
@@ -827,7 +833,7 @@ export function VillagerLayer(props: {
             for (let i = 0; i < shown; i++) {
               const p = a.by === "sea" ? { x: target.x + (i - 1) * 0.22, y: target.y + 0.15 } : along([{ x: route[0].x, y: route[0].y }, ...route], f).p;
               const pos = { x: p.x + (i - 1) * 0.18, y: p.y + (i % 2) * 0.12 };
-              const v = visible(pos);
+              const v = person(pos);
               const sprite = { p: pos, moving: f < 1, stride: t * 9 + i + k };
               if (v) drawn.push({ x: v.x, y: v.y, f: () => drawPerson(g, v.x, v.y, T, 9500 + k * 3 + i, "warrior", sprite, t) });
             }
@@ -865,7 +871,7 @@ export function VillagerLayer(props: {
         if (sp.alpha < 1) animating = true;
         // A few carry torches when out in the dark.
         if (night && carriesTorch(plan) && !goingIn) lit.push({ x: sp.p.x, y: sp.p.y - 0.25 });
-        const at = visible(sp.p);
+        const at = person(sp.p);
         if (!at) continue;
         const sprite = sp;
         const alpha = sp.alpha;
@@ -932,7 +938,7 @@ export function VillagerLayer(props: {
         l.p = step.p;
         l.moving = step.moving;
         l.stride += dt * 9;
-        const at = visible(l.p);
+        const at = person(l.p);
         if (at) drawn.push({ x: at.x, y: at.y, f: () => drawPerson(g, at.x, at.y, T, l.id, "leaving", l, t) });
         return step.moving;
       });
@@ -963,14 +969,14 @@ export function VillagerLayer(props: {
         const home = householdOf(s, content);
         const malong = content.traditions.find((x) => x.id === s.tradition)?.dress === "malong";
         const datuLook: Appearance = { gender: home.datuGender, age: "adult", cls: "nobility", malong };
-        const at = visible(d0.p);
+        const at = person(d0.p);
         if (at) drawn.push({ x: at.x, y: at.y, f: () => drawPerson(g, at.x, at.y, T, 9000, "datu", d0, t, 1, datuLook) });
         // Two attendants a step behind the datu, and the spouse: in front of the house, now and
         // then at the gathering spots, by the fire at night.
         const gathering = gatheringSpots(s, content);
         const spouseTo = night || Math.floor(t / 40) % 3 !== 2 ? { x: front.x + 0.55, y: front.y + 0.05 } : (gathering.spots[1] ?? gathering.spots[0] ?? front);
         // Never onto a building or the house: then they stand by the datu.
-        const free = (q: Point) => (blocked[Math.floor(q.y) * s.map.width + Math.floor(q.x)] ? { x: d0.p.x, y: d0.p.y + 0.15 } : q);
+        const free = (q: Point) => (blocked[Math.floor(q.y) * s.map.width + Math.floor(q.x)] || !onLand(s.map, q) ? { x: d0.p.x, y: d0.p.y + 0.15 } : q);
         const targets = [free({ x: d0.p.x - 0.32, y: d0.p.y + 0.12 }), free({ x: d0.p.x + 0.32, y: d0.p.y + 0.14 }), spouseTo];
         const looks: [Look, Appearance][] = [
           ["attendant", { gender: "man", age: "adult", cls: "dependent", malong }],
@@ -990,7 +996,7 @@ export function VillagerLayer(props: {
             }
           }
           household.current[k] = h;
-          const v = visible(h.p);
+          const v = person(h.p);
           const [role, lk] = looks[k];
           if (v) drawn.push({ x: v.x, y: v.y, f: () => drawPerson(g, v.x, v.y, T, 9010 + k, role, h, t, 1, lk) });
         });
@@ -1001,7 +1007,8 @@ export function VillagerLayer(props: {
       const docked = offerNow && boat.current && !boat.current.leftAt && !boat.current.hold && hasDatuUnlock(s, content, "envoys");
       if (docked && path.length > 2) {
         const key = `${offerNow.from}@${offerNow.expiresAt}`;
-        const start = dockPoint(path, plaza);
+        // They step off the bangka onto the bank (the nearest land to where it docks).
+        const start = keepOnLand(s.map, dockPoint(path, plaza));
         if (envoys.current?.key !== key) envoys.current = { key, walkers: [0, 1].map((i) => ({ p: { x: start.x + i * 0.2, y: start.y }, moving: true, stride: i, walker: newWalker({ x: start.x + i * 0.2, y: start.y }) })) };
         envoys.current.walkers.forEach((w, i) => {
           const to = { x: front.x - 0.25 + i * 0.5, y: front.y };
@@ -1015,7 +1022,7 @@ export function VillagerLayer(props: {
               animating = true;
             }
           }
-          const at = visible(w.p);
+          const at = person(w.p);
           if (at) drawn.push({ x: at.x, y: at.y, f: () => drawPerson(g, at.x, at.y, T, 9100 + i, "envoy", w, t) });
         });
       } else envoys.current = null;

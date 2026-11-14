@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Content } from "../engine/content";
 import type { Expedition } from "../engine/expeditions";
 import type { GameState } from "../engine/game";
-import type { Point } from "../engine/map";
+import type { MapState, Point } from "../engine/map";
 import { neighborDef } from "../engine/region";
 import { parseSnapshot } from "../engine/save";
 import { villageSnapshot } from "../engine/village";
@@ -19,6 +19,7 @@ import { buildReplay, sampleReplay, type Phase, type Script } from "./replay";
 import type { Lang } from "./settings";
 import { fill, type GameText } from "./uiContent";
 import { drawBoat, drawPerson, drawSparks, useReducedMotion } from "./VillagerLayer";
+import { keepOnLand } from "./villagers";
 import { datuHouseBox, datuHouseImage, eraseImage, houseStyleFor, type HouseStyle } from "./datuHouseArt";
 import { householdOf } from "../engine/household";
 import { houseFront } from "../engine/plaza";
@@ -113,8 +114,8 @@ function drawChip(g: CanvasRenderingContext2D, text: string, x: number, y: numbe
 }
 
 /** The canvas: draws the script at its own pace (or one still), never re-rendering the map. */
-function ReplayLayer(props: { script: Script; house: { box: ReturnType<typeof datuHouseBox>; style: HouseStyle } | null; household: Figure[]; cam: Camera; view: View; still: number | null; onPhase: (p: Phase) => void; onEnd: () => void }) {
-  const { script, house, household, cam, view, still, onPhase, onEnd } = props;
+function ReplayLayer(props: { script: Script; map: MapState; house: { box: ReturnType<typeof datuHouseBox>; style: HouseStyle } | null; household: Figure[]; cam: Camera; view: View; still: number | null; onPhase: (p: Phase) => void; onEnd: () => void }) {
+  const { script, map, house, household, cam, view, still, onPhase, onEnd } = props;
   const canvas = useRef<HTMLCanvasElement>(null);
   const live = useRef({ cam, view, onPhase, onEnd });
   live.current = { cam, view, onPhase, onEnd };
@@ -149,7 +150,10 @@ function ReplayLayer(props: { script: Script; house: { box: ReturnType<typeof da
         drawBoat(g, q.x, q.y, T, b.heading, b.kind, wall);
       }
       // The datu's household stands with everyone else, sorted by where they stand.
-      const people = [...f.people, ...household.map((h, i) => ({ id: 9010 + i, p: h.p, look: h.role, moving: false, figure: h.look, label: undefined, bundle: false }))].sort((a, b) => a.p.y - b.p.y);
+      // Never on open water (only land or a Tulay): the script keeps to the paths; this is the last guard.
+      const people = [...f.people, ...household.map((h, i) => ({ id: 9010 + i, p: h.p, look: h.role, moving: false, figure: h.look, label: undefined, bundle: false }))]
+        .map((p) => ({ ...p, p: keepOnLand(map, p.p) }))
+        .sort((a, b) => a.p.y - b.p.y);
       // Those behind the Bahay ng Datu are hidden by it: once everyone behind its ground line is
       // drawn, cut its shape out (the house on the map shows through), then draw the rest.
       const img = house ? datuHouseImage(house.box.level, house.style) : null;
@@ -246,7 +250,7 @@ export function ReplayView(props: { expedition: Expedition; state: GameState; co
           onBuildingMenu={noop}
           onSpirit={noop}
           visit={{ landing: null }}
-          overlay={(cam, view) => (done ? null : <ReplayLayer script={script} house={house} household={household} cam={cam} view={view} still={stillT} onPhase={setPhase} onEnd={() => setDone(true)} />)}
+          overlay={(cam, view) => (done ? null : <ReplayLayer script={script} map={shown.map} house={house} household={household} cam={cam} view={view} still={stillT} onPhase={setPhase} onEnd={() => setDone(true)} />)}
         />
       )}
       <div data-map-overlay className="pointer-events-none absolute inset-x-2 top-2 z-10 flex justify-center">

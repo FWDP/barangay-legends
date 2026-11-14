@@ -6,7 +6,8 @@ import { at, content, mapFrom, TEST_MAP, withState } from "../engine/testUtils";
 import { solidTiles } from "../engine/doors";
 import { clearingShape, houseFootprint } from "../engine/plaza";
 import type { GameState } from "../engine/game";
-import { carriesTorch, destination, goal, edgeTile, namedSprites, speedOf, exitPoint, MAX_SPRITES, newWalker, planVillagers, SPEED, stepWalker, walk } from "./villagers";
+import { carriesTorch, destination, goal, edgeTile, keepOnLand, namedSprites, onLand, speedOf, exitPoint, MAX_SPRITES, newWalker, planVillagers, SPEED, stepWalker, walk } from "./villagers";
+import { bandAt, dockPoint, riverPath } from "./visitors";
 
 const fed = { resources: { rice: 100, wood: 0, gold: 0 } };
 
@@ -299,5 +300,70 @@ describe("villagers of all kinds", () => {
     const s = withState({ ...fed2, villagers: 40, named, buildings: town().buildings });
     const plans = planVillagers(s, content);
     for (const [id, v] of namedSprites(plans, s, content)) expect(plans.find((p) => p.id === id)!.look!.gender).toBe(v.gender);
+  });
+});
+
+describe("no one walks on water", () => {
+  // A river down column 4 and the sea along the bottom row, with a Tulay at row 2.
+  const map = mapFrom(["....~....", "....~....", ".P..=....", "....~....", "~~~~~~~~~"]);
+
+  it("onLand: land and a Tulay yes, river no, off the map yes (walking in or out)", () => {
+    expect(onLand(map, { x: 0.5, y: 0.5 })).toBe(true);
+    expect(onLand(map, { x: 4.5, y: 2.5 })).toBe(true);
+    expect(onLand(map, { x: 4.5, y: 0.5 })).toBe(false);
+    expect(onLand(map, { x: 2.5, y: 4.5 })).toBe(false);
+    expect(onLand(map, { x: -1, y: 2 })).toBe(true);
+  });
+
+  it("keepOnLand moves a point off the water to the nearest bank, and leaves land alone", () => {
+    expect(keepOnLand(map, { x: 1.3, y: 0.7 })).toEqual({ x: 1.3, y: 0.7 });
+    const moved = keepOnLand(map, { x: 4.2, y: 0.5 });
+    expect(onLand(map, moved)).toBe(true);
+    expect(Math.floor(moved.x)).toBe(3);
+    const fromSea = keepOnLand(map, { x: 6.5, y: 4.6 });
+    expect(onLand(map, fromSea)).toBe(true);
+    expect(Math.floor(fromSea.y)).toBe(3);
+  });
+
+  it("every sprite position the plans give is on land, day, evening and night, with routes over land and Tulay only", () => {
+    const region = newGame(content, 5).region!;
+    const houses = [at("bahay-kubo", 1, 3), at("bahay-kubo", 2, 2), at("palayan", 8, 7), at("woodcutter-camp", 1, 6), at("kuta", 7, 1)];
+    const states = [
+      withState({ ...fed, villagers: 30, warriors: 4, buildings: houses }),
+      { ...withState({ ...fed, villagers: 30, warriors: 4, buildings: houses }), region: { ...region, incomingRaid: { from: "batong-buhay", strikeAt: 60, landing: { x: 1, y: 4 } } } },
+    ];
+    for (const s of states) {
+      const blocked = solidTiles(s, content);
+      const plans = planVillagers(s, content);
+      for (const night of [false, true]) {
+        for (const evening of [false, true]) {
+          for (let t = 0; t < 160; t += 11) {
+            for (const plan of plans) {
+              const g = goal(plan, t, night, s.map.plaza, false, evening);
+              expect(onLand(s.map, g.p)).toBe(true);
+              // Walking there from the edge (as newcomers do): every step on land.
+              const e = edgeTile(s.map, g.p);
+              let w = newWalker({ x: e.x + 0.5, y: e.y + 0.5 });
+              for (let i = 0; i < 400 && (i === 0 || w.moving); i++) {
+                w = stepWalker(w, g.p, s.map, 1.5, 0.1, 1, blocked);
+                expect(onLand(s.map, w.p)).toBe(true);
+              }
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it("raiders stand as a band on their landing tile, never in the water beside it", () => {
+    const s = withState({ ...fed, villagers: 5 });
+    for (let n = 1; n <= 8; n++) for (const p of bandAt({ x: 1, y: 4 }, n)) expect(onLand(s.map, p)).toBe(true);
+  });
+
+  it("envoys step off the trade bangka onto the bank, not the water", () => {
+    const s = withState({ ...fed, villagers: 5 });
+    const path = riverPath(s.map);
+    const dock = dockPoint(path, s.map.plaza);
+    expect(onLand(s.map, keepOnLand(s.map, dock))).toBe(true);
   });
 });
