@@ -729,6 +729,7 @@ export function App() {
     if (inHouse(state, content, x, y)) {
       sfx.click();
       setDatuOpen(true);
+      dispatch({ type: "visitHouse" });
       return;
     }
     // Empty cleared land (or land growing back): offer to replant it.
@@ -827,6 +828,7 @@ export function App() {
   return (
     <div className="fixed inset-0 flex flex-col bg-green-800 pt-[env(safe-area-inset-top)] text-stone-800">
       <Hud state={state} content={content} full={{ label: ui.game.kamalig.full[lang], tip: ui.game.kamalig.fullTip[lang] }}
+        mood={{ housesNear: ui.game.doors.housesNear[lang], tip: ui.game.doors.moodTip[lang] }}
         stockpile={{
           label: ui.game.stockpile.label[lang],
           stopLabel: ui.game.stockpile.stopLabel[lang],

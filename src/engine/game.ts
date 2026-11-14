@@ -78,7 +78,7 @@ import {
   type TikbalangTrick,
 } from "./worship";
 
-export const STATE_VERSION = 27;
+export const STATE_VERSION = 28;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -812,6 +812,8 @@ export type Command =
   | { type: "gather"; resource: Resource }
   /** The player looked at a villager (tapped them): who they met, for the Aklat entries on dress and classes. */
   | { type: "meet"; cls: SocialClass; datu?: boolean }
+  /** The player opened the Bahay ng Datu (for the Aklat entry on how settlements were laid out). */
+  | { type: "visitHouse" }
   | { type: "build"; building: string; x: number; y: number }
   | { type: "undo" }
   | { type: "move"; x: number; y: number; toX: number; toY: number }
@@ -874,6 +876,8 @@ function applyCommand(state: GameState, content: Content, command: Command): Gam
       return gather(state, content, command.resource);
     case "meet":
       return meet(state, command.cls, command.datu === true);
+    case "visitHouse":
+      return addFlag(state, "visited-house");
     case "dev":
       return devCommand(state, content, command, (s, seconds) => tick(s, content, seconds));
     case "build":

@@ -127,6 +127,7 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 | content/lore/alipin.json | Aklat entry: alipin and oripun, dependents (not chattel) | Tagalog, Visayan | Plasencia 1589; Scott 1994 |
 | content/names.json "villagers" | Named villagers' names, split into women's and men's (everyday Tagalog and Visayan words) | Tagalog, Visayan | made up for the game; see the file's note |
 | content/lore/kuta.json and src/ui/buildingArt.ts | Kuta art and lore note: precolonial fortifications (kuta/kota) drawn as a palisade with a gate and a thatched lookout; generic, the same for every tradition | Widespread | Scott 1994 |
+| content/lore/settlement-layout.json and src/engine/plaza.ts | Aklat entry and map layout: precolonial settlements along rivers and coasts in kinship clusters, gathering informally in a clearing by the datu's house (drawn as an irregular open clearing with a fire pit and a shade tree); the town plaza as a Spanish colonial introduction | Widespread lowland | Scott 1994; Reed 1978; Laws of the Indies 1573 |
 
 ## Reviewed
 

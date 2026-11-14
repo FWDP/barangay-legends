@@ -73,7 +73,7 @@ describe("map generation", () => {
     }
   });
 
-  it.each(seeds)("seed %i: the start is a cleared 7 × 7 around the plaza, touching the river", (seed) => {
+  it.each(seeds)("seed %i: the start is a cleared 7 × 7 around the plaza (and a row behind it), touching the river", (seed) => {
     const map = generateMap(content, seed);
     const { plaza } = map;
     let touchesRiver = false;
@@ -84,7 +84,10 @@ describe("map generation", () => {
       }
     }
     expect(touchesRiver).toBe(true);
-    expect(countTiles(map, "cleared")).toBe((2 * R + 1) ** 2);
+    // The row behind gives back the land the clearing in front keeps open (only forest is cleared there).
+    for (let x = plaza.x - R; x <= plaza.x + R; x++) expect(["cleared", "river"]).toContain(tileAt(map, x, plaza.y - R - 1));
+    const extra = [...Array(2 * R + 1).keys()].filter((k) => tileAt(map, plaza.x - R + k, plaza.y - R - 1) === "cleared").length;
+    expect(countTiles(map, "cleared")).toBe((2 * R + 1) ** 2 + extra);
   });
 
   it.each(seeds)("seed %i: a few old balete trees grow in the forest, away from the plaza", (seed) => {

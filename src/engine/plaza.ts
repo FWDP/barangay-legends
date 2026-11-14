@@ -1,19 +1,24 @@
-// The Bahay ng Datu's footprint and the gatherings around it. The house stands on the plaza
+// The Bahay ng Datu's footprint, the clearing beside it and the gatherings there. ("Plaza" is
+// the internal name only: precolonial barangays had no town square. People gathered in an open
+// clearing by the datu's house; see content/lore/settlement-layout.json.) The house stands on the plaza
 // tile; from rules.plaza.bigFromLevel it takes bigWidth × bigHeight tiles (the plaza tile is the
 // footprint's front-left corner: it grows right and back, away from the doorway in front). Those
 // extra tiles are reserved from the start, so new buildings, Daan and replanting never take them.
 // An old save whose buildings already stand there keeps the one-tile house ("grandfathered":
 // worked out from the state, so nothing needs migrating) until the tiles are free again.
-// Footprint tiles are solid (doors.ts). People who gather at the house stand on open tiles
-// around it, spread out, never on it. Pure: no React, no browser APIs.
+// Footprint tiles are solid (doors.ts). The clearing (map.gathering) is a few irregular open
+// tiles in front of the house, with the fire pit in it: walkable, never built on. People who
+// gather at the house stand on it first, then on open tiles around the house, spread out, never
+// on it. Pure: no React, no browser APIs.
 import type { Content } from "./content";
 import type { GameState } from "./game";
 import type { MapState, Point } from "./map";
-import { inBounds, tileAt } from "./map";
+import { inBounds, isFootTile, tileAt } from "./map";
+import { Rng } from "./rng";
 import { buildingSolid, hasReachableSide, isSolid, reachWith, walkReach } from "./doors";
 
 /** The tiles the big house takes (plaza tile included), whether or not it stands that big yet. */
-export function reservedTiles(map: MapState, content: Content): Point[] {
+export function reservedTiles(map: Pick<MapState, "plaza">, content: Content): Point[] {
   const { bigWidth, bigHeight } = content.rules.plaza;
   const out: Point[] = [];
   for (let dy = 0; dy < bigHeight; dy++) for (let dx = 0; dx < bigWidth; dx++) out.push({ x: map.plaza.x + dx, y: map.plaza.y - dy });
@@ -21,12 +26,83 @@ export function reservedTiles(map: MapState, content: Content): Point[] {
 }
 
 /**
- * Is (x, y) kept for the Bahay ng Datu: the plaza tile always, and from reserveFromLevel the
- * tiles the big house will take (so the first minutes keep all their building land).
+ * The clearing's shape for a map: grown from the two tiles in front of the house (its doorway
+ * opens onto it), a seeded, irregular patch of clearingMin..clearingMax tiles in front of and
+ * beside the house, never on the big house's tiles, and inside the start square's inner columns
+ * (its edge column runs along the river: that land is kept for fields and docks). Only the map's seed and the house's tile
+ * decide it, so a new map and an old save's migration agree.
+ */
+export function clearingShape(map: Pick<MapState, "width" | "height" | "seed" | "plaza">, content: Content): Point[] {
+  const { clearingMin, clearingMax } = content.rules.plaza;
+  const P = map.plaza;
+  const rng = new Rng((map.seed ^ 0x2c1b3c6d) >>> 0);
+  const house = new Set(reservedTiles(map, content).map((p) => `${p.x},${p.y}`));
+  const ok = (x: number, y: number) =>
+    x >= 0 && y >= 0 && x < map.width && y < map.height && x >= P.x - 2 && x <= P.x + 2 && y >= P.y && y <= P.y + 3 && !house.has(`${x},${y}`);
+  const out: Point[] = [
+    { x: P.x, y: P.y + 1 },
+    { x: P.x + 1, y: P.y + 1 },
+  ].filter((p) => ok(p.x, p.y));
+  const n = rng.int(clearingMin, clearingMax);
+  // The middle it grows around: in front of the house, a little to the right of its doorway.
+  const mid = { x: P.x + 1, y: P.y + 1.8 };
+  while (out.length < n) {
+    const has = new Set(out.map((p) => `${p.x},${p.y}`));
+    const frontier: Point[] = [];
+    for (const p of out) {
+      for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) {
+        const q = { x: p.x + dx, y: p.y + dy };
+        const k = `${q.x},${q.y}`;
+        if (ok(q.x, q.y) && !has.has(k) && !frontier.some((f) => f.x === q.x && f.y === q.y)) frontier.push(q);
+      }
+    }
+    if (frontier.length === 0) break;
+    frontier.sort((a, b) => a.y - b.y || a.x - b.x);
+    // Nearest the middle wins, with a seeded jitter, so the edge is uneven; the last tile never
+    // squares it off into a full rectangle when there is another choice.
+    const scored = frontier.map((q) => ({ q, v: Math.hypot(q.x + 0.5 - mid.x, q.y + 0.5 - mid.y) + rng.next() * 1.6 }));
+    scored.sort((a, b) => a.v - b.v);
+    const last = out.length === n - 1;
+    out.push((last ? scored.find((c) => !fillsBox([...out, c.q])) : undefined)?.q ?? scored[0].q);
+  }
+  return out;
+}
+
+/** Do the tiles fill their bounding box (a rectangle, at least 2 × 2)? */
+function fillsBox(tiles: Point[]): boolean {
+  const w = Math.max(...tiles.map((p) => p.x)) - Math.min(...tiles.map((p) => p.x)) + 1;
+  const h = Math.max(...tiles.map((p) => p.y)) - Math.min(...tiles.map((p) => p.y)) + 1;
+  return w > 1 && h > 1 && tiles.length === w * h;
+}
+
+/**
+ * The clearing's open tiles now: its tiles that are still open ground (cleared land or a Daan)
+ * with nothing built on them and not under the house. Empty on a map without a clearing.
+ */
+export function clearingTiles(state: GameState, content: Content): Point[] {
+  const { map } = state;
+  if (!map.gathering?.length) return [];
+  const fp = houseFootprint(state, content);
+  return map.gathering.filter((p) => {
+    const t = tileAt(map, p.x, p.y);
+    if (!isFootTile(t) || t === "bridge") return false;
+    if (fp.some((f) => f.x === p.x && f.y === p.y)) return false;
+    return !state.buildings.some((b) => b.x === p.x && b.y === p.y);
+  });
+}
+
+/** Is (x, y) one of the clearing's tiles (kept open: nothing is built there)? */
+export const inClearing = (map: MapState, x: number, y: number) => (map.gathering ?? []).some((p) => p.x === x && p.y === y);
+
+/**
+ * Is (x, y) kept for the Bahay ng Datu: the plaza tile and the clearing always, and from
+ * reserveFromLevel the tiles the big house will take (so the first minutes keep all their
+ * building land).
  */
 export function isReserved(state: GameState, content: Content, x: number, y: number): boolean {
   const { plaza } = state.map;
   if (x === plaza.x && y === plaza.y) return true;
+  if (inClearing(state.map, x, y)) return true;
   if ((state.datuLevel ?? 1) < content.rules.plaza.reserveFromLevel) return false;
   return reservedTiles(state.map, content).some((p) => p.x === x && p.y === y);
 }
@@ -97,10 +173,21 @@ function open(state: GameState, reach: Uint8Array, x: number, y: number): boolea
 }
 
 /**
- * The plaza's fire pit, in tile units: beside the one-tile house on the right, in front of the
- * big house's right side (always on the plaza's own 3 × 3, which starts cleared).
+ * The fire pit, in tile units: in the clearing, on its open tile nearest the clearing's middle
+ * (not the one right before the doorway). On a map without a clearing: beside the one-tile
+ * house on the right, in front of the big house's right side.
  */
 export function firePit(state: GameState, content: Content): Point {
+  const tiles = clearingTiles(state, content);
+  if (tiles.length > 0) {
+    const cx = tiles.reduce((n, p) => n + p.x + 0.5, 0) / tiles.length;
+    const cy = tiles.reduce((n, p) => n + p.y + 0.5, 0) / tiles.length;
+    const door = houseFront(state, content);
+    const atDoor = (p: Point) => Math.floor(door.x) === p.x && Math.floor(door.y) === p.y;
+    const pool = tiles.length > 1 ? tiles.filter((p) => !atDoor(p)) : tiles;
+    const best = [...pool].sort((a, b) => Math.hypot(a.x + 0.5 - cx, a.y + 0.5 - cy) - Math.hypot(b.x + 0.5 - cx, b.y + 0.5 - cy) || a.y - b.y || a.x - b.x)[0];
+    return { x: best.x + 0.5, y: best.y + 0.55 };
+  }
   const b = bounds(houseFootprint(state, content));
   return isBigHouse(state, content) ? { x: b.x1 + 0.6, y: b.y1 + 1.5 } : { x: b.x1 + 1.3, y: b.y1 + 0.75 };
 }
@@ -138,7 +225,7 @@ function tileSpots(x: number, y: number, n: number, fire: Point): Point[] {
   const out: Point[] = [];
   for (const [ox, oy] of offsets) {
     const p = { x: x + ox, y: y + oy };
-    if (Math.hypot(p.x - fire.x, p.y - fire.y) < 0.3) continue;
+    if (Math.hypot(p.x - fire.x, p.y - fire.y) < 0.35) continue;
     out.push(p);
     if (out.length >= n) break;
   }
@@ -174,9 +261,13 @@ export function gatheringSpots(state: GameState, content: Content): Gathering {
     // Nearest the front of the house first, then left to right.
     return tiles.sort((p, q) => Math.hypot(p.x + 0.5 - front.x, p.y + 0.5 - front.y) - Math.hypot(q.x + 0.5 - front.x, q.y + 0.5 - front.y) || p.y - q.y || p.x - q.x);
   };
-  const near = ring(1).flatMap((t) => tileSpots(t.x, t.y, spotsPerTile, fire));
+  // The clearing first (nearest the front of the house), then the open tiles right around the house.
+  const clearing = clearingTiles(state, content).filter((t) => open(state, reach, t.x, t.y));
+  const inC = new Set(clearing.map((t) => `${t.x},${t.y}`));
+  const byFront = (p: Point, q: Point) => Math.hypot(p.x + 0.5 - front.x, p.y + 0.5 - front.y) - Math.hypot(q.x + 0.5 - front.x, q.y + 0.5 - front.y) || p.y - q.y || p.x - q.x;
+  const near = [...clearing.sort(byFront), ...ring(1).filter((t) => !inC.has(`${t.x},${t.y}`))].flatMap((t) => tileSpots(t.x, t.y, spotsPerTile, fire));
   let spots = near.slice(0, gatherMax);
-  let waiting = [...near.slice(gatherMax), ...ring(2).flatMap((t) => tileSpots(t.x, t.y, spotsPerTile, fire))];
+  let waiting = [...near.slice(gatherMax), ...ring(2).filter((t) => !inC.has(`${t.x},${t.y}`)).flatMap((t) => tileSpots(t.x, t.y, spotsPerTile, fire))];
   for (let r = 3; spots.length === 0 && waiting.length === 0 && r <= 6; r++) waiting = ring(r).flatMap((t) => tileSpots(t.x, t.y, spotsPerTile, fire));
   if (spots.length === 0) {
     spots = waiting.slice(0, gatherMax);

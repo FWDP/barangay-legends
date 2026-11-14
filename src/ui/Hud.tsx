@@ -11,7 +11,7 @@ import { clock } from "./EventBanners";
 import { formatAmount, formatBreakdown, formatRate, RESOURCE_ICON } from "./format";
 
 /** Slim top bar: title, resources, and whatever controls are passed as children. */
-export function Hud(props: { state: GameState; content: Content; children: ReactNode; extraChips?: ReactNode; level?: ReactNode; day?: ReactNode; full?: FullText; stockpile?: StockpileText }) {
+export function Hud(props: { state: GameState; content: Content; children: ReactNode; extraChips?: ReactNode; level?: ReactNode; day?: ReactNode; full?: FullText; stockpile?: StockpileText; mood?: MoodText }) {
   const { state, content, children, extraChips, level, day } = props;
   const r = rates(state, content);
   const working = buildingWorkers(state, content).reduce((a, b) => a + b, 0);
@@ -40,13 +40,13 @@ export function Hud(props: { state: GameState; content: Content; children: React
             <span className="hidden sm:inline">👥</span>
           </>
         }
-        label={`${state.villagers} villagers (room for ${housing(state, content)}) · ${working} working · ${free} free · ${state.warriors} warriors${called ? ", called to arms" : ""}${state.sick.length ? ` · ${state.sick.length} sick` : ""} · ${happinessText(state, content)}`}
+        label={`${state.villagers} villagers (room for ${housing(state, content)}) · ${working} working · ${free} free · ${state.warriors} warriors${called ? ", called to arms" : ""}${state.sick.length ? ` · ${state.sick.length} sick` : ""} · ${happinessText(state, content, props.mood ?? MOOD_EN)}`}
         tip={
           <>
             {state.villagers} villagers, room for {housing(state, content)} · {working} working · {free} free
             {state.sick.length > 0 && <> · {state.sick.length} sick</>}
             <span className="mt-1 block text-amber-300 sm:hidden">
-              {moodFace(state.happiness)} {happinessText(state, content)}
+              {moodFace(state.happiness)} {happinessText(state, content, props.mood ?? MOOD_EN)}
             </span>
           </>
         }
@@ -77,7 +77,7 @@ export function Hud(props: { state: GameState; content: Content; children: React
         </div>
       )}
       <span className="hidden sm:block">
-        <HappinessChip state={state} content={content} />
+        <HappinessChip state={state} content={content} mood={props.mood ?? MOOD_EN} />
       </span>
       {extraChips && <span className="hidden sm:block">{extraChips}</span>}
       {/* On phones the season sits on the map instead (MapSeasonBadge): the bar has no room. */}
@@ -103,13 +103,21 @@ function notes(state: GameState, content: Content): Record<Resource, string | nu
 
 const moodFace = (h: number) => (h >= 75 ? "😄" : h >= 55 ? "🙂" : h >= 35 ? "😐" : "😟");
 
-/** e.g. "Happiness 72 of 100: production +3%. Heading to 64 (+4 houses near the plaza)." */
-function happinessText(state: GameState, content: Content): string {
+/** The happiness chip's words from ui.json: houses near the datu's house, and the tooltip's last line. */
+export interface MoodText {
+  housesNear: string;
+  tip: string;
+}
+
+const MOOD_EN: MoodText = { housesNear: "+{n} houses near the datu's house", tip: "Houses near the datu's house lift spirits; hunger and sickness lower them." };
+
+/** e.g. "Happiness 72 of 100: production +3%. Heading to 64 (+4 houses near the datu's house)." */
+function happinessText(state: GameState, content: Content, mood: MoodText): string {
   const h = Math.round(state.happiness);
   const parts = happinessTarget(state, content);
   const effect = Math.round((happinessMultiplier(state, content) - 1) * 100);
   const why = [
-    parts.houses > 0 && `+${parts.houses} houses near the plaza`,
+    parts.houses > 0 && mood.housesNear.replace("{n}", String(parts.houses)),
     parts.hunger < 0 && `${parts.hunger} hunger`,
     parts.sickness < 0 && `${parts.sickness} sickness`,
   ].filter(Boolean);
@@ -117,11 +125,11 @@ function happinessText(state: GameState, content: Content): string {
 }
 
 /** Happiness: a face and the number; the tooltip says what raises or lowers it. */
-function HappinessChip({ state, content }: { state: GameState; content: Content }) {
+function HappinessChip({ state, content, mood }: { state: GameState; content: Content; mood: MoodText }) {
   const [open, setOpen] = useState(false);
   const h = Math.round(state.happiness);
   const face = moodFace(state.happiness);
-  const label = happinessText(state, content);
+  const label = happinessText(state, content, mood);
   return (
     <div className="group relative">
       <button
@@ -141,7 +149,7 @@ function HappinessChip({ state, content }: { state: GameState; content: Content 
         role="tooltip"
         className={`absolute top-full right-0 z-50 mt-2 w-56 rounded-lg border border-amber-950/50 bg-stone-900/95 px-2.5 py-1.5 text-xs text-amber-50 shadow-lg group-hover:block sm:left-0 sm:right-auto ${open ? "block" : "hidden"}`}
       >
-        {label} Houses near the plaza lift spirits; hunger and sickness lower them.
+        {label} {mood.tip}
       </div>
     </div>
   );

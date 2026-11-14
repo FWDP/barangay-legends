@@ -146,7 +146,7 @@ export function BuildingMenu(props: {
           {connected ? (
             <span className="font-semibold text-amber-800">🛤️ Connected: +{content.rules.roads.connectedBonusPercent}% output</span>
           ) : (
-            <>🛤️ Join it to the plaza with a Daan for +{content.rules.roads.connectedBonusPercent}%</>
+            <>🛤️ {game ? fill(game.doors.joinHouse[lang], { percent: content.rules.roads.connectedBonusPercent }) : `Join it to the Bahay ng Datu with a Daan for +${content.rules.roads.connectedBonusPercent}%`}</>
           )}
         </p>
       )}

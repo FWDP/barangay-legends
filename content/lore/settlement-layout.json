@@ -1,0 +1,36 @@
+{
+  "id": "settlement-layout",
+  "name": "Settlements along rivers and coasts",
+  "description": "How precolonial barangays were laid out: houses strung along rivers and shores in kinship clusters, with informal gathering places; the town plaza came later, with Spanish colonial planning.",
+  "tradition": "Widespread (lowland Tagalog and Visayan)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Robert R. Reed, Colonial Manila: The Context of Hispanic Urbanism and Process of Morphogenesis (University of California Press, 1978)",
+    "Ordenanzas de descubrimiento, nueva población y pacificación de las Indias (the Laws of the Indies on town planning, 1573)"
+  ],
+  "aklat": {
+    "order": 21,
+    "icon": "🏞️",
+    "name": {
+      "en": "A clearing, not a plaza",
+      "fil": "Bukás na pook, hindi plaza"
+    },
+    "lore": {
+      "en": "Sixteenth-century barangays had no town square. Houses stood along rivers and coasts, where boats were the main way to travel, often in loose clusters of related families, with fields and gardens behind them. People met informally: in an open clearing, along the shore, or beneath the datu's house, where disputes were heard and guests received. The grid town with a central plaza, church and town hall came with Spanish colonial planning, which gathered scattered settlements into planned towns (reducción) from the late 1500s.",
+      "fil": "Walang plaza ang mga barangay noong ika-16 na siglo. Nakatayo ang mga bahay sa tabi ng ilog at baybayin, kung saan bangka ang pangunahing paraan ng paglalakbay, kadalasan sa maluluwag na kumpol ng magkakamag-anak, at nasa likuran ang mga bukid at halamanan. Nagtitipon ang mga tao nang walang pormal na lugar: sa isang bukás na pook, sa dalampasigan, o sa silong ng bahay ng datu, kung saan dinidinig ang mga alitan at tinatanggap ang mga panauhin. Ang bayang hugis-grid na may plaza, simbahan at munisipyo sa gitna ay dala ng pagpaplano ng kolonyal na Espanya, na nagtipon sa nagkalat na pamayanan sa mga planadong bayan (reducción) mula sa huling bahagi ng dekada 1500."
+    },
+    "inGame": {
+      "en": "Your barangay gathers in the clearing beside the Bahay ng Datu, around its fire, instead of on a plaza.",
+      "fil": "Nagtitipon ang iyong barangay sa bukás na pook sa tabi ng Bahay ng Datu, sa paligid ng apoy nito, sa halip na sa plaza."
+    },
+    "hint": {
+      "en": "Visit the Bahay ng Datu.",
+      "fil": "Dalawin ang Bahay ng Datu."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "visited-house"
+    }
+  },
+  "reviewed": false
+}

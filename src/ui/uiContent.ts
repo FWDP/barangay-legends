@@ -172,7 +172,7 @@ export const GAME_TEXT = {
     losses: ["attackers", "defenders"], kuta: ["bonus", "cover"], covered: [], late: ["n"], allies: ["names"], loot2: ["goods"], gave: ["gave", "got"], named: ["names"],
     fell: ["name"], capped: ["shown", "total"], arrived: ["barangay"], sailing: ["barangay", "time"], recent: [], none: [], close: [],
   },
-  doors: { blocked: ["building"], plaza: [] },
+  doors: { blocked: ["building"], plaza: [], joinHouse: ["percent"], housesNear: ["n"], moodTip: [] },
   events: { eclipse: [], gong: [], gongs: ["taps", "needed"], eclipseWon: ["favor", "gold"], eclipseLost: ["rice"], tikbalang: ["n"], right: [], wrong: ["time"], sarimanok: ["gift"] },
 } as const satisfies Record<string, Record<string, readonly string[]>>;
 

@@ -2,6 +2,7 @@
 // and even here the storage is passed in so tests can use a fake.
 import { AGE_GROUPS, classFor, GENDERS, syncResidents, type AgeGroup, type Gender } from "./residents";
 import { makeHousehold } from "./household";
+import { clearingShape } from "./plaza";
 import { REFUSAL_REASONS, RESOURCES, SOCIAL_CLASSES, type BuildingDef, type Content, type RefusalReason, type Resource, type SocialClass } from "./content";
 import { cleanName, newGame, placeAuto, STATE_VERSION, type ClearingJob, type GameState, type PlacedBuilding } from "./game";
 import {
@@ -15,6 +16,7 @@ import {
   standingBridgeTiles,
   tileAt,
   type MapState,
+  type Point,
   type Tile,
 } from "./map";
 import {
@@ -274,6 +276,22 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
   // v26 → v27: social classes and the datu's household. Residents without a class get theirs
   // from the seed, and the household is made from the seed and the datu's name, when read.
   26: (raw) => ({ ...raw, version: 27, household: null }),
+  // v27 → v28: the plaza becomes a clearing beside the Bahay ng Datu (plaza.ts). It grows from
+  // the house's front, where the fire pit stood, moving nothing: tiles already built on (or no
+  // longer open ground) are left out, and the clearing is the open tiles that remain.
+  27: (raw, content) => {
+    const m = raw.map;
+    if (!isObject(m) || !isObject(m.plaza) || !Number.isInteger(m.width) || !Number.isInteger(m.height) || typeof m.tiles !== "string") return { ...raw, version: 28 };
+    const shape = { width: m.width as number, height: m.height as number, seed: ((m.seed as number) ?? 0) >>> 0, plaza: { x: m.plaza.x as number, y: m.plaza.y as number } };
+    const built = new Set((Array.isArray(raw.buildings) ? raw.buildings : []).filter(isObject).map((b) => `${b.x},${b.y}`));
+    const growing = new Set((Array.isArray(raw.replanting) ? raw.replanting : []).filter(isObject).map((j) => `${j.x},${j.y}`));
+    const tiles = m.tiles as string;
+    const gathering = clearingShape(shape, content).filter((p) => {
+      const c = tiles[p.y * shape.width + p.x];
+      return (c === "c" || c === "d") && !built.has(`${p.x},${p.y}`) && !growing.has(`${p.x},${p.y}`);
+    });
+    return { ...raw, version: 28, map: { ...m, gathering } };
+  },
 };
 
 // ---------- Frozen v15 bridge rule (for the v14 → v15 migration only) ----------
@@ -425,6 +443,10 @@ function parseMap(raw: unknown): MapState | null {
     tiles,
     plaza: { x: raw.plaza.x as number, y: raw.plaza.y as number },
   };
+  if (Array.isArray(raw.gathering)) {
+    const seen = new Set<string>();
+    map.gathering = raw.gathering.filter((p): p is Point => isObject(p) && inBounds(map, p.x as number, p.y as number) && !seen.has(`${p.x},${p.y}`) && !!seen.add(`${p.x},${p.y}`)).map((p) => ({ x: p.x, y: p.y }));
+  }
   return tileAt(map, map.plaza.x, map.plaza.y) === "cleared" ? map : null;
 }
 

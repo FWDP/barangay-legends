@@ -3,7 +3,7 @@
 // forest and bridging the river. Pure and deterministic, like the rest of the engine.
 import { curveFactor } from "./curve";
 import { closesPlaza, cutsOffLand, entrancesBlockedBy, wouldHaveEntrance } from "./doors";
-import { isReserved } from "./plaza";
+import { clearingShape, isReserved } from "./plaza";
 import type { BuildingDef, Content, GroveBlessing, Resource } from "./content";
 import type { GameState, PlacedBuilding } from "./game";
 import { rollAt, Rng } from "./rng";
@@ -22,8 +22,13 @@ export interface MapState {
   seed: number;
   /** width × height characters, row by row (see TILE_CODE). */
   tiles: string;
-  /** The gathering spot. Cleared, but never built on. */
+  /** The Bahay ng Datu's tile (internal name kept from when it was a plaza). Cleared, never built on. */
   plaza: Point;
+  /**
+   * The clearing beside the Bahay ng Datu where people gather (plaza.ts): a few irregular open
+   * tiles in front of the house, walkable and never built on. Missing on hand-made test maps.
+   */
+  gathering?: Point[];
 }
 
 export interface Point {
@@ -132,7 +137,8 @@ export function generateMap(content: Content, seed: number): MapState {
   const leftBank = rng.next() < 0.5;
   const px = leftBank ? Math.min(...rows) - 1 - R : Math.max(...rows) + riverWidth + R;
   const plaza = { x: Math.min(W - R - 2, Math.max(R + 1, px)), y: py };
-  for (let y = plaza.y - R; y <= plaza.y + R; y++) {
+  // One row more behind the house: the land the clearing in front of it keeps open (plaza.ts).
+  for (let y = plaza.y - R - 1; y <= plaza.y + R; y++) {
     for (let x = plaza.x - R; x <= plaza.x + R; x++) if (grid[y][x] === "forest") grid[y][x] = "cleared";
   }
 
@@ -159,12 +165,15 @@ export function generateMap(content: Content, seed: number): MapState {
     placed.push({ x, y });
   }
 
+  // The clearing beside the Bahay ng Datu: inside the start square, so already open.
+  const gathering = clearingShape({ width: W, height: H, seed: seed >>> 0, plaza }, content).filter((p) => grid[p.y][p.x] === "cleared");
   const map: MapState = {
     width: W,
     height: H,
     seed: seed >>> 0,
     tiles: grid.map((row) => row.map((t) => TILE_CODE[t]).join("")).join(""),
     plaza,
+    gathering,
   };
   return map;
 }
@@ -256,14 +265,28 @@ export const isFootTile = (t: Tile | null) => t === "cleared" || t === "daan" ||
 const footCache = new WeakMap<MapState, Uint8Array>();
 const roadCache = new WeakMap<MapState, Uint8Array>();
 
-/** Flood fill from the center over tiles that pass `ok`. */
-function flood(map: MapState, ok: (code: string) => boolean): Uint8Array {
+const gatheringCache = new WeakMap<MapState, ReadonlySet<number>>();
+
+/** The clearing's tiles that people can still walk on (cleared land or a Daan), as tile indices. Cached per map. */
+export function gatheringIndex(map: MapState): ReadonlySet<number> {
+  let out = gatheringCache.get(map);
+  if (out) return out;
+  const set = new Set<number>();
+  for (const p of map.gathering ?? []) if (isFootTile(tileAt(map, p.x, p.y)) && tileAt(map, p.x, p.y) !== "bridge") set.add(p.y * map.width + p.x);
+  gatheringCache.set(map, (out = set));
+  return out;
+}
+
+/** Flood fill from the center over tiles that pass `ok` (`withClearing`: the clearing's tiles count too). */
+function flood(map: MapState, pass: (code: string) => boolean, withClearing = false): Uint8Array {
   const W = map.width;
   const seen = new Uint8Array(W * map.height);
   const c = barangayCenter(map);
   if (!inBounds(map, c.x, c.y)) return seen;
   const start = c.y * W + c.x;
   seen[start] = 1;
+  const clearing = withClearing ? gatheringIndex(map) : null;
+  const ok = (code: string, j: number) => pass(code) || (clearing !== null && clearing.has(j));
   const queue = [start];
   while (queue.length > 0) {
     const i = queue.pop()!;
@@ -274,7 +297,7 @@ function flood(map: MapState, ok: (code: string) => boolean): Uint8Array {
       const ny = y + dy;
       if (!inBounds(map, nx, ny)) continue;
       const j = ny * W + nx;
-      if (seen[j] || !ok(map.tiles[j])) continue;
+      if (seen[j] || !ok(map.tiles[j], j)) continue;
       seen[j] = 1;
       queue.push(j);
     }
@@ -301,11 +324,11 @@ export function isFootReachable(map: MapState, x: number, y: number): boolean {
 
 /**
  * The road network: Daan (and bridges along it) joined to the center without a break. The
- * center counts, so a path starting next to the plaza is connected.
+ * center and the clearing beside it count, so a path starting at the clearing is connected.
  */
 export function roadNetwork(map: MapState): Uint8Array {
   let r = roadCache.get(map);
-  if (!r) roadCache.set(map, (r = flood(map, (c) => ROAD_CODES.has(c))));
+  if (!r) roadCache.set(map, (r = flood(map, (c) => ROAD_CODES.has(c), true)));
   return r;
 }
 
@@ -313,10 +336,12 @@ export function roadNetwork(map: MapState): Uint8Array {
 export function isConnected(map: MapState, x: number, y: number): boolean {
   const net = roadNetwork(map);
   const c = barangayCenter(map);
+  const clearing = gatheringIndex(map);
   return NEIGHBOURS.some(([dx, dy]) => {
     const nx = x + dx;
     const ny = y + dy;
-    if (!inBounds(map, nx, ny) || (nx === c.x && ny === c.y)) return false;
+    // Standing beside the house or its clearing isn't a Daan: only a path is.
+    if (!inBounds(map, nx, ny) || (nx === c.x && ny === c.y) || (clearing.has(ny * map.width + nx) && tileAt(map, nx, ny) !== "daan")) return false;
     return net[ny * map.width + nx] === 1 && tileAt(map, nx, ny) !== "bridge";
   });
 }

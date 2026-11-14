@@ -158,7 +158,9 @@ export function botDecide(state: GameState, content: Content): GameState {
     const next = run({ type: "clearArea", tiles: nearestClearable(state, 8) });
     if (next !== state) return next;
   }
-  if (state.clearing.length === 0 && state.tilesCleared < 6 + fields * 2 + state.buildings.length && state.resources.rice > 40) {
+  // Ahead of need, a few tiles more than the land the house's clearing keeps open (plaza.ts).
+  const kept = state.map.gathering?.length ?? 0;
+  if (state.clearing.length === 0 && state.tilesCleared < 6 + kept + fields * 2 + state.buildings.length && state.resources.rice > 40) {
     const next = run({ type: "clearArea", tiles: nearestClearable(state, 2) });
     if (next !== state) return next;
   }

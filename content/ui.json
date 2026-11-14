@@ -1170,8 +1170,20 @@
       "fil": "Haharangan nito ang daan papasok sa {building}"
     },
     "plaza": {
-      "en": "Would close off the plaza",
-      "fil": "Isasara nito ang plaza"
+      "en": "Would close off the Bahay ng Datu",
+      "fil": "Isasara nito ang daan sa Bahay ng Datu"
+    },
+    "joinHouse": {
+      "en": "Join it to the Bahay ng Datu with a Daan for +{percent}%",
+      "fil": "Iugnay ito sa Bahay ng Datu sa isang Daan para sa +{percent}%"
+    },
+    "housesNear": {
+      "en": "+{n} houses near the datu's house",
+      "fil": "+{n} bahay malapit sa bahay ng datu"
+    },
+    "moodTip": {
+      "en": "Houses near the datu's house lift spirits; hunger and sickness lower them.",
+      "fil": "Nagpapasaya ang mga bahay na malapit sa bahay ng datu; nagpapalungkot ang gutom at sakit."
     }
   },
   "expedition": {

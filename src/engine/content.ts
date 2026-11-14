@@ -125,7 +125,7 @@ export interface Rules {
   /** How many sick villagers a healer's hut holds (healing.ts). */
   healing: { hutCapacity: number };
   /** The Bahay ng Datu's footprint and the gathering spots around it (plaza.ts). */
-  plaza: { bigFromLevel: number; reserveFromLevel: number; bigWidth: number; bigHeight: number; spotsPerTile: number; gatherMax: number };
+  plaza: { bigFromLevel: number; reserveFromLevel: number; bigWidth: number; bigHeight: number; spotsPerTile: number; gatherMax: number; clearingMin: number; clearingMax: number };
   /** The wood and gold soft cap (stockpile.ts): multiple × the next big purchase, at least minimum; above it production is slowPercent lower, and above stopMultiple × the cap none comes in. */
   stockpile: { multiple: number; minimum: Partial<Record<Resource, number>>; slowPercent: number; stopMultiple: number };
   /** AI barangays: how many forest tiles they queue at a time when they run out of room. */
@@ -1119,9 +1119,10 @@ export function validateRules(raw: unknown): Rules {
   }
   if (!isObject(raw.healing) || !Number.isInteger(raw.healing.hutCapacity) || (raw.healing.hutCapacity as number) < 1) throw new Error('rules: "healing.hutCapacity" must be a whole number >= 1');
   if (!isObject(raw.plaza)) throw new Error('rules: missing "plaza"');
-  for (const key of ["bigFromLevel", "reserveFromLevel", "bigWidth", "bigHeight", "spotsPerTile", "gatherMax"]) {
+  for (const key of ["bigFromLevel", "reserveFromLevel", "bigWidth", "bigHeight", "spotsPerTile", "gatherMax", "clearingMin", "clearingMax"]) {
     if (!Number.isInteger(raw.plaza[key]) || (raw.plaza[key] as number) < 1) throw new Error(`rules: "plaza.${key}" must be a whole number >= 1`);
   }
+  if ((raw.plaza.clearingMax as number) < (raw.plaza.clearingMin as number)) throw new Error('rules: "plaza.clearingMax" must be at least "plaza.clearingMin"');
   if (!isObject(raw.aiGrowth) || !Number.isInteger(raw.aiGrowth.clearTiles) || (raw.aiGrowth.clearTiles as number) < 1) throw new Error('rules: "aiGrowth.clearTiles" must be a whole number >= 1');
   if (!isObject(raw.happiness)) throw new Error('rules: missing "happiness"');
   checkNumbers(raw.happiness, ["start", "maxEffectPercent", "pointsPerSecond", "plazaRadius", "perHouseNearPlaza", "maxFromHouses"], "rules: happiness");
