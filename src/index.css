@@ -262,3 +262,38 @@
     linear-gradient(90deg, #6b4a1c 0 10%, #d8bb6c 10% 90%, #6b4a1c 90%);
   box-shadow: 2px 0 3px rgb(0 0 0 / 0.35);
 }
+
+/*
+ * Floating labels on the map (Trade, Landing, No path, placement hints...): crisp, like a HUD
+ * chip. A solid pill with clear dark text and a thin light border; the only shadow is a small
+ * soft one under the pill, never on the letters. Readable at 375px, day and night (they sit
+ * above the night tint). Components layer, so size utilities (text-[0.26em]) still win.
+ */
+@layer components {
+  .map-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25em;
+    border: 1px solid rgb(255 255 255 / 0.85);
+    border-radius: 9999px;
+    background: #fffbeb;
+    color: #292524;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 11px;
+    font-weight: 650;
+    line-height: 1.25;
+    letter-spacing: 0.01em;
+    padding: 0.15em 0.6em;
+    white-space: nowrap;
+    text-shadow: none;
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.28);
+  }
+  .map-chip-warn {
+    background: #fee2e2;
+    color: #7f1d1d;
+  }
+  .map-chip-good {
+    background: #fef3c7;
+    color: #78350f;
+  }
+}

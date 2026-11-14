@@ -68,6 +68,26 @@ export function reportLines(e: Expedition, state: GameState, content: Content, g
   return lines;
 }
 
+/** A label pill on a canvas: solid light background, thin light border, soft shadow under the pill only. */
+function drawChip(g: CanvasRenderingContext2D, text: string, x: number, y: number, fontPx: number): void {
+  const w = g.measureText(text).width + fontPx * 1.1;
+  const h = fontPx * 1.55;
+  g.save();
+  g.shadowColor = "rgb(0 0 0 / 0.28)";
+  g.shadowBlur = 2;
+  g.shadowOffsetY = 1;
+  g.fillStyle = "#fffbeb";
+  g.beginPath();
+  g.roundRect(x - w / 2, y - h / 2, w, h, h / 2);
+  g.fill();
+  g.restore();
+  g.strokeStyle = "rgb(255 255 255 / 0.85)";
+  g.lineWidth = 1;
+  g.stroke();
+  g.fillStyle = "#292524";
+  g.fillText(text, x, y + 0.5);
+}
+
 /** The canvas: draws the script at its own pace (or one still), never re-rendering the map. */
 function ReplayLayer(props: { script: Script; house: { box: ReturnType<typeof datuHouseBox>; style: HouseStyle } | null; cam: Camera; view: View; still: number | null; onPhase: (p: Phase) => void; onEnd: () => void }) {
   const { script, house, cam, view, still, onPhase, onEnd } = props;
@@ -130,18 +150,16 @@ function ReplayLayer(props: { script: Script; house: { box: ReturnType<typeof da
         const q = px(f.sparks);
         drawSparks(g, q.x, q.y, T, still === null ? wall : 0.4);
       }
-      // Named villagers' names over their heads.
-      g.font = `600 ${Math.max(10, Math.min(13, T * 0.3))}px system-ui, sans-serif`;
+      // Named villagers' names over their heads, as crisp chips (the map-chip style in index.css).
+      const fontPx = Math.max(10, Math.min(12, T * 0.28));
+      g.font = `650 ${fontPx}px system-ui, sans-serif`;
       g.textAlign = "center";
-      g.lineWidth = 3;
-      g.strokeStyle = "rgb(28 20 16 / 0.85)";
-      g.fillStyle = "#fde68a";
+      g.textBaseline = "middle";
       for (const p of people) {
         if (!p.label) continue;
         const q = px(p.p);
-        const y = q.y - Math.max(7, T * 0.32) * 1.35;
-        g.strokeText(`★ ${p.label}`, q.x, y);
-        g.fillText(`★ ${p.label}`, q.x, y);
+        const y = q.y - Math.max(7, T * 0.32) * 1.5;
+        drawChip(g, `★ ${p.label}`, q.x, y, fontPx);
       }
     };
     if (still !== null) {

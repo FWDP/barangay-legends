@@ -816,7 +816,8 @@ export function BarangayMap(props: {
   // The docked trade boat's tap target (the boat itself is drawn on the villager canvas).
   const path = useMemo(() => riverPath(map), [map]);
   const offer = state.region?.offer ?? null;
-  const docked = offer && !tradeHeld && !scenic && onBoat && path.length > 2 && (reducedMotion || state.time - (offer.expiresAt - content.rules.diplomacy.offers.expireSeconds) >= SAIL_SECONDS);
+  // Only while its offer is still open: an answered or expired offer leaves no label.
+  const docked = offer && offer.expiresAt > state.time && !tradeHeld && !scenic && onBoat && path.length > 2 && (reducedMotion || state.time - (offer.expiresAt - content.rules.diplomacy.offers.expireSeconds) >= SAIL_SECONDS);
   const dock = docked ? { p: dockPoint(path, map.plaza), name: content.neighbors.find((n) => n.id === offer.from)?.name ?? offer.from } : null;
   // While trade is paused, a label where the bangka waits offshore. If it can't sit clear of the
   // controls it's left out: the offer bar at the top says the same thing.
@@ -874,7 +875,7 @@ export function BarangayMap(props: {
         {waitingAt && (
           <span
             role="status"
-            className="pointer-events-none absolute z-10 -translate-x-1/2 rounded-full border border-red-950 bg-stone-900/85 px-1.5 py-0.5 text-[11px] font-semibold whitespace-nowrap text-amber-50 shadow"
+            className="map-chip pointer-events-none absolute z-10 -translate-x-1/2"
             style={{ left: waitingAt.x, top: waitingAt.y }}
           >
             {WAITING_TEXT}
@@ -897,7 +898,7 @@ export function BarangayMap(props: {
             className="absolute z-10 flex -translate-x-1/2 -translate-y-1/2 cursor-pointer items-start justify-center rounded-full outline-none focus-visible:ring-4 focus-visible:ring-amber-300"
             style={{ left: o.x + dock.p.x * cam.tile, top: o.y + dock.p.y * cam.tile, width: cam.tile * 1.3, height: cam.tile * 1.3 }}
           >
-            <span aria-hidden className="text-outline -mt-[0.9em] rounded-full bg-amber-300 px-1.5 font-display text-[11px] leading-snug text-amber-950 shadow motion-safe:animate-bounce">
+            <span aria-hidden className="map-chip map-chip-good -mt-[0.9em] motion-safe:animate-bounce">
               🛶 Trade
             </span>
           </span>
@@ -965,7 +966,7 @@ function LandingMarker({ cam, view, landing, avoid }: { cam: Camera; view: View;
         {at && (
           <span
             aria-hidden
-            className="pointer-events-none absolute z-10 flex -translate-x-1/2 items-center gap-1 rounded-full border-2 border-red-950 bg-red-700 px-1.5 py-0.5 font-display text-xs whitespace-nowrap text-white shadow-lg"
+            className="map-chip map-chip-warn pointer-events-none absolute z-10 -translate-x-1/2"
             style={{ left: at.x, top: at.y }}
           >
             ⚔️ Landing
@@ -984,7 +985,7 @@ function LandingMarker({ cam, view, landing, avoid }: { cam: Camera; view: View;
     <div
       role="img"
       aria-label="Raiders will land off screen in this direction"
-      className="pointer-events-none absolute z-10 flex -translate-x-1/2 items-center gap-1 rounded-full border-2 border-red-950 bg-red-700 px-1.5 py-0.5 font-display text-xs text-white shadow-lg"
+      className="map-chip map-chip-warn pointer-events-none absolute z-10 -translate-x-1/2"
       style={{ left: at.x, top: at.y }}
     >
       ⚔️
@@ -1199,7 +1200,7 @@ const Cell = memo(function Cell(props: {
         />
       )}
       {valid && target > 0 && !ghost && (
-        <span className="text-outline pointer-events-none absolute top-0 right-0.5 font-display text-[0.32em] text-amber-200">
+        <span className="map-chip map-chip-good pointer-events-none absolute top-0 right-0.5 text-[0.24em]">
           +{Math.round(target * 100)}%
         </span>
       )}
@@ -1305,9 +1306,7 @@ function Label({ text, good, warn }: { text: string; good?: boolean; warn?: bool
   return (
     <span
       role="status"
-      className={`pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 -translate-x-1/2 rounded-md border px-1.5 py-0.5 font-display text-xs whitespace-nowrap shadow-lg ${
-        warn ? "border-red-950 bg-red-700 text-white" : good ? "border-amber-900 bg-amber-300 text-amber-950" : "border-stone-600 bg-stone-800/90 text-stone-100"
-      }`}
+      className={`map-chip pointer-events-none absolute bottom-full left-1/2 z-20 mb-1 -translate-x-1/2 ${warn ? "map-chip-warn" : good ? "map-chip-good" : ""}`}
     >
       {text}
     </span>
@@ -1493,7 +1492,7 @@ function Building(props: {
       {noPath && !damaged && (
         <span
           aria-hidden
-          className="pointer-events-none absolute -top-[0.15em] left-1/2 -translate-x-1/2 rounded-full border border-red-950 bg-red-700 px-1 font-display text-[0.26em] leading-tight whitespace-nowrap text-white shadow"
+          className="map-chip map-chip-warn pointer-events-none absolute -top-[0.15em] left-1/2 -translate-x-1/2 text-[0.26em]"
         >
           🚫 No path
         </span>
@@ -1512,7 +1511,7 @@ function Building(props: {
       {inside > 0 && !damaged && (
         <span
           aria-hidden
-          className="pointer-events-none absolute top-0 right-0 flex items-center gap-[0.05em] rounded-full border-[0.03em] border-emerald-950/40 bg-emerald-50 px-[0.18em] text-[0.24em] leading-tight font-bold text-emerald-900 shadow-sm"
+          className="pointer-events-none absolute top-0 right-0 flex items-center gap-[0.05em] rounded-full border-[0.03em] border-emerald-950/40 bg-emerald-50 px-[0.18em] text-[0.3em] leading-tight font-bold text-emerald-900 shadow-sm"
         >
           🌿{inside}
         </span>

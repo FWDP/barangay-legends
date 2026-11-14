@@ -41,6 +41,25 @@ const fmt = (amounts: Partial<Record<Resource, number>>) =>
     .map((r) => `${amounts[r]} ${RESOURCE_ICON[r]}`)
     .join(" ");
 
+/**
+ * A name label on the region map, in the map-chip style (index.css): a solid light pill with
+ * dark text, a thin light border and a soft shadow under the pill, no outline on the letters.
+ * The width is estimated from the text (SVG can't measure before layout).
+ */
+function SvgChip({ text, y, size }: { text: string; y: number; size: number }) {
+  const w = text.length * size * 0.56 + size * 1.2;
+  const h = size * 1.55;
+  return (
+    <g transform={`translate(0, ${y})`} aria-hidden>
+      <rect x={-w / 2} y={-h / 2 + size * 0.12} width={w} height={h} rx={h / 2} fill="rgb(0 0 0 / 0.22)" />
+      <rect x={-w / 2} y={-h / 2} width={w} height={h} rx={h / 2} fill="#fffbeb" stroke="rgb(255 255 255 / 0.85)" strokeWidth={size * 0.08} />
+      <text textAnchor="middle" dominantBaseline="central" fontSize={size} fontWeight="600" fill="#292524" fontFamily="system-ui, sans-serif">
+        {text}
+      </text>
+    </g>
+  );
+}
+
 export function RegionView(props: {
   state: GameState;
   content: Content;
@@ -151,9 +170,7 @@ function ArchipelagoMap(props: { state: GameState; content: Content; game: GameT
         <text textAnchor="middle" dy="1.1" fontSize="3" aria-hidden>
           🔥
         </text>
-        <text textAnchor="middle" y="-4" fontSize="2.2" fill="#fffbeb" fontWeight="bold" stroke="#0c4a6e" strokeWidth="0.35" paintOrder="stroke">
-          {state.barangay.name || game.balita.you[lang]}
-        </text>
+        <SvgChip text={state.barangay.name || game.balita.you[lang]} y={-4.6} size={2.1} />
       </g>
       {region.neighbors.map((n) => {
         const def = neighborDef(content, n.id)!;
@@ -185,9 +202,7 @@ function ArchipelagoMap(props: { state: GameState; content: Content; game: GameT
               </text>
             )}
             {raiding && <circle r="4" fill="none" stroke="#dc2626" strokeWidth="0.6" className="motion-safe:animate-pulse" />}
-            <text textAnchor="middle" y="4.9" fontSize="1.9" fill="#fffbeb" fontWeight="bold" stroke="#0c4a6e" strokeWidth="0.35" paintOrder="stroke">
-              {def.name.replace("Barangay ", "")}
-            </text>
+            <SvgChip text={def.name.replace("Barangay ", "")} y={4.6} size={1.8} />
             <g transform="translate(2.4, -2.2)" aria-hidden>
               <circle r="1.25" fill="#fcd34d" stroke="#78350f" strokeWidth="0.25" />
               <text textAnchor="middle" dy="0.55" fontSize="1.5" fontWeight="bold" fill="#451a03">

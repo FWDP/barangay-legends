@@ -35,7 +35,8 @@ const subscribe = (l: () => void) => {
   return () => listeners.delete(l);
 };
 
-const TONE = { rice: "text-amber-50", wood: "text-orange-200", gold: "text-yellow-200", info: "text-sky-100" } as const;
+/** Crisp chips (index.css map-chip): a solid pill with dark text, no outline on the letters. */
+const TONE = { rice: "map-chip-good", wood: "map-chip-good", gold: "map-chip-good", info: "" } as const;
 
 export function FloatLayer() {
   const list = useSyncExternalStore(subscribe, () => floats);
@@ -44,7 +45,7 @@ export function FloatLayer() {
       {list.map((f) => (
         <span
           key={f.id}
-          className={`text-outline absolute font-display text-lg whitespace-nowrap motion-safe:animate-float-up motion-reduce:animate-fade-out ${TONE[f.tone]}`}
+          className={`map-chip absolute text-[13px] motion-safe:animate-float-up motion-reduce:animate-fade-out ${TONE[f.tone]}`}
           style={{ left: f.x, top: f.y }}
         >
           {f.text}

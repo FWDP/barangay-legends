@@ -113,8 +113,10 @@ export function VisitView(props: {
             </p>
           </div>
         </div>
-        <p className="pointer-events-none absolute inset-x-2 bottom-2 z-10 text-center text-[11px] text-amber-50 [text-shadow:0_1px_2px_rgb(0_0_0)]">
-          {t.ai[lang]} {t.readOnly[lang]}
+        <p className="pointer-events-none absolute inset-x-2 bottom-2 z-10 text-center">
+          <span className="map-chip whitespace-normal">
+            {t.ai[lang]} {t.readOnly[lang]}
+          </span>
         </p>
       </div>
       <aside className="mat-card flex-1 border-t-4 border-amber-900/60 p-3 text-stone-800 lg:w-[26rem] lg:flex-none lg:overflow-y-auto lg:border-t-0 lg:border-l-4">
