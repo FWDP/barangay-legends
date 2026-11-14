@@ -81,6 +81,7 @@ export function VisitView(props: {
           onBuildingMenu={noop}
           onSpirit={noop}
           visit={{ landing: planning ? (preview?.landing ?? null) : null }}
+          defense={{ on: false, text: game.defense, lang }}
         />
         {/* Who they are, over the top of their map. */}
         <div data-map-overlay className="pointer-events-none absolute inset-x-2 top-2 z-10 flex items-start justify-between gap-2">

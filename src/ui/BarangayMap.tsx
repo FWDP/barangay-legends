@@ -51,6 +51,7 @@ import {
   type View,
 } from "./camera";
 import { spawnFloat } from "./floats";
+import { legendItems, markerAt, MARKER_TEXT, type MarkerKind, type Marks } from "./defenseLegend";
 import { NightLayer } from "./NightLayer";
 import { bonusPreviewText, RESOURCE_ICON } from "./format";
 import { activeJobs, jobCost, workforce } from "../engine/clearing";
@@ -394,12 +395,15 @@ export function BarangayMap(props: {
   // cover), on the Defense map, and while a raid is coming. Green: a Kuta covers it.
   const showShore = !scenic && !visit && (!!defense?.on || !!placing?.defense || !!landing);
   const planned = placing?.defense && hover && placement?.has(`${hover.x},${hover.y}`) ? hover : null;
+  // The key to the markers, and their tips: on the Defense map and a visit's raid preview.
+  const legendOn = !scenic && !placing && !road && (!!defense?.on || !!visit?.landing);
   const shore = useMemo(() => {
     const out = new Map<string, "covered" | "new" | "open">();
     if (!showShore) return out;
     for (const s of shoreCoverage(plan, content, planned)) out.set(`${s.p.x},${s.p.y}`, s.covered ? "covered" : s.byNew ? "new" : "open");
     return out;
   }, [showShore, plan.buildings, plan.map, content, planned?.x, planned?.y]);
+  const marks: Marks = { shore, range: guard, landing };
 
   // Now and then the anito of a balete shows itself. Which trees, and when, comes from a hash of the
   // tree's position and the current time window, so it's stable for a while (UI only).
@@ -452,9 +456,19 @@ export function BarangayMap(props: {
 
   const namedHit = useRef<NamedHit | null>(null);
   const tapAt = (px: number, py: number, clientX: number, clientY: number) => {
-    if (!cam || visit) return;
+    if (!cam) return;
     const t = screenToTile(cam, view, px, py);
     if (tileAt(map, t.x, t.y) === null) return;
+    // The Defense map or a raid preview: tapping a marker says what it is in one line. A landing
+    // point or the raiders' landing takes the tap; a tile in a Kuta's range still works as usual.
+    if (legendOn && defense) {
+      const k = markerAt(marks, t.x, t.y);
+      if (k) {
+        spawnFloat(clientX, clientY, defense.text[MARKER_TEXT[k].tip][defense.lang], "info");
+        if (visit || k !== "range") return;
+      }
+    }
+    if (visit) return;
     if (road) {
       if (tileAt(map, t.x, t.y) === "daan") road.onRemove(t.x, t.y);
       else if (canPlaceRoad(state, content, t.x, t.y)) road.onLay([t]);
@@ -887,6 +901,7 @@ export function BarangayMap(props: {
         {cam && view.w > 0 && <VillagerLayer state={state} content={content} cam={cam} view={view} reducedMotion={reducedMotion} clash={clash} hitRef={scenic ? undefined : namedHit} torches={scenic ? undefined : torches} />}
         {cam && view.w > 0 && overlay?.(cam, view)}
         {cam && landing && <LandingMarker cam={cam} view={view} landing={landing} avoid={avoid} />}
+        {cam && legendOn && defense && <DefenseLegend marks={marks} text={defense.text} lang={defense.lang} view={view} avoid={avoid} />}
         {waitingAt && (
           <span
             role="status"
@@ -964,6 +979,48 @@ export function BarangayMap(props: {
  * Where raiders will land: a pulsing marker on the tile, or, when it's off screen, an arrow at
  * the edge of the view pointing to it.
  */
+/** A small swatch for each marker in the key, drawn like the marker on the map. */
+function Swatch({ kind }: { kind: MarkerKind }) {
+  if (kind === "range") return <span aria-hidden className="inline-block size-3.5 shrink-0 rounded-sm bg-sky-300/50 shadow-[inset_0_0_4px_rgb(186_230_253_/_0.9)]" />;
+  if (kind === "landing") return <span aria-hidden className="inline-flex size-3.5 shrink-0 items-center justify-center rounded-full bg-red-500/60 text-[8px] leading-none">⚔️</span>;
+  return (
+    <span
+      aria-hidden
+      className={`inline-flex size-3.5 shrink-0 items-center justify-center rounded-full border border-dashed text-[7px] leading-none ${kind === "open" ? "border-red-600 bg-red-500/40" : "border-emerald-700 bg-emerald-500/40"}`}
+    >
+      {kind === "open" ? "⚠️" : "🛡️"}
+    </span>
+  );
+}
+
+/** The key to the Defense map's markers, in a free corner of the map (clear of the controls). */
+function DefenseLegend({ marks, text, lang, view, avoid }: { marks: Marks; text: GameText["defense"]; lang: Lang; view: View; avoid: Rect[] }) {
+  const items = legendItems(marks);
+  if (items.length === 0) return null;
+  const size = { w: 210, h: 34 + items.length * 19 };
+  // Bottom left first; placeLabel moves it clear of any control drawn over the map.
+  const at = placeLabel(8 + size.w / 2, view.h - size.h - 8, size, view, avoid, 8);
+  if (!at) return null;
+  return (
+    <div
+      role="note"
+      aria-label={text.legendTitle[lang]}
+      className="pointer-events-none absolute z-10 rounded-lg border border-amber-900/50 bg-amber-50/95 px-2 py-1 text-[11px] leading-tight text-stone-800 shadow-md"
+      style={{ left: at.x - size.w / 2, top: at.y, width: size.w }}
+    >
+      <p className="font-display text-xs text-amber-900">{text.legendTitle[lang]}</p>
+      <ul className="mt-0.5 space-y-0.5">
+        {items.map((k) => (
+          <li key={k} className="flex items-center gap-1.5">
+            <Swatch kind={k} /> {text[MARKER_TEXT[k].legend][lang]}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-0.5 text-[10px] text-stone-500 italic">{text.legendTap[lang]}</p>
+    </div>
+  );
+}
+
 function LandingMarker({ cam, view, landing, avoid }: { cam: Camera; view: View; landing: Point; avoid: Rect[] }) {
   const p = tileCenter(cam, view, landing.x, landing.y);
   const inside = p.x >= 0 && p.y >= 0 && p.x <= view.w && p.y <= view.h;

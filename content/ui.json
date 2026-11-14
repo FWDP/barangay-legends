@@ -1598,6 +1598,46 @@
     "outnumbered": {
       "en": "The raiders outnumbered your defenders at the landing point.",
       "fil": "Mas marami ang mananalakay kaysa sa mga tagapagtanggol sa daungan."
+    },
+    "legendTitle": {
+      "en": "Map key",
+      "fil": "Gabay sa mapa"
+    },
+    "legendOpen": {
+      "en": "Landing point, no Kuta in reach",
+      "fil": "Daungan, walang Kutang abot"
+    },
+    "legendCovered": {
+      "en": "Landing point a Kuta covers",
+      "fil": "Daungang sakop ng Kuta"
+    },
+    "legendRange": {
+      "en": "Kuta range",
+      "fil": "Abot ng Kuta"
+    },
+    "legendLanding": {
+      "en": "Where the raiders will land",
+      "fil": "Kung saan dadaong ang mananalakay"
+    },
+    "legendTap": {
+      "en": "Tap a marker to learn more.",
+      "fil": "Pindutin ang isang marka para sa paliwanag."
+    },
+    "tipOpen": {
+      "en": "Raiders could land here, and no Kuta is close enough to defend it.",
+      "fil": "Maaaring dumaong dito ang mananalakay, at walang Kutang sapat na malapit para ipagtanggol ito."
+    },
+    "tipCovered": {
+      "en": "Raiders could land here, but a Kuta is close enough to defend it.",
+      "fil": "Maaaring dumaong dito ang mananalakay, ngunit may Kutang sapat na malapit para ipagtanggol ito."
+    },
+    "tipRange": {
+      "en": "Inside a Kuta's range: a landing here meets its full defense.",
+      "fil": "Saklaw ng isang Kuta: buong lakas ng depensa nito ang sasalubong sa dadaong dito."
+    },
+    "tipLanding": {
+      "en": "The raiders land here today.",
+      "fil": "Dito dadaong ang mananalakay ngayong araw."
     }
   },
   "stockpile": {

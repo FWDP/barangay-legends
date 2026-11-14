@@ -158,6 +158,8 @@ export const GAME_TEXT = {
     map: [], mapOn: [], mapTip: [], legend: ["covered", "total"], landing: [], covered: [], uncovered: [], placing: ["covered", "total", "left"], placingNone: [], noShore: [],
     warnCovered: [], warnUncovered: [], showMe: [], close: [],
     wonCovered: [], won: [], lateUncovered: [], uncovered_: [], late: [], lostCovered: [], outnumbered: [],
+    legendTitle: [], legendOpen: [], legendCovered: [], legendRange: [], legendLanding: [], legendTap: [],
+    tipOpen: [], tipCovered: [], tipRange: [], tipLanding: [],
   },
   stockpile: { label: [], tip: ["cap"], over: ["cap", "percent"], stop: ["stop"], stopLabel: [] },
   healing: { inside: ["n"], others: ["n"], none: [], home: ["n"], badge: ["n"] },
