@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import mapSource from "./BarangayMap.tsx?raw";
+import shareSource from "./share.ts?raw";
 import { describe, expect, it } from "vitest";
 import { PADDY, PADDY_STYLE } from "./paddy";
 
@@ -16,7 +17,7 @@ describe("Palayan fields", () => {
   });
 
   it("the map no longer uses the old lime-to-cyan gradient, and the share card draws the same field", () => {
-    expect(readFileSync("src/ui/BarangayMap.tsx", "utf8")).not.toMatch(/to-cyan|from-lime/);
-    expect(readFileSync("src/ui/share.ts", "utf8")).toContain("drawPaddy(");
+    expect(mapSource).not.toMatch(/to-cyan|from-lime/);
+    expect(shareSource).toContain("drawPaddy(");
   });
 });
