@@ -18,7 +18,7 @@
   --animate-smoke: smoke 2.6s ease-out infinite;
   --animate-peek: peek 5s ease-in-out infinite;
 
-  /* The kapre's cigar smoke drifting up out of the balete. */
+  /* Leaves rustling up out of the balete when its anito is near. */
   @keyframes smoke {
     0% {
       opacity: 0;

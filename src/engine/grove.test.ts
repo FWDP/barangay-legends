@@ -21,11 +21,11 @@ const meadow = mapFrom([
 ]);
 const bonus = (x: number, y: number, map = meadow, c: Content = content) => groveBonusAt(map, c, c.buildings.find((b) => b.id === "woodcutter-camp")!, x, y, "wood");
 
-describe("Kapre's grove", () => {
+describe("the Anito ng Balete's grove", () => {
   it("is defined in content: +25% wood for woodcutter camps within 3 tiles of a balete", () => {
     expect(grove).toMatchObject({ tile: "balete", radius: 3, affects: "woodcutter-camp", resource: "wood", percent: 25 });
-    expect(grove.tradition).toBe("Tagalog and other lowland folklore");
-    expect(content.lore.kapre.tradition).toBe("Tagalog and other lowland folklore");
+    expect(grove.tradition).toBe("Tagalog and other lowland belief");
+    expect(content.lore["anito-ng-balete"].tradition).toBe("Tagalog and other lowland belief");
   });
 
   it("reaches 3 tiles in a straight line, and no further", () => {
@@ -105,7 +105,7 @@ describe("Kapre's grove", () => {
 describe("balete lore", () => {
   it("names what clearing loses", () => {
     expect(content.lore.balete.clearWarning).toBe(
-      "This removes Kapre's grove: nearby woodcutters lose +{percent}% wood. This can't be undone.",
+      "This removes the Anito ng Balete's grove: nearby woodcutters lose +{percent}% wood. This can't be undone.",
     );
   });
 });

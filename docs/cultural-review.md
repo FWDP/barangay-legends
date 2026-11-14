@@ -21,7 +21,7 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 
 ### Questions for the reviewer
 
-1. **Tikbalang riddles** (`content/blessings/tikbalang.json`): the three riddles were written in
+1. **Tigbalang riddles** (`content/blessings/tikbalang.json`): the three riddles were written in
    the style of Tagalog *bugtong*; they are not quoted from a collection. Please replace them with
    documented bugtong (e.g. from Eugenio, *Philippine Folk Literature: The Riddles*) or confirm
    they are acceptable.
@@ -95,9 +95,9 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 | content/blessings/diwata-favor.json | Ritual | Widespread (nature spirits) | Scott; Jocano 1969; Wikipedia: Diwata |
 | content/blessings/sarimanok.json | Visitor | Maranao | Wikipedia: Sarimanok, Maranao people |
 | content/blessings/bakunawa.json | Event | Visayan | Scott; Eugenio 1993; Wikipedia: Bakunawa |
-| content/blessings/tikbalang.json | Event (with riddles) | Tagalog | Ramos 1971; Eugenio 1994; Wikipedia: Tikbalang |
+| content/blessings/tikbalang.json | Event (with riddles): the tigbalang (shown as "Tigbalang"; the id stays tikbalang) | Tagalog | Plasencia 1589; Ramos 1971; Eugenio 1994 |
 | content/lore/balete.json | Aklat entry | Tagalog and lowland | Ramos 1971 |
-| content/lore/kapre.json | Aklat entry | Tagalog and lowland | Ramos 1971 |
+| content/lore/anito-ng-balete.json (was kapre.json) | Aklat entry: the spirit of the balete, and the colonial origin of the word "kapre" (Spanish cafre, from Arabic kafir) and of the cigar-smoking giant image; drawn as a glow, rustling leaves and a faint shape in the tree | Tagalog and lowland | Plasencia 1589; Scott 1994; Ramos 1971 |
 | content/lore/sandugo.json | Aklat entry | Widespread | Scott 1994 |
 | content/lore/mangayaw.json | Aklat entry | Visayan and others | Scott 1994 |
 | content/lore/babaylan.json | Aklat entry | Visayan / Tagalog | Scott; Brewer 2004; Plasencia |
@@ -105,11 +105,11 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 | content/lore/bathala.json | Aklat entry (story only) | Tagalog | Plasencia; Jocano |
 | content/lore/diwata.json | Aklat entry | Widespread | Scott; Jocano |
 | content/lore/forest-spirits.json | Aklat entry | Widespread lowland | Ramos; Scott; Wikipedia: Nuno sa punso |
-| content/lore/tikbalang.json | Aklat entry | Tagalog | Ramos |
+| content/lore/tikbalang.json | Aklat entry: the tigbalang (name as in Plasencia 1589), a tall shadowy forest phantom; the horse-headed image as later folklore (no horses before the Spanish); drawn as a dark figure between trunks | Tagalog | Plasencia 1589; Scott 1994; Ramos 1971 |
 | content/lore/sarimanok.json | Aklat entry | Maranao | Wikipedia |
 | content/lore/bakunawa.json | Aklat entry | Visayan | Scott; Eugenio 1993 |
 | content/lore/karakoa.json | Aklat entry | Visayan | Scott |
-| content/blessings/kapres-grove.json | Passive blessing | Tagalog and lowland | Ramos 1971 |
+| content/blessings/anito-ng-balete.json (was kapres-grove.json) | Passive blessing: the Anito ng Balete's grove | Tagalog and lowland | Plasencia 1589; Scott 1994; Ramos 1971 |
 | content/buildings/libingan.json | Building (resting place) | Widespread | Scott; Fox 1970; Wikipedia: Manunggul Jar |
 | content/blessings/mourning-rite.json | Ritual (rite for the departed) | Widespread | Scott; Plasencia |
 | content/lore/burial-jars.json | Aklat entry (Manunggul and Maitum jars) | Archaeological (Palawan; Sarangani) | Fox 1970; Dizon and Santiago 1996; Wikipedia |

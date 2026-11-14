@@ -41,7 +41,7 @@ export function bonusRuleText(def: BuildingDef, content: Content): string | null
 }
 
 /**
- * Ghost preview label, e.g. "+10% wood · 🌳 Kapre's grove +25%"; "No bonus" when the tile
+ * Ghost preview label, e.g. "+10% wood · 🌳 the Anito ng Balete's grove +25%"; "No bonus" when the tile
  * gives none. `grove` is the grove bonus there, if any, with the grove's name.
  */
 export function bonusPreviewText(def: BuildingDef, bonus: number, grove?: { name: string; bonus: number }): string {
@@ -54,7 +54,7 @@ export function bonusPreviewText(def: BuildingDef, bonus: number, grove?: { name
   return parts.length ? parts.join(" · ") : "No bonus";
 }
 
-/** e.g. "🌳 Kapre's grove: +25% wood within 3 tiles of an old balete", for building cards. */
+/** e.g. "🌳 the Anito ng Balete's grove: +25% wood within 3 tiles of an old balete", for building cards. */
 export function groveRuleText(def: BuildingDef, content: Content): string | null {
   const grove = content.groves.find((g) => g.affects === def.id);
   if (!grove) return null;

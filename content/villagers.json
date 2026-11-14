@@ -57,11 +57,11 @@
       }
     },
     {
-      "id": "kapre-friend",
+      "id": "balete-friend",
       "role": "woodcutter",
       "text": {
-        "en": "{name}, who leaves tobacco for the kapre before every cut",
-        "fil": "Si {name}, na nag-iiwan ng tabako para sa kapre bago pumutol"
+        "en": "{name}, who leaves a little rice for the anito of the balete before every cut",
+        "fil": "Si {name}, na nag-iiwan ng kaunting bigas para sa anito ng balete bago pumutol"
       }
     },
     {
@@ -92,8 +92,8 @@
       "id": "storyteller",
       "role": "villager",
       "text": {
-        "en": "{name}, who tells the children stories of the kapre",
-        "fil": "Si {name}, na nagkukuwento sa mga bata tungkol sa kapre"
+        "en": "{name}, who tells the children stories of the anito of the balete",
+        "fil": "Si {name}, na nagkukuwento sa mga bata tungkol sa anito ng balete"
       }
     },
     {

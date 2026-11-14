@@ -1,6 +1,6 @@
 // Worship and the spirits on screen: the Dambana (tradition, offerings, rituals, asking
 // permission), the Aklat ng Alamat, the Forest Balance leaf, and the bars for the beings who
-// come on their own (the Bakunawa eclipse, the tikbalang's riddle, a kapre's prank).
+// come on their own (the Bakunawa eclipse, the tigbalang's riddle, the balete spirit's prank).
 import { useState } from "react";
 import { RESOURCES, type Content, type Resource } from "../engine/content";
 import { aklatEntry, aklatProgress } from "../engine/aklat";
@@ -406,7 +406,23 @@ export function EclipseBar({ state, content, game, lang, onGong }: { state: Game
   );
 }
 
-/** The tikbalang's riddle: the right answer brings the lost workers home. */
+/**
+ * The tigbalang as the early sources have it: a tall, shadowy phantom among the trees (no horse
+ * head: horses came with the Spanish; content/lore/tikbalang.json).
+ */
+function TigbalangFigure() {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" className="mr-1 inline-block size-5 align-[-0.3em]">
+      <rect x="2" y="2" width="2.2" height="22" fill="#3f6212" opacity="0.8" />
+      <rect x="19.5" y="1" width="2.4" height="23" fill="#3f6212" opacity="0.8" />
+      <path d="M12 2.5c-2 0-3 1.8-3 3.6 0 1.4.6 2.2 1.2 2.8L8.6 21c-.1.9.5 1.6 1.4 1.6h4c.9 0 1.5-.7 1.4-1.6l-1.6-12.1c.6-.6 1.2-1.4 1.2-2.8 0-1.8-1-3.6-3-3.6z" fill="#1c1917" opacity="0.75" />
+      <path d="M9 10.5 5.5 16M15 10.5l3.5 5.5" stroke="#1c1917" strokeWidth="1.2" strokeLinecap="round" opacity="0.6" />
+      <circle cx="11" cy="6" r="0.5" fill="#fef3c7" /><circle cx="13" cy="6" r="0.5" fill="#fef3c7" />
+    </svg>
+  );
+}
+
+/** The tigbalang's riddle: the right answer brings the lost workers home. */
 export function TikbalangBar({ state, content, game, lang, onAnswer }: { state: GameState; content: Content; game: GameText; lang: Lang; onAnswer: (i: number) => void }) {
   const t = state.tikbalang;
   const riddle = content.trickery?.riddles.find((r) => r.id === t?.riddle);
@@ -414,7 +430,7 @@ export function TikbalangBar({ state, content, game, lang, onAnswer }: { state: 
   return (
     <div role="alert" className="pointer-events-auto max-w-[min(26rem,100%)] rounded-xl border-2 border-amber-950 bg-stone-900/90 p-2.5 text-amber-50 shadow-lg">
       <p className="text-xs leading-snug sm:text-sm">
-        <span aria-hidden>🐴 </span>
+        <TigbalangFigure />
         {fill(game.events.tikbalang[lang], { n: t.workers })}
       </p>
       <p className="mt-1 text-sm font-semibold">{riddle.question[lang]}</p>
@@ -433,7 +449,7 @@ export function TikbalangBar({ state, content, game, lang, onAnswer }: { state: 
   );
 }
 
-/** A kapre hid a camp's tools: which camp, and for how long. */
+/** The anito of the balete hid a camp's tools: which camp, and for how long. */
 export function PrankBar({ state, content, game, lang }: { state: GameState; content: Content; game: GameText; lang: Lang }) {
   const p = state.pranks.find((x) => isPranked(state, x.x, x.y));
   if (!p) return null;

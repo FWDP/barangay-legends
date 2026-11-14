@@ -2,12 +2,12 @@
   "id": "tikbalang",
   "type": "trickery",
   "name": {
-    "en": "Tikbalang trickery",
-    "fil": "Panlilinlang ng tikbalang"
+    "en": "Tigbalang trickery",
+    "fil": "Panlilinlang ng tigbalang"
   },
   "description": {
-    "en": "A tikbalang leads some workers astray. Answer its riddle and they find their way home at once.",
-    "fil": "Inililigaw ng tikbalang ang ilang manggagawa. Sagutin ang bugtong nito at makauuwi sila agad."
+    "en": "A tigbalang leads some workers astray. Answer its riddle and they find their way home at once.",
+    "fil": "Inililigaw ng tigbalang ang ilang manggagawa. Sagutin ang bugtong nito at makauuwi sila agad."
   },
   "minVillagers": 20,
   "chancePerSecond": 0.0004,
@@ -87,8 +87,8 @@
   "tradition": "Tagalog",
   "reviewed": false,
   "sources": [
+    "Juan de Plasencia, Customs of the Tagalogs (1589), in Emma H. Blair and James A. Robertson, eds., The Philippine Islands, 1493–1898, vol. 7 (Arthur H. Clark, 1903)",
     "Maximo D. Ramos, The Creatures of Philippine Lower Mythology (University of the Philippines Press, 1971)",
-    "Damiana L. Eugenio, Philippine Folk Literature: The Riddles (University of the Philippines Press, 1994)",
-    "https://en.wikipedia.org/wiki/Tikbalang"
+    "Damiana L. Eugenio, Philippine Folk Literature: The Riddles (University of the Philippines Press, 1994)"
   ]
 }

@@ -1,26 +1,27 @@
 {
   "id": "tikbalang",
-  "name": "Tikbalang",
-  "description": "A tall creature with a horse's head that leads travelers astray.",
+  "name": "Tigbalang",
+  "description": "A tall, shadowy forest phantom that leads travelers astray; and how it later got a horse's head.",
   "tradition": "Tagalog",
   "sources": [
-    "Maximo D. Ramos, The Creatures of Philippine Lower Mythology (University of the Philippines Press, 1971)",
-    "https://en.wikipedia.org/wiki/Tikbalang"
+    "Juan de Plasencia, Customs of the Tagalogs (1589), in Emma H. Blair and James A. Robertson, eds., The Philippine Islands, 1493–1898, vol. 7 (Arthur H. Clark, 1903)",
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Maximo D. Ramos, The Creatures of Philippine Lower Mythology (University of the Philippines Press, 1971)"
   ],
   "aklat": {
     "order": 10,
-    "icon": "🐴",
+    "icon": "🌫️",
     "name": {
-      "en": "Tikbalang",
-      "fil": "Tikbalang"
+      "en": "Tigbalang",
+      "fil": "Tigbalang"
     },
     "lore": {
-      "en": "The tikbalang is a tall, bony creature with the head and hooves of a horse. In Tagalog folklore it haunts forests and makes travelers lose their way, walking in circles. Turning one's shirt inside out was said to break the spell. It is a trickster more than a killer.",
-      "fil": "Ang tikbalang ay matangkad at payat na nilalang na may ulo at paa ng kabayo. Sa alamat ng mga Tagalog, nagmumulto ito sa gubat at inililigaw ang mga manlalakbay hanggang paikot-ikot sila. Sinasabing nasisira ang engkanto kapag binaligtad ang damit. Mas manloloko ito kaysa mamamatay-tao."
+      "en": "Juan de Plasencia, writing about the Tagalogs in 1589, recorded the tigbalang among the beings people feared: a phantom of the forest that appears to travelers and leads them astray, so they walk in circles. Turning one's shirt inside out was later said to break the spell. The familiar picture of a tall creature with a horse's head and hooves (the 'tikbalang') belongs to later folklore: there were no horses in the islands before the Spanish brought them. The game uses the older name and shows a tall, shadowy figure among the trees.",
+      "fil": "Itinala ni Juan de Plasencia, na sumulat tungkol sa mga Tagalog noong 1589, ang tigbalang sa mga nilalang na kinatatakutan: isang multo ng gubat na nagpapakita sa mga manlalakbay at inililigaw sila hanggang paikot-ikot. Sa mas huling panahon, sinasabing nasisira ang engkanto kapag binaligtad ang damit. Ang kilalang larawan ng matangkad na nilalang na may ulo at paa ng kabayo (ang 'tikbalang') ay mula sa mas huling alamat: walang kabayo sa kapuluan bago dinala ng mga Espanyol. Ginagamit ng laro ang mas lumang pangalan at ipinapakita ito bilang matangkad at madilim na anino sa gitna ng mga puno."
     },
     "inGame": {
-      "en": "Sometimes a tikbalang leads a few workers astray for a minute. Answer its riddle and they come home at once. It comes more often when the forest is cut too fast.",
-      "fil": "Paminsan-minsan, inililigaw ng tikbalang ang ilang manggagawa nang isang minuto. Sagutin ang bugtong nito at makauuwi sila agad. Mas madalas itong dumating kapag masyadong mabilis ang pagputol ng gubat."
+      "en": "Sometimes a tigbalang leads a few workers astray for a minute. Answer its riddle and they come home at once. It comes more often when the forest is cut too fast.",
+      "fil": "Paminsan-minsan, inililigaw ng tigbalang ang ilang manggagawa nang isang minuto. Sagutin ang bugtong nito at makauuwi sila agad. Mas madalas itong dumating kapag masyadong mabilis ang pagputol ng gubat."
     },
     "hint": {
       "en": "Something in the forest plays tricks on workers.",

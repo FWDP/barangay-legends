@@ -92,7 +92,7 @@ describe("AI fame", () => {
 describe("the player's ranked stats", () => {
   it("note when they last grew", () => {
     const s = world({ time: 10 });
-    const later = { ...s, time: 70, kabantugan: s.kabantugan + 5, stats: { ...s.stats, raidsDefended: 1 }, aklat: ["kapre"] };
+    const later = { ...s, time: 70, kabantugan: s.kabantugan + 5, stats: { ...s.stats, raidsDefended: 1 }, aklat: ["anito-ng-balete"] };
     expect(trackRanking(s, later, content).achievedAt).toEqual({ renown: 70, defended: 70, aklat: 70 });
   });
 });

@@ -1,0 +1,23 @@
+{
+  "id": "anito-ng-balete",
+  "type": "grove",
+  "name": "Anito ng Balete",
+  "description": "While an old balete stands, the anito of the balete keeps its grove. Woodcutters working near it bring back more wood.",
+  "tile": "balete",
+  "radius": 3,
+  "affects": "woodcutter-camp",
+  "resource": "wood",
+  "percent": 25,
+  "sighting": {
+    "chancePercent": 10,
+    "windowSeconds": 60
+  },
+  "tradition": "Tagalog and other lowland belief",
+  "lore": "anito-ng-balete",
+  "sources": [
+    "Juan de Plasencia, Customs of the Tagalogs (1589), in Emma H. Blair and James A. Robertson, eds., The Philippine Islands, 1493–1898, vol. 7 (Arthur H. Clark, 1903)",
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Maximo D. Ramos, The Creatures of Philippine Lower Mythology (University of the Philippines Press, 1971)"
+  ],
+  "reviewed": false
+}

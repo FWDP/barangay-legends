@@ -26,7 +26,7 @@ Every sound in the game is generated in the browser with the Web Audio API. Ther
 | Pick up | Choosing a building to place or move | Two quick triangle "tocks" | Generated, `sfx.pick` |
 | Build | Placing, moving, repairing or demolishing a building | Low thunk and a two-note chime | Generated, `sfx.build` |
 | Extinguish | Putting out a fire | Falling sawtooth whoosh | Generated, `sfx.extinguish` |
-| Click | Menus, undo, the kapre | Very short sine tick | Generated, `sfx.click` |
+| Click | Menus, undo, the anito of the balete | Very short sine tick | Generated, `sfx.click` |
 | Event warning | A fire, typhoon, raid, hunger or sickness warning appears | Two low gong strokes | Generated, `sfx.warning` |
 | Battle start | A raid or defense report arrives | Four filtered-noise drum hits and a gong | Generated, `sfx.battleStart` |
 | Battle won | After a won battle | Three rising gongs | Generated, `sfx.battleWon` |

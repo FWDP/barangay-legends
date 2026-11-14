@@ -323,7 +323,7 @@ function ClearingQueueDialog(props: {
   );
 }
 
-/** A short lore note (e.g. the kapre), with its tradition and source. Closes itself after a while. */
+/** A short lore note (e.g. the anito of the balete), with its tradition and source. Closes itself after a while. */
 function LoreToast(props: { loreId: string | null; onClose: () => void }) {
   const { loreId, onClose } = props;
   const note = loreId ? content.lore[loreId] : null;
@@ -628,7 +628,7 @@ export function App() {
       ),
       label: `🌑 ${nt.eclipse[lang]}`,
     },
-    tikbalang: { node: <TikbalangBar state={state} content={content} game={ui.game} lang={lang} onAnswer={(i) => dispatch({ type: "answerRiddle", option: i })} />, label: `🐴 ${nt.tikbalang[lang]}` },
+    tikbalang: { node: <TikbalangBar state={state} content={content} game={ui.game} lang={lang} onAnswer={(i) => dispatch({ type: "answerRiddle", option: i })} />, label: `🌫️ ${nt.tikbalang[lang]}` },
     offer: {
       node: <OfferBar state={state} content={content} dispatch={dispatch} folded={view === "barangay" && !offerOpen} sailing={sailing} held={tradeHeld} onOpen={() => !sailing && setOfferOpen(true)} />,
       label: `🛶 ${fill(nt.offer[lang], { barangay: offerFrom })}`,

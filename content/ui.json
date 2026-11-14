@@ -338,8 +338,8 @@
       "fil": "Bumababa ito sa paglilinis ng gubat; bumabalik kapag nagpapahinga ang palakol, mas mabilis kung maraming gubat at matandang balete. Humingi ng pahintulot sa Dambana o magtanim muli."
     },
     "stage1": {
-      "en": "The spirits are restless: kapre pranks and tikbalang tricks.",
-      "fil": "Balisa ang mga espiritu: biro ng kapre at panlilinlang ng tikbalang."
+      "en": "The spirits are restless: the anito of the balete hides tools, and the tigbalang leads people astray.",
+      "fil": "Balisa ang mga espiritu: nagtatago ng kasangkapan ang anito ng balete, at nanliligaw ang tigbalang."
     },
     "stage2": {
       "en": "The spirits are angry: rice −{percent}%, more sickness.",
@@ -354,8 +354,8 @@
       "fil": "Tumutubo: {time}"
     },
     "prank": {
-      "en": "A kapre hid the tools at the {building}: back in {time}.",
-      "fil": "Itinago ng kapre ang kasangkapan sa {building}: babalik sa {time}."
+      "en": "The anito of the balete hid the tools at the {building}: back in {time}.",
+      "fil": "Itinago ng anito ng balete ang kasangkapan sa {building}: babalik sa {time}."
     }
   },
   "events": {
@@ -380,8 +380,8 @@
       "fil": "Kinain ng ahas ang bahagi ng gabi: nawalan ka ng {rice} bigas."
     },
     "tikbalang": {
-      "en": "A tikbalang led {n} workers astray! Answer its riddle:",
-      "fil": "Inililigaw ng tikbalang ang {n} manggagawa! Sagutin ang bugtong nito:"
+      "en": "A tigbalang led {n} workers astray! Answer its riddle:",
+      "fil": "Inililigaw ng tigbalang ang {n} manggagawa! Sagutin ang bugtong nito:"
     },
     "right": {
       "en": "Right! The workers found their way home.",
@@ -1370,8 +1370,8 @@
       "fil": "Nilulunok ng Bakunawa ang buwan"
     },
     "tikbalang": {
-      "en": "A tikbalang's riddle",
-      "fil": "Bugtong ng tikbalang"
+      "en": "A tigbalang's riddle",
+      "fil": "Bugtong ng tigbalang"
     },
     "offer": {
       "en": "Trade offer from {barangay}",
@@ -1390,8 +1390,8 @@
       "fil": "May Balangay sa laot"
     },
     "prank": {
-      "en": "A kapre hid the tools",
-      "fil": "Itinago ng kapre ang mga kagamitan"
+      "en": "The anito of the balete hid the tools",
+      "fil": "Itinago ng anito ng balete ang mga kagamitan"
     },
     "mourning": {
       "en": "Mourning: {time} left. A Libingan helps it pass; a rite at the Dambana eases it.",

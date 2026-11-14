@@ -35,16 +35,16 @@ describe("bonus text", () => {
     expect(bonusPreviewText(def("palayan"), 0.1)).toBe("+10% rice");
     expect(bonusPreviewText(def("woodcutter-camp"), 0.1)).toBe("+10% wood");
     expect(bonusPreviewText(def("palayan"), 0)).toBe("No bonus");
-    expect(bonusPreviewText(def("woodcutter-camp"), 0.1, { name: "Kapre's grove", bonus: 0.25 })).toBe(
-      "+10% wood · 🌳 Kapre's grove +25%",
+    expect(bonusPreviewText(def("woodcutter-camp"), 0.1, { name: "Anito ng Balete", bonus: 0.25 })).toBe(
+      "+10% wood · 🌳 Anito ng Balete +25%",
     );
-    expect(bonusPreviewText(def("woodcutter-camp"), 0, { name: "Kapre's grove", bonus: 0.25 })).toBe("🌳 Kapre's grove +25%");
+    expect(bonusPreviewText(def("woodcutter-camp"), 0, { name: "Anito ng Balete", bonus: 0.25 })).toBe("🌳 Anito ng Balete +25%");
   });
 
   it("describes the grove and the balete warning from content", () => {
-    expect(groveRuleText(def("woodcutter-camp"), content)).toBe("🌳 Kapre's grove: +25% wood within 3 tiles of an old balete tree");
+    expect(groveRuleText(def("woodcutter-camp"), content)).toBe("🌳 Anito ng Balete: +25% wood within 3 tiles of an old balete tree");
     expect(groveRuleText(def("palayan"), content)).toBeNull();
-    expect(baleteWarning(content)).toBe("This removes Kapre's grove: nearby woodcutters lose +25% wood. This can't be undone.");
+    expect(baleteWarning(content)).toBe("This removes the Anito ng Balete's grove: nearby woodcutters lose +25% wood. This can't be undone.");
   });
 });
 

@@ -72,7 +72,7 @@ describe("Forest Balance", () => {
     expect(after.flags).toContain("forest-spirits");
   });
 
-  it("kapre pranks: below 60 a Woodcutter Camp's tools go missing for a minute", () => {
+  it("balete spirit pranks: below 60 a Woodcutter Camp's tools go missing for a minute", () => {
     const eager = { ...calm, rules: { ...calm.rules, forest: { ...f, prankChancePerSecond: 1 } } };
     const s = base({ villagers: 2, buildings: [at("bahay-kubo", 2, 2), at("woodcutter-camp", 4, 1)], forest: { balance: 50, stage: 1, permission: 0, lastClearAt: null } });
     expect(buildingWorkers(s, calm)).toEqual([0, 2]);
@@ -188,7 +188,7 @@ describe("Aklat ng Alamat", () => {
       }
     }
     const ids = content.aklat.map((e) => e.id);
-    for (const id of ["kapre", "diwata", "sarimanok", "bakunawa", "tikbalang", "babaylan", "sandugo", "mangayaw", "forest-spirits"]) expect(ids).toContain(id);
+    for (const id of ["anito-ng-balete", "diwata", "sarimanok", "bakunawa", "tikbalang", "babaylan", "sandugo", "mangayaw", "forest-spirits"]) expect(ids).toContain(id);
   });
 
   it("unlocks an entry the first time the barangay meets it, and keeps it", () => {
@@ -213,7 +213,7 @@ describe("Aklat ng Alamat", () => {
   });
 
   it("counts progress", () => {
-    const p0 = aklatProgress(base({ aklat: ["kapre", "balete", "not-an-entry"] }), content);
+    const p0 = aklatProgress(base({ aklat: ["anito-ng-balete", "balete", "not-an-entry"] }), content);
     expect(p0).toEqual({ found: 2, total: content.aklat.length });
   });
 
@@ -240,8 +240,8 @@ describe("Aklat ng Alamat", () => {
       blessings: { "diwata-favor": { readyAt: 900 } },
       forest: { balance: 55.5, stage: 1, permission: 4, lastClearAt: 2 },
       replanting: [{ x: 4, y: 3, progress: 10, seconds: 60 }],
-      aklat: ["kapre", "babaylan"],
-      flags: ["kapre"],
+      aklat: ["anito-ng-balete", "babaylan"],
+      flags: ["anito-ng-balete"],
       time: 10,
       buildings: [at("bahay-kubo", 2, 2), at("babaylan-hut", 1, 1), at("dambana", 1, 2)],
     });

@@ -129,7 +129,7 @@ export function BarangayMap(props: {
   onVillager?: (v: Tapped) => void;
   /** Right-click on a building (desktop): open its menu. */
   onBuildingMenu: (x: number, y: number, sx: number, sy: number) => void;
-  /** The player tapped a resting spirit (the kapre): show its lore note. */
+  /** The player tapped a spirit in its tree (the anito of the balete): show its lore note. */
   onSpirit: (loreId: string, sx: number, sy: number) => void;
   /** Background for the title screen: no input, no controls, slowly drifting (unless reduced motion). */
   scenic?: boolean;
@@ -296,7 +296,7 @@ export function BarangayMap(props: {
   const range = cam && view.w > 0 ? visibleRange(cam, view, map, scenic ? SCENIC_DRIFT + 1 : 1) : null;
   const rangeKey = range ? `${range.x0},${range.y0},${range.x1},${range.y1}` : "";
 
-  // The grove that boosts the building being placed, if any (Kapre's grove for camps).
+  // The grove that boosts the building being placed, if any (the Anito ng Balete's grove for camps).
   const grove = placing ? (content.groves.find((g) => g.affects === placing.id) ?? null) : null;
 
   // Valid tiles for the building being placed, within the view, with the bonus each would get.
@@ -399,7 +399,7 @@ export function BarangayMap(props: {
     return out;
   }, [showShore, plan.buildings, plan.map, content, planned?.x, planned?.y]);
 
-  // Now and then a kapre rests in a balete. Which trees, and when, comes from a hash of the
+  // Now and then the anito of a balete shows itself. Which trees, and when, comes from a hash of the
   // tree's position and the current time window, so it's stable for a while (UI only).
   const sighting = content.groves.find((g) => g.sighting && g.lore);
   const sightingWindow = sighting ? Math.floor(Date.now() / 1000 / sighting.sighting!.windowSeconds) : 0;
@@ -1111,7 +1111,7 @@ const Cell = memo(function Cell(props: {
   ghost: GhostInfo | null;
   /** Inside a grove's reach, while placing a building it boosts. */
   glow: boolean;
-  /** A kapre is resting in this balete. */
+  /** The anito of the balete shows itself in this tree. */
   spirit: boolean;
   onSpiritKey: (el: Element) => void;
   clearable: boolean;
@@ -1428,15 +1428,18 @@ function Ghost({ info }: { info: GhostInfo }) {
   );
 }
 
-/** A kapre resting in the balete: eyes among the leaves and a curl of cigar smoke. */
+/**
+ * The anito of the balete, present in its tree: a soft glow in the crown, a faint tall shape
+ * and a few rustling leaves. Never a giant or a cigar (content/lore/anito-ng-balete.json).
+ */
 function RestingSpirit({ onKey }: { onKey: (el: Element) => void }) {
   return (
     <span
       data-spirit
       role="button"
       tabIndex={0}
-      aria-label="A kapre is resting in the balete. Tap for its story."
-      title="A kapre is resting here"
+      aria-label="The anito of the balete is near. Tap for its story."
+      title="The anito of the balete is near"
       onKeyDown={(e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
@@ -1446,11 +1449,13 @@ function RestingSpirit({ onKey }: { onKey: (el: Element) => void }) {
       }}
       className="absolute inset-x-0 top-0 z-10 flex h-[65%] cursor-help items-start justify-center pt-[12%]"
     >
-      <span aria-hidden className="text-[0.32em] leading-none motion-safe:animate-peek">
-        👀
+      <span aria-hidden className="absolute top-[8%] left-1/2 size-[70%] -translate-x-1/2 rounded-full bg-amber-100/45 blur-[3px] motion-safe:animate-pulse" />
+      <span aria-hidden className="absolute top-[18%] left-1/2 h-[70%] w-[22%] -translate-x-1/2 rounded-t-full bg-linear-to-b from-amber-50/55 to-transparent blur-[1px] motion-safe:animate-peek" />
+      <span aria-hidden className="absolute top-[4%] right-[10%] text-[0.3em] leading-none opacity-0 motion-safe:animate-smoke motion-reduce:opacity-70">
+        🍃
       </span>
-      <span aria-hidden className="absolute top-0 right-[12%] text-[0.35em] leading-none opacity-0 motion-safe:animate-smoke motion-reduce:opacity-70">
-        💨
+      <span aria-hidden className="absolute top-[14%] left-[8%] text-[0.26em] leading-none opacity-0 motion-safe:animate-smoke motion-reduce:opacity-60 [animation-delay:1.3s]">
+        🍃
       </span>
     </span>
   );
@@ -1584,7 +1589,7 @@ function Building(props: {
 
 /**
  * Things the spirits and the babaylan put on the map: saplings growing on replanted tiles, a
- * kapre's prank on a Woodcutter Camp, the babaylan's ritual at the Dambana, and the Sarimanok
+ * balete spirit's prank on a Woodcutter Camp, the babaylan's ritual at the Dambana, and the Sarimanok
  * flying across (tap it).
  */
 function SpiritOverlays(props: {
@@ -1638,7 +1643,7 @@ function SpiritOverlays(props: {
         <span
           key={`p${b.x},${b.y}`}
           aria-hidden
-          title="A kapre hid the tools"
+          title="The anito of the balete hid the tools"
           className="pointer-events-none absolute -translate-y-1/3 rounded-full bg-stone-900/75 px-1 text-center leading-tight motion-safe:animate-bounce"
           style={{ ...at(b.x + 0.55, b.y - 0.1), fontSize: T * 0.3 }}
         >

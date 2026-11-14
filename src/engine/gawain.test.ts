@@ -176,7 +176,7 @@ describe("finishing tasks", () => {
 describe("worship and forest tasks", () => {
   it("asks for the Dambana, 5 Aklat entries, permission before clearing and 5 replanted tiles", () => {
     expect(taskMet(fresh({ buildings: [at("babaylan-hut", 2, 2), at("dambana", 2, 3)] }), content, quest("first-dambana"))).toBe(true);
-    expect(taskProgress(fresh({ aklat: ["kapre", "balete", "babaylan"] }), content, quest("aklat-five"))).toEqual({ have: 3, need: 5 });
+    expect(taskProgress(fresh({ aklat: ["anito-ng-balete", "balete", "babaylan"] }), content, quest("aklat-five"))).toEqual({ have: 3, need: 5 });
     const s = fresh();
     expect(taskMet({ ...s, stats: { ...s.stats, permittedClears: 1 } }, content, quest("ask-permission"))).toBe(true);
     expect(taskMet({ ...s, stats: { ...s.stats, replanted: 5 } }, content, quest("replant-five"))).toBe(true);

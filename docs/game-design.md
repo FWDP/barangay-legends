@@ -24,7 +24,7 @@ different form, and some (prestige and Dangal, export codes) isn't built yet.
 - **Seasons and events:** rainy and dry seasons, typhoons, fires, sickness, hunger and choice
   events. Offline progress and autosave.
 - **Faith:** a tradition per barangay (Tagalog, Visayan, Maranao), the Dambana with Favor and
-  blessings, the Bakunawa eclipse, the tikbalang's riddle, the Sarimanok, the Forest Balance,
+  blessings, the Bakunawa eclipse, the tigbalang's riddle, the Sarimanok, the Forest Balance,
   and the Aklat ng Alamat.
 - **Bahay ng Datu:** five levels, each needing a minimum barangay level (3, 6, 9, 12). It unlocks
   envoys, the Balangay and alliances.
@@ -122,10 +122,10 @@ Mythology is the game's hook, and it's earned through play, never sold. The play
 | --- | --- | --- | --- |
 | Anito blessing | Widespread (ancestral spirits) | +20% all production for 5 min | Offer 50 rice at the dambana |
 | Diwata's favor | Widespread (nature spirits) | Rice fields harvest instantly | Offer rice + wood, 15 min cooldown |
-| Kapre's grove | Tagalog and other lowland folklore | +50% wood for 5 min | Leave the old balete tree uncut |
+| Anito ng Balete (was "Kapre's grove": see the Aklat on the colonial word) | Tagalog and other lowland belief | +50% wood for 5 min | Leave the old balete tree uncut |
 | Sarimanok's fortune | Maranao | A random bonus of rice, wood or gold | Rare: the bird crosses the map, click it |
 | Bakunawa eclipse (event) | Visayan | The moon darkens: tap the gongs to drive the serpent off. Success gives gold, failure costs rice | Random event after 30 villagers |
-| Tikbalang trickery (event) | Tagalog | Workers get lost for 1 min unless you solve a short riddle | Random event after first prestige |
+| Tigbalang trickery (event) | Tagalog | Workers get lost for 1 min unless you solve a short riddle | Random event after first prestige |
 
 **Two choices made on purpose:**
 

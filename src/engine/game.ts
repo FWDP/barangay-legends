@@ -78,7 +78,7 @@ import {
   type TikbalangTrick,
 } from "./worship";
 
-export const STATE_VERSION = 28;
+export const STATE_VERSION = 29;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -210,7 +210,7 @@ export interface GameState {
   sarimanok: SarimanokVisit | null;
   eclipse: Eclipse | null;
   tikbalang: TikbalangTrick | null;
-  /** Woodcutter Camps whose tools a kapre hid. */
+  /** Woodcutter Camps whose tools the anito of the balete hid. */
   pranks: Prank[];
   forest: ForestState;
   /** Cleared tiles growing back into forest. */
@@ -551,7 +551,7 @@ export function rates(state: GameState, content: Content, opts: { offline?: bool
   state.buildings.forEach((b, i) => {
     const def = defs.get(b.type);
     for (const r of RESOURCES) {
-      // Adjacency and grove bonuses add up: a camp by the forest in a kapre's grove gets +10% +25%.
+      // Adjacency and grove bonuses add up: a camp by the forest in the Anito ng Balete's grove gets +10% +25%.
       // Connected by Daan adds on top: +10% by the river and +5% connected is +15%.
       produced[r] += workers[i] * (def?.produces?.[r] ?? 0) * (1 + bonuses[i] + roads[i] + (groves[i][r] ?? 0)) * (def?.nightWork ? 1 : night);
     }

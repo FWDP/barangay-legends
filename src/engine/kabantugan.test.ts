@@ -54,7 +54,7 @@ describe("renown sources", () => {
     expect(renownBetween(s, { ...s, gawainDone: ["first-palayan"] }, content)).toBe(k.perTask);
     expect(renownBetween(s, { ...s, stats: { ...s.stats, trades: 2 } }, content)).toBe(2 * k.perTrade);
     expect(renownBetween(s, { ...s, datuLevel: 2 }, content)).toBe(k.perDatuLevel);
-    expect(renownBetween(s, { ...s, aklat: ["kapre", "balete"] }, content)).toBe(2 * k.perAklat);
+    expect(renownBetween(s, { ...s, aklat: ["anito-ng-balete", "balete"] }, content)).toBe(2 * k.perAklat);
   });
 
   it("raids won attacking or defending, and a tributary or ally gained", () => {
@@ -136,7 +136,7 @@ describe("AI levels", () => {
 
 describe("save migration v20 → v21", () => {
   it("works out renown from what the save had already achieved, without paying old rewards", () => {
-    let s = world({ villagers: 25, datuLevel: 3, aklat: ["kapre", "balete"], gawainDone: ["first-palayan", "first-camp"] });
+    let s = world({ villagers: 25, datuLevel: 3, aklat: ["anito-ng-balete", "balete"], gawainDone: ["first-palayan", "first-camp"] });
     s = setNb(s, "malinaw", { status: "tributary" });
     const raw = { ...s, version: 20, region: { ...s.region!, renown: 30, paths: ["trade"] }, stats: { ...s.stats } } as Record<string, unknown>;
     delete raw.kabantugan;

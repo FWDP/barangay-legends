@@ -542,7 +542,7 @@ export function buildingBonuses(state: GameState, content: Content): number[] {
   });
 }
 
-// ---------- Groves (Kapre's grove) ----------
+// ---------- Groves (the Anito ng Balete's grove) ----------
 
 /** The grove tiles (standing balete) within the grove's radius of (x, y), nearest first. */
 export function grovesNear(map: MapState, grove: GroveBlessing, x: number, y: number): Point[] {

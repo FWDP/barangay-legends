@@ -219,7 +219,7 @@ describe("worship and the spirits in words", () => {
     const spirit = content.traditions.find((t) => t.id === "tagalog")!.forestSpirit;
     expect(historyLine({ at: 1, kind: "spirits", stage: 1 }, content, game, "en", tagalog)).toContain(spirit.stage1.en);
     expect(historyLine({ at: 1, kind: "spirits", stage: 2 }, content, game, "en", tagalog)).toContain(`−${content.rules.forest.riceWithheldPercent}%`);
-    expect(historyLine({ at: 1, kind: "aklat", entry: "kapre" }, content, game, "en")).toBe("New in the Aklat ng Alamat: Kapre");
+    expect(historyLine({ at: 1, kind: "aklat", entry: "anito-ng-balete" }, content, game, "en")).toBe("New in the Aklat ng Alamat: Anito ng Balete");
     expect(historyLine({ at: 1, kind: "event", event: "eclipseWon", favor: 15, amounts: { gold: 10 } }, content, game, "en")).toContain("+15 Favor, +10 gold");
     expect(historyLine({ at: 1, kind: "event", event: "sarimanok", amounts: { gold: 7 } }, content, game, "en")).toContain("🪙 7");
   });

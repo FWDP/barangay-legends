@@ -292,6 +292,17 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
     });
     return { ...raw, version: 28, map: { ...m, gathering } };
   },
+  // v28 → v29: "kapre" (a colonial word) becomes the Anito ng Balete. Its Aklat entry, the flag
+  // that opens it, the history lines that name it and a named villager's story change ids;
+  // nothing else changes (content/lore/anito-ng-balete.json).
+  28: (raw) => {
+    const id = (x: unknown) => (x === "kapre" ? "anito-ng-balete" : x === "kapre-friend" ? "balete-friend" : x);
+    const list = (v: unknown) => (Array.isArray(v) ? [...new Set(v.map(id))] : v);
+    const out: RawSave = { ...raw, version: 29, aklat: list(raw.aklat), flags: list(raw.flags) };
+    if (Array.isArray(raw.history)) out.history = raw.history.map((h) => (isObject(h) && h.kind === "aklat" ? { ...h, entry: id(h.entry) } : h));
+    if (Array.isArray(raw.named)) out.named = raw.named.map((v) => (isObject(v) ? { ...v, story: id(v.story) } : v));
+    return out;
+  },
 };
 
 // ---------- Frozen v15 bridge rule (for the v14 → v15 migration only) ----------

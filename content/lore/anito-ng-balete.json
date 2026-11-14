@@ -1,0 +1,45 @@
+{
+  "id": "anito-ng-balete",
+  "name": "Anito ng Balete",
+  "description": "The spirit of an old balete tree, felt as a presence in its roots and leaves; and why the game doesn't call it a kapre.",
+  "tradition": "Tagalog and other lowland belief",
+  "note": "The anito of the balete is shown as a soft presence in the tree (a glow, rustling leaves, a faint shape), never as a giant or with a cigar: those images and the word 'kapre' came with colonial rule.",
+  "sources": [
+    "Juan de Plasencia, Customs of the Tagalogs (1589), in Emma H. Blair and James A. Robertson, eds., The Philippine Islands, 1493–1898, vol. 7 (Arthur H. Clark, 1903)",
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Maximo D. Ramos, The Creatures of Philippine Lower Mythology (University of the Philippines Press, 1971)"
+  ],
+  "aklat": {
+    "order": 2,
+    "icon": "🍃",
+    "name": {
+      "en": "Anito ng Balete",
+      "fil": "Anito ng Balete"
+    },
+    "lore": {
+      "en": "Early accounts of the Tagalogs tell of anito, spirits honored with offerings, and of old trees such as the balete that people would not cut without asking leave. The game calls the spirit of such a tree the anito ng balete. Later folklore gave it another name and face: the kapre, a dark-skinned giant smoking a cigar. The word comes from the Spanish 'cafre', itself from the Arabic 'kafir' (unbeliever), a colonial label for enslaved Africans that was also turned on the Aeta and other dark-skinned peoples; and tobacco only arrived with the Spanish. So the game shows the balete's spirit as a presence in the tree, not as that colonial figure.",
+      "fil": "Ikinukuwento ng mga unang tala tungkol sa mga Tagalog ang mga anito, mga espiritung inaalayan, at ang matatandang puno gaya ng balete na hindi pinuputol nang walang paalam. Tinatawag ng laro ang espiritu ng ganitong puno na anito ng balete. Sa mas huling alamat, binigyan ito ng ibang pangalan at mukha: ang kapre, isang maitim na higanteng naninigarilyo ng tabako. Galing ang salita sa Espanyol na 'cafre', mula sa Arabe na 'kafir' (hindi mananampalataya), isang kolonyal na tawag sa mga inaliping Aprikano na ginamit din sa mga Aeta at iba pang maiitim ang balat; at dumating lamang ang tabako kasama ng mga Espanyol. Kaya ipinapakita ng laro ang espiritu ng balete bilang isang presensiya sa puno, hindi bilang kolonyal na anyong iyon."
+    },
+    "inGame": {
+      "en": "Its grove gives Woodcutter Camps near a balete more wood. When the forest is cut too fast, the anito of the balete hides a camp's tools for a minute.",
+      "fil": "Nagbibigay ng dagdag na kahoy ang kakahuyan nito sa mga Woodcutter Camp malapit sa balete. Kapag masyadong mabilis ang pagputol, itinatago ng anito ng balete ang mga kasangkapan ng isang kampo nang isang minuto."
+    },
+    "hint": {
+      "en": "Work the woods near an old balete.",
+      "fil": "Magtrabaho sa kakahuyan malapit sa matandang balete."
+    },
+    "unlock": {
+      "type": "any",
+      "of": [
+        {
+          "type": "grove"
+        },
+        {
+          "type": "flag",
+          "flag": "anito-ng-balete"
+        }
+      ]
+    }
+  },
+  "reviewed": false
+}

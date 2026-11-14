@@ -1,6 +1,6 @@
 // Forest Balance: the spirits react to clearing (rules.forest). Clearing lowers it (more near
 // an old balete); it recovers when the axes rest, faster with more forest and balete standing.
-// Below stage1Below kapre hide a Woodcutter Camp's tools for a while; below stage2Below the
+// Below stage1Below the anito of the balete hides a Woodcutter Camp's tools for a while; below stage2Below the
 // diwata withhold part of the rice and sickness is a little more likely. Nothing is ever
 // destroyed and nobody dies. Amends: asking permission at the Dambana (worship.ts) and
 // replanting cleared land. AI barangays don't track it. Pure and deterministic.
@@ -33,7 +33,7 @@ export interface ReplantJob {
   seconds: number;
 }
 
-/** A Woodcutter Camp whose tools a kapre hid. */
+/** A Woodcutter Camp whose tools the anito of the balete hid. */
 export interface Prank {
   x: number;
   y: number;
@@ -135,12 +135,12 @@ export function updateForest(state: GameState, content: Content, dt: number, rea
   return s;
 }
 
-// ---------- Kapre pranks ----------
+// ---------- Balete spirit's pranks ----------
 
-/** Is this building's work stopped by a kapre prank? */
+/** Is this building's work stopped by a balete spirit's prank? */
 export const isPranked = (state: GameState, x: number, y: number) => state.pranks.some((p) => p.x === x && p.y === y && p.until > state.time);
 
-/** Below stage 1, now and then a kapre hides a Woodcutter Camp's tools (online only). */
+/** Below stage 1, now and then the anito of the balete hides a Woodcutter Camp's tools (online only). */
 export function updatePranks(state: GameState, content: Content, t0: number, t1: number): GameState {
   const f = content.rules.forest;
   let s = state;
@@ -151,7 +151,7 @@ export function updatePranks(state: GameState, content: Content, t0: number, t1:
     const camps = s.buildings.filter((b) => content.buildings.find((d) => d.id === b.type)?.produces?.wood && !b.damaged);
     if (camps.length === 0) continue;
     const c = camps[Math.floor(rollAt(s.map.seed, second, SALT_PRANK_WHO) * camps.length)];
-    s = addFlag({ ...s, pranks: [{ x: c.x, y: c.y, until: second + f.prankSeconds }] }, "kapre");
+    s = addFlag({ ...s, pranks: [{ x: c.x, y: c.y, until: second + f.prankSeconds }] }, "anito-ng-balete");
   }
   return s;
 }
