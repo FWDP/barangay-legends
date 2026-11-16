@@ -397,6 +397,7 @@ export function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, ti
     g.fillStyle = "#a16207";
     g.fillRect(x + s * 0.14, top + s * 0.08, s * 0.14, s * 0.14);
   } else if (role === "warrior" || role === "defender" || role === "ally") {
+    if (look.honor) drawHonor(g, x, top, y, s, look.honor);
     // A putong (head cloth: red for the barangay's own, blue for another's, gold for allies) and a spear.
     g.fillStyle = role === "defender" ? "#1d4ed8" : role === "ally" ? "#ca8a04" : "#b91c1c";
     g.fillRect(x - s * 0.14, top - s * 0.2, s * 0.28, s * 0.06);
@@ -1151,4 +1152,43 @@ export function VillagerLayer(props: {
   }, [content, reducedMotion, reducedMotion ? state : null, reducedMotion ? cam : null, reducedMotion ? view : null, reducedMotion ? clash : null]);
 
   return <canvas ref={canvas} aria-hidden width={1} height={1} className="pointer-events-none absolute top-0 left-0" />;
+}
+
+/**
+ * An honored warrior's marks (honor.ts): batok, dark tattoo lines on the arms and legs, more with
+ * each level (Visayan); or ornaments, gold bands on the arms and a necklace (other traditions).
+ */
+function drawHonor(g: CanvasRenderingContext2D, x: number, top: number, y: number, s: number, honor: { level: number; kind: "batok" | "ornament" }) {
+  const n = Math.min(3, honor.level);
+  if (honor.kind === "batok") {
+    g.strokeStyle = "rgb(30 41 59 / 0.85)";
+    g.lineWidth = Math.max(0.6, s * 0.025);
+    for (let i = 0; i < n; i++) {
+      const dy = top + s * (0.08 + i * 0.07);
+      g.beginPath();
+      g.moveTo(x - s * 0.2, dy);
+      g.lineTo(x - s * 0.15, dy + s * 0.03);
+      g.moveTo(x + s * 0.15, dy);
+      g.lineTo(x + s * 0.2, dy + s * 0.03);
+      const ly = y - s * (0.12 + i * 0.06);
+      g.moveTo(x - s * 0.1, ly);
+      g.lineTo(x - s * 0.04, ly);
+      g.moveTo(x + s * 0.04, ly);
+      g.lineTo(x + s * 0.1, ly);
+      g.stroke();
+    }
+  } else {
+    g.fillStyle = "#eab308";
+    for (let i = 0; i < n; i++) {
+      g.fillRect(x - s * 0.22, top + s * (0.1 + i * 0.06), s * 0.07, s * 0.025);
+      g.fillRect(x + s * 0.15, top + s * (0.1 + i * 0.06), s * 0.07, s * 0.025);
+    }
+    if (n >= 2) {
+      g.beginPath();
+      g.arc(x, top + s * 0.02, s * 0.08, 0.2, Math.PI - 0.2);
+      g.strokeStyle = "#eab308";
+      g.lineWidth = Math.max(0.6, s * 0.02);
+      g.stroke();
+    }
+  }
 }

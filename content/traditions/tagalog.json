@@ -117,5 +117,13 @@
       "Juan José de Noceda and Pedro de Sanlúcar, Vocabulario de la lengua tagala (Manila, 1754), entry \"dayang\""
     ],
     "reviewed": false
+  },
+  "honorMark": {
+    "kind": "ornament",
+    "sources": [
+      "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+      "Boxer Codex (c. 1590), Lilly Library, Indiana University"
+    ],
+    "reviewed": false
   }
 }

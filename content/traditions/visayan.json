@@ -111,5 +111,14 @@
     "lumbia": 130
   },
   "pigs": true,
-  "_foodComment": "foodYield: percent of each food building's yield in this tradition (river-basin rice for the Tagalog, root crops and sago for the Visayans and Maranao); pigs: whether the Babuyan keeps pigs (false: chickens only). Playtest guesses; pork customs flagged for review (docs/cultural-review.md)."
+  "_foodComment": "foodYield: percent of each food building's yield in this tradition (river-basin rice for the Tagalog, root crops and sago for the Visayans and Maranao); pigs: whether the Babuyan keeps pigs (false: chickens only). Playtest guesses; pork customs flagged for review (docs/cultural-review.md).",
+  "honorMark": {
+    "kind": "batok",
+    "sources": [
+      "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+      "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)",
+      "Boxer Codex (c. 1590), Lilly Library, Indiana University"
+    ],
+    "reviewed": false
+  }
 }

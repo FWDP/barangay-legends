@@ -115,7 +115,7 @@ describe("life events", () => {
     const s: GameState = { ...base, warriors: 1, named: [...base.named, warrior], region: { ...(family().region ?? ({} as never)), reports: [] } as never };
     const report = { id: 1, time: 0, kind: "defense" as const, neighbor: "malinaw", win: true };
     const after = reconcilePeople(s, { ...s, region: { ...s.region!, reports: [report] } }, content);
-    const line = after.named.find((v) => v.id === 3)!.life!.at(-1)!;
+    const line = after.named.find((v) => v.id === 3)!.life!.find((e) => e.kind === "raid")!;
     expect(line).toMatchObject({ kind: "raid", from: "malinaw", outcome: "won", defense: true });
     // Only the warriors fight.
     expect(after.named[0].life!.some((e) => e.kind === "raid")).toBe(false);

@@ -207,6 +207,8 @@ export interface Rules {
   food: FoodRules;
   /** Blood debts, feuds and making peace (W.2, W.3, feud.ts). */
   feud: import("./feud").FeudRules;
+  /** Warriors and honor (W.4, honor.ts). */
+  honor: import("./honor").HonorRules;
   /** Rats, locusts and wild boar (food.ts updatePests). */
   pests: PestRules;
   /** Shares of women, children and elders among new residents (residents.ts). */
@@ -395,6 +397,11 @@ export interface TraditionDef extends Heritage {
    * Missing where no honorific is sourced: the title stays "Datu".
    */
   womanHonorific?: { term: string; sources: string[]; reviewed: boolean };
+  /**
+   * How honored warriors are marked (honor.ts): "batok" (tattoos, Visayan) or "ornament" (dress
+   * and ornaments), with its sources, waiting for review (docs/cultural-review.md).
+   */
+  honorMark?: { kind: "batok" | "ornament"; sources: string[]; reviewed: boolean };
 }
 
 /** A ritual at the Dambana, paid for with Favor. */
@@ -1695,7 +1702,7 @@ const NO_ARRIVALS: ArrivalContent = {
 };
 
 const FAMILY_KEYS = ["born", "bornNoParents", "arrived", "arrivedNoPlace", "founder", "spouse", "child", "children", "and"];
-const EVENT_KEYS = ["born", "arrived", "arrivedFrom", "married", "parent", "grewUp", "elder", "raidWon", "raidLost", "defendedWon", "defendedLost", "sick", "healed", "learned", "learnedAlone", "died", "diedAttack", "diedDefense", "diedAge", "diedSickness", "diedHunger", "day"];
+const EVENT_KEYS = ["born", "arrived", "arrivedFrom", "married", "parent", "grewUp", "elder", "raidWon", "raidLost", "defendedWon", "defendedLost", "sick", "healed", "learned", "learnedAlone", "died", "honored", "diedAttack", "diedDefense", "diedAge", "diedSickness", "diedHunger", "day"];
 const CAUSE_KEYS = ["age", "sickness", "raid", "hunger"];
 
 /** No life-story file (hand-made test content): one plain skill and detail, plain words. */
@@ -1879,6 +1886,12 @@ export function validateTradition(raw: unknown, file = "tradition"): TraditionDe
     checkNumbers(raw.foodYield, Object.keys(raw.foodYield), `${file}: foodYield`);
   }
   if (raw.pigs !== undefined && typeof raw.pigs !== "boolean") throw new Error(`${file}: "pigs" must be true or false`);
+  if (raw.honorMark !== undefined) {
+    const h = raw.honorMark;
+    if (!isObject(h) || (h.kind !== "batok" && h.kind !== "ornament") || !Array.isArray(h.sources) || h.sources.length === 0 || typeof h.reviewed !== "boolean") {
+      throw new Error(`${file}: "honorMark" needs a kind ("batok" or "ornament"), sources and "reviewed"`);
+    }
+  }
   if (raw.womanHonorific !== undefined) {
     const h = raw.womanHonorific;
     if (!isObject(h) || typeof h.term !== "string" || h.term.trim() === "" || !Array.isArray(h.sources) || h.sources.length === 0 || typeof h.reviewed !== "boolean") {

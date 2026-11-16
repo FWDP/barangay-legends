@@ -972,6 +972,8 @@ function parsePeople(data: RawSave, content: Content, state: GameState, isPlayer
     const nv: NamedVillager = { id: v.id as number, name: v.name, story: story.id, role: story.role, since: v.since };
     if (v.sick === true) nv.sick = true;
     if (v.frail === true) nv.frail = true;
+    // A warrior's honor (honor.ts).
+    if (finiteNonNeg(v.honor) && v.honor > 0) nv.honor = Math.min(1000, v.honor);
     if (Number.isInteger(v.resident)) nv.resident = v.resident as number;
     const life = parseLife(v.life);
     if (life.length) nv.life = life;

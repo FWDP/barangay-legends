@@ -2,6 +2,7 @@
 // happen (born or arrived, married, became a parent, grew up, became an elder, ...). Only named
 // villagers keep a story; a named villager is linked to the resident they are (NamedVillager
 // .resident). Pure: no React, no browser APIs.
+import { addHonor, honorFor, honorLevel } from "./honor";
 import type { Content, VillagerRole } from "./content";
 import type { GameState } from "./game";
 import type { Gender, Resident } from "./residents";
@@ -9,7 +10,7 @@ import type { NamedVillager } from "./people";
 import { lifeSpans, residentName } from "./population";
 import { rollAt } from "./rng";
 
-export type LifeKind = "born" | "arrived" | "married" | "parent" | "grewUp" | "elder" | "raid" | "sick" | "healed" | "learned" | "died";
+export type LifeKind = "born" | "arrived" | "married" | "parent" | "grewUp" | "elder" | "raid" | "sick" | "healed" | "learned" | "died" | "honored";
 
 /** One dated line of a life story. Text is made by the UI from content, so it follows the language. */
 export interface LifeEvent {
@@ -31,6 +32,8 @@ export interface LifeEvent {
   otherName?: string;
   /** How they died (died). */
   cause?: "age" | "sickness" | "raid" | "hunger";
+  /** The honor level reached (honored: a new batok or ornament, honor.ts). */
+  level?: number;
 }
 
 /** The most events a story keeps (the first ones, born or arrived, are always kept). */
@@ -80,7 +83,7 @@ function withName(state: GameState, content: Content, e: LifeEvent): LifeEvent {
   return name ? { ...e, otherName: name } : e;
 }
 
-const LIFE_KINDS: readonly LifeKind[] = ["born", "arrived", "married", "parent", "grewUp", "elder", "raid", "sick", "healed", "learned", "died"];
+const LIFE_KINDS: readonly LifeKind[] = ["born", "arrived", "married", "parent", "grewUp", "elder", "raid", "sick", "healed", "learned", "died", "honored"];
 
 /** A saved life story: valid events only, in order, at most MAX_LIFE. */
 export function parseLife(raw: unknown): LifeEvent[] {
@@ -99,6 +102,7 @@ export function parseLife(raw: unknown): LifeEvent[] {
     if (o.defense === true) ev.defense = true;
     if (typeof o.otherName === "string" && o.otherName !== "" && o.otherName.length <= 30) ev.otherName = o.otherName;
     if (o.cause === "age" || o.cause === "sickness" || o.cause === "raid" || o.cause === "hunger") ev.cause = o.cause;
+    if (Number.isInteger(o.level) && (o.level as number) > 0 && (o.level as number) <= 10) ev.level = o.level as number;
     out.push(ev);
   }
   return out.sort((a, b) => a.at - b.at);
@@ -278,6 +282,16 @@ export function noteLifeEvents(prev: GameState, next: GameState, content: Conten
     for (const v of s.named) {
       if (v.role !== "warrior" || !before.has(v.id) || v.resident === undefined) continue;
       s = noteLife(s, content, v.resident, { kind: "raid", from: r.neighbor, outcome: r.win ? "won" : "lost", ...(r.kind === "defense" ? { defense: true } : {}) });
+      // Honor for fighting well (honor.ts): a new level is noted in their story and adds renown.
+      // The warrior as they are now (with the line just written), not as the loop began.
+      const now = s.named.find((x) => x.id === v.id)!;
+      const gained = addHonor(content, now, honorFor(content, r.kind, !!r.win));
+      if (gained.v === now) continue;
+      s = { ...s, named: s.named.map((x) => (x.id === v.id ? gained.v : x)) };
+      if (gained.levels > 0) {
+        s = noteLife(s, content, v.resident, { kind: "honored", level: honorLevel(content, gained.v.honor), from: r.neighbor });
+        s = { ...s, kabantugan: s.kabantugan + gained.levels * content.rules.honor.renownPerLevel };
+      }
     }
   }
   return s;

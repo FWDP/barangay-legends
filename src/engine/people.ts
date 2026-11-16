@@ -28,6 +28,8 @@ export interface NamedVillager {
   life?: LifeEvent[];
   /** Woman or man (pronouns in the history, the name list, the sprite). Missing in old tests only: see namedGender. */
   gender?: Gender;
+  /** A warrior's honor from battles fought well (honor.ts). */
+  honor?: number;
 }
 
 export type HistoryKind = "named" | "left" | "fell" | "task" | "spirits" | "aklat" | "event" | "died" | "frail" | "datu" | "level" | "rank";

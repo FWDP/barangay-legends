@@ -777,5 +777,17 @@
     "mourningRaid": {
       "chancePerSecond": 0.0002
     }
+  },
+  "honor": {
+    "_comment": "Warriors and honor (W.4, engine/honor.ts): a named warrior earns raidWon for a raid won, defenseWon for a raid beaten off at home, allyDefended for standing with an ally. At each of `levels` honor they reach a new level (a new batok in Visayan barangays, an ornament in others: content/traditions honorMark), noted in their life story, worth renownPerLevel renown. Honored warriors make their side steadier (rules.military.battle.honorSteadyPercent). Playtest guesses.",
+    "raidWon": 2,
+    "defenseWon": 2,
+    "allyDefended": 2,
+    "levels": [
+      2,
+      6,
+      12
+    ],
+    "renownPerLevel": 5
   }
 }

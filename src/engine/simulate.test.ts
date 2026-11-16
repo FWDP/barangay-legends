@@ -27,9 +27,10 @@ describe("balance simulation", () => {
 
   it("wood and gold don't run away: at most a little over the stockpile's soft cap", () => {
     for (const r of run.rows) {
-      // Work stops at stopMultiple × the cap; quest rewards and trades can add a little more.
+      // Work stops at stopMultiple × the cap; quest rewards and trades can add a little more, and
+      // gold a little more again: ransoms paid by AI barangays for their warriors (warfare.ts).
       expect(r.wood).toBeLessThanOrEqual(r.woodCap * content.rules.stockpile.stopMultiple * 1.2);
-      expect(r.gold).toBeLessThanOrEqual(r.goldCap * content.rules.stockpile.stopMultiple * 1.2);
+      expect(r.gold).toBeLessThanOrEqual(r.goldCap * content.rules.stockpile.stopMultiple * 1.4);
     }
   });
 

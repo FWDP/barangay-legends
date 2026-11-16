@@ -15,6 +15,7 @@ import { proposeTrade, type CounterOffer, type Proposal } from "./trading";
 import { chooseLanding, raidLanding, raidWindow, sheltered } from "./border";
 import { lootableFood } from "./food";
 import { bloodPrice, coolFeuds, emptyFeuds, peaceOf, priceValue, recordBloodDebt, scalePrice, type Feud, type FeudState, type Mediator, type SealKind } from "./feud";
+import { addHonor, steadiness } from "./honor";
 import { addWounded, endBattle, heldAway, lossTotal, ransomFor, shouldFlee, woundedCount, type BattleEnd, type Captive } from "./warfare";
 import { isWatched, warningFor } from "./watch";
 import { dayPhaseAt, isNightAt } from "./daynight";
@@ -1324,16 +1325,24 @@ export function alliedBattle(state: GameState, content: Content, ally: string, e
   const attack = attackOf(e.state.warriors, content);
   const defense = defenseOf(a.state, content) + sent * m.warrior.defense;
   const battle = resolveBattle(attack, defense, rollAt(state.map.seed, Math.floor(state.time), 8800), content);
-  const ourLosses = casualties(sent, battle.defenderLossPercent, battle.attackerWins);
-  const allyLosses = casualties(a.state.warriors, battle.defenderLossPercent, battle.attackerWins);
-  const enemyLosses = casualties(e.state.warriors, battle.attackerLossPercent, !battle.attackerWins);
-  const player = loseWarriors(state, ourLosses);
+  // The same ending as any raid (warfare.ts): mostly wounded, few dead.
+  const rolls = [0, 1, 2, 3, 4].map((k) => rollAt(state.map.seed, Math.floor(state.time) * 8 + k, 8801));
+  const ours = endBattle(battle.attackerWins, e.state.warriors, sent, rolls, content, { defenderSteady: steadiness(state, content) });
+  const theirs = endBattle(battle.attackerWins, e.state.warriors, a.state.warriors, rolls, content);
+  let player = addWounded(loseWarriors(state, ours.defender.fallen), content, ours.defender.wounded);
+  // Standing with an ally who held: honor for the named warriors who went (honor.ts).
+  if (!battle.attackerWins) {
+    let left = sent;
+    player = { ...player, named: player.named.map((v) => (v.role === "warrior" && left-- > 0 ? addHonor(content, v, content.rules.honor.allyDefended).v : v)) };
+  }
   const neighbors = region.neighbors.map((n) => {
-    if (n.id === ally) return { ...n, state: loseWarriors(n.state, allyLosses), trust: clamp100(n.trust + d.sandugo.trust) };
-    if (n.id === enemy) return { ...n, state: loseWarriors(n.state, enemyLosses), grudge: clamp100(n.grudge + d.grudge.raidLost) };
+    if (n.id === ally) return { ...n, state: loseWarriors(n.state, theirs.defender.fallen), trust: clamp100(n.trust + d.sandugo.trust) };
+    if (n.id === enemy) return { ...n, state: loseWarriors(n.state, ours.attacker.fallen), grudge: clamp100(n.grudge + d.grudge.raidLost) };
     return n;
   });
-  const next = addNews({ ...region, neighbors }, { time: state.time, key: battle.attackerWins ? "ally-lost" : "ally-defended", barangay: ally, other: enemy });
+  let next = addNews({ ...player.region!, neighbors }, { time: state.time, key: battle.attackerWins ? "ally-lost" : "ally-defended", barangay: ally, other: enemy });
+  // Blood debts: our dead are owed by the enemy, and theirs by us.
+  next = owe(owe(next, content, state.barangay.id, enemy, ours.defender.fallen, state.time), content, enemy, state.barangay.id, ours.attacker.fallen, state.time);
   return { ...player, region: next };
 }
 
@@ -1452,8 +1461,9 @@ function battleOpts(state: GameState, content: Content, neighbor: string, side: 
   const me = state.barangay.id;
   const f = feudsOf(state.region!);
   const fierce = side === "defense" ? !!state.region?.incomingRaid?.vengeance || !!state.region?.incomingRaid?.mourning : !!f.feuds.find((x) => x.wronged === me && x.offender === neighbor);
-  void content;
-  return fierce ? { fierce } : {};
+  // Honored warriors are steadier (honor.ts): ours, on whichever side we fight.
+  const steady = steadiness(state, content);
+  return { ...(fierce ? { fierce } : {}), ...(steady > 0 ? (side === "attack" ? { attackerSteady: steady } : { defenderSteady: steady }) : {}) };
 }
 
 /** The feuds of a region (none in older saves). */

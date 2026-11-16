@@ -51,6 +51,7 @@
     "learned": { "en": "Learned {lesson} from {other}", "fil": "Natutunan ang {lesson} kay {other}" },
     "learnedAlone": { "en": "Learned {lesson} from the elders", "fil": "Natutunan ang {lesson} mula sa mga matatanda" },
     "died": { "en": "Died ({cause}); remembered by the barangay", "fil": "Pumanaw ({cause}); inaalala ng barangay" },
+    "honored": { "en": "Honored for courage in the fight with {barangay} (honor {level})", "fil": "Pinarangalan sa tapang sa labanan laban sa {barangay} (dangal {level})" },
     "diedAttack": { "en": "Fell in the raid on {barangay}; remembered by the barangay", "fil": "Nasawi sa pag-atake sa {barangay}; inaalala ng barangay" },
     "diedDefense": { "en": "Fell defending the barangay; remembered by the barangay", "fil": "Nasawi sa pagtatanggol sa barangay; inaalala ng barangay" },
     "diedAge": { "en": "Died of old age, among family; remembered by the barangay", "fil": "Pumanaw sa katandaan, kapiling ang pamilya; inaalala ng barangay" },

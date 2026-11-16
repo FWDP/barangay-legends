@@ -1,5 +1,6 @@
 // Where each villager sprite should be, worked out from the game state. Pure and read-only:
 // the animation layer calls these every frame and never writes anything back to GameState.
+import { honoredLevels } from "../engine/honor";
 import type { Content } from "../engine/content";
 import { activeJobs } from "../engine/clearing";
 import { buildingWorkers, type GameState } from "../engine/game";
@@ -59,6 +60,8 @@ export interface Appearance {
   cls?: SocialClass;
   /** The malong, for women and men alike (a tradition with dress "malong"). */
   malong: boolean;
+  /** An honored warrior (honor.ts): their level, shown as batok or ornaments by tradition. */
+  honor?: { level: number; kind: "batok" | "ornament" };
 }
 
 /** Where a villager is going, and whether they go inside when they get there. */
@@ -181,12 +184,16 @@ function dressPlans(plans: VillagerPlan[], state: GameState, content: Content, t
   const adult = (g?: Gender) => (p: Resident) => p.age === "adult" && (!g || p.gender === g);
   const look = (p: Resident | null, fallback: Appearance): Appearance => (p ? { gender: p.gender, age: p.age, cls: p.cls, malong } : fallback);
   let alt = 0;
+  // Honored warriors (honor.ts) show it: batok in Visayan barangays, ornaments in others.
+  const mark = content.traditions.find((t) => t.id === state.tradition)?.honorMark?.kind ?? "ornament";
+  const honors = honoredLevels(state, content);
   const order = (r: Role) => (r === "warrior" ? 0 : r === "work" || r === "clearing" ? 1 : r === "sick" ? 2 : 3);
   for (const plan of [...plans].sort((a, b) => order(a.role) - order(b.role) || a.id - b.id)) {
     if (plan.role === "warrior") {
       // Mostly from the warrior class (maharlika, timawa...), men for now.
       const p = take((x) => adult("man")(x) && x.cls === "warrior", adult("man"));
-      plan.look = { gender: "man", age: "adult", cls: p?.cls ?? "warrior", malong };
+      const level = honors.shift();
+      plan.look = { gender: "man", age: "adult", cls: p?.cls ?? "warrior", malong, ...(level ? { honor: { level, kind: mark } } : {}) };
     } else if (plan.role === "work" || plan.role === "clearing") {
       // Women and men both work the fields, the fishing and the crafts: alternate. Free
       // commoners and dependents do most of it; the noble families least.
