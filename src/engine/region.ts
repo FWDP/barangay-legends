@@ -6,7 +6,7 @@ import { counted, dailyFactor, relationshipDays, tradeValueFactor, type Today } 
 import { updateDoors } from "./doors";
 import { newFame, type Fame } from "./ranking";
 import { datuInfluenceMultiplier } from "./datu";
-import { RESOURCES, type Content, type NeighborDef, type RefusalReason, type Resource, type TraitDef } from "./content";
+import { RESOURCES, type Content, type NeighborDef, type RefusalReason, type Resource, type ResourceAmounts, type TraitDef } from "./content";
 import { apply, canAfford, asCost, buildingCost, housing, newGame, owned, placeAuto, rates, tick, warriorCap, type GameState } from "./game";
 import { autoPlaceTile } from "./map";
 import { nearestClearable } from "./clearing";
@@ -14,7 +14,7 @@ import { Rng } from "./rng";
 import { proposeTrade, type CounterOffer, type Proposal } from "./trading";
 import { chooseLanding, raidLanding, raidWindow, sheltered } from "./border";
 import { lootableFood } from "./food";
-import { coolFeuds, emptyFeuds, peaceOf, recordBloodDebt, type FeudState } from "./feud";
+import { bloodPrice, coolFeuds, emptyFeuds, peaceOf, priceValue, recordBloodDebt, scalePrice, type Feud, type FeudState, type Mediator, type SealKind } from "./feud";
 import { addWounded, endBattle, heldAway, lossTotal, ransomFor, shouldFlee, woundedCount, type BattleEnd, type Captive } from "./warfare";
 import { isWatched, warningFor } from "./watch";
 import { dayPhaseAt, isNightAt } from "./daynight";
@@ -1630,4 +1630,147 @@ export function mourningRaid(state: GameState, content: Content, second: number)
   if (!rival) return { ...state, region: r };
   r = owe(r, content, rival, n.id, 1, second);
   return { ...state, region: addNews(r, { time: second, key: "mourning-raid", barangay: n.id, other: rival }) };
+}
+
+// ---------- Settling a feud (W.3, feud.ts) ----------
+
+/** A feud the player is part of, by id. */
+const playerFeud = (state: GameState, id: number) => {
+  const me = state.barangay.id;
+  return feudsOf(state.region!).feuds.find((f) => f.id === id && (f.wronged === me || f.offender === me));
+};
+
+/** The other barangay in a feud with the player. */
+const otherSide = (state: GameState, f: Feud) => (f.wronged === state.barangay.id ? f.offender : f.wronged);
+
+const replaceFeud = (region: RegionState, f: Feud): RegionState => {
+  const fs = feudsOf(region);
+  return { ...region, feuds: { ...fs, feuds: fs.feuds.map((x) => (x.id === f.id ? f : x)) } };
+};
+
+export type MediationBlocker = "unknown" | "done" | "retry" | "no-elder" | "no-babaylan" | "no-datu" | null;
+
+/** A neutral datu trusted by the player who could carry the talks: not the other side, trusted enough. */
+export function neutralDatu(state: GameState, content: Content, f: Feud): NeighborState | undefined {
+  const other = otherSide(state, f);
+  const min = content.rules.feud.mediation.datuMinTrust;
+  return state.region!.neighbors.filter((n) => n.id !== other && n.trust >= min && !feudsOf(state.region!).feuds.some((x) => x.wronged === n.id || x.offender === n.id)).sort((a, b) => b.trust - a.trust)[0];
+}
+
+/** Why a go-between can't try now: no elder in the barangay, no healer's hut, no neutral datu, tried too recently. */
+export function mediationBlocker(state: GameState, content: Content, id: number, by: Mediator): MediationBlocker {
+  const f = playerFeud(state, id);
+  if (!f) return "unknown";
+  if (f.mediated) return "done";
+  if (f.failedAt !== undefined && state.time - f.failedAt < content.rules.feud.mediation.retrySeconds) return "retry";
+  if (by === "elder" && !state.residents.some((r) => r.age === "elder")) return "no-elder";
+  if (by === "babaylan" && !state.buildings.some((b) => !b.damaged && content.buildings.find((d) => d.id === b.type)?.heals)) return "no-babaylan";
+  if (by === "datu" && !neutralDatu(state, content, f)) return "no-datu";
+  return null;
+}
+
+/** The chance (0..1) a go-between brings both sides to talk: their standing, the other side's trust, the feud's heat. */
+export function mediationChance(state: GameState, content: Content, f: Feud, by: Mediator): number {
+  const m = content.rules.feud.mediation;
+  const other = state.region!.neighbors.find((n) => n.id === otherSide(state, f));
+  const pct = m.base + m[by] + m.trustWeight * (other?.trust ?? 0) - m.heatWeight * f.heat;
+  return Math.min(0.95, Math.max(0.05, pct / 100));
+}
+
+const SALT_MEDIATE = 7901;
+
+/** Step 1: a go-between carries the talks. A failed attempt can be tried again later. */
+export function mediate(state: GameState, content: Content, id: number, by: Mediator): GameState {
+  if (mediationBlocker(state, content, id, by) !== null) return state;
+  const f = playerFeud(state, id)!;
+  const roll = rollAt(state.map.seed, Math.floor(state.time) * 16 + f.id, SALT_MEDIATE);
+  const ok = roll < mediationChance(state, content, f, by);
+  const next: Feud = ok ? { ...f, mediated: { by, at: state.time }, price: bloodPrice(content, f) } : { ...f, failedAt: state.time };
+  return { ...state, region: replaceFeud(state.region!, next) };
+}
+
+export type PriceOutcome = "paid" | "countered" | "short" | "blocked";
+
+/**
+ * Step 2: the blood price (bayad sa dugo). The player offers (or, when owed, asks) `offer`.
+ * Owed by the player: the wronged side takes it if it's within acceptWithinPercent of what they
+ * ask, and the whole barangay pays together; else they counter, meeting halfway. Owed to the
+ * player: they pay what's asked if it's fair and they can, else they counter with counterPercent.
+ * Paid in the goods in rules.feud.price (gold, Palay, rice wine; heirlooms later, unchanged here).
+ */
+export function offerBloodPrice(state: GameState, content: Content, id: number, offer: ResourceAmounts): { state: GameState; outcome: PriceOutcome } {
+  const f = playerFeud(state, id);
+  if (!f || !f.mediated || f.paid) return { state, outcome: "blocked" };
+  const p = content.rules.feud.price;
+  const ask = f.price ?? bloodPrice(content, f);
+  const askValue = priceValue(content, bloodPrice(content, f));
+  const value = priceValue(content, offer);
+  const me = state.barangay.id;
+  const otherId = otherSide(state, f);
+  const n = state.region!.neighbors.find((x) => x.id === otherId);
+  if (!n) return { state, outcome: "blocked" };
+  const settle = (payer: "player" | "them", goods: ResourceAmounts): GameState => {
+    let player: GameState;
+    let them: GameState;
+    if (payer === "player") [player, them] = moveGoods(state, n.state, goods);
+    else [them, player] = moveGoods(n.state, state, goods);
+    const region = replaceFeud(
+      { ...state.region!, neighbors: state.region!.neighbors.map((x) => (x.id === otherId ? { ...x, state: them } : x)) },
+      { ...f, price: goods, paid: true },
+    );
+    return { ...player, region };
+  };
+  if (f.offender === me) {
+    if (!canAfford(state, asCost(offer))) return { state, outcome: "short" };
+    if (value >= askValue * (1 - p.acceptWithinPercent / 100)) return { state: settle("player", offer), outcome: "paid" };
+    // They meet the player halfway between the offer and what they ask.
+    const counter = Object.fromEntries(Object.keys({ ...ask, ...offer }).map((k) => [k, Math.ceil(((ask[k as Resource] ?? 0) + (offer[k as Resource] ?? 0)) / 2)])) as ResourceAmounts;
+    return { state: { ...state, region: replaceFeud(state.region!, { ...f, price: counter }) }, outcome: "countered" };
+  }
+  // They owe the player: a fair ask they can pay, they pay.
+  const fair = value <= askValue * (1 + p.acceptWithinPercent / 100);
+  if (fair && canAfford(n.state, asCost(offer))) return { state: settle("them", offer), outcome: "paid" };
+  const counter = scalePrice(bloodPrice(content, f), p.counterPercent);
+  return { state: { ...state, region: replaceFeud(state.region!, { ...f, price: counter }) }, outcome: "countered" };
+}
+
+export type SealBlocker = "unknown" | "unpaid" | "cost" | "married" | null;
+
+/** What sealing the peace costs: a sandugo with rice wine, a shared Pista with gifts, or the marriage alliance's cost. */
+export function sealCost(content: Content, by: SealKind): ResourceAmounts {
+  const s = content.rules.feud.seal;
+  if (by === "sandugo") return { wine: s.sandugoWine };
+  if (by === "pista") return s.pistaGifts;
+  return content.rules.diplomacy.marriage.cost;
+}
+
+export function sealBlocker(state: GameState, content: Content, id: number, by: SealKind): SealBlocker {
+  const f = playerFeud(state, id);
+  if (!f) return "unknown";
+  if (!f.paid) return "unpaid";
+  if (by === "marriage" && state.region!.neighbors.find((n) => n.id === otherSide(state, f))?.marriage) return "married";
+  if (!canAfford(state, asCost(sealCost(content, by)))) return "cost";
+  return null;
+}
+
+/**
+ * Step 3: seal the peace with a sandugo (rice wine), a shared Pista with gifts, or a marriage
+ * between the two families. The feud ends, the blood debt is cleared, and trust rises for good.
+ */
+export function sealPeace(state: GameState, content: Content, id: number, by: SealKind): GameState {
+  if (sealBlocker(state, content, id, by) !== null) return state;
+  const f = playerFeud(state, id)!;
+  const otherId = otherSide(state, f);
+  const s = content.rules.feud.seal;
+  const n = state.region!.neighbors.find((x) => x.id === otherId)!;
+  const [player, them] = moveGoods(state, n.state, sealCost(content, by));
+  const fs = feudsOf(state.region!);
+  const me = state.barangay.id;
+  let region: RegionState = {
+    ...state.region!,
+    feuds: { ...fs, feuds: fs.feuds.filter((x) => x.id !== f.id && !(x.wronged === otherId && x.offender === me) && !(x.wronged === me && x.offender === otherId)), peaces: [...fs.peaces.filter((p) => !((p.a === me && p.b === otherId) || (p.b === me && p.a === otherId))), { a: me, b: otherId, at: state.time, by }] },
+    neighbors: state.region!.neighbors.map((x) => (x.id === otherId ? { ...x, state: them, trust: clamp100(x.trust + s.trustBonus), grudge: 0, ...(by === "marriage" ? { marriage: true } : {}) } : x)),
+  };
+  region = addNews(region, { time: state.time, key: "feud-settled", barangay: me, other: otherId });
+  return addFlag({ ...player, region }, "peace-made");
 }

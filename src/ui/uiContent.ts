@@ -24,6 +24,7 @@ export interface HelpDoc {
 
 export const TRIGGERS = [
   "raid-warning",
+  "blood-debt",
   "event-fire",
   "rice-low",
   "food-workers",
@@ -177,6 +178,11 @@ export const GAME_TEXT = {
     brokeLosses: ["side", "how"], brokeLeader: ["side", "how"], attackers: [], defenders: [], byBoat: [], byLand: [], ours: ["wounded", "fallen", "captured"], theirs: ["wounded", "fallen", "captured"],
     woundedRest: [], ransomOffer: ["barangay", "count"], ransomButton: ["cost"], theirCaptives: ["barangay", "count"], fled: [],
   },
+  peace: {
+    title: [], intro: [], step1: [], elder: [], babaylan: [], datu: ["datu"], chance: ["percent"], noElder: [], noBabaylan: [], noDatu: [], retry: ["time"], mediated: [], step2: [],
+    theyAsk: ["barangay", "price"], weAsk: ["price"], pay: ["price"], offerLess: ["price"], ask: ["price"], askLess: ["price"], paid: [], together: [], step3: [], sandugo: ["cost"], pista: ["cost"],
+    marriage: ["cost"], unpaid: [], betrayal: [], none: [],
+  },
   feud: { title: [], theyOwe: ["barangay", "dead", "time"], weOwe: ["barangay", "dead", "time"], between: ["barangay", "other", "time"], heat: [], cools: [], none: [], peace: ["barangay"] },
   ruler: { label: [], woman: [], man: [], changeOnce: [], changed: [], honorific: ["term"], honorificTip: [] },
   gather: { food: [], foodLabel: ["amount"], wood: [], woodLabel: ["amount"] },
@@ -270,6 +276,7 @@ export function validateHelp(raw: unknown, file = "help"): HelpDoc {
 
 const LINE_VARS: Record<TriggerId, string[]> = {
   "raid-warning": ["neighbor", "datu", "seconds", "direction"],
+  "blood-debt": [],
   "event-fire": [],
   "rice-low": ["seconds"],
   "rice-full": [],

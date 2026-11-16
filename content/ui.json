@@ -2113,5 +2113,119 @@
       "en": "Sealed peace with {barangay}",
       "fil": "Pinagtibay na kapayapaan sa {barangay}"
     }
+  },
+  "peace": {
+    "title": {
+      "en": "Make peace",
+      "fil": "Makipagkasundo"
+    },
+    "intro": {
+      "en": "Settle a feud in three steps: a go-between, the blood price, and a seal.",
+      "fil": "Ayusin ang alitan sa tatlong hakbang: tagapamagitan, bayad sa dugo, at pagpapatibay."
+    },
+    "step1": {
+      "en": "1. A go-between",
+      "fil": "1. Tagapamagitan"
+    },
+    "elder": {
+      "en": "An elder of our barangay",
+      "fil": "Isang matanda ng ating barangay"
+    },
+    "babaylan": {
+      "en": "Our babaylan",
+      "fil": "Ang ating babaylan"
+    },
+    "datu": {
+      "en": "{datu}, a datu trusted by both",
+      "fil": "Si {datu}, datung pinagkakatiwalaan ng dalawa"
+    },
+    "chance": {
+      "en": "{percent}% chance",
+      "fil": "{percent}% pagkakataon"
+    },
+    "noElder": {
+      "en": "No elder in the barangay yet.",
+      "fil": "Wala pang matanda sa barangay."
+    },
+    "noBabaylan": {
+      "en": "Needs a healer's hut.",
+      "fil": "Kailangan ng kubo ng manggagamot."
+    },
+    "noDatu": {
+      "en": "No neutral datu trusts us enough yet.",
+      "fil": "Wala pang neutral na datung sapat ang tiwala sa atin."
+    },
+    "retry": {
+      "en": "The talks failed. Try again in {time}.",
+      "fil": "Nabigo ang usapan. Subukang muli sa loob ng {time}."
+    },
+    "mediated": {
+      "en": "Both sides have agreed to talk.",
+      "fil": "Pumayag ang dalawang panig na mag-usap."
+    },
+    "step2": {
+      "en": "2. The blood price (bayad sa dugo)",
+      "fil": "2. Bayad sa dugo"
+    },
+    "theyAsk": {
+      "en": "{barangay} asks {price} for their dead.",
+      "fil": "Humihingi ang {barangay} ng {price} para sa kanilang mga namatay."
+    },
+    "weAsk": {
+      "en": "We ask {price} for our dead.",
+      "fil": "Humihingi tayo ng {price} para sa ating mga namatay."
+    },
+    "pay": {
+      "en": "Pay {price}",
+      "fil": "Magbayad ng {price}"
+    },
+    "offerLess": {
+      "en": "Offer less: {price}",
+      "fil": "Mag-alok ng mas mababa: {price}"
+    },
+    "ask": {
+      "en": "Ask {price}",
+      "fil": "Humingi ng {price}"
+    },
+    "askLess": {
+      "en": "Accept less: {price}",
+      "fil": "Tumanggap ng mas mababa: {price}"
+    },
+    "paid": {
+      "en": "The blood price is paid.",
+      "fil": "Bayad na ang dugo."
+    },
+    "together": {
+      "en": "The whole barangay pays together.",
+      "fil": "Sama-samang nagbabayad ang buong barangay."
+    },
+    "step3": {
+      "en": "3. Seal the peace",
+      "fil": "3. Pagtibayin ang kapayapaan"
+    },
+    "sandugo": {
+      "en": "Sandugo with rice wine · {cost}",
+      "fil": "Sandugo na may tapay · {cost}"
+    },
+    "pista": {
+      "en": "A shared Pista with gifts · {cost}",
+      "fil": "Pistang salu-salo na may regalo · {cost}"
+    },
+    "marriage": {
+      "en": "A marriage between the families · {cost}",
+      "fil": "Kasal ng dalawang pamilya · {cost}"
+    },
+    "unpaid": {
+      "en": "First the blood price.",
+      "fil": "Unahin ang bayad sa dugo."
+    },
+    "betrayal": {
+      "en": "A sealed peace is sacred: raiding them afterwards would be a betrayal every barangay would hear of.",
+      "fil": "Banal ang pinagtibay na kapayapaan: ang pagsalakay sa kanila pagkatapos ay pagtataksil na mababalitaan ng lahat."
+    },
+    "none": {
+      "en": "No feuds to settle.",
+      "fil": "Walang alitang aayusin."
+    }
   }
 }

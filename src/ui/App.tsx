@@ -1322,6 +1322,10 @@ export function App() {
           sfx.click();
         }}
         onBrew={(amount) => dispatch({ type: "brew", amount })}
+        onPeace={(c) => {
+          dispatch(c);
+          sfx.click();
+        }}
         onClose={() => setDatuOpen(false)}
       />
       <RememberedDialog open={rememberedOpen} state={state} content={content} game={ui.game} lang={lang} onClose={() => setRememberedOpen(false)} />

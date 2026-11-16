@@ -1,6 +1,7 @@
 // Game state and rules. Pure functions only: no React, no browser APIs, and no unseeded
 // randomness or wall-clock time. Time is passed in; randomness comes from the RNG in the state.
 import { healWounded, isHiding } from "./warfare";
+import type { Mediator, SealKind } from "./feud";
 import { brewWine, emptyStore, feed, holdPista, restKaingin, foodCaps, foodGroups, updateFoodLand, updatePests, yieldFactor, type FoodStore, type PestEvent, type PistaOccasion } from "./food";
 import { GENDERS, syncResidents, type Gender, type Resident } from "./residents";
 import { makeHousehold, setHonorific, setRulerGender, type Household } from "./household";
@@ -37,7 +38,7 @@ import {
   trade,
   train,
   updateRegion,
-  type RegionState, payRansom, updateCaptives } from "./region";
+  type RegionState, payRansom, updateCaptives, mediate, offerBloodPrice, sealPeace } from "./region";
 import { DEFAULT_SEED } from "./rng";
 import { callForHelp, homeWarriors } from "./region";
 import { choose, updateChoices, type PendingChoice } from "./choices";
@@ -894,6 +895,10 @@ export type Command =
   /** The ruler (household.ts): change her or his gender once, use the tradition's honorific. */
   | { type: "setRulerGender"; gender: Gender }
   | { type: "setHonorific"; on: boolean }
+  /** Making peace in a feud (feud.ts): a go-between, the blood price (offered or asked), the seal. */
+  | { type: "mediate"; feud: number; by: Mediator }
+  | { type: "bloodPrice"; feud: number; offer: ResourceAmounts }
+  | { type: "sealPeace"; feud: number; by: SealKind }
   /** Pay the ransom for our warriors held after a battle (warfare.ts). */
   | { type: "payRansom"; captive: number }
   /** Sound the tambuli during a raid warning: allies send volunteers too. */
@@ -1008,6 +1013,12 @@ function applyCommand(state: GameState, content: Content, command: Command): Gam
       return setHonorific(state, content, command.on === true);
     case "payRansom":
       return payRansom(state, content, command.captive);
+    case "mediate":
+      return mediate(state, content, command.feud, command.by);
+    case "bloodPrice":
+      return isObject(command.offer) ? offerBloodPrice(state, content, command.feud, cleanAmounts(command.offer)).state : state;
+    case "sealPeace":
+      return sealPeace(state, content, command.feud, command.by);
     case "brew":
       return brewWine(state, content, command.amount);
     case "pista":
@@ -1189,4 +1200,11 @@ function meet(state: GameState, cls: SocialClass, datu: boolean): GameState {
   let s = addFlag(addFlag(state, "met-villager"), `met-${cls}`);
   if (datu) s = addFlag(s, "met-datu");
   return s;
+}
+
+const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+
+/** Whole, non-negative amounts of known goods only (a command may come from anywhere later). */
+function cleanAmounts(raw: ResourceAmounts): ResourceAmounts {
+  return Object.fromEntries(RESOURCES.filter((r) => Number.isFinite(raw[r]) && (raw[r] ?? 0) > 0).map((r) => [r, Math.floor(raw[r]!)])) as ResourceAmounts;
 }

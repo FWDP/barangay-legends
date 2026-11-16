@@ -110,3 +110,85 @@ describe("feuds spread to kin and cool very slowly", () => {
     expect(parseSave(JSON.stringify(withFeud), content)!.region!.feuds).toEqual(withFeud.region.feuds);
   });
 });
+
+describe("settling a feud (W.3)", () => {
+  /** The player owes `target` blood for two warriors, with a healer's hut and an elder at home. */
+  const owing = (patch: Partial<GameState> = {}) => {
+    const s = world({ buildings: [{ type: "babaylan-hut", x: 3, y: 3 }], ...patch });
+    const target = s.region!.neighbors[0].id;
+    return { s: { ...s, region: owe(s.region!, content, target, ME, 2, 5) }, target };
+  };
+  const feudId = (s: GameState) => feudsOf(s.region!).feuds[0].id;
+  /** Mediation with rolls tried over time until it succeeds (seeded, so the same every run). */
+  const mediated = (s0: GameState) => {
+    let s = s0;
+    for (let i = 0; i < 40 && !feudsOf(s.region!).feuds[0].mediated; i++) {
+      s = apply({ ...s, time: s.time + r.mediation.retrySeconds + 1 }, calm, { type: "mediate", feud: feudId(s), by: "babaylan" });
+    }
+    return s;
+  };
+
+  it("mediation by a go-between can fail and be retried later, or succeed", async () => {
+    const { mediationChance, mediationBlocker } = await import("./region");
+    const { s } = owing();
+    const f = feudsOf(s.region!).feuds[0];
+    expect(mediationChance(s, content, f, "datu")).toBeGreaterThan(mediationChance(s, content, f, "elder") - 1e-9);
+    const tried = apply(s, calm, { type: "mediate", feud: f.id, by: "babaylan" });
+    const after = feudsOf(tried.region!).feuds[0];
+    expect(after.mediated !== undefined || after.failedAt !== undefined).toBe(true);
+    if (!after.mediated) expect(mediationBlocker(tried, content, f.id, "babaylan")).toBe("retry");
+    expect(mediationBlocker({ ...s, buildings: [] }, content, f.id, "babaylan")).toBe("no-babaylan");
+    expect(feudsOf(mediated(s).region!).feuds[0].mediated).toBeDefined();
+  });
+
+  it("the blood price is paid by the whole barangay; a low offer is countered", () => {
+    const { s, target } = owing();
+    const m = mediated(s);
+    const f = feudsOf(m.region!).feuds[0];
+    const ask = bloodPrice(content, f);
+    const low = Object.fromEntries(Object.entries(ask).map(([k, v]) => [k, Math.floor((v ?? 0) / 4)]));
+    const countered = apply(m, calm, { type: "bloodPrice", feud: f.id, offer: low });
+    const c = feudsOf(countered.region!).feuds[0];
+    expect(c.paid).toBeFalsy();
+    expect(c.price!.gold).toBeGreaterThan(low.gold);
+    expect(c.price!.gold).toBeLessThan(ask.gold! + 1);
+    const paid = apply(m, calm, { type: "bloodPrice", feud: f.id, offer: ask });
+    expect(feudsOf(paid.region!).feuds[0].paid).toBe(true);
+    expect(paid.resources.gold).toBe(m.resources.gold - (ask.gold ?? 0));
+    expect(nb(paid, target).state.resources.gold).toBe(nb(m, target).state.resources.gold + (ask.gold ?? 0));
+  });
+
+  it("sealing ends the feud, clears the debt and gives a lasting trust bonus; breaking it is a betrayal everywhere", () => {
+    const { s, target } = owing();
+    const m = mediated(s);
+    const f = feudsOf(m.region!).feuds[0];
+    const paid = apply(m, calm, { type: "bloodPrice", feud: f.id, offer: bloodPrice(content, f) });
+    expect(apply(m, calm, { type: "sealPeace", feud: f.id, by: "sandugo" })).toBe(m); // unpaid
+    const sealed = apply(paid, calm, { type: "sealPeace", feud: f.id, by: "sandugo" });
+    expect(feudsOf(sealed.region!).feuds).toHaveLength(0);
+    expect(feudsOf(sealed.region!).peaces).toHaveLength(1);
+    expect(nb(sealed, target).trust).toBe(Math.min(100, nb(paid, target).trust + r.seal.trustBonus));
+    expect(nb(sealed, target).grudge).toBe(0);
+    expect(sealed.resources.wine).toBe(paid.resources.wine - r.seal.sandugoWine);
+    // Raiding them afterwards: every barangay trusts the player less.
+    const ready = setNb(sealed, target, { status: "independent", raidCooldownUntil: 0 });
+    const betrayed = apply(ready, calm, { type: "raid", neighbor: target, warriors: 5 });
+    for (const n of betrayed.region!.neighbors.filter((x) => x.id !== target)) expect(n.trust).toBeLessThanOrEqual(Math.max(0, nb(ready, n.id).trust - r.betrayal.trustLossAll));
+    expect(feudsOf(betrayed.region!).peaces).toHaveLength(0);
+    expect(betrayed.region!.news.some((n) => n.key === "peace-broken")).toBe(true);
+  });
+
+  it("when they owe us, they pay a fair blood price, or counter a greedy one", () => {
+    const s0 = world({ buildings: [{ type: "babaylan-hut", x: 3, y: 3 }] });
+    const target = s0.region!.neighbors[0].id;
+    let s: GameState = { ...s0, region: owe(s0.region!, content, ME, target, 1, 5) };
+    s = setNb(s, target, { state: { ...nb(s, target).state, resources: { ...nb(s, target).state.resources, gold: 500, rice: 500, wine: 50 } } });
+    const m = mediated(s);
+    const f = feudsOf(m.region!).feuds[0];
+    const greedy = Object.fromEntries(Object.entries(bloodPrice(content, f)).map(([k, v]) => [k, (v ?? 0) * 3]));
+    expect(feudsOf(apply(m, calm, { type: "bloodPrice", feud: f.id, offer: greedy }).region!).feuds[0].paid).toBeFalsy();
+    const fair = apply(m, calm, { type: "bloodPrice", feud: f.id, offer: bloodPrice(content, f) });
+    expect(feudsOf(fair.region!).feuds[0].paid).toBe(true);
+    expect(fair.resources.gold).toBe(m.resources.gold + (bloodPrice(content, f).gold ?? 0));
+  });
+});

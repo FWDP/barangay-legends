@@ -192,6 +192,10 @@ export function observe(session: AdvisorSession, state: GameState, content: Cont
     if (t - s.unstaffedSince >= UNSTAFFED_SECONDS) active.set("unstaffed", { building: defs.get(state.buildings[empty].type)!.name });
   }
 
+  // The first blood debt with the player, either way (feud.ts): how feuds work and how to make peace.
+  const me = state.barangay.id;
+  if (state.region?.feuds?.feuds.some((f) => f.wronged === me || f.offender === me)) active.set("blood-debt", {});
+
   if (state.typhoon) active.set("event-typhoon", { seconds: Math.max(0, Math.ceil(state.typhoon.strikeAt - t)) });
   if (state.buildings.some(isBurning)) active.set("event-fire", {});
   if (state.sick.length > 0) active.set("event-sickness", {});

@@ -2,13 +2,16 @@
 import { onArawText } from "./Days";
 import { useEffect, useState } from "react";
 import type { Content } from "../engine/content";
-import type { GameState } from "../engine/game";
+import type { Command, GameState } from "../engine/game";
 import { currentTask, earnedTitles, taskProgress } from "../engine/gawain";
 import { datuLevelNeeded, maxDatuLevel, nextDatuLevel } from "../engine/datu";
 import { datuHouseUrl, houseStyleFor } from "./datuHouseArt";
 import { asCost, canAfford } from "../engine/game";
 import { pistaBlocker, pistaOccasions, type PistaOccasion } from "../engine/food";
 import { rulerTitle } from "../engine/household";
+import { bloodPrice, scalePrice, type Mediator, type SealKind } from "../engine/feud";
+import { feudsOf, mediationBlocker, mediationChance, neutralDatu, sealBlocker, sealCost } from "../engine/region";
+import { barangayName } from "./politicsText";
 import { clock } from "./EventBanners";
 import { costText } from "./format";
 import type { Lang } from "./settings";
@@ -231,9 +234,11 @@ export function DatuDialog(props: {
   onUpgrade: () => void;
   onPista?: (occasion: PistaOccasion) => void;
   onBrew?: (amount: number) => void;
+  /** Making peace in a feud (feud.ts): mediate, the blood price, the seal. */
+  onPeace?: (c: Command) => void;
   onClose: () => void;
 }) {
-  const { open, state, content, game, lang, onUpgrade, onPista, onBrew, onClose } = props;
+  const { open, state, content, game, lang, onUpgrade, onPista, onBrew, onPeace, onClose } = props;
   const dialog = useModal(open);
   const house = content.datuHouse;
   const d = game.datu;
@@ -284,6 +289,7 @@ export function DatuDialog(props: {
               </button>
             )}
           </div>
+          {onPeace && <PeacePanel state={state} content={content} game={game} lang={lang} onPeace={onPeace} />}
           {onPista && onBrew && <PistaPanel state={state} content={content} game={game} lang={lang} onPista={onPista} onBrew={onBrew} />}
           <div className="flex justify-end">
             <button type="button" autoFocus onClick={onClose} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-4 py-1.5 text-sm font-semibold text-amber-950">
@@ -437,6 +443,96 @@ function PistaPanel(props: { state: GameState; content: Content; game: GameText;
           {fill(t.brew[lang], { n: brewN, cost: costText(asCost(brewCost)) })}
         </button>
       </div>
+    </section>
+  );
+}
+
+/**
+ * Making peace (W.3) at the Bahay ng Datu, one feud at a time: 1. a go-between (an elder, the
+ * babaylan, or a neutral datu), 2. the blood price, paid or asked, with counter-offers, 3. the seal.
+ */
+function PeacePanel(props: { state: GameState; content: Content; game: GameText; lang: Lang; onPeace: (c: Command) => void }) {
+  const { state, content, game, lang, onPeace } = props;
+  const t = game.peace;
+  const me = state.barangay.id;
+  if (!state.region) return null;
+  const feuds = feudsOf(state.region).feuds.filter((f) => f.wronged === me || f.offender === me);
+  if (feuds.length === 0) return null;
+  const btn = "game-btn w-full border-2 border-amber-950/60 bg-amber-100 px-2 py-1 text-left text-xs font-semibold text-amber-950 disabled:cursor-not-allowed disabled:opacity-50";
+  return (
+    <section className="space-y-2 border-t border-amber-900/20 pt-2" data-peace>
+      <h3 className="font-display text-base text-amber-900">🕊️ {t.title[lang]}</h3>
+      <p className="text-xs text-stone-600">{t.intro[lang]}</p>
+      {feuds.map((f) => {
+        const other = f.wronged === me ? f.offender : f.wronged;
+        const name = barangayName(state, content, other, game, lang);
+        const owe = f.offender === me;
+        const full = bloodPrice(content, f);
+        const price = f.price ?? full;
+        const less = scalePrice(full, content.rules.feud.price.counterPercent);
+        const head = owe
+          ? fill(game.feud.weOwe[lang], { barangay: name, dead: f.deaths.length, time: clock(state.time - f.since) })
+          : fill(game.feud.theyOwe[lang], { barangay: name, dead: f.deaths.length, time: clock(state.time - f.since) });
+        return (
+          <div key={f.id} className="space-y-1 rounded-lg border border-amber-900/20 bg-amber-50 p-2 text-xs">
+            <p className="font-semibold text-red-900">{head}</p>
+            <p className="font-semibold">{t.step1[lang]}</p>
+            {f.mediated ? (
+              <p className="text-green-800">✅ {t.mediated[lang]}</p>
+            ) : (
+              (["elder", "babaylan", "datu"] as Mediator[]).map((by) => {
+                const why = mediationBlocker(state, content, f.id, by);
+                const label = by === "datu" ? fill(t.datu[lang], { datu: neutralDatu(state, content, f) ? barangayName(state, content, neutralDatu(state, content, f)!.id, game, lang) : "—" }) : t[by][lang];
+                const note =
+                  why === "no-elder" ? t.noElder[lang] : why === "no-babaylan" ? t.noBabaylan[lang] : why === "no-datu" ? t.noDatu[lang] : why === "retry" ? fill(t.retry[lang], { time: clock((f.failedAt ?? 0) + content.rules.feud.mediation.retrySeconds - state.time) }) : fill(t.chance[lang], { percent: Math.round(mediationChance(state, content, f, by) * 100) });
+                return (
+                  <button key={by} type="button" disabled={why !== null} onClick={() => onPeace({ type: "mediate", feud: f.id, by })} className={btn}>
+                    {label} <span className="block font-normal">{note}</span>
+                  </button>
+                );
+              })
+            )}
+            <p className="font-semibold">{t.step2[lang]}</p>
+            {f.paid ? (
+              <p className="text-green-800">✅ {t.paid[lang]}</p>
+            ) : !f.mediated ? null : owe ? (
+              <>
+                <p>{fill(t.theyAsk[lang], { barangay: name, price: costText(asCost(price)) })}</p>
+                <p className="text-[11px] text-stone-500">{t.together[lang]}</p>
+                <button type="button" disabled={!canAfford(state, asCost(price))} onClick={() => onPeace({ type: "bloodPrice", feud: f.id, offer: price })} className={btn}>
+                  {fill(t.pay[lang], { price: costText(asCost(price)) })}
+                </button>
+                <button type="button" disabled={!canAfford(state, asCost(less))} onClick={() => onPeace({ type: "bloodPrice", feud: f.id, offer: less })} className={btn}>
+                  {fill(t.offerLess[lang], { price: costText(asCost(less)) })}
+                </button>
+              </>
+            ) : (
+              <>
+                <p>{fill(t.weAsk[lang], { price: costText(asCost(full)) })}</p>
+                <button type="button" onClick={() => onPeace({ type: "bloodPrice", feud: f.id, offer: full })} className={btn}>
+                  {fill(t.ask[lang], { price: costText(asCost(full)) })}
+                </button>
+                {f.price && (
+                  <button type="button" onClick={() => onPeace({ type: "bloodPrice", feud: f.id, offer: f.price! })} className={btn}>
+                    {fill(t.askLess[lang], { price: costText(asCost(f.price)) })}
+                  </button>
+                )}
+              </>
+            )}
+            <p className="font-semibold">{t.step3[lang]}</p>
+            {!f.paid ? (
+              <p className="text-stone-500">{t.unpaid[lang]}</p>
+            ) : (
+              (["sandugo", "pista", "marriage"] as SealKind[]).map((by) => (
+                <button key={by} type="button" disabled={sealBlocker(state, content, f.id, by) !== null} onClick={() => onPeace({ type: "sealPeace", feud: f.id, by })} className={btn}>
+                  {fill(t[by][lang], { cost: costText(asCost(sealCost(content, by))) })}
+                </button>
+              ))
+            )}
+            {f.paid && <p className="text-[11px] text-stone-500">{t.betrayal[lang]}</p>}
+          </div>
+        );
+      })}
     </section>
   );
 }

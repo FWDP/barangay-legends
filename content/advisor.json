@@ -1,5 +1,5 @@
 {
-  "_comment": "The datu's elder adviser. 'portrait' is an emoji, or an image in public/art written as '/art/<file>.png'. The tutorial runs in order; a step is done when its 'done' condition holds: {\"event\": \"gather\" | \"menu\" | \"rehiyon\"} (the player gathered, opened a building's menu, opened the Rehiyon map) or {\"built\": \"<building id>\"} (more of that building than the barangay started with). Tips: each line has an id, a trigger id and text in every language. Triggers: dambana (a Babaylan's Hut stands, no Dambana yet), forest-restless (Forest Balance below stage 1), forest-angry (below stage 2), aklat (the first 5 entries aren't found yet), rice-low (Pagkain will run out soon), food-workers, unstaffed, event-typhoon, event-fire, event-sickness, trade-offer, refused-raids, raid-warning, idle, unlocked, no-path, old-paths, roads, borrowing, rice-full (the Palay store is full), bantayan-shore (the last raid landed where no Bantayan watched, and still none watches any landing point), defense-rework (once, after an old save's Kutas were split into Bantayan and Kuta). Text may use {building}, {neighbor}, {datu}, {seconds}, {direction}, {percent}, {farmers} and {villagers} where the trigger provides them. A line may set \"max\" (1-3) to be shown fewer times. Add more lines for a trigger and the adviser rotates through them; each line is shown at most 3 times.",
+  "_comment": "The datu's elder adviser. 'portrait' is an emoji, or an image in public/art written as '/art/<file>.png'. The tutorial runs in order; a step is done when its 'done' condition holds: {\"event\": \"gather\" | \"menu\" | \"rehiyon\"} (the player gathered, opened a building's menu, opened the Rehiyon map) or {\"built\": \"<building id>\"} (more of that building than the barangay started with). Tips: each line has an id, a trigger id and text in every language. Triggers: dambana (a Babaylan's Hut stands, no Dambana yet), forest-restless (Forest Balance below stage 1), forest-angry (below stage 2), aklat (the first 5 entries aren't found yet), rice-low (Pagkain will run out soon), food-workers, unstaffed, event-typhoon, event-fire, event-sickness, trade-offer, refused-raids, raid-warning, blood-debt (the first time a feud with the player begins: someone died in a raid), idle, unlocked, no-path, old-paths, roads, borrowing, rice-full (the Palay store is full), bantayan-shore (the last raid landed where no Bantayan watched, and still none watches any landing point), defense-rework (once, after an old save's Kutas were split into Bantayan and Kuta). Text may use {building}, {neighbor}, {datu}, {seconds}, {direction}, {percent}, {farmers} and {villagers} where the trigger provides them. A line may set \"max\" (1-3) to be shown fewer times. Add more lines for a trigger and the adviser rotates through them; each line is shown at most 3 times.",
   "name": "Dalisay",
   "title": {
     "en": "Elder adviser to the datu",
@@ -74,6 +74,15 @@
     }
   ],
   "lines": [
+    {
+      "id": "blood-debt-1",
+      "trigger": "blood-debt",
+      "max": 1,
+      "text": {
+        "en": "Datu, blood was spilled in that raid, and blood is owed. Their kin will not forget: a feud may bring raids for vengeance. It can be settled: send a go-between, agree a blood price for the dead, and seal the peace with a sandugo, a shared feast or a marriage. Make peace at the Bahay ng Datu.",
+        "fil": "Datu, may dugong dumanak sa pagsalakay na iyon, at may utang na dugo. Hindi ito malilimutan ng kanilang kamag-anak: maaaring humantong ang alitan sa paghihiganti. Maaari itong ayusin: magpadala ng tagapamagitan, magkasundo sa bayad sa dugo para sa mga namatay, at pagtibayin ang kapayapaan sa sandugo, sa isang salu-salo o sa kasal. Makipagkasundo sa Bahay ng Datu."
+      }
+    },
     {
       "id": "food-workers-1",
       "trigger": "food-workers",
