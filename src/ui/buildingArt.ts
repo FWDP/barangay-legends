@@ -204,6 +204,23 @@ export function kamaligSvg(level: number): string {
 </svg>`;
 }
 
+
+/**
+ * Suyak (W.5): sharpened bamboo stakes set slanting toward the water on the shore, in two rows,
+ * their cut tips pale. Simple and flat; the term waits for review.
+ */
+const SUYAK = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <path d="M2 44 Q32 38 62 44 V62 H2 Z" fill="#38bdf8" opacity="0.45"/>
+  <path d="M2 30 Q32 24 62 30 V48 Q32 42 2 48 Z" fill="#e3cf9a"/>
+  <g stroke="#4d5c22" stroke-width="0.8">
+    <path d="M8 46 L14 18 L17 19 L12 46 Z" fill="#a3b84a"/><path d="M20 45 L26 16 L29 17 L24 45 Z" fill="#8aa04a"/>
+    <path d="M32 45 L38 15 L41 16 L36 45 Z" fill="#a3b84a"/><path d="M44 45 L50 17 L53 18 L48 45 Z" fill="#8aa04a"/>
+    <path d="M14 40 L18 24 L20 25 L17 40 Z" fill="#8aa04a"/><path d="M38 40 L42 23 L44 24 L41 40 Z" fill="#8aa04a"/>
+  </g>
+  <g fill="#f5efd6"><path d="M14 18 L15.5 13 L17 19 Z"/><path d="M26 16 L27.5 11 L29 17 Z"/><path d="M38 15 L39.5 10 L41 16 Z"/><path d="M50 17 L51.5 12 L53 18 Z"/><path d="M18 24 L19 20 L20 25 Z"/><path d="M42 23 L43 19 L44 24 Z"/></g>
+  <g stroke="#6b5a2a" stroke-width="0.5"><line x1="10" y1="36" x2="13" y2="36"/><line x1="22" y1="34" x2="25" y2="34"/><line x1="34" y1="33" x2="37" y2="33"/><line x1="46" y1="35" x2="49" y2="35"/></g>
+</svg>`;
+
 const url = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg.replace(/\s+/g, " "))}`;
 
 const ART: Record<string, string> = {
@@ -226,6 +243,7 @@ const ART: Record<string, string> = {
   babuyan: url(babuyanSvg(true)),
   asinan: url(ASINAN),
   baklad: url(BAKLAD),
+  suyak: url(SUYAK),
 };
 
 /** The pen where the tradition keeps no pigs: chickens only (content/traditions pigs). */
@@ -260,4 +278,4 @@ export const DAMBANA_ART = ART.dambana;
 export const mapIcon = (def: Pick<BuildingDef, "icon" | "bridge">): string | null => (def.bridge ? null : def.icon);
 
 /** The lore note (content/lore) about how a building with custom art is drawn. */
-export const ART_LORE: Record<string, string> = { dambana: "dambana-art", kuta: "kuta", bantayan: "bantayan", "babaylan-hut": "babaylan", kamalig: "kamalig", gabihan: "gabi", kaingin: "kaingin-food", sagingan: "saging", lumbia: "lumbia", niyugan: "niyog", pangangalap: "pangangalap", pangangaso: "pangangaso", babuyan: "babuyan", asinan: "asin", baklad: "baklad", "fishing-dock": "pangingisda" };
+export const ART_LORE: Record<string, string> = { dambana: "dambana-art", kuta: "kuta", bantayan: "bantayan", "babaylan-hut": "babaylan", kamalig: "kamalig", gabihan: "gabi", kaingin: "kaingin-food", sagingan: "saging", lumbia: "lumbia", niyugan: "niyog", pangangalap: "pangangalap", pangangaso: "pangangaso", babuyan: "babuyan", asinan: "asin", baklad: "baklad", "fishing-dock": "pangingisda", suyak: "suyak" };

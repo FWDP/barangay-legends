@@ -17,7 +17,7 @@ import { lootableFood } from "./food";
 import { bloodPrice, coolFeuds, emptyFeuds, peaceOf, priceValue, recordBloodDebt, scalePrice, type Feud, type FeudState, type Mediator, type SealKind } from "./feud";
 import { addHonor, steadiness } from "./honor";
 import { addWounded, endBattle, heldAway, lossTotal, ransomFor, shouldFlee, woundedCount, type BattleEnd, type Captive } from "./warfare";
-import { isWatched, warningFor } from "./watch";
+import { isWatched, stakesDelay, warningFor } from "./watch";
 import { dayPhaseAt, isNightAt } from "./daynight";
 import { seasonAt } from "./events";
 import { addExpedition, defenseExpedition } from "./expeditions";
@@ -1139,7 +1139,8 @@ export function raidTimingFactor(state: GameState, content: Content, second: num
 export function startRaid(state: GameState, content: Content, from: string, second: number): IncomingRaid {
   const landing = chooseLanding(state, content, second);
   const watched = isWatched(state, content, landing);
-  return { from, strikeAt: second + warningFor(content, watched), landing, warnedAt: second, watched };
+  // Suyak near the landing slow them: they strike later (watch.ts stakesDelay).
+  return { from, strikeAt: second + warningFor(content, watched) + stakesDelay(state, content, landing), landing, warnedAt: second, watched };
 }
 
 /**

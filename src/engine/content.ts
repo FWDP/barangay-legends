@@ -99,6 +99,8 @@ export interface BuildingDef {
   defense?: number;
   /** A Bantayan: when staffed, it watches the landing points within rules.watch.radius (watch.ts). */
   watch?: boolean;
+  /** Suyak: sharpened stakes that slow raiders landing within rules.watch.stakes.radius (watch.ts). */
+  stakes?: boolean;
   /** Food it brings in (produces.food): where it's kept (food.ts) and its food group (variety). */
   foodKind?: FoodKind;
   foodGroup?: FoodGroup;
@@ -160,7 +162,7 @@ export interface Rules {
   clearing: ClearingRules;
   military: MilitaryRules;
   /** The Bantayan's watch (watch.ts). */
-  watch: { radius: number; watchedWarningSeconds: number; unwatchedWarningSeconds: number; revealUnwatchedSeconds: number };
+  watch: { radius: number; watchedWarningSeconds: number; unwatchedWarningSeconds: number; revealUnwatchedSeconds: number; stakes: { radius: number; secondsEach: number; maxSeconds: number } };
   /** Calling for help with the tambuli (region.ts callForHelp). */
   tambuli: { volunteerPercent: number; distancePenaltyPerUnit: number; smallRaidAttackers: number; cooldownSeconds: number; overuseTrust: number };
   /** The Kuta: the rally, the ready bonus and the shelter (border.ts, region.ts). */
@@ -1113,6 +1115,7 @@ export function validateBuilding(raw: unknown, file = "building"): BuildingDef {
   }
   if (raw.defense !== undefined && !isNonNegNumber(raw.defense)) throw new Error(`${file}: "defense" must be a number >= 0`);
   if (raw.watch !== undefined && raw.watch !== true) throw new Error(`${file}: "watch" must be true if given`);
+  if (raw.stakes !== undefined && raw.stakes !== true) throw new Error(`${file}: "stakes" must be true if given`);
   if (raw.foodKind !== undefined && !(FOOD_KINDS as readonly unknown[]).includes(raw.foodKind)) throw new Error(`${file}: "foodKind" must be one of ${FOOD_KINDS.join(", ")}`);
   if (raw.foodGroup !== undefined && !(FOOD_GROUPS as readonly unknown[]).includes(raw.foodGroup)) throw new Error(`${file}: "foodGroup" must be one of ${FOOD_GROUPS.join(", ")}`);
   if (isObject(raw.produces) && raw.produces.food !== undefined && (!raw.foodKind || !raw.foodGroup)) throw new Error(`${file}: a building that produces food needs "foodKind" and "foodGroup"`);

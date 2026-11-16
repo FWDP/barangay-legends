@@ -38,3 +38,15 @@ export function warningFor(content: Content, watched: boolean): number {
 export function landingShownAt(content: Content, watched: boolean, strikeAt: number, warnedAt: number): number {
   return watched ? warnedAt : Math.max(warnedAt, strikeAt - content.rules.watch.revealUnwatchedSeconds);
 }
+
+/**
+ * Suyak (W.5): sharpened bamboo stakes near the landing slow the raiders, so they strike later and
+ * the defenders have more time to arrive: secondsEach per standing stake within the radius.
+ */
+export function stakesDelay(state: GameState, content: Content, landing: Point | null): number {
+  if (!landing) return 0;
+  const k = content.rules.watch.stakes;
+  const defs = new Map(content.buildings.map((d) => [d.id, d]));
+  const n = state.buildings.filter((b) => !b.damaged && defs.get(b.type)?.stakes && Math.hypot(b.x - landing.x, b.y - landing.y) <= k.radius).length;
+  return Math.min(k.maxSeconds, n * k.secondsEach);
+}

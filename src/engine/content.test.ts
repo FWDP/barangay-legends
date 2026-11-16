@@ -20,7 +20,7 @@ describe("content", () => {
     // In menu order ("order" in each file), not file-name order.
     expect(content.buildings.map((b) => b.id)).toEqual([
       "bahay-kubo", "gabihan", "kaingin", "sagingan", "niyugan", "palayan", "lumbia", "woodcutter-camp", "babaylan-hut", "dambana", "libingan", "kamalig",
-      "tulay", "bantayan", "kuta", "fishing-dock", "pangangalap", "pangangaso", "babuyan", "balangay-dock", "asinan", "baklad",
+      "tulay", "bantayan", "suyak", "kuta", "fishing-dock", "pangangalap", "pangangaso", "babuyan", "balangay-dock", "asinan", "baklad",
     ]);
   });
 

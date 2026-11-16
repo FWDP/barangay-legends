@@ -7,7 +7,7 @@
 import type { Content } from "./content";
 import type { GameState } from "./game";
 import { borderDefense, chooseLanding, closestLandings, type Muster } from "./border";
-import { isWatched, warningFor } from "./watch";
+import { isWatched, stakesDelay, warningFor } from "./watch";
 import type { Point } from "./map";
 import { dayAt } from "./daynight";
 import { blocOf } from "./politics";
@@ -39,7 +39,7 @@ export function borderBattle(defender: GameState, content: Content, landing: Poi
   const helping = allies.filter((a) => a.arrives);
   const allyDefense = helping.reduce((sum, a) => sum + (a.warriors * m.warrior.defense * d.sandugo.allyDefensePercent) / 100, 0);
   // The warning: long if a staffed Bantayan watches the landing, short if not (watch.ts).
-  const window = windowSeconds ?? warningFor(content, isWatched(defender, content, landing));
+  const window = windowSeconds ?? warningFor(content, isWatched(defender, content, landing)) + stakesDelay(defender, content, landing);
   const border = landing ? borderDefense(defender, content, landing, window) : null;
   const defense = (border ? border.defense : defenseOf(defender, content)) + allyDefense;
   const attack = attackOf(attackers, content);

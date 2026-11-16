@@ -51,7 +51,7 @@ describe("card states", () => {
     const fresh = tabsWithNew(s, content, seenBefore);
     expect(fresh).toEqual(new Set(["pagkain", "depensa"])); // Kamalig, Kuta and Bantayan at 10 villagers
     expect(tabsWithNew(s, content, [...seenBefore, "kamalig", "kuta"]).size).toBe(1);
-    expect(tabsWithNew(s, content, [...seenBefore, "kamalig", "kuta", "bantayan"]).size).toBe(0);
+    expect(tabsWithNew(s, content, [...seenBefore, "kamalig", "kuta", "bantayan", "suyak"]).size).toBe(0);
   });
 });
 

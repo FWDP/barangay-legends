@@ -1,0 +1,26 @@
+{
+  "id": "suyak",
+  "name": "Suyak",
+  "description": "Sharpened bamboo stakes set in the ground at the shore or river bank. Raiders who land near them are slowed, giving the barangay's warriors more time to reach the landing. Cheap, and easily cleared away.",
+  "icon": "🎍",
+  "order": 5.95,
+  "category": "depensa",
+  "cost": {
+    "wood": 6
+  },
+  "repairCost": {
+    "wood": 2
+  },
+  "stakes": true,
+  "placeNextTo": [
+    "river",
+    "sea"
+  ],
+  "unlock": {
+    "villagers": 10
+  },
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Term \"suyak\" flagged for review (docs/cultural-review.md); cost and effect are playtest guesses"
+  ]
+}

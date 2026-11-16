@@ -488,7 +488,13 @@
     "radius": 7,
     "watchedWarningSeconds": 75,
     "unwatchedWarningSeconds": 45,
-    "revealUnwatchedSeconds": 15
+    "revealUnwatchedSeconds": 15,
+    "stakes": {
+      "radius": 3,
+      "secondsEach": 6,
+      "maxSeconds": 24
+    },
+    "_stakes": "Suyak (sharpened bamboo stakes, W.5): each standing one within stakes.radius of the landing slows the raiders secondsEach seconds (up to maxSeconds), so the raid strikes later and the defenders have more time to arrive. Playtest guesses."
   },
   "tambuli": {
     "_comment": "Calling for help (engine/region.ts callForHelp): during a raid warning the datu may sound the tambuli (a signal fire at night). Allies, bloc mates and tributaries then send armed volunteers on top of their warriors: up to volunteerPercent of their villagers, scaled by how willing they are (their trust out of 100, less distancePenaltyPerUnit for every unit of regional distance). They arrive by the usual arrival rules. Calling for a small raid (attackers at most smallRaidAttackers) or again within cooldownSeconds of the last call costs every answering ally overuseTrust trust. Playtest guesses.",

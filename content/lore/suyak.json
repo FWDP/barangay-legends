@@ -1,0 +1,35 @@
+{
+  "id": "suyak",
+  "name": "Suyak: sharpened bamboo stakes",
+  "description": "Sharpened bamboo stakes, often hidden in grass or shallow water, were set around settlements and along approaches to slow and hurt attackers. Spanish and later accounts mention them; the term 'suyak' (used here) and its spread by tradition are flagged for review.",
+  "tradition": "Widespread (term flagged for review)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)"
+  ],
+  "aklat": {
+    "order": 61,
+    "icon": "🎍",
+    "name": {
+      "en": "Suyak: sharpened stakes",
+      "fil": "Suyak: matutulis na tulos"
+    },
+    "lore": {
+      "en": "Around their settlements and along the paths from the shore, people set sharpened bamboo stakes, sometimes hidden in grass or shallow water, to slow attackers and give the defenders time. Spanish soldiers learned to fear them. Such simple defenses fit a kind of war that was mostly raiding: slowing raiders down gave families time to gather their warriors or to slip into the forest.",
+      "fil": "Sa paligid ng kanilang pamayanan at sa mga daan mula sa dalampasigan, nagtutusok ang mga tao ng matutulis na kawayan, kung minsan nakatago sa damo o mababaw na tubig, upang pabagalin ang mananalakay at bigyan ng panahon ang mga tagapagtanggol. Natutong katakutan ito ng mga sundalong Espanyol. Akma ang ganitong simpleng depensa sa digmaang karamihan ay pagsalakay: ang pagpapabagal sa mananalakay ay nagbibigay ng panahon sa mga pamilya na tipunin ang mga mandirigma o tumakas sa gubat."
+    },
+    "inGame": {
+      "en": "Suyak at the shore slow raiders landing nearby, so they strike later and more of your warriors reach the landing in time. Cheap, and easily cleared.",
+      "fil": "Pinababagal ng suyak sa dalampasigan ang mananalakay na dumarating sa malapit, kaya mas huli silang sumasalakay at mas maraming mandirigma ang umaabot sa tamang oras. Mura, at madaling alisin."
+    },
+    "hint": {
+      "en": "Set suyak at the shore.",
+      "fil": "Magtusok ng suyak sa dalampasigan."
+    },
+    "unlock": {
+      "type": "built",
+      "building": "suyak"
+    }
+  },
+  "reviewed": false
+}
