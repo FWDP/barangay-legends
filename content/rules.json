@@ -709,5 +709,73 @@
     "boarStock": 30,
     "boarGuardRadius": 5,
     "cooldownSeconds": 300
+  },
+  "feud": {
+    "_comment": "Blood debts and feuds (W.2, W.3, engine/feud.ts). Each death adds heatPerDeath × rankWeight to a feud's heat (0-100); it cools coolPerMinute and ends at 0 (very slowly). When the player kills a neighbor's people, that neighbor's grudge rises grudgeOnDeath per death and its bloc mates (kin) trust the player kinTrustLoss less. A neighbor owed blood raids even if it isn't a raider, vengeance.chanceFactor times as often, with warriorsPercent more warriors; a winning vengeance raid sets up to firesMax houses alight; its battles are fierce (rules.military.battle.feudFallenPercent). Making peace: mediation succeeds with chance base + the go-between's own bonus (elder, babaylan, or a neutral datu trusted by both: datuMinTrust) + trustWeight × their trust (0-100) − heatWeight × the feud's heat, in percent; a failed attempt can be retried after retrySeconds. The blood price is per death by rank in each good (gold, Palay, rice wine now; heirlooms can be added as their own resource later); a counter-offer of counterPercent of the price is accepted if within acceptWithinPercent of the asking value. Sealing: a sandugo (with sandugoWine rice wine), a shared Pista (with pistaGifts), or a marriage; sealed peace gives trustBonus and ends the feud; breaking it (raiding them) costs trustLossAll with every barangay and grudge with them. mourningRaid: per second, the chance an AI datu dies and their barangay may go on a mourning raid (Visayan practice; flagged for review). Playtest guesses.",
+    "heatPerDeath": 20,
+    "rankWeight": {
+      "commoner": 1,
+      "warrior": 1,
+      "noble": 2,
+      "datu": 3
+    },
+    "coolPerMinute": 0.5,
+    "grudgeOnDeath": 12,
+    "kinTrustLoss": 5,
+    "vengeance": {
+      "chanceFactor": 4,
+      "warriorsPercent": 30,
+      "firesMax": 2
+    },
+    "mediation": {
+      "base": 30,
+      "elder": 10,
+      "babaylan": 15,
+      "datu": 25,
+      "trustWeight": 0.4,
+      "heatWeight": 0.3,
+      "retrySeconds": 300,
+      "datuMinTrust": 40
+    },
+    "price": {
+      "perDeath": {
+        "commoner": {
+          "gold": 10,
+          "rice": 20
+        },
+        "warrior": {
+          "gold": 15,
+          "rice": 30,
+          "wine": 2
+        },
+        "noble": {
+          "gold": 30,
+          "rice": 60,
+          "wine": 4
+        },
+        "datu": {
+          "gold": 60,
+          "rice": 120,
+          "wine": 8
+        }
+      },
+      "counterPercent": 75,
+      "acceptWithinPercent": 20
+    },
+    "seal": {
+      "trustBonus": 25,
+      "sandugoWine": 5,
+      "pistaGifts": {
+        "gold": 10,
+        "rice": 30
+      }
+    },
+    "betrayal": {
+      "trustLossAll": 20,
+      "grudge": 40
+    },
+    "mourningRaid": {
+      "chancePerSecond": 0.0002
+    }
   }
 }

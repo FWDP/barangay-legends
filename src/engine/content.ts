@@ -205,6 +205,8 @@ export interface Rules {
   storage: { baseRice: number; baseDried: number; baseSalt: number };
   /** How a barangay eats and stores food (food.ts). */
   food: FoodRules;
+  /** Blood debts, feuds and making peace (W.2, W.3, feud.ts). */
+  feud: import("./feud").FeudRules;
   /** Rats, locusts and wild boar (food.ts updatePests). */
   pests: PestRules;
   /** Shares of women, children and elders among new residents (residents.ts). */

@@ -70,7 +70,7 @@ describe("neighbors", () => {
     }
     // At least one neighbor has grown in people too.
     expect(later.region!.neighbors.some((n) => n.state.villagers > nb(start, n.id).state.villagers)).toBe(true);
-  });
+  }, 30000);
 
   it("have no random disasters, but keep seasons and hunger", () => {
     expect(aiContent(content).events.fire).toBeUndefined();

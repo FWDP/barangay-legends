@@ -14,6 +14,7 @@ import { Rng } from "./rng";
 import { proposeTrade, type CounterOffer, type Proposal } from "./trading";
 import { chooseLanding, raidLanding, raidWindow, sheltered } from "./border";
 import { lootableFood } from "./food";
+import { coolFeuds, emptyFeuds, peaceOf, recordBloodDebt, type FeudState } from "./feud";
 import { addWounded, endBattle, heldAway, lossTotal, ransomFor, shouldFlee, woundedCount, type BattleEnd, type Captive } from "./warfare";
 import { isWatched, warningFor } from "./watch";
 import { dayPhaseAt, isNightAt } from "./daynight";
@@ -25,6 +26,7 @@ import { generateArchipelago, islandDistance, type Island, type Place } from "./
 import {
   absorbed,
   atWarMembers,
+  blocById,
   blocOf,
   blocStrength,
   expel as expelFor,
@@ -126,6 +128,10 @@ export interface IncomingRaid {
   watched?: boolean;
   /** The datu sounded the tambuli: allies send volunteers too (callForHelp). */
   called?: boolean;
+  /** A vengeance raid for a blood debt (feud.ts): fiercer, more warriors, and a few houses may burn. */
+  vengeance?: boolean;
+  /** A mourning raid after their datu died (Visayan practice; flagged for review). */
+  mourning?: boolean;
 }
 
 /** An ally being raided: its messenger's call for help waits at the Bahay ng Datu until the raid strikes. */
@@ -213,6 +219,8 @@ export interface RegionState {
   /** Warriors held for ransom after battles, ours and theirs (warfare.ts); they always come home. */
   captives?: Captive[];
   nextCaptiveId?: number;
+  /** Blood debts, feuds and sealed peaces (feud.ts). Missing in older saves: none. */
+  feuds?: FeudState;
 }
 
 const EPSILON = 1e-9;
@@ -663,6 +671,11 @@ export function raid(state: GameState, content: Content, id: string, warriors: n
   }
   const captive = takeCaptives(region, state, content, id, end.attacker.captured, end.defender.captured);
   region = captive.region;
+  // Breaking a sealed peace is a grave betrayal: every barangay trusts the player less.
+  region = breakPeace(region, content, state.barangay.id, id, state.time);
+  // The dead are owed: blood debts both ways (feud.ts).
+  region = owe(region, content, id, state.barangay.id, end.defender.fallen, state.time);
+  region = owe(region, content, state.barangay.id, id, end.attacker.fallen, state.time);
   region = addReport(region, {
     time: state.time,
     kind: "raid",
@@ -833,6 +846,12 @@ export function updateRegion(state: GameState, content: Content, t0: number, dt:
   });
   region = { ...region, neighbors };
   for (const id of rebels) region = addReport(region, { time: t1, kind: "rebellion", neighbor: id });
+  // Feuds cool very slowly on their own (feud.ts); one that has cooled to nothing is over.
+  if (region.feuds?.feuds.length) {
+    const cooled = coolFeuds(region.feuds, content, dt);
+    region = { ...region, feuds: cooled.feuds };
+    for (const f of cooled.ended) region = addNews(region, { time: t1, key: "feud-cooled", barangay: f.wronged, other: f.offender });
+  }
   s = { ...s, region };
 
   const rng = new Rng(s.rng);
@@ -883,12 +902,22 @@ function onRegionSecond(state: GameState, content: Content, second: number, rng:
   if (region.incomingRaid && second >= region.incomingRaid.strikeAt) s = aiRaidStrikes(s, content, second, rng);
   region = { ...s.region! };
 
+  // Now and then an AI datu dies; their barangay may go on a mourning raid against a rival (feud.ts).
+  if (second >= region.truceUntil) {
+    const out = mourningRaid({ ...s, region }, content, second);
+    s = out;
+    region = { ...out.region! };
+  }
+
   // New raids, after the truce: only aggressive, independent neighbors with warriors.
   if (!region.incomingRaid && second >= region.truceUntil && second >= region.nextAiRaidAt) {
+    const me = s.barangay.id;
     for (const n of region.neighbors) {
-      if (n.status !== "independent" || !traitOf(content, n.id).raids || n.state.warriors < 1) continue;
-      if (rng.next() < d.aiRaid.chancePerSecond * raidTimingFactor(s, content, second)) {
-        region = { ...region, incomingRaid: startRaid(s, content, n.id, second) };
+      // A blood debt owed to them makes even a peaceful barangay raid, and more often (feud.ts).
+      const feud = feudsOf(region).feuds.find((f) => f.wronged === n.id && f.offender === me && !f.paid);
+      if (n.status !== "independent" || (!traitOf(content, n.id).raids && !feud) || n.state.warriors < 1) continue;
+      if (rng.next() < d.aiRaid.chancePerSecond * raidTimingFactor(s, content, second) * (feud ? content.rules.feud.vengeance.chanceFactor : 1)) {
+        region = { ...region, incomingRaid: { ...startRaid(s, content, n.id, second), ...(feud ? { vengeance: true } : {}) } };
         break;
       }
     }
@@ -949,11 +978,12 @@ function aiRaidStrikes(state: GameState, content: Content, second: number, rng: 
   // who rally at the Kutas and get there before the raiders strike fight, and allies who arrive
   // in time help.
   const landing = raidLanding(state, content);
-  const fight = borderBattle(state, content, landing, attacker.state.warriors, coming, rng.next(), window);
+  const fight = borderBattle(state, content, landing, attackerCount(attacker, raid, content), coming, rng.next(), window);
   const { attack, defense, battle, defenders } = fight;
   const border = fight.muster ? { muster: fight.muster } : null;
   // The battle ends when one side's morale breaks (warfare.ts): mostly wounded, few dead, some held.
-  const end = endBattle(battle.attackerWins, attacker.state.warriors, defenders, battleRolls(state, region.nextReportId), content, battleOpts(state, content, attacker.id, "defense"));
+  const raiders = attackerCount(attacker, raid, content);
+  const end = endBattle(battle.attackerWins, raiders, defenders, battleRolls(state, region.nextReportId), content, battleOpts(state, content, attacker.id, "defense"));
   const ourLosses = lossTotal(end.defender);
   const theirLosses = lossTotal(end.attacker);
 
@@ -975,6 +1005,10 @@ function aiRaidStrikes(state: GameState, content: Content, second: number, rng: 
   let next: RegionState = { ...base, neighbors, renown: base.renown + (battle.attackerWins ? 0 : d.aiRaid.defendRenown) };
   const captive = takeCaptives(next, state, content, attacker.id, end.defender.captured, end.attacker.captured, second);
   next = captive.region;
+  next = owe(next, content, state.barangay.id, attacker.id, end.defender.fallen, second);
+  next = owe(next, content, attacker.id, state.barangay.id, end.attacker.fallen, second);
+  // A vengeance raid that wins sets a few houses alight (the usual fire rules: damaged, never destroyed).
+  if (raid.vengeance && battle.attackerWins) player = setFires(player, content, second);
   next = addReport(next, {
     time: second,
     kind: "defense",
@@ -1236,6 +1270,12 @@ export function updatePolitics(state: GameState, content: Content, t0: number, t
   for (let second = Math.floor(t0 + EPSILON) + 1; second <= Math.floor(t1 + EPSILON); second++) {
     // Wars wear both sides down.
     if (r.politics.wars.length && second >= r.politics.nextWarTickAt) {
+      // Wars between blocs leave blood debts between their leaders (feud.ts), told in the Balita.
+      for (const w of r.politics.wars) {
+        const a = blocById(r.politics, w.a)?.leader;
+        const b = blocById(r.politics, w.b)?.leader;
+        if (a && b) r = owe(owe(r, content, a, b, 1, second), content, b, a, 1, second);
+      }
       const hurt = new Set(atWarMembers(r.politics));
       r = {
         ...r,
@@ -1404,14 +1444,84 @@ function battleRolls(state: GameState, reportId: number): number[] {
   return [0, 1, 2, 3, 4].map((k) => rollAt(state.map.seed, reportId * 8 + k, SALT_BATTLE));
 }
 
-/** Fiercer battles (feuds, see feud.ts) and steadier warriors (honor, see honor.ts); none yet. */
+/**
+ * Fiercer battles: a vengeance raid on us, or our raid on a barangay that owes us blood (feud.ts),
+ * kill more. Steadier warriors (honor.ts) break later.
+ */
 function battleOpts(state: GameState, content: Content, neighbor: string, side: "attack" | "defense"): { fierce?: boolean; attackerSteady?: number; defenderSteady?: number } {
-  void state;
+  const me = state.barangay.id;
+  const f = feudsOf(state.region!);
+  const fierce = side === "defense" ? !!state.region?.incomingRaid?.vengeance || !!state.region?.incomingRaid?.mourning : !!f.feuds.find((x) => x.wronged === me && x.offender === neighbor);
   void content;
-  void neighbor;
-  void side;
-  return {};
+  return fierce ? { fierce } : {};
 }
+
+/** The feuds of a region (none in older saves). */
+export const feudsOf = (region: RegionState): FeudState => region.feuds ?? emptyFeuds();
+
+/** Raiders who come: all their warriors, and more for a vengeance raid (kin and volunteers join it). */
+function attackerCount(attacker: NeighborState, raid: IncomingRaid, content: Content): number {
+  const extra = raid.vengeance || raid.mourning ? Math.ceil((attacker.state.warriors * content.rules.feud.vengeance.warriorsPercent) / 100) : 0;
+  return attacker.state.warriors + extra;
+}
+
+/**
+ * `offender` killed `count` of `wronged`'s people: a blood debt (feud.ts). If the player is the
+ * offender, the wronged neighbor's grudge rises sharply and its kin (bloc mates, marriage and
+ * sandugo partners) trust the player less. A new feud is told in the Balita.
+ */
+export function owe(region: RegionState, content: Content, wronged: string, offender: string, count: number, at: number, rank: "warrior" | "noble" | "datu" | "commoner" = "warrior"): RegionState {
+  if (count <= 0) return region;
+  const r = content.rules.feud;
+  const { feuds, started } = recordBloodDebt(feudsOf(region), content, wronged, offender, Array.from({ length: count }, () => ({ rank, at })));
+  let next: RegionState = { ...region, feuds };
+  // The player is the one barangay that isn't a neighbor.
+  if (!next.neighbors.some((n) => n.id === offender)) {
+    const bloc = blocOf(next.politics, wronged);
+    next = {
+      ...next,
+      neighbors: next.neighbors.map((n) =>
+        n.id === wronged
+          ? { ...n, grudge: clamp100(n.grudge + r.grudgeOnDeath * count) }
+          : bloc?.members.includes(n.id)
+            ? { ...n, trust: clamp100(n.trust - r.kinTrustLoss) }
+            : n,
+      ),
+    };
+  }
+  if (started) next = addNews(next, { time: at, key: "feud-begun", barangay: wronged, other: offender });
+  return next;
+}
+
+/** Raiding a barangay you sealed peace with: trust drops with every barangay, the peace is broken. */
+function breakPeace(region: RegionState, content: Content, me: string, them: string, at: number): RegionState {
+  const f = feudsOf(region);
+  const peace = peaceOf(f, me, them);
+  if (!peace) return region;
+  const b = content.rules.feud.betrayal;
+  return addNews(
+    {
+      ...region,
+      feuds: { ...f, peaces: f.peaces.filter((p) => p !== peace) },
+      neighbors: region.neighbors.map((n) => ({ ...n, trust: clamp100(n.trust - b.trustLossAll), ...(n.id === them ? { grudge: clamp100(n.grudge + b.grudge) } : {}) })),
+    },
+    { time: at, key: "peace-broken", barangay: me, other: them },
+  );
+}
+
+/** A winning vengeance raid sets up to firesMax houses alight (fire.ts rules: put out, or damaged and repaired). */
+function setFires(state: GameState, content: Content, second: number): GameState {
+  const max = content.rules.feud.vengeance.firesMax;
+  let n = 0;
+  const buildings = state.buildings.map((b) => {
+    if (n >= max || b.damaged || b.burningSince !== undefined || !content.buildings.find((d) => d.id === b.type)?.housing) return b;
+    n++;
+    return { ...b, burningSince: second };
+  });
+  return n ? { ...state, buildings } : state;
+}
+
+
 
 /** The report's fields for a battle's end, from our side ("attack": we raided; "defense": we were raided). */
 function battleFields(end: BattleEnd, side: "attack" | "defense"): Partial<Report> {
@@ -1491,4 +1601,33 @@ export function updateCaptives(state: GameState, content: Content, t: number): G
     } else r = addNews(r, { time: t, key: "captivesHome", barangay: c.neighbor });
   }
   return { ...s, region: { ...r, captives: keep } };
+}
+
+const SALT_MOURN = 7811;
+const SALT_MOURN_WHO = 7812;
+
+/**
+ * A datu dies (rarely, per second rules.feud.mourningRaid.chancePerSecond): told in the Balita.
+ * Their barangay goes on a mourning raid against a rival: the player, if it holds a grudge or a
+ * blood debt against them (a raid on its way, fierce), else the leader of a bloc at war with its
+ * own (a blood debt between them, in the Balita). A Visayan practice; flagged for review.
+ */
+export function mourningRaid(state: GameState, content: Content, second: number): GameState {
+  const region = state.region!;
+  if (rollAt(state.map.seed, second, SALT_MOURN) >= content.rules.feud.mourningRaid.chancePerSecond || region.neighbors.length === 0) return state;
+  const n = region.neighbors[Math.floor(rollAt(state.map.seed, second, SALT_MOURN_WHO) * region.neighbors.length)];
+  let r = addNews(region, { time: second, key: "datu-died", barangay: n.id });
+  if (n.status !== "independent" || n.state.warriors < 1) return { ...state, region: r };
+  const me = state.barangay.id;
+  const owed = feudsOf(r).feuds.some((f) => f.wronged === n.id && f.offender === me);
+  if (!r.incomingRaid && (owed || n.grudge >= content.rules.diplomacy.grudge.noAlliancesAbove)) {
+    r = { ...r, incomingRaid: { ...startRaid({ ...state, region: r }, content, n.id, second), mourning: true } };
+    return { ...state, region: addNews(r, { time: second, key: "mourning-raid", barangay: n.id, other: me }) };
+  }
+  const own = blocOf(r.politics, n.id);
+  const war = own ? r.politics.wars.find((w) => w.a === own.id || w.b === own.id) : undefined;
+  const rival = war ? blocById(r.politics, war.a === own!.id ? war.b : war.a)?.leader : undefined;
+  if (!rival) return { ...state, region: r };
+  r = owe(r, content, rival, n.id, 1, second);
+  return { ...state, region: addNews(r, { time: second, key: "mourning-raid", barangay: n.id, other: rival }) };
 }

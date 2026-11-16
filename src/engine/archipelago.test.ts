@@ -250,9 +250,11 @@ describe("scripted political events", () => {
     let s = world({ time: P.startsAfterSeconds });
     const sure = { ...calm, rules: { ...calm.rules, politics: { ...P, chancePerSecond: 1 } } };
     const once = updatePolitics(s, sure, s.time, s.time + P.minGapSeconds - 1);
-    expect(once.region!.news).toHaveLength(1);
+    // Scripted events only (wars also leave blood debts in the Balita: feud.ts).
+    const scripted = (x: GameState) => x.region!.news.filter((n) => !n.key.startsWith("feud"));
+    expect(scripted(once)).toHaveLength(1);
     const twice = updatePolitics(s, sure, s.time, s.time + P.minGapSeconds + 1);
-    expect(twice.region!.news).toHaveLength(2);
+    expect(scripted(twice)).toHaveLength(2);
     // The player's bloc is never touched by a script.
     s = apply({ ...s, datuLevel: 4 }, calm, { type: "bloc", action: "form" });
     const mineBefore = blocOf(s.region!.politics, ME)!;

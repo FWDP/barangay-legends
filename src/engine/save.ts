@@ -3,6 +3,7 @@
 import { AGE_GROUPS, classFor, GENDERS, syncResidents, type AgeGroup, type Gender, type Resident } from "./residents";
 import { linkNamed, parseLife, parseStory } from "./talambuhay";
 import { emptyStore, PISTA_OCCASIONS, type PistaOccasion } from "./food";
+import type { Feud, Mediator, Rank, SealKind } from "./feud";
 import { rollAt } from "./rng";
 import { makeHousehold } from "./household";
 import { clearingShape } from "./plaza";
@@ -340,6 +341,8 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
   34: (raw) => ({ ...raw, version: 35 }),
   // v35 → v36: battles leave wounded and captives (warfare.ts); older saves have none.
   35: (raw) => ({ ...raw, version: 36 }),
+  // v36 → v37: blood debts, feuds and sealed peaces (feud.ts); older saves have none.
+  36: (raw) => ({ ...raw, version: 37 }),
 };
 
 // ---------- Food (v33 → v34) ----------
@@ -1124,6 +1127,8 @@ function parseRegion(raw: unknown, content: Content, player: GameState): RegionS
             ...(finiteNonNeg(incoming.warnedAt) && incoming.warnedAt <= incoming.strikeAt ? { warnedAt: incoming.warnedAt } : {}),
             ...(incoming.watched === true ? { watched: true } : {}),
             ...(incoming.called === true ? { called: true } : {}),
+            ...(incoming.vengeance === true ? { vengeance: true } : {}),
+            ...(incoming.mourning === true ? { mourning: true } : {}),
           }
         : null,
     nextAiRaidAt: finiteNonNeg(raw.nextAiRaidAt) ? raw.nextAiRaidAt : 0,
@@ -1151,6 +1156,7 @@ function parseRegion(raw: unknown, content: Content, player: GameState): RegionS
     nextReportId: finiteNonNeg(raw.nextReportId) ? Math.floor(raw.nextReportId) : 1,
     // Warriors held for ransom (warfare.ts): kept while their barangay is known.
     ...captivesOf(raw, ids),
+    ...feudsFrom(raw, new Set([player.barangay.id, ...ids])),
     nextTributeAt: finiteNonNeg(raw.nextTributeAt) ? raw.nextTributeAt : fresh.nextTributeAt,
     paths,
     victory:
@@ -1159,6 +1165,38 @@ function parseRegion(raw: unknown, content: Content, player: GameState): RegionS
         : null,
     ...parseArchipelago(raw, content, player, fresh, neighbors),
   };
+}
+
+/** Blood debts, feuds and sealed peaces (feud.ts), kept while both barangays are known; none: left out. */
+function feudsFrom(raw: RawSave, ids: Set<string>): Pick<RegionState, "feuds"> {
+  const f = raw.feuds;
+  if (!isObject(f)) return {};
+  const RANKS = ["commoner", "warrior", "noble", "datu"];
+  const MEDIATORS = ["elder", "babaylan", "datu"];
+  const SEALS = ["sandugo", "pista", "marriage"];
+  const feuds: Feud[] = (Array.isArray(f.feuds) ? f.feuds : [])
+    .filter((x): x is RawSave => isObject(x) && Number.isInteger(x.id) && ids.has(x.wronged as string) && ids.has(x.offender as string) && x.wronged !== x.offender && finiteNonNeg(x.since) && finiteNonNeg(x.heat))
+    .slice(0, 60)
+    .map((x) => {
+      const deaths = (Array.isArray(x.deaths) ? x.deaths : [])
+        .filter((d): d is RawSave => isObject(d) && RANKS.includes(d.rank as string) && finiteNonNeg(d.at))
+        .slice(-30)
+        .map((d) => ({ rank: d.rank as Rank, at: d.at as number, ...(typeof d.name === "string" && d.name.length <= 30 ? { name: d.name } : {}) }));
+      const out: Feud = { id: x.id as number, wronged: x.wronged as string, offender: x.offender as string, deaths, since: x.since as number, heat: Math.min(100, x.heat as number) };
+      if (isObject(x.mediated) && MEDIATORS.includes(x.mediated.by as string) && finiteNonNeg(x.mediated.at)) out.mediated = { by: x.mediated.by as Mediator, at: x.mediated.at };
+      if (finiteNonNeg(x.failedAt)) out.failedAt = x.failedAt;
+      if (isObject(x.price)) out.price = Object.fromEntries(RESOURCES.filter((r) => finiteNonNeg((x.price as RawSave)[r])).map((r) => [r, (x.price as RawSave)[r] as number]));
+      if (x.paid === true) out.paid = true;
+      return out;
+    })
+    .filter((x) => x.deaths.length > 0);
+  const peaces = (Array.isArray(f.peaces) ? f.peaces : [])
+    .filter((p): p is RawSave => isObject(p) && ids.has(p.a as string) && ids.has(p.b as string) && finiteNonNeg(p.at) && SEALS.includes(p.by as string))
+    .slice(0, 30)
+    .map((p) => ({ a: p.a as string, b: p.b as string, at: p.at as number, by: p.by as SealKind }));
+  if (feuds.length === 0 && peaces.length === 0) return {};
+  const next = Number.isInteger(f.nextFeudId) ? (f.nextFeudId as number) : 1;
+  return { feuds: { feuds, peaces, nextFeudId: Math.max(next, ...feuds.map((x) => x.id + 1), 1) } };
 }
 
 /** Warriors held for ransom (warfare.ts), kept while their barangay is known; none: left out. */

@@ -816,6 +816,30 @@
     "captivesHome": {
       "en": "Our warriors held by {barangay} have come home.",
       "fil": "Nakauwi na ang ating mga mandirigmang hawak ng {barangay}."
+    },
+    "feud-begun": {
+      "en": "A blood debt: {other} killed people of {barangay}. A feud has begun between them.",
+      "fil": "Utang na dugo: may napatay ang {other} sa {barangay}. Nagsimula ang alitan nila."
+    },
+    "feud-cooled": {
+      "en": "The feud between {barangay} and {other} has cooled at last.",
+      "fil": "Lumamig na rin ang alitan ng {barangay} at {other}."
+    },
+    "feud-settled": {
+      "en": "{barangay} and {other} have made peace: the blood debt is settled.",
+      "fil": "Nagkasundo ang {barangay} at {other}: bayad na ang utang na dugo."
+    },
+    "peace-broken": {
+      "en": "{barangay} broke the sealed peace with {other}. Every barangay hears of the betrayal.",
+      "fil": "Sinira ng {barangay} ang pinagtibay na kapayapaan sa {other}. Nabalitaan ng lahat ng barangay ang pagtataksil."
+    },
+    "datu-died": {
+      "en": "The datu of {barangay} has died. The barangay mourns.",
+      "fil": "Pumanaw ang datu ng {barangay}. Nagluluksa ang barangay."
+    },
+    "mourning-raid": {
+      "en": "In mourning for their datu, warriors of {barangay} raid {other}.",
+      "fil": "Bilang pagluluksa sa kanilang datu, sumalakay ang mga mandirigma ng {barangay} sa {other}."
     }
   },
   "alliance": {
@@ -2054,6 +2078,40 @@
     "fled": {
       "en": "With no Kuta to shelter in, the villagers fled into the forest. They are safe and will come back soon.",
       "fil": "Dahil walang Kutang matataguan, tumakas sa gubat ang mga taga-barangay. Ligtas sila at babalik din."
+    }
+  },
+  "feud": {
+    "title": {
+      "en": "Feuds (utang na dugo)",
+      "fil": "Mga alitan (utang na dugo)"
+    },
+    "theyOwe": {
+      "en": "{barangay} owes us blood: {dead} of ours killed. Lasted {time}.",
+      "fil": "May utang na dugo sa atin ang {barangay}: {dead} sa atin ang napatay. Tumagal nang {time}."
+    },
+    "weOwe": {
+      "en": "We owe {barangay} blood: {dead} of theirs killed. They may raid for vengeance. Lasted {time}.",
+      "fil": "May utang tayong dugo sa {barangay}: {dead} sa kanila ang napatay. Maaari silang sumalakay para gumanti. Tumagal nang {time}."
+    },
+    "between": {
+      "en": "{barangay} and {other}: a feud, lasted {time}.",
+      "fil": "{barangay} at {other}: may alitan, tumagal nang {time}."
+    },
+    "heat": {
+      "en": "Feud",
+      "fil": "Alitan"
+    },
+    "cools": {
+      "en": "Feuds cool very slowly on their own. Making peace is better: at the Bahay ng Datu.",
+      "fil": "Napakabagal lumamig ng alitan nang kusa. Mas mabuti ang makipagkasundo: sa Bahay ng Datu."
+    },
+    "none": {
+      "en": "No feuds.",
+      "fil": "Walang alitan."
+    },
+    "peace": {
+      "en": "Sealed peace with {barangay}",
+      "fil": "Pinagtibay na kapayapaan sa {barangay}"
     }
   }
 }

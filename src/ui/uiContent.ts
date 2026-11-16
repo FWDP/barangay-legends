@@ -135,6 +135,7 @@ export const GAME_TEXT = {
     defeated: ["barangay", "bloc"], "war-joined": ["barangay", "other"], "ally-defended": ["barangay", "other"], "ally-lost": ["barangay", "other"], you: [], yourBloc: [],
     blocName: ["leader"], independent: [], atWar: ["other"], formedYou: [], joinedYou: ["bloc"], leftYou: ["bloc"], level: ["barangay"], levelYou: [], "rank-up": ["barangay"], "rank-upYou": [], overtook: ["barangay", "other"], defenseRework: [],
     ransomPaid: ["barangay"], ransomReceived: ["barangay"], captivesFreed: ["barangay"], captivesHome: ["barangay"],
+    "feud-begun": ["barangay", "other"], "feud-cooled": ["barangay", "other"], "feud-settled": ["barangay", "other"], "peace-broken": ["barangay", "other"], "datu-died": ["barangay"], "mourning-raid": ["barangay", "other"],
   },
   alliance: {
     title: [], level: [], form: [], leave: [], join: [], invite: [], expel: [], leader: [], members: ["n", "strength"], yours: ["bloc"], member: ["bloc"], none: [],
@@ -176,6 +177,7 @@ export const GAME_TEXT = {
     brokeLosses: ["side", "how"], brokeLeader: ["side", "how"], attackers: [], defenders: [], byBoat: [], byLand: [], ours: ["wounded", "fallen", "captured"], theirs: ["wounded", "fallen", "captured"],
     woundedRest: [], ransomOffer: ["barangay", "count"], ransomButton: ["cost"], theirCaptives: ["barangay", "count"], fled: [],
   },
+  feud: { title: [], theyOwe: ["barangay", "dead", "time"], weOwe: ["barangay", "dead", "time"], between: ["barangay", "other", "time"], heat: [], cools: [], none: [], peace: ["barangay"] },
   ruler: { label: [], woman: [], man: [], changeOnce: [], changed: [], honorific: ["term"], honorificTip: [] },
   gather: { food: [], foodLabel: ["amount"], wood: [], woodLabel: ["amount"] },
   pests: { rats: ["amount"], locustComing: ["time"], locust: ["time"], boar: [] },

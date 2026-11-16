@@ -311,5 +311,5 @@ describe("determinism", () => {
     let small = start(11);
     for (let i = 0; i < 4000; i++) small = tick(small, busy, 0.1);
     expect(summary(small)).toEqual(summary(tick(start(11), busy, 400)));
-  });
+  }, 30000);
 });

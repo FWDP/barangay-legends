@@ -18,7 +18,7 @@ import { sameIsland } from "../engine/archipelago";
 import { hasDatuUnlock } from "../engine/datu";
 import { barangayLevel } from "../engine/kabantugan";
 import { blocOf, blocStrength } from "../engine/politics";
-import { blocBlocker, strengthFn } from "../engine/region";
+import { blocBlocker, feudsOf, strengthFn } from "../engine/region";
 import { boatCap, boatCost, boatsFree, sailBlocker, voyageSeconds } from "../engine/sea";
 import { expeditionTitle } from "./ReplayView";
 import { villageBuildingCount } from "../engine/village";
@@ -26,7 +26,7 @@ import { raidOutlook } from "../engine/battle";
 import { barangayName, blocColor, blocName, newsLine, warLine } from "./politicsText";
 import type { Lang } from "./settings";
 import { fill, type GameText } from "./uiContent";
-import { RESOURCE_ICON } from "./format";
+import { formatDuration, RESOURCE_ICON } from "./format";
 import { LevelBadge, levelOf } from "./LevelBadge";
 import { arawText } from "./Days";
 
@@ -339,7 +339,46 @@ function AlliancePanel(props: { state: GameState; content: Content; game: GameTe
         </>
       )}
       <p className="text-[11px] text-stone-500">{t.paramount[lang]}</p>
+      <FeudLines state={state} content={content} game={game} lang={lang} />
     </section>
+  );
+}
+
+/**
+ * Feuds (feud.ts) with how long they've lasted and how hot they run: those with one barangay
+ * (`only`, on its diplomacy panel), or every feud the player knows of (the alliance panel).
+ */
+export function FeudLines(props: { state: GameState; content: Content; game: GameText; lang: Lang; only?: string }) {
+  const { state, content, game, lang, only } = props;
+  const t = game.feud;
+  const me = state.barangay.id;
+  const f = feudsOf(state.region!);
+  const list = f.feuds.filter((x) => (only ? (x.wronged === me && x.offender === only) || (x.wronged === only && x.offender === me) : true));
+  const peace = only ? f.peaces.find((p) => (p.a === me && p.b === only) || (p.b === me && p.a === only)) : undefined;
+  if (only && list.length === 0 && !peace) return null;
+  const name = (id: string) => barangayName(state, content, id, game, lang);
+  return (
+    <div className="space-y-1 text-xs" data-feuds>
+      {!only && <h3 className="font-semibold text-red-900">🩸 {t.title[lang]}</h3>}
+      {!only && list.length === 0 && <p className="text-stone-500">{t.none[lang]}</p>}
+      {list.map((x) => {
+        const time = formatDuration(Math.max(0, state.time - x.since));
+        const line =
+          x.wronged === me
+            ? fill(t.theyOwe[lang], { barangay: name(x.offender), dead: x.deaths.length, time })
+            : x.offender === me
+              ? fill(t.weOwe[lang], { barangay: name(x.wronged), dead: x.deaths.length, time })
+              : fill(t.between[lang], { barangay: name(x.wronged), other: name(x.offender), time });
+        return (
+          <div key={x.id}>
+            <Bar label={t.heat[lang]} value={x.heat} color="bg-red-800" />
+            <p className="text-stone-700">{line}</p>
+          </div>
+        );
+      })}
+      {list.some((x) => x.wronged === me || x.offender === me) && <p className="text-[11px] text-stone-500">{t.cools[lang]}</p>}
+      {peace && <p className="font-semibold text-green-800">🕊️ {fill(t.peace[lang], { barangay: name(only!) })}</p>}
+    </div>
   );
 }
 
@@ -620,6 +659,7 @@ export function NeighborPanel(props: {
         {n.status === "independent" && <Bar label="Influence" value={n.influence} color="bg-amber-500" />}
         <Bar label="Trust" value={n.trust} color="bg-sky-500" />
         <Bar label="Grudge" value={n.grudge} color="bg-red-600" />
+        <FeudLines state={state} content={content} game={game} lang={lang} only={n.id} />
         {n.grudge > 0 && (
           <p className="text-[11px] text-stone-500">
             {embargo
