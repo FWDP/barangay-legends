@@ -64,9 +64,12 @@ const onAt = (x: number, y: number) => {
  * torches at each Kuta, the Dambana, and a resin torch (sulô) at each dock: fire only, no glass lamps. Damaged buildings stay dark.
  */
 export function barangayLights(state: GameState, content: Content): Light[] {
-  // A raid a Bantayan saw: the lookouts light the signal fire.
-  const alarm = !!state.region?.incomingRaid?.watched;
+  // A raid a Bantayan saw, or the tambuli sounded: the signal fire is lit on the Bantayan.
+  const raid = state.region?.incomingRaid;
+  const alarm = !!raid?.watched || !!raid?.called;
   const defs = new Map(content.buildings.map((d) => [d.id, d]));
+  // Called with no Bantayan standing: the signal fire burns by the Bahay ng Datu instead.
+  const towerStanding = state.buildings.some((b) => !b.damaged && defs.get(b.type)?.watch);
   const { plaza } = state.map;
   const lights: Light[] = [
     { p: { x: plaza.x + 0.5, y: plaza.y + 0.7 }, kind: "fire", on: 0.1, seed: 1 },
@@ -97,6 +100,7 @@ export function barangayLights(state: GameState, content: Content): Light[] {
       lights.push({ p: c, kind: "lantern", on: onAt(b.x, b.y), seed });
     }
   }
+  if (raid?.called && !towerStanding) lights.push({ p: { x: plaza.x + 1.2, y: plaza.y + 0.4 }, kind: "fire", on: 0, seed: 5 });
   return lights;
 }
 

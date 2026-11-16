@@ -33,7 +33,7 @@ export function NoticeStack(props: { state: GameState; queue: Notice[]; views: R
   return (
     <div className="pointer-events-none flex w-full max-w-full flex-col items-center gap-1 sm:w-auto">
       {/* The banner, kept to the top strip of the map on phones. */}
-      <div className="pointer-events-auto relative max-h-[22vh] max-w-full overflow-hidden sm:max-h-none">
+      <div className="pointer-events-auto relative max-h-[22vh] max-w-full overflow-y-auto overscroll-contain sm:max-h-none">
         {views[shown.id]!.node}
         {shown.dismissKey && (
           <button

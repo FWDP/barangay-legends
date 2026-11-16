@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import type { Content } from "../engine/content";
 import { healRate, isBurning, secondsUntilLeaving } from "../engine/events";
 import { hungerDeathAt, sicknessWarning } from "../engine/death";
@@ -107,7 +108,31 @@ const TONE = {
 } as const;
 
 /** An event banner; `extra` is one more line (the raid warning: is the landing covered?), `danger` makes it stand out. */
-export function EventBanner({ banner, extra, danger = false }: { banner: Banner; extra?: string; danger?: boolean }) {
+/** A button on a banner (e.g. sounding the tambuli on the raid warning). */
+export interface BannerAction {
+  label: string;
+  icon?: ReactNode;
+  tip: string;
+  onClick: () => void;
+  disabled?: boolean;
+  /** A line under the button (why it can't be used, or a warning). */
+  note?: string;
+}
+
+export function EventBanner({ banner, extra, danger = false, action }: { banner: Banner; extra?: string; danger?: boolean; action?: BannerAction }) {
+  const button = action && (
+    <button
+      type="button"
+      title={action.tip}
+      aria-label={`${action.label}: ${action.tip}`}
+      disabled={action.disabled}
+      onClick={action.onClick}
+      className="game-btn flex shrink-0 items-center gap-1 border-2 border-amber-950 bg-amber-300 px-2 py-1 text-xs font-semibold text-amber-950 disabled:cursor-not-allowed disabled:opacity-60 sm:text-sm"
+    >
+      {action.icon}
+      {action.label}
+    </button>
+  );
   return (
     <div
       role={banner.tone === "info" ? "status" : "alert"}
@@ -116,10 +141,31 @@ export function EventBanner({ banner, extra, danger = false }: { banner: Banner;
       <span className="text-xl leading-none" aria-hidden>
         {banner.icon}
       </span>
-      <span className="min-w-0 text-xs leading-tight sm:text-sm">
-        <span className="font-display text-sm sm:text-base">{banner.title}</span> {banner.text}
+      <span className="min-w-0 flex-1 text-xs leading-tight sm:text-sm">
+        {/* An action sits beside the title, so it shows even when a phone cuts the banner short. */}
+        {button ? (
+          <span className="mb-0.5 flex items-center justify-between gap-2">
+            <span className="font-display text-sm sm:text-base">{banner.title}</span>
+            {button}
+          </span>
+        ) : (
+          <span className="font-display text-sm sm:text-base">{banner.title}</span>
+        )}{" "}
+        {action?.note && <span className="mb-0.5 block text-[11px] font-semibold opacity-90">{action.note}</span>}
+        {banner.text}
         {extra && <span className={`mt-0.5 block font-semibold ${danger ? "rounded bg-red-950/40 px-1 text-yellow-200" : ""}`}>{extra}</span>}
       </span>
     </div>
+  );
+}
+
+/** The tambuli: a curved horn (a water buffalo's horn, or a conch: see the Aklat), blown to call for help. */
+export function TambuliIcon() {
+  return (
+    <svg aria-hidden viewBox="0 0 24 24" className="inline-block size-[1.2em]">
+      <path d="M3 15 Q5 6 15 5 Q20 4.6 21 7 L19 9 Q15 8.4 11 11 Q7.5 13.5 6.6 17.2 Z" fill="#e7d3a8" stroke="#6b4423" strokeWidth="1" strokeLinejoin="round" />
+      <path d="M3 15 L6.6 17.2 L5.6 19.6 L2.2 17.6 Z" fill="#8b5a2b" stroke="#4a2f17" strokeWidth="0.8" />
+      <g stroke="#b08a52" strokeWidth="0.7" fill="none"><path d="M9 8.5 Q8 10 8.4 12" /><path d="M12.5 6.6 Q11.6 8 12 9.8" /><path d="M16 5.6 Q15.4 6.8 15.8 8.2" /></g>
+    </svg>
   );
 }

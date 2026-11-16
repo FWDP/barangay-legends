@@ -124,6 +124,11 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
     sought captives (bihag) who became dependents, along with gold and trade goods. Is this
     accurate and respectfully put?
 
+25. **Tambuli and budyong** (`content/lore/tambuli.json`): is "tambuli" (horn, often of a water
+    buffalo) right for the Tagalog barangay and "budyong" (conch trumpet) for the Visayan one?
+    Was the water buffalo widespread before contact? Is there a better-sourced account of signal
+    fires and drums along the coast?
+
 ### Notes for the future
 
 - **Earth spirits**: if spirits of the ground are added, use precolonial names (for example the
@@ -186,6 +191,7 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 | content/lore/baybayin.json | Aklat entry: baybayin and the living related scripts of Mindoro and Palawan | Tagalog, Visayan; Hanunó'o, Buhid, Tagbanwa | Chirino 1604; Scott 1994; UNESCO Memory of the World 1999 |
 | content/villagers/talambuhay.json | Life-story templates: skills, personal details, family sentences, life events and the lessons elders teach. Skills are open to women and men alike (fighting only to the Mandirigma, men for now). Elders are called by name, not "Lola/Lolo" (Spanish-derived) | Widespread lowland | Scott 1994; see questions 19–20 |
 | content/lore/kamalig.json and src/ui/buildingArt.ts (kamaligSvg) | Aklat entry and Kamalig art: a granary raised on posts, woven bamboo walls, steep thatched roof, ladder, palay sheaves; wider on more posts at levels 2-3. Generic, the same for every tradition | Widespread lowland (Tagalog, Visayan) | Scott 1994; Noceda and Sanlúcar 1754; Barton 1922 |
+| content/lore/tambuli.json and src/ui/EventBanners.tsx (TambuliIcon) | Aklat entry and icon: the tambuli (horn) and budyong (conch trumpet) blown to call for help; drums and fires passing warnings; the call-for-help action | Tagalog (tambuli), Visayan (budyong) | Scott 1994; see question 25 |
 
 ## Reviewed
 

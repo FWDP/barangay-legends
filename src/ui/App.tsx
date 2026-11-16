@@ -10,7 +10,7 @@ import { BuildToolbar } from "./BuildToolbar";
 import { recommended } from "./buildMenu";
 import { latestReportId, OfferBar, ReportDialog, unseenReport, VictoryDialog } from "./RegionOverlays";
 import { RegionView } from "./RegionView";
-import { activeBanners, clock, EventBanner } from "./EventBanners";
+import { activeBanners, clock, EventBanner, TambuliIcon, type BannerAction } from "./EventBanners";
 import { NoticeStack, StatusIcons, type NoticeView } from "./NoticeStack";
 import { noticeQueue } from "./notices";
 import { landedUnwatched, raidWarning } from "../engine/defense";
@@ -33,7 +33,7 @@ import { awayStory, offlineStory } from "./away";
 import { AwayDialog, ChoiceBanner, ChoiceDialog, NoticeDialog } from "./StoryDialogs";
 import { useReducedMotion, type Clash } from "./VillagerLayer";
 import { BOAT_RETURN_MS, CLASH_MS, SAIL_SECONDS } from "./visitors";
-import { tradingPaused } from "../engine/region";
+import { callBlocker, callOverused, tradingPaused } from "../engine/region";
 import type { GameState } from "../engine/game";
 import { DatuDialog, GawainPanel, HistoryDialog, RememberedDialog, VillagerDialog } from "./Gawain";
 import type { Tapped } from "./villagers";
@@ -612,6 +612,23 @@ export function App() {
   const noticeQueueNow = noticeQueue(state, content, { expeditionFresh: !!fresh, sailing: !!sailingVoyage(state), tradeHeld });
   const eventBanners = new Map(activeBanners(state, content).map((b) => [b.id, b]));
   const raidCover = raidWarning(state, content);
+  // Sounding the tambuli on the raid warning: allies send volunteers (region.ts callForHelp).
+  const callBlock = callBlocker(state);
+  const dt = ui.game.defense;
+  const tambuliAction: BannerAction | undefined =
+    callBlock === "no-raid"
+      ? undefined
+      : {
+          label: dt.callHelp[lang],
+          icon: <TambuliIcon />,
+          tip: dt.callHelpTip[lang],
+          disabled: callBlock !== null,
+          note: callBlock === "called" ? dt.called[lang] : callBlock === "no-allies" ? dt.noAllies[lang] : callOverused(state, content) ? dt.callOverused[lang] : undefined,
+          onClick: () => {
+            dispatch({ type: "callForHelp" });
+            sfx.alarm();
+          },
+        };
   const nt = ui.game.notices;
   const offerFrom = state.region?.offer ? (neighborDef(content, state.region.offer.from)?.name ?? state.region.offer.from) : "";
   const expeditionBar = (
@@ -664,6 +681,7 @@ export function App() {
               banner={b.id === "raid" ? { ...b, title: fill(ui.game.defense.raidTitle[lang], { time: clock((state.region?.incomingRaid?.strikeAt ?? state.time) - state.time) }), text: raidBannerText(state, content, ui.game, lang) } : b}
               extra={b.id === "raid" && raidCover ? (raidCover.watched ? ui.game.defense.warnWatched[lang] : ui.game.defense.warnUnwatched[lang]) : undefined}
               danger={!!raidCover && !raidCover.watched}
+              action={b.id === "raid" ? tambuliAction : undefined}
             />
           ),
           label: `${b.icon} ${b.title}`,

@@ -98,6 +98,8 @@ export interface Rules {
   military: MilitaryRules;
   /** The Bantayan's watch (watch.ts). */
   watch: { radius: number; watchedWarningSeconds: number; unwatchedWarningSeconds: number; revealUnwatchedSeconds: number };
+  /** Calling for help with the tambuli (region.ts callForHelp). */
+  tambuli: { volunteerPercent: number; distancePenaltyPerUnit: number; smallRaidAttackers: number; cooldownSeconds: number; overuseTrust: number };
   /** The Kuta: the rally, the ready bonus and the shelter (border.ts, region.ts). */
   kuta: { rallySeconds: number; readySeconds: number; readyBonus: number; shelterRadius: number; shelteredLootPercent: number };
   diplomacy: DiplomacyRules;
@@ -1131,6 +1133,9 @@ export function validateRules(raw: unknown): Rules {
   if (!isObject(watch)) throw new Error('rules: missing "watch"');
   checkNumbers(watch, ["radius", "watchedWarningSeconds", "unwatchedWarningSeconds"], "rules: watch", true);
   checkNumbers(watch, ["revealUnwatchedSeconds"], "rules: watch");
+  const tb = raw.tambuli;
+  if (!isObject(tb)) throw new Error('rules: missing "tambuli"');
+  checkNumbers(tb, ["volunteerPercent", "distancePenaltyPerUnit", "smallRaidAttackers", "cooldownSeconds", "overuseTrust"], "rules: tambuli");
   const kuta = raw.kuta;
   if (!isObject(kuta)) throw new Error('rules: missing "kuta"');
   checkNumbers(kuta, ["rallySeconds", "readySeconds", "readyBonus", "shelterRadius", "shelteredLootPercent"], "rules: kuta");

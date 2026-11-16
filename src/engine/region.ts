@@ -122,6 +122,8 @@ export interface IncomingRaid {
   warnedAt?: number;
   /** A staffed Bantayan watched the landing: a long warning, the landing shown at once, the alarm. */
   watched?: boolean;
+  /** The datu sounded the tambuli: allies send volunteers too (callForHelp). */
+  called?: boolean;
 }
 
 /** An ally being raided: its messenger's call for help waits at the Bahay ng Datu until the raid strikes. */
@@ -170,6 +172,8 @@ export interface RegionState {
   /** A raid on its way (warning shown), or null. */
   incomingRaid: IncomingRaid | null;
   nextAiRaidAt: number;
+  /** When the datu last sounded the tambuli (callForHelp), for overuse. */
+  lastCallAt?: number;
   offer: TradeOffer | null;
   reports: Report[];
   nextReportId: number;
@@ -966,7 +970,10 @@ function aiRaidStrikes(state: GameState, content: Content, second: number, rng: 
 /** An ally who could come to defend the player, and whether they arrive within the raid warning. */
 export interface AllyDefender {
   id: string;
+  /** Everyone they send: their warriors and, if called with the tambuli, volunteers. */
   warriors: number;
+  /** Of them, volunteers who came because the tambuli called. */
+  volunteers?: number;
   /** Seconds to reach the landing, or null if they can't come at all (another island, no boats). */
   eta: number | null;
   arrives: boolean;
@@ -983,9 +990,51 @@ export function alliedDefenders(state: GameState, content: Content, window = rai
   const region = state.region;
   if (!region) return [];
   const me = state.barangay.id;
-  const myBloc = blocOf(region.politics, me);
   // Sandugo allies and bloc mates come; tributaries owe military support and send some warriors.
-  return alliesComing(region, content, me, region.neighbors.filter((n) => n.status === "ally" || n.status === "tributary" || myBloc?.members.includes(n.id)), window);
+  return alliesComing(region, content, me, helpersOf(state), window, !!region.incomingRaid?.called);
+}
+
+/** Who may come to the player's defense: sandugo allies, bloc mates and tributaries. */
+function helpersOf(state: GameState): NeighborState[] {
+  const region = state.region;
+  if (!region) return [];
+  const myBloc = blocOf(region.politics, state.barangay.id);
+  return region.neighbors.filter((n) => n.status === "ally" || n.status === "tributary" || myBloc?.members.includes(n.id));
+}
+
+/** Why the tambuli can't be sounded now, or null: no raid coming, already sounded, or no one to call. */
+export function callBlocker(state: GameState): "no-raid" | "called" | "no-allies" | null {
+  const raid = state.region?.incomingRaid;
+  if (!raid || state.time >= raid.strikeAt) return "no-raid";
+  if (raid.called) return "called";
+  return helpersOf(state).length ? null : "no-allies";
+}
+
+/** Would sounding the tambuli now be overusing it (a small raid, or soon after the last call)? */
+export function callOverused(state: GameState, content: Content): boolean {
+  const region = state.region;
+  const raid = region?.incomingRaid;
+  if (!region || !raid) return false;
+  const t = content.rules.tambuli;
+  const attackers = region.neighbors.find((n) => n.id === raid.from)?.state.warriors ?? 0;
+  return attackers <= t.smallRaidAttackers || (region.lastCallAt !== undefined && state.time - region.lastCallAt < t.cooldownSeconds);
+}
+
+/**
+ * Sounding the tambuli (a signal fire at night): allies, bloc mates and tributaries send armed
+ * volunteers on top of their warriors, as their trust and the distance allow (alliesComing).
+ * Calling for a small raid, or too soon after the last call, costs every answering ally trust.
+ */
+const addFlag = (state: GameState, flag: string): GameState => (state.flags.includes(flag) ? state : { ...state, flags: [...state.flags, flag] });
+
+export function callForHelp(state: GameState, content: Content): GameState {
+  if (callBlocker(state)) return state;
+  const region = state.region!;
+  const raid = region.incomingRaid!;
+  const overused = callOverused(state, content);
+  const answering = new Set(helpersOf(state).map((n) => n.id));
+  const neighbors = overused ? region.neighbors.map((n) => (answering.has(n.id) ? { ...n, trust: clamp100(n.trust - content.rules.tambuli.overuseTrust) } : n)) : region.neighbors;
+  return addFlag({ ...state, region: { ...region, neighbors, incomingRaid: { ...raid, called: true }, lastCallAt: state.time } }, "tambuli");
 }
 
 // ---------- Raids on the player: when they come, the warning, the loot ----------

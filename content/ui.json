@@ -1678,6 +1678,26 @@
     "sheltered": {
       "en": "The Kuta's shelter kept most of the stores safe.",
       "fil": "Iningatan ng kanlungan ng Kuta ang karamihan ng imbak."
+    },
+    "callHelp": {
+      "en": "Sound the tambuli",
+      "fil": "Hipan ang tambuli"
+    },
+    "callHelpTip": {
+      "en": "Call your allies, bloc mates and tributaries: they send volunteers on top of their warriors, as their trust and the distance allow.",
+      "fil": "Tawagin ang iyong mga kakampi, kasapi sa alyansa at sakop: magpapadala sila ng mga boluntaryo bukod sa kanilang mga mandirigma, ayon sa kanilang tiwala at layo."
+    },
+    "called": {
+      "en": "The tambuli has sounded: your allies are sending help.",
+      "fil": "Hinipan na ang tambuli: nagpapadala ng tulong ang iyong mga kakampi."
+    },
+    "callOverused": {
+      "en": "Calling for so small a raid, or so soon again, wears on your allies' patience: they'll trust you a little less.",
+      "fil": "Ang pagtawag para sa ganito kaliit na pagsalakay, o nang ganito kadali muli, ay nakababawas sa pasensiya ng mga kakampi: bahagyang bababa ang kanilang tiwala."
+    },
+    "noAllies": {
+      "en": "No ally, bloc mate or tributary to call yet.",
+      "fil": "Wala pang kakampi, kasapi sa alyansa o sakop na matatawag."
     }
   },
   "stockpile": {

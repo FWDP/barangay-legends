@@ -160,6 +160,7 @@ export const GAME_TEXT = {
     warnWatched: [], warnUnwatched: [], showMe: [], close: [],
     raidTitle: ["time"], raidLands: ["datu", "barangay", "direction"], raidUnknown: ["datu", "barangay"], raidRally: ["n"], raidNoWarriors: [],
     wonWatched: [], won: [], lateUnwatched: ["direction"], unwatchedReason: ["direction"], late: [], lostWatched: [], outnumbered: [], sheltered: [],
+    callHelp: [], callHelpTip: [], called: [], callOverused: [], noAllies: [],
     legendTitle: [], legendOpen: [], legendCovered: [], legendRange: [], legendLanding: [], legendTap: [],
     tipOpen: [], tipCovered: [], tipRange: [], tipLanding: [],
   },

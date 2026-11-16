@@ -59,8 +59,9 @@ export function borderBattle(defender: GameState, content: Content, landing: Poi
  * (landSeconds plus distance); from another island only those big enough to have boats sail.
  * They fight only if they arrive within the raid warning.
  */
-export function alliesComing(region: RegionState, content: Content, to: string, candidates: NeighborState[], warning: number): AllyDefender[] {
+export function alliesComing(region: RegionState, content: Content, to: string, candidates: NeighborState[], warning: number, called = false): AllyDefender[] {
   const a = content.rules.allyDefense;
+  const tb = content.rules.tambuli;
   return candidates
     .filter((n) => n.id !== to && n.state.warriors > 0)
     .map((n) => {
@@ -74,8 +75,12 @@ export function alliesComing(region: RegionState, content: Content, to: string, 
           ? travelSeconds(content, region.islands, region.places, n.id, to)
           : null;
       // Tributaries owe military support: they send part of their warriors.
-      const warriors = n.status === "tributary" ? Math.max(1, Math.floor((n.state.warriors * a.tributarySendPercent) / 100)) : n.state.warriors;
-      return { id: n.id, warriors, eta, arrives: eta !== null && eta <= warning, by: land ? ("land" as const) : ("sea" as const) };
+      const own = n.status === "tributary" ? Math.max(1, Math.floor((n.state.warriors * a.tributarySendPercent) / 100)) : n.state.warriors;
+      // The tambuli: armed volunteers on top, as many as their trust and the distance allow.
+      const willing = called ? Math.max(0, Math.min(1, n.trust / 100 - distance * tb.distancePenaltyPerUnit)) : 0;
+      const volunteers = Math.floor((n.state.villagers * tb.volunteerPercent * willing) / 100);
+      const warriors = own + volunteers;
+      return { id: n.id, warriors, ...(volunteers > 0 ? { volunteers } : {}), eta, arrives: eta !== null && eta <= warning, by: land ? ("land" as const) : ("sea" as const) };
     });
 }
 

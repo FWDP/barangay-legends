@@ -460,6 +460,14 @@
     "unwatchedWarningSeconds": 45,
     "revealUnwatchedSeconds": 15
   },
+  "tambuli": {
+    "_comment": "Calling for help (engine/region.ts callForHelp): during a raid warning the datu may sound the tambuli (a signal fire at night). Allies, bloc mates and tributaries then send armed volunteers on top of their warriors: up to volunteerPercent of their villagers, scaled by how willing they are (their trust out of 100, less distancePenaltyPerUnit for every unit of regional distance). They arrive by the usual arrival rules. Calling for a small raid (attackers at most smallRaidAttackers) or again within cooldownSeconds of the last call costs every answering ally overuseTrust trust. Playtest guesses.",
+    "volunteerPercent": 25,
+    "distancePenaltyPerUnit": 0.6,
+    "smallRaidAttackers": 3,
+    "cooldownSeconds": 900,
+    "overuseTrust": 6
+  },
   "kuta": {
     "_comment": "The Kuta (engine/border.ts muster, engine/region.ts aiRaidStrikes): on the alarm the Mandirigma rally at the Kutas (rallySeconds), then march to the landing; only those who get there before the raiders strike fight, and those with readySeconds to spare get there ready (readyBonus more defense each). Villagers within shelterRadius of a standing Kuta take refuge: if raiders win, they take only shelteredLootPercent of the usual loot from storehouses and fields inside it. Playtest guesses, tuned with npm run simulate.",
     "rallySeconds": 8,

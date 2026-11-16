@@ -1059,9 +1059,11 @@ function parseRegion(raw: unknown, content: Content, player: GameState): RegionS
             landing: parseLanding(incoming.landing, player.map),
             ...(finiteNonNeg(incoming.warnedAt) && incoming.warnedAt <= incoming.strikeAt ? { warnedAt: incoming.warnedAt } : {}),
             ...(incoming.watched === true ? { watched: true } : {}),
+            ...(incoming.called === true ? { called: true } : {}),
           }
         : null,
     nextAiRaidAt: finiteNonNeg(raw.nextAiRaidAt) ? raw.nextAiRaidAt : 0,
+    ...(finiteNonNeg(raw.lastCallAt) ? { lastCallAt: raw.lastCallAt } : {}),
     allyCall:
       isObject(raw.allyCall) && ids.has(raw.allyCall.ally as string) && ids.has(raw.allyCall.from as string) && finiteNonNeg(raw.allyCall.strikeAt)
         ? { ally: raw.allyCall.ally as string, from: raw.allyCall.from as string, strikeAt: raw.allyCall.strikeAt }

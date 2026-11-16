@@ -38,7 +38,7 @@ import {
   type RegionState,
 } from "./region";
 import { DEFAULT_SEED } from "./rng";
-import { homeWarriors } from "./region";
+import { callForHelp, homeWarriors } from "./region";
 import { choose, updateChoices, type PendingChoice } from "./choices";
 import { acceptCounter, declineCounter, handog, proposeTrade, type Goods } from "./trading";
 import { advanceClearing, cancelClearing, clearArea, dropUnreachableJobs, workforce, type ClearingJob } from "./clearing";
@@ -854,6 +854,8 @@ export type Command =
   | { type: "catchSarimanok" }
   /** A gong strike: when (game time, for the beat) and whether it's the "hold to beat" option. */
   | { type: "gong"; at?: number; held?: boolean }
+  /** Sound the tambuli during a raid warning: allies send volunteers too. */
+  | { type: "callForHelp" }
   | { type: "answerRiddle"; option: number }
   | { type: "replant"; x: number; y: number }
   | { type: "cancelReplant"; x: number; y: number }
@@ -952,6 +954,8 @@ function applyCommand(state: GameState, content: Content, command: Command): Gam
       return catchSarimanok(state, content);
     case "gong":
       return gong(state, content, command.at, command.held === true);
+    case "callForHelp":
+      return callForHelp(state, content);
     case "answerRiddle":
       return answerRiddle(state, content, command.option);
     case "replant":

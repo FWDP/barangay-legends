@@ -1,0 +1,34 @@
+{
+  "id": "tambuli",
+  "name": "Tambuli, budyong and signal fires",
+  "description": "Horns and shell trumpets were blown to gather people and to call for help: the tambuli (a horn, often a water buffalo's) and the budyong (a conch-shell trumpet, a Visayan term). Fires and drums also passed warnings along a coast. In the game, sounding the tambuli during a raid warning brings volunteers from allies, bloc mates and tributaries; calling too often wears on their patience. The exact instruments and their use in each tradition wait for a historian's review.",
+  "tradition": "Widespread (Tagalog tambuli; Visayan budyong)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+  ],
+  "aklat": {
+    "order": 28,
+    "icon": "🐚",
+    "name": {
+      "en": "Tambuli and signal fires",
+      "fil": "Tambuli at apoy na hudyat"
+    },
+    "lore": {
+      "en": "To gather people quickly, communities blew horns and shell trumpets: the tambuli, a horn often made from a water buffalo's, and the budyong, a trumpet made from a large conch shell, as the Visayans called it. Drums and fires carried warnings along a coast or river, from one lookout to the next. When raiders came, the call brought in fighters from the barangay and from friendly neighbors, who came because of kinship, alliance or obligation.",
+      "fil": "Upang mabilis na tipunin ang mga tao, hinihipan ng mga pamayanan ang sungay at kabibeng tambuli: ang tambuli, sungay na kadalasang mula sa kalabaw, at ang budyong, trumpetang yari sa malaking kabibe, ayon sa tawag ng mga Bisaya. Dinadala ng tambol at apoy ang babala sa baybayin o ilog, mula sa isang bantayan patungo sa susunod. Kapag dumating ang mananalakay, tinatawag ng hudyat ang mga mandirigma ng barangay at ng mga kaibigang kapitbahay, na dumarating dahil sa pagkakamag-anak, alyansa o tungkulin."
+    },
+    "inGame": {
+      "en": "During a raid warning, sound the tambuli: allies, bloc mates and tributaries send volunteers on top of their warriors, as their trust and the distance allow, and a signal fire burns at night. Calling for a small raid, or too often, lowers their trust.",
+      "fil": "Habang may babala ng pagsalakay, hipan ang tambuli: magpapadala ng mga boluntaryo ang mga kakampi, kasapi sa alyansa at sakop bukod sa kanilang mga mandirigma, ayon sa kanilang tiwala at layo, at may apoy na hudyat sa gabi. Bumababa ang kanilang tiwala kung tatawag para sa maliit na pagsalakay, o nang madalas."
+    },
+    "hint": {
+      "en": "Sound the tambuli when raiders come.",
+      "fil": "Hipan ang tambuli kapag dumating ang mananalakay."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "tambuli"
+    }
+  },
+  "reviewed": false
+}

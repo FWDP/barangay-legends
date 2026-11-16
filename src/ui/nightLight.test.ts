@@ -45,6 +45,14 @@ describe("the night look", () => {
     const alarm = { ...tower, region: { ...region, incomingRaid: { from: "batong-buhay", strikeAt: 99, landing: { x: 1, y: 4 }, warnedAt: 9, watched: true } } };
     expect(fires(alarm)).toBe(quiet + 1);
   });
+
+  it("the tambuli's signal fire burns by the Bahay ng Datu when no Bantayan stands", () => {
+    const s = withState({ buildings: [at("kuta", 4, 6)], villagers: 2 });
+    const fires = (x: GameState) => barangayLights(x, calm).filter((l) => l.kind === "fire").length;
+    const region = newGame(calm, 2).region!;
+    const called = { ...s, region: { ...region, incomingRaid: { from: "batong-buhay", strikeAt: 99, landing: { x: 1, y: 4 }, warnedAt: 9, called: true } } };
+    expect(fires(called)).toBe(fires(s) + 1);
+  });
 });
 
 describe("Mandirigma called to arms", () => {
