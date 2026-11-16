@@ -30,7 +30,8 @@ export const TRIGGERS = [
   "forest-angry",
   "event-typhoon",
   "event-sickness",
-  "kuta-shore",
+  "bantayan-shore",
+  "defense-rework",
   "trade-offer",
   "refused-raids",
   "forest-restless",
@@ -121,7 +122,7 @@ export const GAME_TEXT = {
   forest: { label: ["balance"], tip: [], stage1: [], stage2: ["percent"], replant: ["cost"], replanting: ["time"], prank: ["building", "time"] },
   build: {
     tirahan: [], pagkain: [], depensa: [], pananampalataya: [], daan: [], iba: [], build: [], cancel: [], locked: ["villagers"], lockedDatu: ["level"], need: ["missing"],
-    recommended: [], more: [], new: [], details: [], staffed: ["staffed"], noPath: ["n"], perTile: [], daanName: [], daanText: ["percent"], layDaan: [], aboutLook: [],
+    recommended: [], more: [], new: [], details: [], kutaEffect: ["radius", "n"], watchEffect: ["radius"], staffed: ["staffed"], noPath: ["n"], perTile: [], daanName: [], daanText: ["percent"], layDaan: [], aboutLook: [],
   },
   death: {
     died: ["cause"], diedNamed: ["name", "cause", "them"], diedRaid: ["count"], frail: ["name"], age: [], sickness: [], hunger: [], raid: [], mourning: ["time"],
@@ -131,7 +132,7 @@ export const GAME_TEXT = {
   balita: {
     title: [], none: [], formed: ["barangay"], joined: ["barangay", "bloc"], left: ["barangay", "bloc"], expelled: ["barangay", "bloc"], absorbed: ["barangay"],
     defeated: ["barangay", "bloc"], "war-joined": ["barangay", "other"], "ally-defended": ["barangay", "other"], "ally-lost": ["barangay", "other"], you: [], yourBloc: [],
-    blocName: ["leader"], independent: [], atWar: ["other"], formedYou: [], joinedYou: ["bloc"], leftYou: ["bloc"], level: ["barangay"], levelYou: [], "rank-up": ["barangay"], "rank-upYou": [], overtook: ["barangay", "other"],
+    blocName: ["leader"], independent: [], atWar: ["other"], formedYou: [], joinedYou: ["bloc"], leftYou: ["bloc"], level: ["barangay"], levelYou: [], "rank-up": ["barangay"], "rank-upYou": [], overtook: ["barangay", "other"], defenseRework: [],
   },
   alliance: {
     title: [], level: [], form: [], leave: [], join: [], invite: [], expel: [], leader: [], members: ["n", "strength"], yours: ["bloc"], member: ["bloc"], none: [],
@@ -155,9 +156,10 @@ export const GAME_TEXT = {
   report: { button: [], title: [], what: [], expected: [], note: [], share: [], copy: [], copied: [], github: [], githubNote: [], pasteSave: [], close: [] },
   version: { label: ["version"] },
   defense: {
-    map: [], mapOn: [], mapTip: [], legend: ["covered", "total"], landing: [], covered: [], uncovered: [], placing: ["covered", "total", "left"], placingNone: [], noShore: [],
-    warnCovered: [], warnUncovered: [], showMe: [], close: [],
-    wonCovered: [], won: [], lateUncovered: [], uncovered_: [], late: [], lostCovered: [], outnumbered: [],
+    map: [], mapOn: [], mapTip: [], legend: ["covered", "total"], landing: [], watched: [], unwatched: [], placing: ["covered", "total", "left"], placingNone: [], placingKuta: ["n"], noShore: [],
+    warnWatched: [], warnUnwatched: [], showMe: [], close: [],
+    raidTitle: ["time"], raidLands: ["datu", "barangay", "direction"], raidUnknown: ["datu", "barangay"], raidRally: ["n"], raidNoWarriors: [],
+    wonWatched: [], won: [], lateUnwatched: ["direction"], unwatchedReason: ["direction"], late: [], lostWatched: [], outnumbered: [], sheltered: [],
     legendTitle: [], legendOpen: [], legendCovered: [], legendRange: [], legendLanding: [], legendTap: [],
     tipOpen: [], tipCovered: [], tipRange: [], tipLanding: [],
   },
@@ -253,7 +255,8 @@ const LINE_VARS: Record<TriggerId, string[]> = {
   "event-fire": [],
   "rice-low": ["seconds"],
   "rice-full": [],
-  "kuta-shore": [],
+  "bantayan-shore": [],
+  "defense-rework": [],
   "food-workers": ["farmers", "villagers"],
   "event-typhoon": ["seconds"],
   "event-sickness": [],

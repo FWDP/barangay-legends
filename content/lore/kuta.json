@@ -1,10 +1,35 @@
 {
   "id": "kuta",
-  "name": "Kuta: precolonial fortifications",
-  "description": "Barangays of the sixteenth century defended themselves with kuta or kota: enclosures of sharpened timber or bamboo stakes, sometimes with earthworks, ditches and lookout platforms, where people could gather when raiders came by sea. Spanish accounts of the islands mention such stockades, and the word survives in place names. In this game the Kuta is drawn as a small palisade with a gate and a raised, thatched lookout reached by a ladder. The design is generic, the same for every tradition, and waits for a historian's review.",
-  "tradition": "Widespread (Visayan, Tagalog and others)",
+  "name": "Kuta: palisaded refuges",
+  "description": "A kuta (kota) was a fortified enclosure: a palisade of sharpened timber or bamboo stakes, sometimes with earthworks and ditches, around a settlement or a ruler's house, where people gathered when raiders came. Spanish accounts of 1570 describe the palisaded settlement of Rajah Sulayman in Maynila. In this game the Kuta is drawn as a palisaded enclosure with a gate and a thatched shelter inside; the design is generic, the same for every tradition, and waits for a historian's review.",
+  "tradition": "Widespread (Tagalog, Visayan and others)",
   "sources": [
-    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Relation of the Voyage to Luzon (1570), on Martín de Goiti's expedition to Manila, in Emma H. Blair and James A. Robertson, eds., The Philippine Islands, 1493–1898, vol. 3 (Arthur H. Clark, 1903)"
   ],
+  "aklat": {
+    "order": 26,
+    "icon": "🛡️",
+    "name": {
+      "en": "Kuta: palisaded refuges",
+      "fil": "Kuta: nababakurang kanlungan"
+    },
+    "lore": {
+      "en": "A kuta was a fortified enclosure: a fence of sharpened timber or bamboo stakes, sometimes with ditches and earthworks, around a settlement or the house of its ruler. When raiders came, people gathered inside for safety and the fighting men set out from it. Spanish accounts of Martín de Goiti's expedition in 1570 describe the palisaded settlement of Rajah Sulayman in Maynila. Barangays had no standing armies: the men who defended them were farmers, fishers and craftsmen called to arms.",
+      "fil": "Ang kuta ay isang nababakurang lugar: bakod ng matutulis na tulos ng kahoy o kawayan, kung minsan may hukay at pilapil, sa paligid ng pamayanan o ng bahay ng pinuno nito. Kapag dumating ang mananalakay, nagtitipon sa loob ang mga tao para sa kaligtasan at mula roon lumalabas ang mga mandirigma. Inilalarawan ng mga salaysay ng Espanyol sa ekspedisyon ni Martín de Goiti noong 1570 ang nababakurang pamayanan ni Rajah Sulayman sa Maynila. Walang permanenteng hukbo ang mga barangay: ang nagtatanggol ay mga magsasaka, mangingisda at manggagawang tinawag sa labanan."
+    },
+    "inGame": {
+      "en": "On the alarm, the Mandirigma rally at the nearest Kuta and march to the landing; families within its shelter take refuge, and winning raiders take much less from storehouses and fields there. Each Kuta allows a few more Mandirigma.",
+      "fil": "Sa hudyat, nagtitipon ang mga Mandirigma sa pinakamalapit na Kuta at lumalakad patungo sa daungan; kumakanlong ang mga pamilyang saklaw nito, at mas kaunti ang nakukuha ng nagwaging mananalakay sa mga imbakan at bukid doon. Bawat Kuta ay nagpapahintulot ng ilan pang Mandirigma."
+    },
+    "hint": {
+      "en": "Build a Kuta.",
+      "fil": "Magtayo ng Kuta."
+    },
+    "unlock": {
+      "type": "built",
+      "building": "kuta"
+    }
+  },
   "reviewed": false
 }

@@ -56,7 +56,8 @@ import { NightLayer } from "./NightLayer";
 import { bonusPreviewText, RESOURCE_ICON } from "./format";
 import { activeJobs, jobCost, workforce } from "../engine/clearing";
 import { raidLanding } from "../engine/border";
-import { shoreCoverage } from "../engine/defense";
+import { landingKnown, shoreCoverage } from "../engine/defense";
+import { sheltered } from "../engine/border";
 import { fill, type GameText } from "./uiContent";
 import type { Lang } from "./settings";
 import { useReducedMotion, VillagerLayer, type Clash, type NamedHit } from "./VillagerLayer";
@@ -314,20 +315,25 @@ export function BarangayMap(props: {
           const g = grove ? groveBonusAt(plan.map, content, placing, t.x, t.y, grove.resource) : 0;
           const road = placing.produces && isConnected(plan.map, t.x, t.y) ? content.rules.roads.connectedBonusPercent / 100 : 0;
           const noPath = (placing.workers ?? 0) > 0 && !wouldHaveEntrance(plan, content, t.x, t.y);
-          // The landing points (the engine's own, see defense.ts) a Kuta here would cover.
+          // A Bantayan: the landing points (the engine's own, see defense.ts) it would watch.
+          // A Kuta: the houses and stores its shelter would reach.
           let bank = 0;
           let shore = "";
-          if (placing.defense) {
+          const dt = defense?.text;
+          const lang = defense?.lang ?? "en";
+          if (placing.watch) {
             const cover = shoreCoverage(plan, content, t);
             bank = cover.filter((s) => s.byNew).length;
-            const union = cover.filter((s) => s.covered || s.byNew).length;
-            const dt = defense?.text;
-            const lang = defense?.lang ?? "en";
+            const union = cover.filter((s) => s.watched || s.byNew).length;
             shore = cover.length === 0
               ? (dt?.noShore[lang] ?? "No shore where raiders can land")
               : bank === 0
-                ? (dt?.placingNone[lang] ?? "🛡️ Covers no landing point")
-                : fill(dt?.placing[lang] ?? "🛡️ Covers {covered} of {total} landing points ({left} left uncovered)", { covered: union, total: cover.length, left: cover.length - union });
+                ? (dt?.placingNone[lang] ?? "🎋 Watches no landing point")
+                : fill(dt?.placing[lang] ?? "🎋 Watches {covered} of {total} landing points ({left} left unwatched)", { covered: union, total: cover.length, left: cover.length - union });
+          } else if (placing.defense) {
+            const keep = new Set([...content.rules.diplomacy.aiRaid.lootTargets, ...content.buildings.filter((d) => d.housing).map((d) => d.id)]);
+            bank = plan.buildings.filter((b) => keep.has(b.type) && sheltered(content, t, b)).length;
+            shore = fill(dt?.placingKuta[lang] ?? "🛡️ Shelters {n} houses and stores", { n: bank });
           }
           return [`${t.x},${t.y}`, { adjacency, grove: g, road, noPath, bank, shore }];
         }),
@@ -367,15 +373,17 @@ export function BarangayMap(props: {
 
   // A Kuta's defense radius: around the tile being placed on, the Kuta whose menu is open, or
   // every Kuta while a raid is coming (where they'll land is marked too).
-  const landing = scenic ? null : visit ? visit.landing : raidLanding(state, content);
-  const radius = content.rules.military.kutaRadius;
+  // A raid's landing shows from the start if a Bantayan saw it, else only as the boats come close.
+  const landing = scenic ? null : visit ? visit.landing : landingKnown(state, content) ? raidLanding(state, content) : null;
+  // The tint: a Kuta's shelter (rules.kuta.shelterRadius); while placing a Bantayan, its watch.
+  const radius = placing?.watch ? content.rules.watch.radius : content.rules.kuta.shelterRadius;
   const kutaIds = useMemo(() => new Set(content.buildings.filter((b) => b.defense).map((b) => b.id)), [content]);
   const guardCenters: Point[] = [];
   if (!scenic) {
-    if (placing?.defense && hover) guardCenters.push(hover);
+    if ((placing?.defense || placing?.watch) && hover) guardCenters.push(hover);
     const focused = focus ? state.buildings.find((b) => b.x === focus.x && b.y === focus.y) : undefined;
     if (focused && kutaIds.has(focused.type)) guardCenters.push(focused);
-    if (landing || placing?.defense || visit || defense?.on) for (const b of state.buildings) if (kutaIds.has(b.type) && !b.damaged) guardCenters.push(b);
+    if (landing || placing?.defense || visit || defense?.on) if (!placing?.watch) for (const b of state.buildings) if (kutaIds.has(b.type) && !b.damaged) guardCenters.push(b);
   }
   const guardKey = guardCenters.map((p) => `${p.x},${p.y}`).join(";");
   const guard = useMemo(() => {
@@ -393,14 +401,14 @@ export function BarangayMap(props: {
 
   // The landing points on the shore: shown while placing a Kuta (with what the new one would
   // cover), on the Defense map, and while a raid is coming. Green: a Kuta covers it.
-  const showShore = !scenic && !visit && (!!defense?.on || !!placing?.defense || !!landing);
-  const planned = placing?.defense && hover && placement?.has(`${hover.x},${hover.y}`) ? hover : null;
+  const showShore = !scenic && !visit && (!!defense?.on || !!placing?.watch || !!landing);
+  const planned = placing?.watch && hover && placement?.has(`${hover.x},${hover.y}`) ? hover : null;
   // The key to the markers, and their tips: on the Defense map and a visit's raid preview.
   const legendOn = !scenic && !placing && !road && (!!defense?.on || !!visit?.landing);
   const shore = useMemo(() => {
     const out = new Map<string, "covered" | "new" | "open">();
     if (!showShore) return out;
-    for (const s of shoreCoverage(plan, content, planned)) out.set(`${s.p.x},${s.p.y}`, s.covered ? "covered" : s.byNew ? "new" : "open");
+    for (const s of shoreCoverage(plan, content, planned)) out.set(`${s.p.x},${s.p.y}`, s.watched ? "covered" : s.byNew ? "new" : "open");
     return out;
   }, [showShore, plan.buildings, plan.map, content, planned?.x, planned?.y]);
   const marks: Marks = { shore, range: guard, landing };
@@ -803,7 +811,7 @@ export function BarangayMap(props: {
             glow={glow.has(key)}
             guard={guard.has(key)}
             shore={shore.get(key)}
-            shoreText={shore.has(key) && defense ? `${defense.text.landing[defense.lang]}: ${shore.get(key) === "open" ? defense.text.uncovered[defense.lang] : defense.text.covered[defense.lang]}` : undefined}
+            shoreText={shore.has(key) && defense ? `${defense.text.landing[defense.lang]}: ${shore.get(key) === "open" ? defense.text.unwatched[defense.lang] : defense.text.watched[defense.lang]}` : undefined}
             deck={decks.get(key) ?? (tile === "bridge" ? FALLBACK_DECK : null)}
             deckPreview={crossingDecks.get(key) ?? null}
             cantCross={cantCross && hovered}
@@ -1453,7 +1461,7 @@ function ArtOrIcon({ def }: { def: BuildingDef }) {
 
 function Ghost({ info }: { info: GhostInfo }) {
   const { def, adjacency, grove, groveName, road, noPath, bank, shore } = info;
-  if (def.defense) {
+  if (def.defense || def.watch) {
     return (
       <>
         <span aria-hidden className="pointer-events-none leading-none opacity-60 select-none">
@@ -1665,8 +1673,8 @@ function SpiritOverlays(props: {
   const at = (x: number, y: number) => ({ left: o.x + x * T, top: o.y + y * T });
   const bird = state.sarimanok ? sarimanokAt(state.sarimanok, state.time) : null;
   const camps = state.buildings.filter((b) => isPranked(state, b.x, b.y));
-  // A raid is coming: a lookout stands on each Kuta's raised platform.
-  const lookouts = state.region?.incomingRaid ? state.buildings.filter((b) => !b.damaged && content.buildings.find((d) => d.id === b.type)?.defense) : [];
+  // A raid is coming: a lookout stands on each Bantayan's platform, raising the alarm.
+  const lookouts = state.region?.incomingRaid ? state.buildings.filter((b) => !b.damaged && content.buildings.find((d) => d.id === b.type)?.watch) : [];
   return (
     <>
       {lookouts.map((b) => (

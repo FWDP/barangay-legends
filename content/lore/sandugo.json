@@ -5,7 +5,8 @@
   "tradition": "Widespread in the precolonial Philippines",
   "sources": [
     "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
-    "https://en.wikipedia.org/wiki/Sandugo"
+    "https://en.wikipedia.org/wiki/Sandugo",
+    "Relation of the Voyage to the Philippine Islands, by Miguel López de Legazpi (1565), in Emma H. Blair and James A. Robertson, eds., The Philippine Islands, 1493–1898, vol. 2 (Arthur H. Clark, 1903)"
   ],
   "aklat": {
     "order": 3,
@@ -15,8 +16,8 @@
       "fil": "Sandugo"
     },
     "lore": {
-      "en": "The sandugo was a blood compact. Two leaders mixed drops of their blood in a drink and shared it. This made their peoples kin and allies, bound to help each other. Spanish accounts record such compacts with visiting captains in the 1500s.",
-      "fil": "Ang sandugo ay isang kasunduan sa dugo. Hinahalo ng dalawang pinuno ang patak ng kanilang dugo sa inumin at pinagsasaluhan ito. Ginagawa nitong magkamag-anak at magkakampi ang kanilang mga tao. Naitala ng mga Espanyol ang ganitong kasunduan sa mga dumadalaw na kapitan noong 1500s."
+      "en": "The sandugo was a blood compact. Two leaders mixed drops of their blood in a drink and shared it. This made their peoples kin and allies, bound to help each other. Spanish accounts record such compacts with visiting captains in the 1500s. It was an alliance between leaders, not a submission: it could be made between equals, as between Datu Sikatuna of Bohol and Miguel López de Legazpi in 1565.",
+      "fil": "Ang sandugo ay isang kasunduan sa dugo. Hinahalo ng dalawang pinuno ang patak ng kanilang dugo sa inumin at pinagsasaluhan ito. Ginagawa nitong magkamag-anak at magkakampi ang kanilang mga tao. Naitala ng mga Espanyol ang ganitong kasunduan sa mga dumadalaw na kapitan noong 1500s. Isa itong alyansa ng mga pinuno, hindi pagsuko: maaari itong gawin ng magkapantay, gaya nina Datu Sikatuna ng Bohol at Miguel López de Legazpi noong 1565."
     },
     "inGame": {
       "en": "A diplomacy path in the Rehiyon: a blood compact makes a neighbor your ally.",

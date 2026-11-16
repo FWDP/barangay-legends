@@ -308,7 +308,7 @@ describe("allied defense", () => {
     const boats = setNb(s, far, { state: { ...nb(s, far).state, villagers: 20, warriors: 3 } });
     const sea = alliedDefenders(boats, content).find((x) => x.id === far)!;
     expect(sea.eta).toBeGreaterThan(0);
-    expect(sea.arrives).toBe(sea.eta! <= content.rules.diplomacy.aiRaid.warningSeconds);
+    expect(sea.arrives).toBe(sea.eta! <= content.rules.watch.unwatchedWarningSeconds);
   });
 });
 

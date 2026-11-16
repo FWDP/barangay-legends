@@ -214,12 +214,21 @@ describe("generated villages for AI barangays", () => {
     expect(v.tradition).toBe(n.tradition);
   });
 
-  it("show the likely landing and the Kuta that cover it", () => {
+  it("show the likely landing and the Bantayan that watch it; Bantayan at the shore, Kuta near the datu's house", () => {
     const { def, n } = pick("aggressive");
     const v = generateVillage(content, n, def, 0);
     const p = raidPreview(v, content, 1);
     expect(p.landing).not.toBeNull();
-    for (const k2 of p.covering) expect(v.buildings).toContain(k2);
+    for (const t of p.watching) expect(v.buildings.some((b) => b.type === "bantayan" && b.x === t.x && b.y === t.y)).toBe(true);
+    const plaza = v.map.plaza;
+    const kutas = v.buildings.filter((b) => b.type === "kuta");
+    const towers = v.buildings.filter((b) => b.type === "bantayan");
+    if (kutas.length) {
+      expect(towers.length).toBeGreaterThan(0);
+      // Kutas stand nearer the Bahay ng Datu than the Bantayan do.
+      const avg = (list: { x: number; y: number }[]) => list.reduce((sum, b) => sum + Math.hypot(b.x - plaza.x, b.y - plaza.y), 0) / list.length;
+      expect(avg(kutas)).toBeLessThan(avg(towers));
+    }
   });
 });
 

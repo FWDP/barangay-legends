@@ -1,10 +1,11 @@
 {
   "id": "mangayaw",
-  "name": "Mangayaw",
-  "description": "Raiding expeditions between communities, which won renown and goods. In this game a raid's gains are abstract tribute; no people are ever taken.",
+  "name": "Mangayaw (pangayaw)",
+  "description": "Raiding expeditions (mangayaw or pangayaw) between communities. Historically they sought captives (bihag), who became dependents of the victors' households, along with gold, porcelain and other trade goods, and renown for the raiders. In this game captives stay abstract: no people are ever taken, and a raid's gains are goods and renown.",
   "tradition": "Visayan and other precolonial societies",
   "sources": [
-    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Francisco Ignacio Alcina, History of the Bisayan People in the Philippine Islands (1668), trans. Cantius J. Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)"
   ],
   "aklat": {
     "order": 4,
@@ -14,8 +15,8 @@
       "fil": "Mangayaw"
     },
     "lore": {
-      "en": "Mangayaw were raiding expeditions between communities. They brought renown to the warriors and goods to the barangay. Scott describes them as a regular part of Visayan life, with their own customs and seasons. In this game a raid's gains are abstract tribute: no people are ever taken.",
-      "fil": "Ang mangayaw ay mga paglusob sa pagitan ng mga pamayanan. Nagdadala ito ng karangalan sa mga mandirigma at ng yaman sa barangay. Inilalarawan ito ni Scott bilang karaniwang bahagi ng buhay-Bisaya, na may sariling kaugalian at panahon. Sa larong ito, abstraktong tributo lamang ang nakukuha: walang taong binibihag kailanman."
+      "en": "Mangayaw (or pangayaw) were raiding expeditions between communities, often by sea in fast war boats. Historically their main prize was captives (bihag), who became dependents (alipin, oripun) in the victors' households; raiders also took gold, porcelain and other trade goods, and won renown. Raids tended to come by surprise, at night or at dawn, and raiders left quickly before defenders could gather. In this game captives stay abstract: no people are ever taken, and a raid's gains are goods and renown.",
+      "fil": "Ang mangayaw (o pangayaw) ay mga paglusob sa pagitan ng mga pamayanan, kadalasan sa dagat sakay ng mabibilis na bangkang pandigma. Sa kasaysayan, ang pangunahing hangad ay bihag, na naging alipin o oripun sa sambahayan ng nagwagi; kumukuha rin ang mananalakay ng ginto, porselana at iba pang kalakal, at nagkakamit ng karangalan. Karaniwang dumarating nang biglaan ang paglusob, sa gabi o madaling-araw, at mabilis na umaalis bago makapagtipon ang mga tagapagtanggol. Sa larong ito, abstrakto ang bihag: walang taong binibihag kailanman, at kalakal at karangalan ang nakukuha sa paglusob."
     },
     "inGame": {
       "en": "A diplomacy path in the Rehiyon: send your Mandirigma to raid a rival.",

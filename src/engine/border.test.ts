@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { borderDefense, chooseLanding, closestLandings, directionFrom, kutaShare, landingCandidates, muster, raidLanding, travelSeconds } from "./border";
+import { borderDefense, chooseLanding, closestLandings, directionFrom, landingCandidates, muster, raidLanding, raidWindow, travelSeconds } from "./border";
 import { newGame, tick, type GameState } from "./game";
 import { tileAt } from "./map";
 import { at, calm, content, mapFrom, withState } from "./testUtils";
@@ -15,6 +15,9 @@ const map = mapFrom([
 ]);
 const military = content.rules.military;
 const aiRaid = content.rules.diplomacy.aiRaid;
+const k = content.rules.kuta;
+/** A warning long enough for anyone to arrive, ready. */
+const WIDE = 999;
 const state = (patch: Partial<GameState> = {}) => withState({ map, buildings: [], villagers: 8, warriors: 4, ...patch });
 
 describe("landing point", () => {
@@ -55,7 +58,8 @@ describe("landing point", () => {
     expect(raidLanding(raid, content)).toEqual({ x: 5, y: 1 });
     // An older save's raid without a landing gets the seeded one for its start time.
     const old = { ...raid, region: { ...raid.region, incomingRaid: { from: "batong-buhay", strikeAt: 200 } } };
-    expect(raidLanding(old, content)).toEqual(chooseLanding(old, content, 200 - aiRaid.warningSeconds));
+    expect(raidLanding(old, content)).toEqual(chooseLanding(old, content, 200 - content.rules.watch.unwatchedWarningSeconds));
+    expect(raidWindow(old, content)).toBe(content.rules.watch.unwatchedWarningSeconds);
   });
 
   it("names the direction for the warning", () => {
@@ -65,50 +69,16 @@ describe("landing point", () => {
   });
 });
 
-describe("Kuta radius", () => {
-  const landing = { x: 5, y: 2 };
-
-  it(`gives full defense within ${military.kutaRadius} tiles, ${military.kutaOutsidePercent}% beyond`, () => {
-    expect(kutaShare(content, { x: 1, y: 2 }, landing)).toBe(1);
-    expect(kutaShare(content, { x: 5 - military.kutaRadius, y: 2 }, landing)).toBe(1);
-    expect(kutaShare(content, { x: 5 - military.kutaRadius - 1, y: 2 }, landing)).toBe(military.kutaOutsidePercent / 100);
-  });
-
-  it("counts each Kuta by its own distance", () => {
-    const kuta = content.buildings.find((b) => b.id === "kuta")!;
-    const wide = mapFrom([
-      "T.............T~~",
-      "T..P...........~~",
-      "T.............T~~",
-    ]);
-    const near = { x: 15, y: 1 };
-    const s = withState({ map: wide, buildings: [at("kuta", 13, 0), at("kuta", 1, 0)], villagers: 2, warriors: 0 });
-    const m = muster(s, content, near, aiRaid.warningSeconds);
-    expect(m.walls).toBeCloseTo(kuta.defense! * (1 + military.kutaOutsidePercent / 100));
-    expect(m.covered).toBe(true);
-    const far = withState({ map: wide, buildings: [at("kuta", 1, 0)], villagers: 2, warriors: 0 });
-    expect(muster(far, content, near, aiRaid.warningSeconds).covered).toBe(false);
-  });
-
-  it("a damaged Kuta gives nothing", () => {
-    const s = state({ buildings: [{ ...at("kuta", 4, 1), damaged: true }] });
-    expect(muster(s, content, { x: 5, y: 2 }, aiRaid.warningSeconds).walls).toBe(0);
-  });
-});
-
 describe("defenders on the way", () => {
-  it("walk from the Kuta to the landing; the closer ones make it", () => {
-    const s = state({ buildings: [at("kuta", 4, 1)] });
-    const m = muster(s, content, { x: 5, y: 2 }, aiRaid.warningSeconds);
-    expect(m.joined).toBe(4);
-    expect(m.late).toBe(0);
-  });
-
-  it("don't join if they can't get there in time", () => {
+  it("muster at the Kuta, then travel to the landing: in time only with the rally and the walk", () => {
     const s = state({ buildings: [at("kuta", 1, 1)] });
-    const seconds = travelSeconds(map, { x: 1, y: 1 }, { x: 5, y: 2 }, content)!;
-    expect(muster(s, content, { x: 5, y: 2 }, seconds - 0.5)).toMatchObject({ joined: 0, late: 4 });
-    expect(muster(s, content, { x: 5, y: 2 }, seconds)).toMatchObject({ joined: 4, late: 0 });
+    const walk = travelSeconds(map, { x: 1, y: 1 }, { x: 5, y: 2 }, content)!;
+    const need = k.rallySeconds + walk;
+    expect(muster(s, content, { x: 5, y: 2 }, need - 0.5)).toMatchObject({ joined: 0, late: 4 });
+    expect(muster(s, content, { x: 5, y: 2 }, need)).toMatchObject({ joined: 4, late: 0, ready: 0 });
+    // With readySeconds to spare, they meet the raiders ready.
+    expect(muster(s, content, { x: 5, y: 2 }, need + k.readySeconds)).toMatchObject({ joined: 4, ready: 4 });
+    expect(muster(s, content, { x: 5, y: 2 }, WIDE).posts[0]).toMatchObject({ from: { x: 1, y: 1 }, seconds: need });
   });
 
   it("forest is slower to cross than cleared land", () => {
@@ -122,23 +92,27 @@ describe("defenders on the way", () => {
     ]);
     const s = withState({ map: long, buildings: [at("kuta", 21, 0), at("kuta", 0, 0)], villagers: 6, warriors: 3 });
     const landing = { x: 22, y: 1 };
-    const tight = travelSeconds(long, { x: 21, y: 0 }, landing, content)! + 1;
+    const tight = k.rallySeconds + travelSeconds(long, { x: 21, y: 0 }, landing, content)! + 1;
     const m = muster(s, content, landing, tight);
     expect(m.posts.map((p) => p.warriors)).toEqual([2, 1]);
     expect(m).toMatchObject({ joined: 2, late: 1 });
   });
 
   it("with no Kuta, they set out from the plaza", () => {
-    const m = muster(state(), content, { x: 5, y: 2 }, aiRaid.warningSeconds);
+    const m = muster(state(), content, { x: 5, y: 2 }, WIDE);
     expect(m.posts).toHaveLength(1);
     expect(m.posts[0].from).toEqual(map.plaza);
     expect(m.joined).toBe(4);
   });
 
-  it("defense at the landing: base, warriors who arrive, Kutas by radius", () => {
+  it("defense at the landing: base, warriors who arrive, more for those ready; no wall bonus from the Kuta itself", () => {
     const s = state({ buildings: [at("kuta", 4, 1)] });
-    const kuta = content.buildings.find((b) => b.id === "kuta")!;
-    expect(borderDefense(s, content, { x: 5, y: 2 }, aiRaid.warningSeconds).defense).toBe(military.baseDefense + 4 * military.warrior.defense + kuta.defense!);
+    expect(borderDefense(s, content, { x: 5, y: 2 }, WIDE).defense).toBe(military.baseDefense + 4 * military.warrior.defense + 4 * k.readyBonus);
+    const late = travelSeconds(map, { x: 4, y: 1 }, { x: 5, y: 2 }, content)! + k.rallySeconds;
+    expect(borderDefense(s, content, { x: 5, y: 2 }, late).defense).toBe(military.baseDefense + 4 * military.warrior.defense);
+    // A damaged Kuta is no rally point: they set out from the barangay's center.
+    const broken = state({ buildings: [{ ...at("kuta", 4, 1), damaged: true }] });
+    expect(muster(broken, content, { x: 5, y: 2 }, WIDE).posts[0].from).toEqual(map.plaza);
   });
 });
 
@@ -171,12 +145,12 @@ describe("raids strike at the landing", () => {
 
   it("uses the defense at the landing, and records where and who was late", () => {
     const s = raid(9);
-    const expected = borderDefense(s, content, s.region!.incomingRaid!.landing!, aiRaid.warningSeconds);
+    const expected = borderDefense(s, content, s.region!.incomingRaid!.landing!, raidWindow(s, content));
     const after = tick(s, calm, 1);
     const report = after.region!.reports.at(-1)!;
     expect(report.kind).toBe("defense");
     expect(report.defense).toBeCloseTo(expected.defense);
-    expect(report).toMatchObject({ landing: s.region!.incomingRaid!.landing, late: expected.muster.late, covered: expected.muster.covered });
+    expect(report).toMatchObject({ landing: s.region!.incomingRaid!.landing, late: expected.muster.late, watched: expected.muster.watched });
   });
 
   it("gives identical results for the same seed", () => {
@@ -190,7 +164,7 @@ describe("raids strike at the landing", () => {
   it("warriors who were too far away don't die in the battle", () => {
     const s = raid(9);
     const landing = s.region!.incomingRaid!.landing!;
-    const expected = borderDefense(s, content, landing, aiRaid.warningSeconds).muster;
+    const expected = borderDefense(s, content, landing, raidWindow(s, content)).muster;
     const after = tick(s, calm, 1);
     const report = after.region!.reports.at(-1)!;
     expect(report.ourLosses!).toBeLessThanOrEqual(expected.joined);

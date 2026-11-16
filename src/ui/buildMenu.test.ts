@@ -49,8 +49,9 @@ describe("card states", () => {
     const s = withState({ villagers: 10 });
     const seenBefore = ["bahay-kubo", "palayan", "woodcutter-camp", "babaylan-hut", "dambana"];
     const fresh = tabsWithNew(s, content, seenBefore);
-    expect(fresh).toEqual(new Set(["pagkain", "depensa"])); // Kamalig, Kuta at 10 villagers
-    expect(tabsWithNew(s, content, [...seenBefore, "kamalig", "kuta"]).size).toBe(0);
+    expect(fresh).toEqual(new Set(["pagkain", "depensa"])); // Kamalig, Kuta and Bantayan at 10 villagers
+    expect(tabsWithNew(s, content, [...seenBefore, "kamalig", "kuta"]).size).toBe(1);
+    expect(tabsWithNew(s, content, [...seenBefore, "kamalig", "kuta", "bantayan"]).size).toBe(0);
   });
 });
 

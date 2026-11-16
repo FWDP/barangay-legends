@@ -10,7 +10,7 @@ import { directionFrom, raidLanding } from "../engine/border";
 import { barangayCenter, isUnlocked, TILE_CODE } from "../engine/map";
 import { neighborDef } from "../engine/region";
 import { riceFull } from "../engine/storage";
-import { landedUncovered, shoreCovered } from "../engine/defense";
+import { landedUnwatched, landingKnown, shoreWatched } from "../engine/defense";
 import { storyText, type HistoryEntry } from "../engine/people";
 import type { Lang } from "./settings";
 import { historyLine, levelNews, taskNews } from "./stories";
@@ -209,7 +209,7 @@ export function observe(session: AdvisorSession, state: GameState, content: Cont
   const raid = state.region?.incomingRaid;
   if (raid) {
     const who = neighborDef(content, raid.from);
-    const landing = raidLanding(state, content);
+    const landing = landingKnown(state, content) ? raidLanding(state, content) : null;
     active.set("raid-warning", {
       neighbor: who?.name ?? raid.from,
       datu: who?.datu ?? "",
@@ -221,9 +221,11 @@ export function observe(session: AdvisorSession, state: GameState, content: Cont
   // Full granaries: raise a Kamalig or spend rice (one line, shown once).
   // (Before the first Kamalig the store's tip says to build one.)
   if (riceFull(state, content) && state.buildings.some((b) => !!defsById.get(b.type)?.upgrades)) active.set("rice-full", {});
-  // A raid landed where no Kuta reached: build one near the shore (once).
+  // A raid landed where no Bantayan watched: build one at the shore (once).
   const lastDefense = [...(state.region?.reports ?? [])].reverse().find((r) => r.kind === "defense");
-  if (lastDefense && landedUncovered(lastDefense) && shoreCovered(state, content).covered === 0) active.set("kuta-shore", {});
+  if (lastDefense && landedUnwatched(lastDefense) && shoreWatched(state, content).watched === 0) active.set("bantayan-shore", {});
+  // An old save's Kutas were split into Bantayan and Kuta: say so once.
+  if (state.flags.includes("defense-rework")) active.set("defense-rework", {});
 
   if (state.buildings.length > s.buildingCount) s.lastBuildAt = t;
   s.buildingCount = state.buildings.length;

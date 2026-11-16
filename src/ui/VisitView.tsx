@@ -66,7 +66,7 @@ export function VisitView(props: {
   const tradition = content.traditions.find((x) => x.id === n.tradition)?.name[lang] ?? "";
   const embargo = isEmbargo(n, content);
   const planText = preview?.landing
-    ? fill(t.raidPreview[lang], { direction: t[shore(village.map, preview.landing)][lang], cover: preview.covering.length ? t.covered[lang] : t.uncovered[lang] })
+    ? fill(t.raidPreview[lang], { direction: t[shore(village.map, preview.landing)][lang], cover: preview.watching.length ? t.covered[lang] : t.uncovered[lang] })
     : t.uncovered[lang];
 
   return (

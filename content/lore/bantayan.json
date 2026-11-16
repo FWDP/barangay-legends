@@ -1,0 +1,34 @@
+{
+  "id": "bantayan",
+  "name": "Bantayan: watching the shore",
+  "description": "Bantayan comes from bantay, to watch or guard. Coastal and riverine communities kept watch for war boats and raised the alarm with horns, drums, gongs or fires. The tall stone watchtowers seen on Philippine coasts today were mostly built under Spanish rule against later raids and are outside this game; the bamboo tower here is a generic, modest form and waits for a historian's review.",
+  "tradition": "Widespread (coastal and riverine)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+  ],
+  "aklat": {
+    "order": 27,
+    "icon": "🎋",
+    "name": {
+      "en": "Bantayan: watching the shore",
+      "fil": "Bantayan: pagbabantay sa dalampasigan"
+    },
+    "lore": {
+      "en": "Bantayan comes from bantay: to watch, to guard. Communities on rivers and coasts kept watch for war boats coming in, and raised the alarm with horns, drums, gongs or fires so that people could gather and warriors could meet the raiders. The stone watchtowers that still stand on many Philippine coasts are later, mostly from the Spanish era, built against the raids of that time; they are not part of this game.",
+      "fil": "Ang bantayan ay mula sa salitang bantay: magmasid, magbantay. Nagbabantay ang mga pamayanan sa ilog at baybayin sa mga paparating na bangkang pandigma, at nagtataas ng hudyat sa pamamagitan ng tambuli, tambol, gong o apoy upang makapagtipon ang mga tao at masalubong ng mga mandirigma ang mananalakay. Ang mga batong bantayang nakatayo pa sa maraming baybayin ng Pilipinas ay mas huli, karamihan mula sa panahon ng Espanyol, itinayo laban sa mga pagsalakay noon; hindi bahagi ng larong ito ang mga iyon."
+    },
+    "inGame": {
+      "en": "A staffed Bantayan sees raiders landing within its sight: the warning comes earlier, the landing shows at once, and the alarm sounds (a signal fire at night). Raiders prefer landings no Bantayan watches.",
+      "fil": "Nakikita ng Bantayang may bantay ang mananalakay na dadaong sa abot ng tanaw nito: mas maaga ang babala, agad lumalabas ang daungan, at tumutunog ang hudyat (apoy na hudyat sa gabi). Mas gusto ng mananalakay ang daungang walang Bantayang nagbabantay."
+    },
+    "hint": {
+      "en": "Build a Bantayan at the shore.",
+      "fil": "Magtayo ng Bantayan sa dalampasigan."
+    },
+    "unlock": {
+      "type": "built",
+      "building": "bantayan"
+    }
+  },
+  "reviewed": false
+}

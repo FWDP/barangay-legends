@@ -61,7 +61,7 @@ export function reportLines(e: Expedition, state: GameState, content: Content, g
     lines.push(fill(t.sides[lang], { attackers: e.party.count, defenders: joined }));
     lines.push(fill(t.chance[lang], { percent: Math.round(b.chance * 100) }));
     lines.push(fill(t.losses[lang], { attackers: b.attackerLosses, defenders: b.defenderLosses }));
-    if (b.kutaBonus > 0) lines.push(fill(t.kuta[lang], { bonus: Math.round(b.kutaBonus), cover: b.covered ? t.covered[lang] : "" }));
+    if (b.kutaBonus > 0) lines.push(fill(t.kuta[lang], { bonus: Math.round(b.kutaBonus), cover: b.watched ? t.covered[lang] : "" }));
     if (b.defenders.late > 0) lines.push(fill(t.late[lang], { n: b.defenders.late }));
     const allies = b.allies.filter((a) => a.arrives).map((a) => placeName(state, content, a.id, game, lang));
     if (allies.length) lines.push(fill(t.allies[lang], { names: allies.join(", ") }));

@@ -130,7 +130,11 @@ describe("migrating an all-warrior save", () => {
     const workers = buildingWorkers(s, calm);
     const inFields = s.buildings.reduce((n, b, i) => n + (b.type === "palayan" ? workers[i] : 0), 0);
     expect(inFields).toBe(12); // every field full: rice is short, so food first
-    expect(workers.reduce((a, b) => a + b, 0)).toBe(18); // fields and camps, all staffed
+    // Fields and camps all staffed, and the Kutas nearer the river than the Bahay ng Datu became
+    // Bantayan (the v33 migration), each with its lookouts.
+    const towers = s.buildings.filter((b) => b.type === "bantayan").length;
+    expect(towers).toBeGreaterThan(0);
+    expect(workers.reduce((a, b) => a + b, 0)).toBe(18 + calm.buildings.find((b) => b.id === "bantayan")!.workers! * towers);
     expect(rates(s, calm).net.rice).toBeGreaterThan(0);
     const later = tick(s, calm, 60);
     expect(later.villagers).toBe(29);

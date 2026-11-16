@@ -20,7 +20,10 @@ export function useGameSounds(state: GameState, content: Content) {
   const heard = useRef<string[] | null>(null);
   useEffect(() => {
     const now = warnings ? warnings.split(",") : [];
-    if (heard.current && now.some((id) => !heard.current!.includes(id))) sfx.warning();
+    const fresh = heard.current ? now.filter((id) => !heard.current!.includes(id)) : [];
+    // A raid a Bantayan saw: the lookouts' horn and drum; any other warning: the gongs.
+    if (fresh.includes("raid") && state.region?.incomingRaid?.watched) sfx.alarm();
+    else if (fresh.length) sfx.warning();
     heard.current = now;
   }, [warnings]);
 

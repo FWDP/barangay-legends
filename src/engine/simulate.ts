@@ -51,6 +51,8 @@ export interface SimResult {
   unlockTimes: number[];
   /** Everything new in the order it came: buildings unlocked, barangay levels, Bahay ng Datu levels. */
   milestones: { t: number; what: string }[];
+  /** Raids on the barangay: how many came, how many were beaten off, and the rice and wood they took. */
+  raids: { defenses: number; won: number; lostRice: number; lostWood: number };
 }
 
 /** Seconds between the bot's decisions. */
@@ -133,6 +135,8 @@ export function botDecide(state: GameState, content: Content): GameState {
       return next === state ? null : next;
     },
     () => (kuta < 1 + Math.floor(state.villagers / 25) ? tryBuild("kuta") : null),
+    // A Bantayan at the shore once there is a Kuta, as the tasks ask, and a second one later.
+    () => (kuta > 0 && owned(state, "bantayan") < Math.min(kuta, 2) ? tryBuild("bantayan") : null),
     () => (state.warriors < Math.min(warriorCap(state, content), Math.floor(state.villagers / 5)) ? (run({ type: "train" }) === state ? null : run({ type: "train" })) : null),
     () => (nextDatuLevel(state, content) && datuLevelNeeded(state, content) === null ? (run({ type: "upgradeDatu" }) === state ? null : run({ type: "upgradeDatu" })) : null),
     () => (owned(state, "babaylan-hut") === 0 && state.villagers >= 12 ? tryBuild("babaylan-hut") : null),
@@ -181,6 +185,8 @@ export function simulate(content: Content, days: number, seed = 12345): SimResul
   let lastDatu = s.datuLevel;
   let hungry = 0;
   let full = 0;
+  const raids = { defenses: 0, won: 0, lostRice: 0, lostWood: 0 };
+  let seenReport = 0;
   const end = days * daySeconds;
   while (s.time < end) {
     s = botDecide(s, content);
@@ -188,6 +194,15 @@ export function simulate(content: Content, days: number, seed = 12345): SimResul
       s = tick(s, content, 1);
       if (s.resources.rice <= 0) hungry++;
       if (s.resources.rice >= riceCap(s, content) - 0.01) full++;
+    }
+    for (const r of s.region?.reports ?? []) {
+      if (r.id <= seenReport) continue;
+      seenReport = r.id;
+      if (r.kind !== "defense") continue;
+      raids.defenses++;
+      if (r.win) raids.won++;
+      raids.lostRice += r.lost?.rice ?? 0;
+      raids.lostWood += r.lost?.wood ?? 0;
     }
     for (const b of s.buildings) if (firsts[b.type] === undefined) firsts[b.type] = s.time;
     if (firstIncomeAt === null && RESOURCES.some((r: Resource) => rates(s, content).produced[r] > 0)) firstIncomeAt = s.time;
@@ -230,5 +245,5 @@ export function simulate(content: Content, days: number, seed = 12345): SimResul
       full = 0;
     }
   }
-  return { rows, firsts, firstIncomeAt, unlockTimes, milestones };
+  return { rows, firsts, firstIncomeAt, unlockTimes, milestones, raids };
 }

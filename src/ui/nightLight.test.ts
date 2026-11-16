@@ -3,6 +3,7 @@ import { at, calm, withState } from "../engine/testUtils";
 import { barangayLights, darknessAt, LIGHT_LOOK, NIGHT_BLUE, nightColor, tintAt } from "./nightLight";
 import { planVillagers, goal } from "./villagers";
 import { solidTiles } from "../engine/doors";
+import { newGame, type GameState } from "../engine/game";
 
 describe("the night look", () => {
   it("is one cool blue, white (no change) by day, never orange at dusk", () => {
@@ -34,9 +35,15 @@ describe("the night look", () => {
     }
   });
 
-  it("lights a Kuta's palisade and its lookout", () => {
+  it("lights a Kuta's gate, and a Bantayan's platform; the signal fire when a Bantayan saw raiders", () => {
     const s = withState({ buildings: [at("kuta", 4, 6)], villagers: 2 });
-    expect(barangayLights(s, calm).filter((l) => l.kind === "torch")).toHaveLength(3);
+    expect(barangayLights(s, calm).filter((l) => l.kind === "torch")).toHaveLength(2);
+    const tower = withState({ buildings: [at("bantayan", 1, 4)], villagers: 2 });
+    const fires = (x: GameState) => barangayLights(x, calm).filter((l) => l.kind === "fire").length;
+    const quiet = fires(tower);
+    const region = newGame(calm, 2).region!;
+    const alarm = { ...tower, region: { ...region, incomingRaid: { from: "batong-buhay", strikeAt: 99, landing: { x: 1, y: 4 }, warnedAt: 9, watched: true } } };
+    expect(fires(alarm)).toBe(quiet + 1);
   });
 });
 

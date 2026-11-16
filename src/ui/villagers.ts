@@ -7,6 +7,7 @@ import { isHungry } from "../engine/events";
 import { tileAt, type MapState, type Point } from "../engine/map";
 import { cachedPath, isWalkable } from "../engine/paths";
 import { homeWarriors } from "../engine/region";
+import { sheltered } from "../engine/border";
 import { doorOf, isSolid } from "../engine/doors";
 import { namedGender, type NamedVillager } from "../engine/people";
 import { gatheringSpots, gatherSpot, houseFront } from "../engine/plaza";
@@ -145,6 +146,12 @@ export function planVillagers(state: GameState, content: Content, cap = MAX_SPRI
     const gather = gatherSpot(gathering, j, gatherMax);
     const home = homes[i] ?? (gather ? { x: Math.floor(gather.x), y: Math.floor(gather.y) } : plaza);
     const onWatch = r.role === "work" && watching < watchers ? forts[watching++ % forts.length] : null;
+    // A raid is coming: families whose home is in a Kuta's shelter take refuge there.
+    const refuge = state.region?.incomingRaid && r.role === "idle" ? forts.find((f) => sheltered(content, f, home)) : undefined;
+    if (refuge) {
+      plans.push({ id: j, role: r.role, home: refuge, place: null, homeDoor: door(refuge), placeDoor: null, watch: null, gather });
+      continue;
+    }
     plans.push({ id: j, role: r.role, home, place: r.place, homeDoor: door(homes[i] ? home : null), placeDoor: r.role === "clearing" ? null : door(r.place), watch: onWatch ? door(onWatch) ?? onWatch : null, gather });
   }
   dressPlans(plans, state, content, total, cap);

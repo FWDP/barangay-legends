@@ -111,6 +111,19 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
     mention of the Ifugao alang (Barton 1922) appropriate, or should the entry stay with the
     lowlands?
 
+22. **Bantayan and Kuta** (`content/lore/bantayan.json`, `kuta.json`): the game splits defense into
+    a watchtower at the shore and a palisaded refuge near the datu's house. Is there evidence for
+    precolonial wooden watchtowers (as opposed to Spanish-era stone ones), and for alarms by horn
+    (tambuli), drum, gong and fire? Is the description of Rajah Sulayman's Maynila (1570) fair?
+    No crew sizes or population shares are stated as fact.
+23. **Weapons by tradition** (`src/ui/VillagerLayer.tsx`): Maranao warriors draw a kampilan,
+    Maranao raiders a kris; Tagalog and Visayan warriors a spear, raiders a shield and blade. The
+    Sulu tradition isn't in the game. Are these fair, and what would fit the lowland traditions
+    better (e.g. the kalasag shield, the bangkaw spear)?
+24. **Pangayaw and captives** (`content/lore/mangayaw.json`): the entry says raids historically
+    sought captives (bihag) who became dependents, along with gold and trade goods. Is this
+    accurate and respectfully put?
+
 ### Notes for the future
 
 - **Earth spirits**: if spirits of the ground are added, use precolonial names (for example the
@@ -134,8 +147,6 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 | content/blessings/tikbalang.json | Event (with riddles): the tigbalang (shown as "Tigbalang"; the id stays tikbalang) | Tagalog | Plasencia 1589; Ramos 1971; Eugenio 1994 |
 | content/lore/balete.json | Aklat entry | Tagalog and lowland | Ramos 1971 |
 | content/lore/anito-ng-balete.json (was kapre.json) | Aklat entry: the spirit of the balete, and the colonial origin of the word "kapre" (Spanish cafre, from Arabic kafir) and of the cigar-smoking giant image; drawn as a glow, rustling leaves and a faint shape in the tree | Tagalog and lowland | Plasencia 1589; Scott 1994; Ramos 1971 |
-| content/lore/sandugo.json | Aklat entry | Widespread | Scott 1994 |
-| content/lore/mangayaw.json | Aklat entry | Visayan and others | Scott 1994 |
 | content/lore/babaylan.json | Aklat entry | Visayan / Tagalog | Scott; Brewer 2004; Plasencia |
 | content/lore/anito.json | Aklat entry | Widespread | Scott; Plasencia |
 | content/lore/bathala.json | Aklat entry (story only) | Tagalog | Plasencia; Jocano |
@@ -162,7 +173,11 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 | content/lore/timawa.json | Aklat entry: timawa (Tagalog commoners, Visayan retainers) | Tagalog, Visayan | Plasencia 1589; Scott 1994 |
 | content/lore/alipin.json | Aklat entry: alipin and oripun, dependents (not chattel) | Tagalog, Visayan | Plasencia 1589; Scott 1994 |
 | content/names.json "villagers" | Named villagers' names, split into women's and men's (everyday Tagalog and Visayan words) | Tagalog, Visayan | made up for the game; see the file's note |
-| content/lore/kuta.json and src/ui/buildingArt.ts | Kuta art and lore note: precolonial fortifications (kuta/kota) drawn as a palisade with a gate and a thatched lookout; generic, the same for every tradition | Widespread | Scott 1994 |
+| content/lore/kuta.json and src/ui/buildingArt.ts | Aklat entry and Kuta art: a palisaded refuge (kuta/kota) where people gathered and warriors set out, drawn as a palisaded enclosure with a gate and a thatched shelter inside (no tower); Rajah Sulayman's palisaded Maynila, 1570; generic, the same for every tradition | Widespread | Scott 1994; Relation of the Voyage to Luzon 1570 (Blair and Robertson vol. 3) |
+| content/lore/bantayan.json, content/buildings/bantayan.json and src/ui/buildingArt.ts | Aklat entry, building and art: a bamboo watchtower whose lookouts (bantay) see war boats and raise the alarm (horn, drum, signal fire). Precolonial wooden watchtowers are less documented than the Spanish-era stone ones (left out); see question 22 | Widespread (coastal and riverine) | Scott 1994 |
+| content/lore/mangayaw.json | Aklat entry: raids sought captives (bihag) who became dependents, with gold and trade goods; captives stay abstract in play | Visayan and others | Scott 1994; Alcina 1668 |
+| content/lore/sandugo.json | Aklat entry: an alliance between leaders, possibly between equals (Sikatuna and Legazpi, 1565) | Widespread | Scott 1994; Legazpi 1565 (Blair and Robertson vol. 2) |
+| src/ui/VillagerLayer.tsx (drawKampilan, raiders' kris) | Weapons by tradition: Maranao warriors carry a kampilan, Maranao raiders a kris; others a spear, or a shield and blade | Maranao; lowland | see question 23 |
 | src/ui/buildingArt.ts (healer's hut, fishing landing, woodcutters' camp, Tulay) | Building art: a raised thatched hut with herbs drying under the eaves and clay jars; a bamboo landing with a bangka, a bubo fish trap and a net; cut timber with a bolo in a stump and an adze; a bamboo footbridge. Generic, for every tradition; replaces a fishing rod with a reel, a steel axe and a plant icon | Widespread lowland | Scott 1994 |
 | Interface symbols (see the S prompt summary) | Era check of emoji: no candles (the Dambana's art, a burial jar for mourning), no railway track for the Daan (footprints), no padlock, ring, crown, dove, wrapped present, megaphone or snare drum (a gong is drawn) | n/a | n/a |
 | content/lore/settlement-layout.json and src/engine/plaza.ts | Aklat entry and map layout: precolonial settlements along rivers and coasts in kinship clusters, gathering informally in a clearing by the datu's house (drawn as an irregular open clearing with a fire pit and a shade tree); the town plaza as a Spanish colonial introduction | Widespread lowland | Scott 1994; Reed 1978; Laws of the Indies 1573 |

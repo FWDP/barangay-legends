@@ -330,7 +330,58 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
   // v31 → v32: the Bakunawa's rhythm (worship.ts). An eclipse under way keeps its taps as its
   // strength (every tap counted fully before).
   31: (raw) => ({ ...raw, version: 32, ...(isObject(raw.eclipse) && finiteNonNeg(raw.eclipse.taps) ? { eclipse: { ...raw.eclipse, strength: raw.eclipse.taps } } : {}) }),
+  // v32 → v33: the Bantayan and the reworked Kuta (watch.ts, border.ts). See migrateDefenseV33.
+  32: (raw, content) => migrateDefenseV33(raw, content),
 };
+
+// ---------- The Bantayan and the reworked Kuta (v32 → v33) ----------
+
+/**
+ * Kutas that stand closer to the water (river or sea) than to the Bahay ng Datu become a
+ * Bantayan on the same tile, with the difference in cost refunded; the others stay Kutas (now
+ * the rally point and shelter). A raid on its way keeps its warning, unwatched. The change is
+ * told once: an adviser note (the flag) and a Balita line.
+ */
+export function migrateDefenseV33(raw: RawSave, content: Content): RawSave {
+  const out: RawSave = { ...raw, version: 33 };
+  const kuta = content.buildings.find((d) => d.id === "kuta");
+  const tower = content.buildings.find((d) => d.id === "bantayan");
+  const map = raw.map;
+  if (!kuta || !tower || !isObject(map) || typeof map.tiles !== "string" || !Number.isInteger(map.width) || !Array.isArray(raw.buildings)) return out;
+  const W = map.width as number;
+  const tiles = map.tiles as string;
+  const H = Math.floor(tiles.length / W);
+  const plaza = isObject(map.plaza) && Number.isInteger(map.plaza.x) && Number.isInteger(map.plaza.y) ? { x: map.plaza.x as number, y: map.plaza.y as number } : null;
+  const water: { x: number; y: number }[] = [];
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (tiles[y * W + x] === "r" || tiles[y * W + x] === "s") water.push({ x, y });
+  let converted = 0;
+  const buildings = raw.buildings.map((b) => {
+    if (!isObject(b) || b.type !== "kuta" || !Number.isInteger(b.x) || !Number.isInteger(b.y) || !plaza || water.length === 0) return b;
+    const x = b.x as number;
+    const y = b.y as number;
+    const toWater = Math.min(...water.map((w) => Math.hypot(w.x - x, w.y - y)));
+    if (toWater >= Math.hypot(plaza.x - x, plaza.y - y)) return b;
+    converted++;
+    return { ...b, type: "bantayan" };
+  });
+  if (converted === 0) return { ...out, buildings };
+  // The difference in cost, back to the stores.
+  const resources: RawSave = isObject(raw.resources) ? { ...raw.resources } : {};
+  for (const r of RESOURCES) {
+    const back = Math.max(0, (kuta.cost[r] ?? 0) - (tower.cost[r] ?? 0)) * converted;
+    if (back > 0) resources[r] = (finiteNonNeg(resources[r]) ? resources[r] : 0) + back;
+  }
+  const flags = Array.isArray(raw.flags) ? [...raw.flags] : [];
+  if (!flags.includes("defense-rework")) flags.push("defense-rework");
+  let region = raw.region;
+  if (isObject(region)) {
+    const news = Array.isArray(region.news) ? region.news : [];
+    const id = finiteNonNeg(region.nextNewsId) ? region.nextNewsId : news.length + 1;
+    const time = finiteNonNeg(raw.time) ? raw.time : 0;
+    region = { ...region, news: [...news, { id, time, key: "defenseRework" }], nextNewsId: id + 1 };
+  }
+  return { ...out, buildings, resources, flags, region };
+}
 
 // ---------- Frozen v15 bridge rule (for the v14 → v15 migration only) ----------
 
@@ -1002,7 +1053,13 @@ function parseRegion(raw: unknown, content: Content, player: GameState): RegionS
     truceUntil: finiteNonNeg(raw.truceUntil) ? raw.truceUntil : fresh.truceUntil,
     incomingRaid:
       isObject(incoming) && ids.has(incoming.from as string) && finiteNonNeg(incoming.strikeAt)
-        ? { from: incoming.from as string, strikeAt: incoming.strikeAt, landing: parseLanding(incoming.landing, player.map) }
+        ? {
+            from: incoming.from as string,
+            strikeAt: incoming.strikeAt,
+            landing: parseLanding(incoming.landing, player.map),
+            ...(finiteNonNeg(incoming.warnedAt) && incoming.warnedAt <= incoming.strikeAt ? { warnedAt: incoming.warnedAt } : {}),
+            ...(incoming.watched === true ? { watched: true } : {}),
+          }
         : null,
     nextAiRaidAt: finiteNonNeg(raw.nextAiRaidAt) ? raw.nextAiRaidAt : 0,
     allyCall:

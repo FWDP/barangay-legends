@@ -80,7 +80,7 @@ import {
   type TikbalangTrick,
 } from "./worship";
 
-export const STATE_VERSION = 32;
+export const STATE_VERSION = 33;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */

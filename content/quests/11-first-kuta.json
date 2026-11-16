@@ -1,12 +1,11 @@
 {
   "id": "first-kuta",
   "text": {
-    "en": "Build a Kuta",
-    "fil": "Magtayo ng Kuta"
+    "en": "Build a Kuta near the Bahay ng Datu",
+    "fil": "Magtayo ng Kuta malapit sa Bahay ng Datu"
   },
   "condition": {
-    "type": "built",
-    "building": "kuta",
+    "type": "kutaNearDatu",
     "count": 1
   },
   "reward": {

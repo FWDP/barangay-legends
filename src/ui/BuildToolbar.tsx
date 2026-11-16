@@ -2,7 +2,7 @@
 // Details (description, bonuses, staffing) open in a popover on hover (desktop) or long-press
 // (phone), with a Build button. The row fades at its edges and shows arrows when it
 // overflows. Tabs badge newly unlocked buildings; the adviser's or task's pick glows.
-import { shoreCovered } from "../engine/defense";
+import { shoreWatched } from "../engine/defense";
 import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { RESOURCES, type BuildingDef, type Content } from "../engine/content";
 import { asCost, buildingCost, canAfford, owned, roadCost, staffedBuildings, unreachableWorkplaces, type GameState } from "../engine/game";
@@ -38,7 +38,7 @@ function write(key: string, value: unknown) {
   }
 }
 
-function effectText(b: BuildingDef, content: Content): string {
+function effectText(b: BuildingDef, content: Content, game: GameText, lang: Lang): string {
   const parts: string[] = [];
   if (b.housing) parts.push(`+${b.housing} villager capacity`);
   if (b.storage?.rice) parts.push(`+${b.storage.rice} rice storage`);
@@ -54,7 +54,8 @@ function effectText(b: BuildingDef, content: Content): string {
   }
   if (b.workers) parts.push(`${b.workers} workers`);
   if (b.heals) parts.push(`sick villagers heal ${b.heals.percentFaster}% faster`);
-  if (b.defense) parts.push(`+${b.defense} defense`);
+  if (b.defense) parts.push(fill(game.build.kutaEffect[lang], { radius: content.rules.kuta.shelterRadius, n: content.rules.military.warriorsPerKuta }));
+  if (b.watch) parts.push(fill(game.build.watchEffect[lang], { radius: content.rules.watch.radius }));
   if (b.bridge) parts.push("crosses the river, opening the far bank");
   return parts.join(", ");
 }
@@ -219,7 +220,7 @@ export function BuildToolbar(props: {
       affordable: open && canAfford(state, cost),
       costLine: <CostLine cost={cost} have={state.resources} />,
       missing: Object.keys(missing).length ? costText(missing) : "",
-      details: [b.description, effectText(b, content), bonus && `✨ ${bonus}`, grove].filter((x): x is string => !!x),
+      details: [b.description, effectText(b, content, game, lang), bonus && `✨ ${bonus}`, grove].filter((x): x is string => !!x),
       status: [b.id in staffed ? `× ${count} · ${fill(t.staffed[lang], { staffed: staffed[b.id] })}` : "", noPath[b.id] ? fill(t.noPath[lang], { n: noPath[b.id] }) : ""].filter(Boolean),
       recommended: open && recommend.has(id),
       selected: selected === id,
@@ -418,7 +419,7 @@ export function BuildToolbar(props: {
                 </span>
                 <span className="text-center font-display text-[12px] leading-tight text-amber-950 sm:text-sm">{(defenseMap ? game.defense.mapOn : game.defense.map)[lang].replace(/^🗺️ /, "")}</span>
                 <span className={`mt-auto w-full rounded-md px-1 py-0.5 text-center text-[11px] leading-tight font-semibold sm:text-xs ${defenseMap ? "bg-amber-600 text-white" : "bg-stone-200 text-stone-700"}`}>
-                  {fill(game.defense.legend[lang], { covered: shoreCovered(state, content).covered, total: shoreCovered(state, content).total }).replace(/^🛡️ /, "")}
+                  {fill(game.defense.legend[lang], { covered: shoreWatched(state, content).watched, total: shoreWatched(state, content).total }).replace(/^🛡️ /, "")}
                 </span>
               </button>
             </li>

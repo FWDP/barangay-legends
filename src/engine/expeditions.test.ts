@@ -63,7 +63,7 @@ describe("expedition records: the player's raids", () => {
       const allyDefense = b.allies.filter((a) => a.arrives).reduce((n, a) => n + (a.warriors * m.warrior.defense * d.sandugo.allyDefensePercent) / 100, 0);
       expect(b.defense).toBeCloseTo(m.baseDefense + b.defenders.count * m.warrior.defense + b.kutaBonus + allyDefense, 9);
       expect(report.landing).toEqual(e.landing);
-      expect(report.covered).toBe(b.covered);
+      expect(report.watched).toBe(b.watched);
       expect(report.late).toBe(b.defenders.late);
     }
   });
@@ -158,7 +158,7 @@ describe("expedition records: raids on the player", () => {
     const report = after.region!.reports.at(-1)!;
     const e = after.expeditions.at(-1)!;
     expect(report.kind).toBe("defense");
-    expect(e).toMatchObject({ kind: "raid", side: "in", from: "batong-buhay", to: ME, boat: "karakoa", landing: { x: 1, y: 4 }, reportId: report.id, arriveAt: 660, departAt: 660 - d.aiRaid.warningSeconds });
+    expect(e).toMatchObject({ kind: "raid", side: "in", from: "batong-buhay", to: ME, boat: "karakoa", landing: { x: 1, y: 4 }, reportId: report.id, arriveAt: 660, departAt: 660 - calm.rules.watch.unwatchedWarningSeconds });
     const b = e.battle!;
     expect(b.attackerWins).toBe(!report.win);
     expect(b.defense).toBe(report.defense);
@@ -168,7 +168,7 @@ describe("expedition records: raids on the player", () => {
     expect(b.attackerLosses).toBe(report.theirLosses);
     expect(b.loot).toEqual(report.lost);
     expect(b.defenders.late).toBe(report.late);
-    expect(b.covered).toBe(report.covered);
+    expect(b.watched).toBe(report.watched);
     expect(b.defenders.posts.length).toBeGreaterThan(0);
     expect(b.allies.filter((a) => a.arrives).map((a) => a.id)).toEqual(report.allies ?? []);
     expect(e.party.count).toBe(6);

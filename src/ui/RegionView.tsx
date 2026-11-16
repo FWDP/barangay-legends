@@ -612,7 +612,7 @@ export function NeighborPanel(props: {
         <Stat
           label={game.visit.defenseLabel[lang]}
           value={`🛡️ ${Math.round(theirDefense)}`}
-          note={outlook ? fill(game.visit.shoreline[lang], { covered: outlook.covered, points: outlook.points }) : ""}
+          note={outlook ? fill(game.visit.shoreline[lang], { covered: outlook.watched, points: outlook.points }) : ""}
           tip={game.visit.defenseTip[lang]}
         />
       </div>

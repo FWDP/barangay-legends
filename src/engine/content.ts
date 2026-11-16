@@ -46,8 +46,10 @@ export interface BuildingDef {
   workers?: number;
   /** Villager capacity added per copy. */
   housing?: number;
-  /** Defense added against raids (e.g. a Kuta). */
+  /** The Kuta: the rally point and shelter in a raid; also its share of a barangay's strength in wars between barangays. */
   defense?: number;
+  /** A Bantayan: when staffed, it watches the landing points within rules.watch.radius (watch.ts). */
+  watch?: boolean;
   adjacencyBonus?: AdjacencyBonus;
   /** Where it can be built. Default "cleared" land; a bridge goes on the river. */
   placeOn?: "cleared" | "river";
@@ -94,6 +96,10 @@ export interface Rules {
   map: MapRules;
   clearing: ClearingRules;
   military: MilitaryRules;
+  /** The Bantayan's watch (watch.ts). */
+  watch: { radius: number; watchedWarningSeconds: number; unwatchedWarningSeconds: number; revealUnwatchedSeconds: number };
+  /** The Kuta: the rally, the ready bonus and the shelter (border.ts, region.ts). */
+  kuta: { rallySeconds: number; readySeconds: number; readyBonus: number; shelterRadius: number; shelteredLootPercent: number };
   diplomacy: DiplomacyRules;
   choices: ChoiceRules;
   offline: OfflineRules;
@@ -121,7 +127,7 @@ export interface Rules {
   blocs: { min: number; max: number; independents: number };
   sea: { secondsPerUnit: number; minSeconds: number; raidWarriorsPerBoat: number };
   politics: PoliticsRules;
-  allyDefense: { landSeconds: number; landSecondsPerUnit: number; balangayMinVillagers: number };
+  allyDefense: { landSeconds: number; landSecondsPerUnit: number; balangayMinVillagers: number; tributarySendPercent: number };
   /** An ally raided: its messenger's call for help (region.ts allyCall). */
   allyCalls: { startsAfterSeconds: number; chancePerSecond: number; cooldownSeconds: number; warningSeconds: number; sendPercent: number; renown: number; ignoreTrust: number };
   kabantugan: KabantuganRules;
@@ -443,9 +449,11 @@ export type QuestCondition =
   | { type: "blocMembers"; count: number }
   | { type: "paramount" }
   /** Landing points on the barangay's shore within a standing Kuta's radius (defense.ts). */
-  | { type: "shoreCovered"; count: number };
+  | { type: "shoreWatched"; count: number }
+  /** A standing Kuta whose shelter reaches the Bahay ng Datu. */
+  | { type: "kutaNearDatu"; count: number };
 
-export const QUEST_CONDITIONS = ["built", "villagers", "tilesCleared", "connected", "survivedSeason", "traded", "warriors", "raidsDefended", "tributaries", "aklat", "replanted", "permittedClears", "datuLevel", "voyages", "leadBloc", "blocMembers", "paramount", "shoreCovered"] as const;
+export const QUEST_CONDITIONS = ["built", "villagers", "tilesCleared", "connected", "survivedSeason", "traded", "warriors", "raidsDefended", "tributaries", "aklat", "replanted", "permittedClears", "datuLevel", "voyages", "leadBloc", "blocMembers", "paramount", "shoreWatched", "kutaNearDatu"] as const;
 
 /** One of the Mga Gawain: a task in a chain, with a reward (resources and/or a title for the datu). */
 export interface QuestDef {
@@ -674,10 +682,6 @@ export interface MilitaryRules {
   loserLossPercent: number;
   /** Share of the loser's rice and wood a winning raid carries off as tribute. */
   lootPercent: number;
-  /** A Kuta defends a landing within this many tiles in full... */
-  kutaRadius: number;
-  /** ...and gives this percent of its defense to one farther away. */
-  kutaOutsidePercent: number;
   /** How fast warriors walk to a landing (tiles per second on cleared land; forest is slower). */
   warriorTilesPerSecond: number;
   /** Each Kuta (standing or damaged) allows this many trained Mandirigma. */
@@ -726,11 +730,17 @@ export interface DiplomacyRules {
   aiRaid: {
     chancePerSecond: number;
     cooldownSeconds: number;
-    warningSeconds: number;
     lootPercent: number;
     defendRenown: number;
     /** Raiders land at one of this many river-bank spots nearest the barangay. */
     landingChoices: number;
+    /** How much likelier an unwatched landing is than a watched one, and a cove or river mouth than a plain bank. */
+    unwatchedWeight: number;
+    coveWeight: number;
+    /** Winning raiders take this percent of the loot when allied defenders are on their way. */
+    alliesComingLootPercent: number;
+    /** When raids come: at night and dawn more, by day less; more around season changes, fewer in a typhoon. */
+    timing: { nightDawnFactor: number; dayFactor: number; dawnShare: number; seasonChangeSeconds: number; seasonChangeFactor: number; typhoonFactor: number };
     /** Where winning raiders go for loot (visual): the first of these building types the barangay has. Unknown ids are skipped. */
     lootTargets: string[];
   };
@@ -1010,6 +1020,7 @@ export function validateBuilding(raw: unknown, file = "building"): BuildingDef {
     if (!isNonNegNumber(bonus.percent)) throw new Error(`${file}: "adjacencyBonus.percent" must be a number >= 0`);
   }
   if (raw.defense !== undefined && !isNonNegNumber(raw.defense)) throw new Error(`${file}: "defense" must be a number >= 0`);
+  if (raw.watch !== undefined && raw.watch !== true) throw new Error(`${file}: "watch" must be true if given`);
   if (raw.produces !== undefined && !raw.workers) {
     throw new Error(`${file}: a building that produces needs "workers"`);
   }
@@ -1115,7 +1126,14 @@ export function validateRules(raw: unknown): Rules {
   if (!isObject(military) || !isObject(military.warrior)) throw new Error('rules: missing "military.warrior"');
   checkAmounts(military.warrior.cost, "rules: military.warrior.cost");
   checkNumbers(military.warrior, ["attack", "defense"], "rules: military.warrior");
-  checkNumbers(military, ["baseDefense", "winnerLossPercent", "loserLossPercent", "lootPercent", "kutaRadius", "kutaOutsidePercent"], "rules: military");
+  checkNumbers(military, ["baseDefense", "winnerLossPercent", "loserLossPercent", "lootPercent"], "rules: military");
+  const watch = raw.watch;
+  if (!isObject(watch)) throw new Error('rules: missing "watch"');
+  checkNumbers(watch, ["radius", "watchedWarningSeconds", "unwatchedWarningSeconds"], "rules: watch", true);
+  checkNumbers(watch, ["revealUnwatchedSeconds"], "rules: watch");
+  const kuta = raw.kuta;
+  if (!isObject(kuta)) throw new Error('rules: missing "kuta"');
+  checkNumbers(kuta, ["rallySeconds", "readySeconds", "readyBonus", "shelterRadius", "shelteredLootPercent"], "rules: kuta");
   checkNumbers(military, ["warriorTilesPerSecond"], "rules: military", true);
   checkNumbers(military, ["warriorsPerKuta"], "rules: military");
   if (!isObject(raw.staffing)) throw new Error('rules: missing "staffing"');
@@ -1131,13 +1149,16 @@ export function validateRules(raw: unknown): Rules {
     raid: ["influence", "renown", "trustLossAll", "trustLossTarget", "cooldownSeconds"],
     tribute: ["percent", "everySeconds"],
     loyalty: ["start", "decayPerMinute", "rebelBelow", "rebelInfluence", "guardSeconds", "guardPerMinute"],
-    aiRaid: ["chancePerSecond", "cooldownSeconds", "warningSeconds", "lootPercent", "defendRenown", "landingChoices"],
+    aiRaid: ["chancePerSecond", "cooldownSeconds", "lootPercent", "defendRenown", "landingChoices", "unwatchedWeight", "coveWeight", "alliesComingLootPercent"],
     offers: ["chancePerSecond", "expireSeconds", "give", "receivePercent", "startsAfterSeconds"],
   };
   for (const [section, keys] of Object.entries(sections)) {
     if (!isObject(d[section])) throw new Error(`rules: missing "diplomacy.${section}"`);
     checkNumbers(d[section] as Record<string, unknown>, keys, `rules: diplomacy.${section}`);
   }
+  const timing = (d.aiRaid as Record<string, unknown>).timing;
+  if (!isObject(timing)) throw new Error('rules: missing "diplomacy.aiRaid.timing"');
+  checkNumbers(timing, ["nightDawnFactor", "dayFactor", "dawnShare", "seasonChangeSeconds", "seasonChangeFactor", "typhoonFactor"], "rules: diplomacy.aiRaid.timing");
   const ch = raw.choices;
   if (!isObject(ch)) throw new Error('rules: missing "choices"');
   checkNumbers(ch, ["startsAfterSeconds", "minGapSeconds", "chancePerSecond"], "rules: choices");
@@ -1261,7 +1282,7 @@ export function validateRules(raw: unknown): Rules {
     ["blocs", ["min", "max", "independents"]],
     ["sea", ["secondsPerUnit", "minSeconds", "raidWarriorsPerBoat"]],
     ["politics", ["startsAfterSeconds", "minGapSeconds", "chancePerSecond", "warTickSeconds", "warLossPercent", "joinTrust", "maxGrudge", "leaveTrustLoss", "expelTrustLoss", "solidarityPercent"]],
-    ["allyDefense", ["landSeconds", "landSecondsPerUnit", "balangayMinVillagers"]],
+    ["allyDefense", ["landSeconds", "landSecondsPerUnit", "balangayMinVillagers", "tributarySendPercent"]],
     ["allyCalls", ["startsAfterSeconds", "chancePerSecond", "cooldownSeconds", "warningSeconds", "sendPercent", "renown", "ignoreTrust"]],
   ] as const) {
     const g = raw[key];

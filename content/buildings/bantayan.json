@@ -1,0 +1,29 @@
+{
+  "id": "bantayan",
+  "name": "Bantayan",
+  "description": "A tall bamboo watchtower at the shore or river bank. Its lookouts (bantay) take turns watching for war boats: raiders landing within its sight are seen early, and the alarm is raised.",
+  "icon": "🎋",
+  "order": 5.9,
+  "category": "depensa",
+  "cost": {
+    "wood": 25,
+    "rice": 5
+  },
+  "repairCost": {
+    "wood": 8
+  },
+  "workers": 1,
+  "nightWork": true,
+  "watch": true,
+  "placeNextTo": [
+    "river",
+    "sea"
+  ],
+  "unlock": {
+    "villagers": 10
+  },
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Costs and staffing are playtest guesses (npm run simulate)"
+  ]
+}

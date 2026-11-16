@@ -33,25 +33,50 @@ const DAMBANA = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
 </svg>`;
 
 /**
- * The Kuta: a small enclosure of sharpened timber stakes with a gate, and a raised lookout
- * platform with a thatched roof and a ladder. Generic, for every tradition.
+ * The Kuta: a palisaded enclosure of sharpened timber and bamboo stakes, seen from a little
+ * above, with a gate at the front and a thatched shelter inside. No tower: watching is the
+ * Bantayan's work. Generic, for every tradition.
  */
 const KUTA = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <g stroke="#5b3a1e" stroke-width="1.8"><line x1="40" y1="12" x2="40" y2="44"/><line x1="54" y1="12" x2="54" y2="44"/></g>
-  <rect x="38" y="20" width="18" height="3.5" fill="#a07a45" stroke="#6b4423" stroke-width="0.8"/>
-  <path d="M47 5 L58 13 L36 13 Z" fill="#d4a94e" stroke="#a87c2c" stroke-width="1" stroke-linejoin="round"/>
-  <g stroke="#b38a3a" stroke-width="1" stroke-linecap="round"><line x1="38" y1="13" x2="38" y2="16"/><line x1="42" y1="13" x2="42" y2="16.5"/><line x1="46" y1="13" x2="46" y2="16"/><line x1="50" y1="13" x2="50" y2="16.5"/><line x1="54" y1="13" x2="54" y2="16"/></g>
-  <g stroke="#7a4f2a" stroke-width="1.1"><line x1="33" y1="44" x2="38" y2="22"/><line x1="37" y1="44" x2="42" y2="22"/><line x1="34" y1="38" x2="38.4" y2="38"/><line x1="35.3" y1="32" x2="39.7" y2="32"/><line x1="36.6" y1="26" x2="41" y2="26"/></g>
-  <g fill="#8b5a2b" stroke="#4a2f17" stroke-width="0.8">
-    <path d="M4 60 V36 L6 31 L8 36 V60 Z"/><path d="M8 60 V34 L10 29 L12 34 V60 Z"/><path d="M12 60 V36 L14 31 L16 36 V60 Z"/>
-    <path d="M16 60 V35 L18 30 L20 35 V60 Z"/><path d="M20 60 V36 L22 31 L24 36 V60 Z"/>
-    <path d="M40 60 V36 L42 31 L44 36 V60 Z"/><path d="M44 60 V35 L46 30 L48 35 V60 Z"/><path d="M48 60 V36 L50 31 L52 36 V60 Z"/>
-    <path d="M52 60 V35 L54 30 L56 35 V60 Z"/><path d="M56 60 V36 L58 31 L60 36 V60 Z"/>
+  <ellipse cx="32" cy="57" rx="29" ry="4" fill="#000" opacity="0.15"/>
+  <path d="M8 34 Q32 22 56 34 L56 54 Q32 62 8 54 Z" fill="#c9b07a" stroke="#8a6a35" stroke-width="0.8"/>
+  <path d="M24 37 L32 29 L40 37 Z" fill="#c8a24a" stroke="#9a7428" stroke-width="1" stroke-linejoin="round"/>
+  <rect x="25.5" y="37" width="13" height="6" fill="#b98a4a" stroke="#6b4423" stroke-width="0.7"/>
+  <g fill="#8b5a2b" stroke="#4a2f17" stroke-width="0.7">
+    <path d="M7 34 V24 L9 20 L11 24 V34 Z"/><path d="M11 32 V22 L13 18 L15 22 V32 Z"/><path d="M15 30 V20 L17 16 L19 20 V30 Z"/>
+    <path d="M19 29 V19 L21 15 L23 19 V29 Z"/><path d="M23 28 V18 L25 14 L27 18 V28 Z"/><path d="M27 27 V17 L29 13 L31 17 V27 Z"/>
+    <path d="M31 27 V17 L33 13 L35 17 V27 Z"/><path d="M35 27 V17 L37 13 L39 17 V27 Z"/><path d="M39 28 V18 L41 14 L43 18 V28 Z"/>
+    <path d="M43 29 V19 L45 15 L47 19 V29 Z"/><path d="M47 30 V20 L49 16 L51 20 V30 Z"/><path d="M51 32 V22 L53 18 L55 22 V32 Z"/>
+    <path d="M55 34 V24 L57 20 L59 24 V34 Z"/>
   </g>
-  <rect x="24" y="40" width="16" height="20" fill="#3b2414"/>
-  <g fill="#9a6a35" stroke="#4a2f17" stroke-width="0.6"><rect x="24" y="40" width="5" height="20"/><rect x="35" y="40" width="5" height="20"/></g>
-  <path d="M23 40 H41" stroke="#4a2f17" stroke-width="2"/>
-  <g stroke="#6b4423" stroke-width="1"><line x1="4" y1="46" x2="24" y2="46"/><line x1="40" y1="46" x2="60" y2="46"/></g>
+  <g fill="#9a6a35" stroke="#4a2f17" stroke-width="0.7">
+    <path d="M5 56 V40 L7 35 L9 40 V56 Z"/><path d="M9 58 V42 L11 37 L13 42 V58 Z"/><path d="M13 59 V43 L15 38 L17 43 V59 Z"/>
+    <path d="M17 60 V44 L19 39 L21 44 V60 Z"/><path d="M21 61 V45 L23 40 L25 45 V61 Z"/>
+    <path d="M39 61 V45 L41 40 L43 45 V61 Z"/><path d="M43 60 V44 L45 39 L47 44 V60 Z"/><path d="M47 59 V43 L49 38 L51 43 V59 Z"/>
+    <path d="M51 58 V42 L53 37 L55 42 V58 Z"/><path d="M55 56 V40 L57 35 L59 40 V56 Z"/>
+  </g>
+  <rect x="25" y="46" width="14" height="15" fill="#3b2414"/>
+  <g fill="#7a4f2a" stroke="#4a2f17" stroke-width="0.6"><rect x="25" y="46" width="4" height="15"/><rect x="35" y="46" width="4" height="15"/></g>
+  <path d="M24 46 H40" stroke="#4a2f17" stroke-width="1.8"/>
+  <g stroke="#6b4423" stroke-width="0.9"><line x1="5" y1="48" x2="25" y2="52"/><line x1="39" y1="52" x2="59" y2="48"/></g>
+</svg>`;
+
+/**
+ * The Bantayan: a tall, narrow watchtower of bamboo poles with cross-bracing, a small thatched
+ * platform on top and a long ladder. Built from the old Kuta's lookout.
+ */
+const BANTAYAN = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <ellipse cx="32" cy="61" rx="12" ry="2" fill="#000" opacity="0.18"/>
+  <g stroke="#5b3a1e" stroke-width="2.2" stroke-linecap="round"><line x1="25" y1="18" x2="22" y2="61"/><line x1="39" y1="18" x2="42" y2="61"/></g>
+  <g stroke="#7a5230" stroke-width="1"><line x1="24.5" y1="26" x2="40" y2="40"/><line x1="39.5" y1="26" x2="24" y2="40"/><line x1="23.5" y1="40" x2="41" y2="55"/><line x1="40.5" y1="40" x2="23" y2="55"/></g>
+  <g stroke="#8a6a35" stroke-width="1.2"><line x1="24.6" y1="26" x2="39.4" y2="26"/><line x1="23.9" y1="40" x2="40.1" y2="40"/><line x1="23.2" y1="55" x2="40.8" y2="55"/></g>
+  <rect x="21" y="16" width="22" height="4" rx="0.8" fill="#a07a45" stroke="#6b4423" stroke-width="0.9"/>
+  <g stroke="#8a6a35" stroke-width="0.7"><line x1="23" y1="12" x2="23" y2="16"/><line x1="41" y1="12" x2="41" y2="16"/></g>
+  <path d="M32 2 L46 13 L18 13 Z" fill="#d4a94e" stroke="#a87c2c" stroke-width="1" stroke-linejoin="round"/>
+  <g stroke="#b38a3a" stroke-width="1" stroke-linecap="round"><line x1="20" y1="13" x2="20" y2="16"/><line x1="24" y1="13" x2="24" y2="16.5"/><line x1="28" y1="13" x2="28" y2="16"/><line x1="32" y1="13" x2="32" y2="16.5"/><line x1="36" y1="13" x2="36" y2="16"/><line x1="40" y1="13" x2="40" y2="16.5"/><line x1="44" y1="13" x2="44" y2="16"/></g>
+  <g stroke="#7a4f2a" stroke-width="1.1"><line x1="12" y1="61" x2="20" y2="20"/><line x1="16" y1="61" x2="24" y2="20"/><line x1="13.2" y1="55" x2="17.2" y2="55"/><line x1="14.4" y1="49" x2="18.4" y2="49"/><line x1="15.6" y1="43" x2="19.6" y2="43"/><line x1="16.8" y1="37" x2="20.8" y2="37"/><line x1="18" y1="31" x2="22" y2="31"/><line x1="19.2" y1="25" x2="23.2" y2="25"/></g>
+  <path d="M45 18 l5 -1 l0 6 l-5 -1 z" fill="#c2410c" opacity="0.85"/>
+  <line x1="45" y1="16" x2="45" y2="26" stroke="#5b3a1e" stroke-width="0.8"/>
 </svg>`;
 
 /**
@@ -183,6 +208,7 @@ const url = (svg: string) => `data:image/svg+xml;charset=utf-8,${encodeURICompon
 const ART: Record<string, string> = {
   dambana: url(DAMBANA),
   kuta: url(KUTA),
+  bantayan: url(BANTAYAN),
   "babaylan-hut": url(HEALER_HUT),
   "fishing-dock": url(FISHING_DOCK),
   "woodcutter-camp": url(WOODCUTTER_CAMP),
@@ -219,4 +245,4 @@ export const DAMBANA_ART = ART.dambana;
 export const mapIcon = (def: Pick<BuildingDef, "icon" | "bridge">): string | null => (def.bridge ? null : def.icon);
 
 /** The lore note (content/lore) about how a building with custom art is drawn. */
-export const ART_LORE: Record<string, string> = { dambana: "dambana-art", kuta: "kuta", "babaylan-hut": "babaylan", kamalig: "kamalig" };
+export const ART_LORE: Record<string, string> = { dambana: "dambana-art", kuta: "kuta", bantayan: "bantayan", "babaylan-hut": "babaylan", kamalig: "kamalig" };

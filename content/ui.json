@@ -546,6 +546,14 @@
     "aboutLook": {
       "en": "About this look",
       "fil": "Tungkol sa anyong ito"
+    },
+    "kutaEffect": {
+      "en": "the Mandirigma rally here; shelters within {radius} tiles; room for {n} more Mandirigma",
+      "fil": "dito nagtitipon ang mga Mandirigma; kumakanlong hanggang {radius} tile; puwang para sa {n} pang Mandirigma"
+    },
+    "watchEffect": {
+      "en": "its lookouts see raiders landing within {radius} tiles",
+      "fil": "nakikita ng mga bantay nito ang mananalakay na dadaong hanggang {radius} tile"
     }
   },
   "death": {
@@ -756,6 +764,10 @@
     "overtook": {
       "en": "{barangay} passed {other} in renown.",
       "fil": "Nalampasan ng {barangay} ang {other} sa kabantugan."
+    },
+    "defenseRework": {
+      "en": "The barangay now keeps watch: Kutas near the water became Bantayan watchtowers, and the rest became palisaded Kutas where the Mandirigma rally and families take refuge.",
+      "fil": "Nagbabantay na ngayon ang barangay: naging Bantayan ang mga Kutang malapit sa tubig, at naging nababakurang Kuta ang iba, kung saan nagtitipon ang mga Mandirigma at kumakanlong ang mga pamilya."
     }
   },
   "alliance": {
@@ -960,12 +972,12 @@
       "fil": "Malamang na dadaungan: baybaying {direction}. {cover}"
     },
     "covered": {
-      "en": "Their Kuta covers it in full.",
-      "fil": "Buong sakop ito ng kanilang Kuta."
+      "en": "A Bantayan of theirs watches it: they'll see you coming.",
+      "fil": "Binabantayan ito ng kanilang Bantayan: makikita ka nilang paparating."
     },
     "uncovered": {
-      "en": "No Kuta covers it fully.",
-      "fil": "Walang Kutang buong sumasakop dito."
+      "en": "No Bantayan watches it: they'll have little warning.",
+      "fil": "Walang Bantayang nagbabantay dito: kaunti lamang ang kanilang babala."
     },
     "confirm": {
       "en": "Confirm the raid",
@@ -1008,12 +1020,12 @@
       "fil": "Depensa sa malamang na daungan"
     },
     "shoreline": {
-      "en": "Shoreline covered: {covered} of {points} landing points",
+      "en": "Shoreline watched: {covered} of {points} landing points",
       "fil": "Bantay na baybayin: {covered} sa {points} daungan"
     },
     "defenseTip": {
-      "en": "Defense at likely landing: what a raid today would meet where it lands (the spot the visit preview shows): their warriors who reach it in time, their Kuta (in full only within reach of the landing) and allies who arrive in time. Shoreline covered: how many of the landing points a raid can choose are within a Kuta's reach.",
-      "fil": "Depensa sa malamang na daungan: ang haharapin ng pagsalakay ngayon kung saan ito dadaong (ang lugar na ipinapakita sa pagbisita): ang kanilang mga mandirigmang makararating sa oras, ang kanilang Kuta (buo lamang kung abot nito ang daungan) at mga kakamping darating sa oras. Bantay na baybayin: ilan sa mga daungang mapipili ng pagsalakay ang abot ng isang Kuta."
+      "en": "Defense at likely landing: what a raid today would meet where it lands (the spot the visit preview shows): their warriors who rally at their Kuta and reach it in time, and allies who arrive in time. A Bantayan watching the landing gives them a longer warning. Shoreline watched: how many of the landing points a raid can choose a staffed Bantayan watches.",
+      "fil": "Depensa sa malamang na daungan: ang haharapin ng pagsalakay ngayon kung saan ito dadaong (ang lugar na ipinapakita sa pagbisita): ang kanilang mga mandirigmang nagtitipon sa Kuta at makararating sa oras, at mga kakamping darating sa oras. Mas mahaba ang kanilang babala kung may Bantayang nagbabantay sa daungan. Bantay na baybayin: ilan sa mga daungang mapipili ng pagsalakay ang binabantayan ng Bantayang may bantay."
     }
   },
   "rank": {
@@ -1346,12 +1358,12 @@
       "fil": "Nasawi: {attackers} mananalakay, {defenders} tagapagtanggol."
     },
     "kuta": {
-      "en": "Kuta defense: +{bonus}{cover}",
-      "fil": "Depensa ng Kuta: +{bonus}{cover}"
+      "en": "Defenders ready at the landing: +{bonus}{cover}",
+      "fil": "Handang tagapagtanggol sa daungan: +{bonus}{cover}"
     },
     "covered": {
-      "en": " (the landing was within its reach)",
-      "fil": " (abot nito ang daungan)"
+      "en": " (a Bantayan saw the boats coming)",
+      "fil": " (nakita ng Bantayan ang paparating na bangka)"
     },
     "late": {
       "en": "{n} defenders came too late.",
@@ -1524,44 +1536,28 @@
       "fil": "🗺️ Itago ang mapa ng depensa"
     },
     "mapTip": {
-      "en": "Shows where raiders can land and which landing points your Kutas cover.",
-      "fil": "Ipinapakita kung saan maaaring dumaong ang mananalakay at kung aling daungan ang sakop ng iyong mga Kuta."
+      "en": "Shows where raiders can land, which landing points a Bantayan watches, and how far each Kuta shelters.",
+      "fil": "Ipinapakita kung saan maaaring dumaong ang mananalakay, aling daungan ang binabantayan ng Bantayan, at hanggang saan ang kanlungan ng bawat Kuta."
     },
     "legend": {
-      "en": "🛡️ {covered} of {total} landing points covered",
-      "fil": "🛡️ {covered} sa {total} daungan ang sakop"
+      "en": "🛡️ {covered} of {total} landing points watched",
+      "fil": "🛡️ {covered} sa {total} daungan ang binabantayan"
     },
     "landing": {
       "en": "Landing point",
       "fil": "Daungan"
     },
-    "covered": {
-      "en": "covered by a Kuta",
-      "fil": "sakop ng Kuta"
-    },
-    "uncovered": {
-      "en": "no Kuta in reach",
-      "fil": "walang Kutang abot"
-    },
     "placing": {
-      "en": "🛡️ Covers {covered} of {total} landing points ({left} left uncovered)",
-      "fil": "🛡️ Sakop ang {covered} sa {total} daungan ({left} pa ang walang bantay)"
+      "en": "🎋 Watches {covered} of {total} landing points ({left} left unwatched)",
+      "fil": "🎋 Binabantayan ang {covered} sa {total} daungan ({left} pa ang walang bantay)"
     },
     "placingNone": {
-      "en": "🛡️ Covers no landing point: build nearer the river or beach",
-      "fil": "🛡️ Walang daungang sakop: magtayo nang mas malapit sa ilog o dalampasigan"
+      "en": "🎋 Watches no landing point: build it at the river or beach",
+      "fil": "🎋 Walang daungang nababantayan: itayo ito sa ilog o dalampasigan"
     },
     "noShore": {
       "en": "No shore where raiders can land",
       "fil": "Walang pampang na madadaungan ng mananalakay"
-    },
-    "warnCovered": {
-      "en": "🛡️ A Kuta guards the landing.",
-      "fil": "🛡️ May Kutang nagbabantay sa daungan."
-    },
-    "warnUncovered": {
-      "en": "⚠️ No Kuta at the shore! (Walang Kuta sa dalampasigan!)",
-      "fil": "⚠️ Walang Kuta sa dalampasigan!"
     },
     "showMe": {
       "en": "🗺️ Show me",
@@ -1571,29 +1567,13 @@
       "en": "Close",
       "fil": "Isara"
     },
-    "wonCovered": {
-      "en": "Your Kuta stood by the landing point, and your warriors held the shore.",
-      "fil": "Nakatayo ang iyong Kuta sa daungan, at naipagtanggol ng mga mandirigma ang pampang."
-    },
     "won": {
-      "en": "Your warriors reached the shore in time and drove them off, even with no Kuta near the landing point.",
-      "fil": "Umabot sa pampang ang iyong mga mandirigma at naitaboy sila, kahit walang Kuta malapit sa daungan."
-    },
-    "lateUncovered": {
-      "en": "Your warriors arrived late: no Kuta near the landing point.",
-      "fil": "Huli nang dumating ang iyong mga mandirigma: walang Kuta malapit sa daungan."
-    },
-    "uncovered_": {
-      "en": "No Kuta near the landing point, so its walls barely helped.",
-      "fil": "Walang Kuta malapit sa daungan, kaya halos hindi nakatulong ang mga pader nito."
+      "en": "Your warriors reached the shore in time and drove them off, even with no Bantayan watching.",
+      "fil": "Umabot sa pampang ang iyong mga mandirigma at naitaboy sila, kahit walang Bantayang nagbabantay."
     },
     "late": {
-      "en": "Some of your warriors arrived too late to fight.",
-      "fil": "Huli nang dumating ang ilan sa iyong mga mandirigma."
-    },
-    "lostCovered": {
-      "en": "Your Kuta covered the landing point, but the raiders were too many.",
-      "fil": "Sakop ng iyong Kuta ang daungan, ngunit masyadong marami ang mananalakay."
+      "en": "Some of your warriors arrived too late to fight: a Kuta closer to the shore helps them get there.",
+      "fil": "Huli nang dumating ang ilan sa iyong mga mandirigma: mas makakarating sila kung mas malapit sa pampang ang Kuta."
     },
     "outnumbered": {
       "en": "The raiders outnumbered your defenders at the landing point.",
@@ -1604,16 +1584,16 @@
       "fil": "Gabay sa mapa"
     },
     "legendOpen": {
-      "en": "Landing point, no Kuta in reach",
-      "fil": "Daungan, walang Kutang abot"
+      "en": "Landing point no Bantayan watches",
+      "fil": "Daungang walang Bantayang nagbabantay"
     },
     "legendCovered": {
-      "en": "Landing point a Kuta covers",
-      "fil": "Daungang sakop ng Kuta"
+      "en": "Landing point a Bantayan watches",
+      "fil": "Daungang binabantayan ng Bantayan"
     },
     "legendRange": {
-      "en": "Kuta range",
-      "fil": "Abot ng Kuta"
+      "en": "Kuta shelter",
+      "fil": "Kanlungan ng Kuta"
     },
     "legendLanding": {
       "en": "Where the raiders will land",
@@ -1624,20 +1604,80 @@
       "fil": "Pindutin ang isang marka para sa paliwanag."
     },
     "tipOpen": {
-      "en": "Raiders could land here, and no Kuta is close enough to defend it.",
-      "fil": "Maaaring dumaong dito ang mananalakay, at walang Kutang sapat na malapit para ipagtanggol ito."
+      "en": "Raiders could land here unseen: a short warning, and the landing shows only as their boats come close.",
+      "fil": "Maaaring dumaong dito ang mananalakay nang hindi nakikita: maikling babala, at lalabas lamang ang daungan kapag malapit na ang mga bangka."
     },
     "tipCovered": {
-      "en": "Raiders could land here, but a Kuta is close enough to defend it.",
-      "fil": "Maaaring dumaong dito ang mananalakay, ngunit may Kutang sapat na malapit para ipagtanggol ito."
+      "en": "A Bantayan watches here: raiders landing here are seen early and the alarm is raised.",
+      "fil": "Binabantayan ito ng Bantayan: maagang makikita ang dadaong dito at itataas ang hudyat."
     },
     "tipRange": {
-      "en": "Inside a Kuta's range: a landing here meets its full defense.",
-      "fil": "Saklaw ng isang Kuta: buong lakas ng depensa nito ang sasalubong sa dadaong dito."
+      "en": "Within a Kuta's shelter: families take refuge, and raiders take much less from stores and fields here.",
+      "fil": "Saklaw ng kanlungan ng Kuta: dito kumakanlong ang mga pamilya, at mas kaunti ang makukuha ng mananalakay sa imbak at bukid dito."
     },
     "tipLanding": {
       "en": "The raiders land here today.",
       "fil": "Dito dadaong ang mananalakay ngayong araw."
+    },
+    "watched": {
+      "en": "watched by a Bantayan",
+      "fil": "binabantayan ng Bantayan"
+    },
+    "unwatched": {
+      "en": "no Bantayan watching",
+      "fil": "walang Bantayang nagbabantay"
+    },
+    "placingKuta": {
+      "en": "🛡️ Shelters {n} houses and stores: the Mandirigma rally here",
+      "fil": "🛡️ Kumakanlong sa {n} bahay at imbakan: dito nagtitipon ang mga Mandirigma"
+    },
+    "warnWatched": {
+      "en": "🎋 Your Bantayan saw them early: the alarm is raised.",
+      "fil": "🎋 Maagang nakita sila ng iyong Bantayan: itinaas ang hudyat."
+    },
+    "warnUnwatched": {
+      "en": "⚠️ No Bantayan saw them: little warning, and where they land is unknown until their boats are close.",
+      "fil": "⚠️ Walang Bantayang nakakita sa kanila: kaunting babala, at hindi alam kung saan sila dadaong hanggang malapit na ang mga bangka."
+    },
+    "raidTitle": {
+      "en": "Raid in {time}",
+      "fil": "Pagsalakay sa loob ng {time}"
+    },
+    "raidLands": {
+      "en": "{datu} of {barangay} will land on the {direction} bank (⚔️ on the map).",
+      "fil": "Dadaong si {datu} ng {barangay} sa {direction} pampang (⚔️ sa mapa)."
+    },
+    "raidUnknown": {
+      "en": "{datu} of {barangay} is coming by boat.",
+      "fil": "Paparating si {datu} ng {barangay} sakay ng bangka."
+    },
+    "raidRally": {
+      "en": "Your {n} Mandirigma rally at the Kuta and march out; families near a Kuta take refuge inside. Buildings will stand.",
+      "fil": "Nagtitipon ang iyong {n} Mandirigma sa Kuta at lumalakad palabas; kumakanlong sa loob ang mga pamilyang malapit sa Kuta. Mananatiling nakatayo ang mga gusali."
+    },
+    "raidNoWarriors": {
+      "en": "Train Mandirigma to meet them; families near a Kuta take refuge inside. Buildings will stand.",
+      "fil": "Magsanay ng Mandirigma para salubungin sila; kumakanlong sa loob ang mga pamilyang malapit sa Kuta. Mananatiling nakatayo ang mga gusali."
+    },
+    "wonWatched": {
+      "en": "Your Bantayan saw them early, and your warriors held the shore.",
+      "fil": "Maaga silang nakita ng iyong Bantayan, at naipagtanggol ng mga mandirigma ang pampang."
+    },
+    "lateUnwatched": {
+      "en": "No Bantayan watched the {direction} bank: your warriors were late.",
+      "fil": "Walang Bantayang nagbabantay sa {direction} pampang: huli nang dumating ang iyong mga mandirigma."
+    },
+    "unwatchedReason": {
+      "en": "No Bantayan watched the {direction} bank, so the warning was short.",
+      "fil": "Walang Bantayang nagbabantay sa {direction} pampang, kaya maikli ang babala."
+    },
+    "lostWatched": {
+      "en": "Your Bantayan saw them coming, but the raiders were too many.",
+      "fil": "Nakita sila ng iyong Bantayan, ngunit masyadong marami ang mananalakay."
+    },
+    "sheltered": {
+      "en": "The Kuta's shelter kept most of the stores safe.",
+      "fil": "Iningatan ng kanlungan ng Kuta ang karamihan ng imbak."
     }
   },
   "stockpile": {

@@ -48,9 +48,9 @@ export interface ExpeditionAlly {
 export interface BattleLog {
   defenders: ExpeditionSide & { posts: ExpeditionPost[]; late: number };
   allies: ExpeditionAlly[];
-  /** The Kutas' share of the defense, and whether any Kuta covered the landing in full. */
+  /** The bonus for defenders who got there ready (rules.kuta.readyBonus), and whether a staffed Bantayan watched the landing. */
   kutaBonus: number;
-  covered: boolean;
+  watched: boolean;
   attack: number;
   defense: number;
   /** The attacker's chance to win. */
@@ -169,7 +169,7 @@ export function noteExpedition(before: GameState, after: GameState, content: Con
       ? fight.muster.posts.map((p) => ({ from: { ...p.from }, warriors: p.warriors, seconds: p.seconds, arrives: p.arrives }))
       : [{ from: { ...setup.village.map.plaza }, warriors: fight.defenders, seconds: 0, arrives: true }];
     const allyDefense = fight.allies.filter((a) => a.arrives).reduce((sum, a) => sum + (a.warriors * m.warrior.defense * content.rules.diplomacy.sandugo.allyDefensePercent) / 100, 0);
-    const kutaBonus = fight.muster ? fight.muster.walls : Math.max(0, (report.defense ?? 0) - allyDefense - m.baseDefense - fight.defenders * m.warrior.defense);
+    const kutaBonus = fight.muster ? fight.muster.ready * content.rules.kuta.readyBonus : Math.max(0, (report.defense ?? 0) - allyDefense - m.baseDefense - fight.defenders * m.warrior.defense);
     const sea = crossesSea(before, me, command.neighbor);
     return addExpedition(after, content, {
       kind: "raid",
@@ -187,7 +187,7 @@ export function noteExpedition(before: GameState, after: GameState, content: Con
         defenders: { barangay: command.neighbor, count: fight.defenders, named: [], posts, late: fight.muster?.late ?? 0 },
         allies: fight.allies.map((a) => ({ id: a.id, warriors: a.warriors, eta: a.eta, arrives: a.arrives, by: a.by })),
         kutaBonus,
-        covered: fight.muster?.covered ?? false,
+        watched: fight.muster?.watched ?? false,
         attack: report.attack ?? 0,
         defense: report.defense ?? 0,
         chance: report.chance ?? 0,
@@ -223,7 +223,7 @@ export function defenseExpedition(
   const posts: ExpeditionPost[] = border
     ? border.posts.map((p) => ({ from: { ...p.from }, warriors: p.warriors, seconds: p.seconds, arrives: p.arrives }))
     : [{ from: { ...state.map.plaza }, warriors: result.defenders, seconds: 0, arrives: true }];
-  const kutaBonus = border ? border.walls : Math.max(0, result.defense - m.baseDefense - result.defenders * m.warrior.defense);
+  const kutaBonus = border ? border.ready * content.rules.kuta.readyBonus : Math.max(0, result.defense - m.baseDefense - result.defenders * m.warrior.defense);
   return {
     kind: "raid",
     from: raid.from,
@@ -240,7 +240,7 @@ export function defenseExpedition(
       defenders: { barangay: me, count: result.defenders, named: namedWarriors(state.named, result.defenders), posts, late: border?.late ?? 0 },
       allies: helpers.map((a) => ({ id: a.id, warriors: a.warriors, eta: a.eta, arrives: a.arrives, by: a.by })),
       kutaBonus,
-      covered: border?.covered ?? false,
+      watched: border?.watched ?? false,
       attack: result.attack,
       defense: result.defense,
       chance: result.chance,
@@ -346,7 +346,7 @@ function battle(v: unknown): BattleLog | null {
     defenders: { ...d, posts, late: nonNeg(raw.late) ? Math.floor(raw.late) : 0 },
     allies,
     kutaBonus: n("kutaBonus"),
-    covered: v.covered === true,
+    watched: v.watched === true,
     attack: n("attack"),
     defense: n("defense"),
     chance: Math.min(1, n("chance")),

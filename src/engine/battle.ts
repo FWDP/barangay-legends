@@ -1,12 +1,13 @@
 // The battle at a barangay's border, the same in both directions: AI raiders on the player's
 // shore, and the player's raiders on an AI barangay's. Raiders land on a river bank or beach;
-// the defenders' warriors walk out from their Kutas and fight only if they get there within the
-// raid warning; a Kuta counts in full only if the landing is within its radius; allies who
-// arrive in time add their share. Pure and deterministic (the one roll is passed in), so a
+// the warning is long if a staffed Bantayan watches the landing (watch.ts); the defenders'
+// warriors rally at their Kutas and march out, fighting only if they get there before the
+// raiders strike (ready if with time to spare); allies who arrive in time add their share. Pure and deterministic (the one roll is passed in), so a
 // server can run it for real players later.
 import type { Content } from "./content";
 import type { GameState } from "./game";
-import { borderDefense, chooseLanding, closestLandings, kutaCovers, type Muster } from "./border";
+import { borderDefense, chooseLanding, closestLandings, type Muster } from "./border";
+import { isWatched, warningFor } from "./watch";
 import type { Point } from "./map";
 import { dayAt } from "./daynight";
 import { blocOf } from "./politics";
@@ -32,12 +33,14 @@ export interface BorderBattle {
  * at the landing, the Kutas after their radius and the allies who arrive in time. `roll` is
  * one seeded roll in [0, 1).
  */
-export function borderBattle(defender: GameState, content: Content, landing: Point | null, attackers: number, allies: AllyDefender[], roll: number): BorderBattle {
+export function borderBattle(defender: GameState, content: Content, landing: Point | null, attackers: number, allies: AllyDefender[], roll: number, windowSeconds?: number): BorderBattle {
   const d = content.rules.diplomacy;
   const m = content.rules.military;
   const helping = allies.filter((a) => a.arrives);
   const allyDefense = helping.reduce((sum, a) => sum + (a.warriors * m.warrior.defense * d.sandugo.allyDefensePercent) / 100, 0);
-  const border = landing ? borderDefense(defender, content, landing, d.aiRaid.warningSeconds) : null;
+  // The warning: long if a staffed Bantayan watches the landing, short if not (watch.ts).
+  const window = windowSeconds ?? warningFor(content, isWatched(defender, content, landing));
+  const border = landing ? borderDefense(defender, content, landing, window) : null;
   const defense = (border ? border.defense : defenseOf(defender, content)) + allyDefense;
   const attack = attackOf(attackers, content);
   return {
@@ -56,9 +59,8 @@ export function borderBattle(defender: GameState, content: Content, landing: Poi
  * (landSeconds plus distance); from another island only those big enough to have boats sail.
  * They fight only if they arrive within the raid warning.
  */
-export function alliesComing(region: RegionState, content: Content, to: string, candidates: NeighborState[]): AllyDefender[] {
+export function alliesComing(region: RegionState, content: Content, to: string, candidates: NeighborState[], warning: number): AllyDefender[] {
   const a = content.rules.allyDefense;
-  const warning = content.rules.diplomacy.aiRaid.warningSeconds;
   return candidates
     .filter((n) => n.id !== to && n.state.warriors > 0)
     .map((n) => {
@@ -71,7 +73,9 @@ export function alliesComing(region: RegionState, content: Content, to: string, 
         : n.state.villagers >= a.balangayMinVillagers
           ? travelSeconds(content, region.islands, region.places, n.id, to)
           : null;
-      return { id: n.id, warriors: n.state.warriors, eta, arrives: eta !== null && eta <= warning, by: land ? ("land" as const) : ("sea" as const) };
+      // Tributaries owe military support: they send part of their warriors.
+      const warriors = n.status === "tributary" ? Math.max(1, Math.floor((n.state.warriors * a.tributarySendPercent) / 100)) : n.state.warriors;
+      return { id: n.id, warriors, eta, arrives: eta !== null && eta <= warning, by: land ? ("land" as const) : ("sea" as const) };
     });
 }
 
@@ -96,7 +100,7 @@ export function raidSetup(state: GameState, content: Content, id: string): { vil
   const landing = playerRaidLanding(village, content, raidKey(state, content));
   const bloc = blocOf(region.politics, id);
   const mates = bloc ? region.neighbors.filter((n) => bloc.members.includes(n.id) && n.id !== state.barangay.id) : [];
-  return { village, landing, allies: alliesComing(region, content, id, mates) };
+  return { village, landing, allies: alliesComing(region, content, id, mates, warningFor(content, isWatched(village, content, landing))) };
 }
 
 /** What the diplomacy panel shows about raiding a neighbor, from the same rules as the raid. */
@@ -105,8 +109,8 @@ export interface RaidOutlook {
   landing: Point | null;
   /** The defense there: the base, defenders who'd get there in time, the Kutas after their radius, allies in time. */
   defense: number;
-  /** Of the landing points a raid can pick from, how many a standing Kuta covers in full. */
-  covered: number;
+  /** Of the landing points a raid can pick from, how many a staffed Bantayan watches. */
+  watched: number;
   points: number;
 }
 
@@ -117,7 +121,6 @@ export function raidOutlook(state: GameState, content: Content, id: string): Rai
   // The battle function itself, with no attackers: only its defense is read.
   const fight = borderBattle(setup.village, content, setup.landing, 0, setup.allies, 0);
   const points = closestLandings(setup.village.map, content.rules.diplomacy.aiRaid.landingChoices);
-  const forts = setup.village.buildings.filter((b) => (content.buildings.find((d) => d.id === b.type)?.defense ?? 0) > 0 && !b.damaged);
-  const covered = points.filter((p) => forts.some((k) => kutaCovers(content, k, p))).length;
-  return { landing: setup.landing, defense: fight.defense, covered, points: points.length };
+  const watched = points.filter((p) => isWatched(setup.village, content, p)).length;
+  return { landing: setup.landing, defense: fight.defense, watched, points: points.length };
 }

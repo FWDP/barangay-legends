@@ -12,7 +12,10 @@ import { autoPlaceTile } from "./map";
 import { nearestClearable } from "./clearing";
 import { Rng } from "./rng";
 import { proposeTrade, type CounterOffer, type Proposal } from "./trading";
-import { chooseLanding } from "./border";
+import { chooseLanding, raidLanding, raidWindow, sheltered } from "./border";
+import { isWatched, warningFor } from "./watch";
+import { dayPhaseAt, isNightAt } from "./daynight";
+import { seasonAt } from "./events";
 import { addExpedition, defenseExpedition } from "./expeditions";
 import { alliesComing, borderBattle, raidSetup } from "./battle";
 import type { Point } from "./map";
@@ -115,6 +118,10 @@ export interface IncomingRaid {
   strikeAt: number;
   /** The river-bank tile they land on, where the battle is fought. Missing in older saves. */
   landing?: Point | null;
+  /** When the raid was seen (the warning began); strikeAt minus this is the warning (v33). */
+  warnedAt?: number;
+  /** A staffed Bantayan watched the landing: a long warning, the landing shown at once, the alarm. */
+  watched?: boolean;
 }
 
 /** An ally being raided: its messenger's call for help waits at the Bahay ng Datu until the raid strikes. */
@@ -145,10 +152,12 @@ export interface Report {
   renown?: number;
   /** The player's raids: the share of renown it brings (less for raiding the same barangay again that day). */
   renownFactor?: number;
-  /** Raids on the player: where it was fought, warriors too far away to arrive in time, and whether a Kuta covered the landing. */
+  /** Raids: where it was fought, warriors too far away to arrive in time, and whether a staffed Bantayan watched the landing (v33). */
   landing?: Point;
   late?: number;
-  covered?: boolean;
+  watched?: boolean;
+  /** Raids on the player: the share of the usual loot taken (less with storehouses in a Kuta's shelter or allies on the way), percent. */
+  lootShare?: number;
   /** Allies whose warriors came in time to fight at the landing. */
   allies?: string[];
 }
@@ -637,7 +646,7 @@ export function raid(state: GameState, content: Content, id: string, warriors: n
     loot,
     renown: battle.attackerWins ? d.raid.renown : 0,
     renownFactor,
-    ...(fight.landing && fight.muster ? { landing: fight.landing, late: fight.muster.late, covered: fight.muster.covered } : {}),
+    ...(fight.landing && fight.muster ? { landing: fight.landing, late: fight.muster.late, watched: fight.muster.watched } : {}),
     ...(fight.allies.some((a) => a.arrives) ? { allies: fight.allies.filter((a) => a.arrives).map((a) => a.id) } : {}),
   });
   const i = region.neighbors.findIndex((n) => n.id === id);
@@ -841,8 +850,8 @@ function onRegionSecond(state: GameState, content: Content, second: number, rng:
   if (!region.incomingRaid && second >= region.truceUntil && second >= region.nextAiRaidAt) {
     for (const n of region.neighbors) {
       if (n.status !== "independent" || !traitOf(content, n.id).raids || n.state.warriors < 1) continue;
-      if (rng.next() < d.aiRaid.chancePerSecond) {
-        region = { ...region, incomingRaid: { from: n.id, strikeAt: second + d.aiRaid.warningSeconds, landing: chooseLanding(s, content, second) } };
+      if (rng.next() < d.aiRaid.chancePerSecond * raidTimingFactor(s, content, second)) {
+        region = { ...region, incomingRaid: startRaid(s, content, n.id, second) };
         break;
       }
     }
@@ -896,13 +905,14 @@ function aiRaidStrikes(state: GameState, content: Content, second: number, rng: 
   // Called off if they're no longer hostile or have no warriors left.
   if (!attacker || attacker.status !== "independent" || attacker.state.warriors < 1) return { ...state, region: base };
 
-  const coming = alliedDefenders(state, content).filter((a) => a.id !== attacker.id);
+  const window = raidWindow(state, content);
+  const coming = alliedDefenders(state, content, window).filter((a) => a.id !== attacker.id);
   const helpers = coming.filter((a) => a.arrives);
   // The battle is at the landing (the same border battle as the player's raids): only warriors
-  // who get there in time fight, each Kuta counts in full only if the landing is within its
-  // radius, and allies who arrive in time help.
-  const landing = raid.landing ?? chooseLanding(state, content, raid.strikeAt - d.aiRaid.warningSeconds);
-  const fight = borderBattle(state, content, landing, attacker.state.warriors, coming, rng.next());
+  // who rally at the Kutas and get there before the raiders strike fight, and allies who arrive
+  // in time help.
+  const landing = raidLanding(state, content);
+  const fight = borderBattle(state, content, landing, attacker.state.warriors, coming, rng.next(), window);
   const { attack, defense, battle, defenders } = fight;
   const border = fight.muster ? { muster: fight.muster } : null;
   const ourLosses = casualties(defenders, battle.defenderLossPercent, battle.attackerWins);
@@ -911,8 +921,11 @@ function aiRaidStrikes(state: GameState, content: Content, second: number, rng: 
   let player = loseWarriors(state, ourLosses);
   let them = loseWarriors(attacker.state, theirLosses);
   let lost: Partial<Record<Resource, number>> = {};
+  // Raiders take what they can and leave quickly: less from storehouses and fields in a Kuta's
+  // shelter, and less still if allied defenders are on their way. No villager is ever taken.
+  const share = battle.attackerWins ? raidLootShare(state, content, coming.some((a) => a.eta !== null)) : 0;
   if (battle.attackerWins) {
-    lost = takeShare(player, d.aiRaid.lootPercent);
+    lost = takeShare(player, (d.aiRaid.lootPercent * share) / 100);
     [player, them] = moveGoods(player, them, lost);
   }
   const neighbors = [...base.neighbors];
@@ -930,7 +943,8 @@ function aiRaidStrikes(state: GameState, content: Content, second: number, rng: 
     theirLosses,
     lost,
     renown: battle.attackerWins ? 0 : d.aiRaid.defendRenown,
-    ...(landing && border ? { landing, late: border.muster.late, covered: border.muster.covered } : {}),
+    ...(landing && border ? { landing, late: border.muster.late, watched: border.muster.watched } : {}),
+    ...(battle.attackerWins ? { lootShare: Math.round(share) } : {}),
     ...(helpers.length ? { allies: helpers.map((a) => a.id) } : {}),
   });
   if (!battle.attackerWins) player = { ...player, stats: { ...player.stats, raidsDefended: player.stats.raidsDefended + 1 } };
@@ -938,7 +952,7 @@ function aiRaidStrikes(state: GameState, content: Content, second: number, rng: 
   const record = defenseExpedition(
     state,
     content,
-    { from: attacker.id, departAt: raid.strikeAt - d.aiRaid.warningSeconds, arriveAt: second, landing, attackers: attacker.state.warriors },
+    { from: attacker.id, departAt: raid.strikeAt - window, arriveAt: second, landing, attackers: attacker.state.warriors },
     border?.muster ?? null,
     coming,
     { attack, defense, chance: battle.chance, attackerWins: battle.attackerWins, ourLosses, theirLosses, lost, defenders },
@@ -965,12 +979,56 @@ export interface AllyDefender {
  * those big enough to have boats (balangayMinVillagers) sail, at Balangay speed. Like the
  * player's own warriors, they fight only if they arrive within the raid warning.
  */
-export function alliedDefenders(state: GameState, content: Content): AllyDefender[] {
+export function alliedDefenders(state: GameState, content: Content, window = raidWindow(state, content)): AllyDefender[] {
   const region = state.region;
   if (!region) return [];
   const me = state.barangay.id;
   const myBloc = blocOf(region.politics, me);
-  return alliesComing(region, content, me, region.neighbors.filter((n) => n.status === "ally" || myBloc?.members.includes(n.id)));
+  // Sandugo allies and bloc mates come; tributaries owe military support and send some warriors.
+  return alliesComing(region, content, me, region.neighbors.filter((n) => n.status === "ally" || n.status === "tributary" || myBloc?.members.includes(n.id)), window);
+}
+
+// ---------- Raids on the player: when they come, the warning, the loot ----------
+
+/**
+ * How likely a raid is to set out now, as a factor on aiRaid.chancePerSecond: raids tend to
+ * arrive at night or dawn (the strike time is judged with an unwatched warning), more around a
+ * change of season, fewer while a typhoon is on its way.
+ */
+export function raidTimingFactor(state: GameState, content: Content, second: number): number {
+  const t = content.rules.diplomacy.aiRaid.timing;
+  const { nightTo } = content.rules.dayNight;
+  const strike = second + content.rules.watch.unwatchedWarningSeconds;
+  const phase = dayPhaseAt(content, strike);
+  const dark = isNightAt(content, strike) || (phase >= nightTo && phase < nightTo + t.dawnShare);
+  let f = dark ? t.nightDawnFactor : t.dayFactor;
+  const season = seasonAt(content, second);
+  if (season && (season.elapsed < t.seasonChangeSeconds || season.remaining < t.seasonChangeSeconds)) f *= t.seasonChangeFactor;
+  if (state.typhoon) f *= t.typhoonFactor;
+  return f;
+}
+
+/** A raid sets out from `from` at `second`: where it lands, whether a Bantayan sees it, its warning. */
+export function startRaid(state: GameState, content: Content, from: string, second: number): IncomingRaid {
+  const landing = chooseLanding(state, content, second);
+  const watched = isWatched(state, content, landing);
+  return { from, strikeAt: second + warningFor(content, watched), landing, warnedAt: second, watched };
+}
+
+/**
+ * The share (percent) of the usual loot winning raiders take: storehouses and fields (the
+ * aiRaid.lootTargets types) inside a standing Kuta's shelter give only shelteredLootPercent;
+ * with allied defenders on their way the raiders leave sooner with alliesComingLootPercent.
+ */
+export function raidLootShare(state: GameState, content: Content, alliesOnTheWay: boolean): number {
+  const targets = new Set(content.rules.diplomacy.aiRaid.lootTargets);
+  const stores = state.buildings.filter((b) => targets.has(b.type));
+  const forts = state.buildings.filter((b) => !b.damaged && (content.buildings.find((d) => d.id === b.type)?.defense ?? 0) > 0);
+  const inside = stores.filter((b) => forts.some((k) => sheltered(content, k, b))).length;
+  const k = content.rules.kuta.shelteredLootPercent;
+  let share = stores.length ? ((stores.length - inside) * 100 + inside * k) / stores.length : 100;
+  if (alliesOnTheWay) share = (share * content.rules.diplomacy.aiRaid.alliesComingLootPercent) / 100;
+  return share;
 }
 
 

@@ -9,7 +9,7 @@ const seed = Number(args[1] ?? 12345);
 const every = Math.max(1, Math.round(days / 40));
 const content = loadContent();
 const started = performance.now();
-const { rows, firstIncomeAt, unlockTimes, firsts, milestones } = simulate(content, days, seed);
+const { rows, firstIncomeAt, unlockTimes, firsts, milestones, raids } = simulate(content, days, seed);
 
 const cols: [string, (r: (typeof rows)[number]) => string | number][] = [
   ["Araw", (r) => r.day],
@@ -38,4 +38,7 @@ console.log(`\nFirst automated income: ${firstIncomeAt === null ? "never" : `${M
 console.log(`Unlocks (minutes): ${unlockTimes.map((t) => (t / 60).toFixed(1)).join(", ")}`);
 console.log(`New things in the first hour (minutes): ${milestones.filter((m) => m.t <= 3600).map((m) => `${(m.t / 60).toFixed(1)} ${m.what}`).join(", ")}`);
 console.log(`First built (minutes): ${Object.entries(firsts).map(([k, t]) => `${k} ${(t / 60).toFixed(1)}`).join(", ")}`);
+console.log(
+  `Raids on the barangay: ${raids.defenses}, beaten off ${raids.won} (${raids.defenses ? Math.round((raids.won * 100) / raids.defenses) : 0}%), lost ${raids.lostRice} rice and ${raids.lostWood} wood`,
+);
 console.log(`(${days} days, seed ${seed}, ${((performance.now() - started) / 1000).toFixed(1)} s)`);

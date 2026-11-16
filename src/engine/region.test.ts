@@ -299,9 +299,9 @@ describe("raids on the player", () => {
     expect(s.region!.incomingRaid).toBeNull();
   });
 
-  it("come from aggressive neighbors with a 60-second warning", () => {
+  it("come from aggressive neighbors; with no Bantayan watching, a short warning", () => {
     const s = tick(fed(), surely, 600.5);
-    expect(s.region!.incomingRaid).toMatchObject({ from: "batong-buhay", strikeAt: 600 + d.aiRaid.warningSeconds });
+    expect(s.region!.incomingRaid).toMatchObject({ from: "batong-buhay", warnedAt: 600, watched: false, strikeAt: 600 + content.rules.watch.unwatchedWarningSeconds });
     // They land on a river bank, chosen when the raid starts.
     expect(s.region!.incomingRaid!.landing).toEqual(expect.objectContaining({ x: expect.any(Number), y: expect.any(Number) }));
     expect(s.region!.reports.filter((r) => r.kind === "defense")).toHaveLength(0);
@@ -330,10 +330,11 @@ describe("raids on the player", () => {
     expect(after.region!.nextAiRaidAt).toBe(660 + d.aiRaid.cooldownSeconds);
   });
 
-  it("are beaten back by warriors and walls, which earns renown", () => {
+  it("are beaten back by warriors who get there in time (ready ones fight better), which earns renown", () => {
     const { after, report } = strike({ warriors: 15, villagers: 20 }, 4, true);
     expect(report).toMatchObject({ kind: "defense", win: true });
-    expect(report.defense).toBe(m.baseDefense + 15 * m.warrior.defense);
+    // Close by and with time to spare, all 15 arrive ready.
+    expect(report.defense).toBe(m.baseDefense + 15 * m.warrior.defense + 15 * content.rules.kuta.readyBonus);
     expect(after.region!.renown).toBe(d.aiRaid.defendRenown);
     expect(after.resources).toBeTruthy();
   });

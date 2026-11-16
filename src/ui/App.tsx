@@ -10,10 +10,11 @@ import { BuildToolbar } from "./BuildToolbar";
 import { recommended } from "./buildMenu";
 import { latestReportId, OfferBar, ReportDialog, unseenReport, VictoryDialog } from "./RegionOverlays";
 import { RegionView } from "./RegionView";
-import { activeBanners, EventBanner } from "./EventBanners";
+import { activeBanners, clock, EventBanner } from "./EventBanners";
 import { NoticeStack, StatusIcons, type NoticeView } from "./NoticeStack";
 import { noticeQueue } from "./notices";
-import { landedUncovered, raidReason, raidWarning, type RaidReason } from "../engine/defense";
+import { landedUnwatched, raidWarning } from "../engine/defense";
+import { defenseReasonLine, raidBannerText } from "./defenseText";
 import { FloatLayer, spawnFloat } from "./floats";
 import { baleteWarning, bonusRuleText, costText, groveRuleText, RESOURCE_ICON } from "./format";
 import { GatherButtons } from "./GatherButtons";
@@ -59,9 +60,6 @@ import { DevPanel, devMode } from "./DevPanel";
 
 /** The game's content as loaded (App itself uses it with the tradition's names, below). */
 const content = baseContent;
-
-/** The ui.json defense key for a raid reason ("uncovered" is taken by the map label). */
-const reasonKey = (r: RaidReason) => (r === "uncovered" ? "uncovered_" : r);
 
 const ui = loadUiContent(content);
 
@@ -660,8 +658,14 @@ export function App() {
       [...eventBanners.values()].map((b) => [
         b.id,
         {
-          // The raid warning says whether a Kuta covers the landing.
-          node: <EventBanner banner={b} extra={b.id === "raid" && raidCover ? (raidCover.covered ? ui.game.defense.warnCovered[lang] : ui.game.defense.warnUncovered[lang]) : undefined} danger={!!raidCover && !raidCover.covered} />,
+          // The raid warning: who, where (once known), and whether a Bantayan saw them early.
+          node: (
+            <EventBanner
+              banner={b.id === "raid" ? { ...b, title: fill(ui.game.defense.raidTitle[lang], { time: clock((state.region?.incomingRaid?.strikeAt ?? state.time) - state.time) }), text: raidBannerText(state, content, ui.game, lang) } : b}
+              extra={b.id === "raid" && raidCover ? (raidCover.watched ? ui.game.defense.warnWatched[lang] : ui.game.defense.warnUnwatched[lang]) : undefined}
+              danger={!!raidCover && !raidCover.watched}
+            />
+          ),
           label: `${b.icon} ${b.title}`,
         },
       ]),
@@ -1305,10 +1309,10 @@ export function App() {
         onSeen={setSeenReport}
         hold={clash !== null || away !== null}
         names={(r) => battleNames(r, state, ui.game, lang)}
-        reason={(r) => (r.kind === "defense" ? ui.game.defense[reasonKey(raidReason(r))][lang] : null)}
+        reason={(r) => (r.kind === "defense" ? defenseReasonLine(r, state, ui.game, lang) : null)}
         showLabel={ui.game.defense.showMe[lang]}
         onShowShore={(r) =>
-          landedUncovered(r)
+          landedUnwatched(r)
             ? () => {
                 setSeenReport(r.id);
                 setView("barangay");

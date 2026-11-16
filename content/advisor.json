@@ -1,5 +1,5 @@
 {
-  "_comment": "The datu's elder adviser. 'portrait' is an emoji, or an image in public/art written as '/art/<file>.png'. The tutorial runs in order; a step is done when its 'done' condition holds: {\"event\": \"gather\" | \"menu\" | \"rehiyon\"} (the player gathered, opened a building's menu, opened the Rehiyon map) or {\"built\": \"<building id>\"} (more of that building than the barangay started with). Tips: each line has an id, a trigger id and text in every language. Triggers: dambana (a Babaylan's Hut stands, no Dambana yet), forest-restless (Forest Balance below stage 1), forest-angry (below stage 2), aklat (the first 5 entries aren't found yet), rice-low, food-workers, unstaffed, event-typhoon, event-fire, event-sickness, trade-offer, refused-raids, raid-warning, idle, unlocked, no-path, old-paths, roads, borrowing, rice-full (the rice store is full), kuta-shore (the last raid landed where no Kuta reached, and still none does). Text may use {building}, {neighbor}, {datu}, {seconds}, {direction}, {percent}, {farmers} and {villagers} where the trigger provides them. A line may set \"max\" (1-3) to be shown fewer times. Add more lines for a trigger and the adviser rotates through them; each line is shown at most 3 times.",
+  "_comment": "The datu's elder adviser. 'portrait' is an emoji, or an image in public/art written as '/art/<file>.png'. The tutorial runs in order; a step is done when its 'done' condition holds: {\"event\": \"gather\" | \"menu\" | \"rehiyon\"} (the player gathered, opened a building's menu, opened the Rehiyon map) or {\"built\": \"<building id>\"} (more of that building than the barangay started with). Tips: each line has an id, a trigger id and text in every language. Triggers: dambana (a Babaylan's Hut stands, no Dambana yet), forest-restless (Forest Balance below stage 1), forest-angry (below stage 2), aklat (the first 5 entries aren't found yet), rice-low, food-workers, unstaffed, event-typhoon, event-fire, event-sickness, trade-offer, refused-raids, raid-warning, idle, unlocked, no-path, old-paths, roads, borrowing, rice-full (the rice store is full), bantayan-shore (the last raid landed where no Bantayan watched, and still none watches any landing point), defense-rework (once, after an old save's Kutas were split into Bantayan and Kuta). Text may use {building}, {neighbor}, {datu}, {seconds}, {direction}, {percent}, {farmers} and {villagers} where the trigger provides them. A line may set \"max\" (1-3) to be shown fewer times. Add more lines for a trigger and the adviser rotates through them; each line is shown at most 3 times.",
   "name": "Dalisay",
   "title": {
     "en": "Elder adviser to the datu",
@@ -161,16 +161,16 @@
       "trigger": "raid-warning",
       "max": 1,
       "text": {
-        "en": "Raiders from {neighbor} will land on the {direction} bank in {seconds} seconds! Our warriors go to meet them at the shore, not at the Kuta. A Kuta built near the river bank helps them most.",
-        "fil": "Dadaong ang mga mandarambong mula sa {neighbor} sa pampang sa {direction} sa loob ng {seconds} segundo! Sasalubungin sila ng ating mga mandirigma sa pampang, hindi sa Kuta. Pinakamalaki ang tulong ng Kutang itinayo malapit sa ilog."
+        "en": "Raiders from {neighbor} are coming, Datu, {seconds} seconds away! The Mandirigma rally at the Kuta and march to the shore, and the families near a Kuta take refuge inside. The sooner a Bantayan sees them, the more of our warriors get there in time.",
+        "fil": "Paparating ang mga mananalakay mula sa {neighbor}, Datu, {seconds} segundo na lamang! Nagtitipon ang mga Mandirigma sa Kuta at lumalakad patungong pampang, at kumakanlong sa loob ang mga pamilyang malapit sa Kuta. Habang mas maagang makita sila ng Bantayan, mas maraming mandirigma ang aabot sa oras."
       }
     },
     {
       "id": "raid-warning-1",
       "trigger": "raid-warning",
       "text": {
-        "en": "Warriors of {datu} of {neighbor} are coming in {seconds} seconds! Train Mandirigma and raise a Kuta.",
-        "fil": "Paparating ang mga mandirigma ni {datu} ng {neighbor} sa loob ng {seconds} segundo! Magsanay ng Mandirigma at magtayo ng Kuta."
+        "en": "Warriors of {datu} of {neighbor} are coming in {seconds} seconds! Train Mandirigma, raise a Kuta near the houses, and a Bantayan where raiders land.",
+        "fil": "Paparating ang mga mandirigma ni {datu} ng {neighbor} sa loob ng {seconds} segundo! Magsanay ng Mandirigma, magtayo ng Kuta malapit sa mga bahay, at Bantayan kung saan dumadaong ang mananalakay."
       }
     },
     {
@@ -277,12 +277,21 @@
       }
     },
     {
-      "id": "kuta-shore-1",
-      "trigger": "kuta-shore",
+      "id": "bantayan-shore-1",
+      "trigger": "bantayan-shore",
       "max": 1,
       "text": {
-        "en": "The raiders landed where no Kuta could reach them, Datu. Build a Kuta near the river or the beach, so our warriors meet them at the shore.",
-        "fil": "Dumaong ang mga mananalakay kung saan walang Kutang nakaaabot, Datu. Magtayo ng Kuta malapit sa ilog o dalampasigan, upang salubungin sila ng ating mga mandirigma sa pampang."
+        "en": "The raiders landed where no one was watching, Datu, so our warning came late. Build a Bantayan at the river or the beach, with lookouts to man it, and we will see the next boats coming.",
+        "fil": "Dumaong ang mga mananalakay kung saan walang nagbabantay, Datu, kaya huli ang ating babala. Magtayo ng Bantayan sa ilog o dalampasigan, may bantay na magbabantay, at makikita natin ang mga susunod na bangkang paparating."
+      }
+    },
+    {
+      "id": "defense-rework-1",
+      "trigger": "defense-rework",
+      "max": 1,
+      "text": {
+        "en": "Datu, we have changed how we keep the barangay safe. The Kutas by the water are now Bantayan, watchtowers whose lookouts see raiders coming and raise the alarm. The others are palisaded Kutas near our houses: there the Mandirigma rally, and the families take refuge.",
+        "fil": "Datu, binago natin kung paano iniingatan ang barangay. Ang mga Kutang malapit sa tubig ay Bantayan na ngayon, mga bantayang nakakikita ng paparating na mananalakay at nagtataas ng hudyat. Ang iba ay mga nababakurang Kuta malapit sa ating mga bahay: doon nagtitipon ang mga Mandirigma, at kumakanlong ang mga pamilya."
       }
     }
   ]

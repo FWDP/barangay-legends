@@ -18,7 +18,7 @@ different form, and some (prestige and Dangal, export codes) isn't built yet.
 
 **Built so far**
 
-- **Barangay:** gathering, forest clearing, 12 buildings (including the Kuta, Tulay, Kamalig,
+- **Barangay:** gathering, forest clearing, 13 buildings (including the Bantayan, Kuta, Tulay, Kamalig,
   Fishing Dock, Babaylan's hut, Dambana, Libingan and Balangay Dock), Daan footpaths, villagers who work on
   their own, happiness, named villagers with stories, and gentle deaths with mourning.
 - **Seasons and events:** rainy and dry seasons, typhoons, fires, sickness, hunger and choice
@@ -72,9 +72,18 @@ different form, and some (prestige and Dangal, export codes) isn't built yet.
 - **Panoorin (expedition replays):** each trade and raid (the player's, and AI raids on the
   player) is written down by the engine as a plain record; the newest few can be watched in the
   target's village, or skipped straight to the report. The replay only shows what was decided.
-- **Shore defense and ally calls:** the map shows the landing points raiders pick from and which
-  ones a Kuta covers (also while placing one); raid warnings and defense reports say whether the
-  landing was covered and why the fight went as it did. Sandugo allies and bloc mates can be
+- **Shore defense and ally calls:** a staffed Bantayan (watchtower at the shore) watches the
+  landing points within `rules.watch.radius`: a watched raid gives a long warning, shows its
+  landing at once and sounds the alarm (horn and drum; a signal fire at night); an unwatched one
+  gives a short warning and shows its landing only as the boats come close. The Kuta (palisaded
+  refuge, one tile) is the rally point: the Mandirigma gather there (`rules.kuta.rallySeconds`)
+  and march to the landing; only those in time fight, those with time to spare fight ready.
+  Families within its shelter take refuge, and winning raiders take much less from storehouses
+  and fields there. Raiders prefer unwatched landings, coves and river mouths, come more at night,
+  dawn and season changes and less in typhoons, and leave sooner with less loot when allies are
+  on the way; tributaries send warriors. The Defense map shows watched and unwatched landing
+  points and each Kuta's shelter, with a key. Old saves: Kutas nearer the water than the Bahay ng
+  Datu became Bantayan (v33). Sandugo allies and bloc mates can be
   raided by aggressive neighbors, and a messenger asks the player to send warriors
   (`rules.allyCalls`, the `ally-call` choice event).
 - **Balance:** a gentle building cost curve (`rules.costCurve`), Kamalig levels 2 and 3, a soft

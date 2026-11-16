@@ -128,9 +128,10 @@ describe("workers and production", () => {
       palayan: 2,
       "woodcutter-camp": 2,
       "fishing-dock": 0,
+      bantayan: 0,
     });
     const few = withState({ villagers: 3, buildings: [...plain, at("palayan", 6, 6)] });
-    expect(assignWorkers(few, content)).toEqual({ palayan: 2, "woodcutter-camp": 1, "fishing-dock": 0 });
+    expect(assignWorkers(few, content)).toEqual({ palayan: 2, "woodcutter-camp": 1, "fishing-dock": 0, bantayan: 0 });
   });
 
   it("produces 0.5 rice/s and 0.4 wood/s per worker, minus 0.1 rice/s per villager", () => {
@@ -167,11 +168,12 @@ describe("workers and production", () => {
     // Plenty of rice, so no food-first: plain round-robin.
     const s = withState({ villagers: 5, resources: { rice: 1000, wood: 0, gold: 0 }, buildings: [...many, at("woodcutter-camp", 3, 2), at("bahay-kubo", 5, 3)] });
     // Round-robin: the camp takes 2, the palayan fields take 3 (one full, one half).
-    expect(staffedBuildings(s, content)).toEqual({ palayan: 2, "woodcutter-camp": 1, "fishing-dock": 0 });
+    expect(staffedBuildings(s, content)).toEqual({ palayan: 2, "woodcutter-camp": 1, "fishing-dock": 0, bantayan: 0 });
     expect(staffedBuildings(withState({ villagers: 0, buildings: many }), content)).toEqual({
       palayan: 0,
       "woodcutter-camp": 0,
       "fishing-dock": 0,
+      bantayan: 0,
     });
   });
 });

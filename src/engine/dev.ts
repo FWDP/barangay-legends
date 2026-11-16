@@ -3,7 +3,7 @@
 // one is marked devSave, to keep it apart from real play.
 import { RESOURCES, type Content, type ResourceAmounts } from "./content";
 import { dayPhaseAt, isNightAt } from "./daynight";
-import { chooseLanding } from "./border";
+import { startRaid } from "./region";
 import type { GameState } from "./game";
 import { setTiles, tileAt } from "./map";
 import { addFlag } from "./worship";
@@ -121,7 +121,7 @@ function trigger(state: GameState, content: Content, event: DevEvent): GameState
       const r = state.region;
       const from = r?.neighbors.find((n) => n.status === "independent");
       if (!r || !from || r.incomingRaid) return state;
-      return { ...state, region: { ...r, truceUntil: 0, incomingRaid: { from: from.id, strikeAt: t + content.rules.diplomacy.aiRaid.warningSeconds, landing: chooseLanding(state, content, t) } } };
+      return { ...state, region: { ...r, truceUntil: 0, incomingRaid: startRaid(state, content, from.id, t) } };
     }
     case "offer": {
       const r = state.region;

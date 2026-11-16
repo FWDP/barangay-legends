@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { isWatched } from "./watch";
 import type { Content } from "./content";
 import { apply, tick, type GameState } from "./game";
 import { sameIsland } from "./archipelago";
 import { createRegion, neighborDef, type NeighborState } from "./region";
 import { borderBattle, raidKey, raidOutlook, raidSetup } from "./battle";
-import { closestLandings, kutaCovers } from "./border";
+import { closestLandings } from "./border";
 import { parseSnapshot } from "./save";
 import { raidPreview, villageSnapshot } from "./village";
 import { nextRandom } from "./rng";
@@ -42,7 +43,7 @@ describe("the player's raids use the border battle", () => {
         const after = apply(s, calm, { type: "raid", neighbor: id, warriors: 5 });
         const report = after.region!.reports.at(-1)!;
         expect(report.landing).toEqual(preview.landing);
-        expect(report.covered).toBe(preview.covering.length > 0);
+        expect(report.watched).toBe(preview.watching.length > 0);
         expect(after.expeditions.at(-1)!.landing).toEqual(preview.landing);
       }
     }
@@ -67,8 +68,8 @@ describe("the player's raids use the border battle", () => {
     expect(report.defense! - alone.defense!).toBeCloseTo((10 * m.warrior.defense * d.sandugo.allyDefensePercent) / 100, 9);
     const record = after.expeditions.at(-1)!.battle!;
     expect(record.allies.find((a) => a.id === mate)).toMatchObject({ arrives: true, warriors: 10 });
-    // With almost no warning, they can't get there in time.
-    const short: Content = { ...calm, rules: { ...calm.rules, diplomacy: { ...d, aiRaid: { ...d.aiRaid, warningSeconds: 1 } } } };
+    // With almost no warning (watched or not), they can't get there in time.
+    const short: Content = { ...calm, rules: { ...calm.rules, watch: { ...calm.rules.watch, watchedWarningSeconds: 1, unwatchedWarningSeconds: 1 } } };
     const late = apply(s, short, { type: "raid", neighbor: target, warriors: 6 });
     expect(late.region!.reports.at(-1)!.allies).toBeUndefined();
     expect(late.expeditions.at(-1)!.battle!.allies.find((a) => a.id === mate)?.arrives).toBe(false);
@@ -103,7 +104,7 @@ describe("one battle function for both directions", () => {
     const fight = borderBattle(s, surely, { x: 1, y: 4 }, 6, [], 0);
     expect(report.attack).toBe(fight.attack);
     expect(report.defense).toBeCloseTo(fight.defense, 9);
-    expect(report.covered).toBe(fight.muster!.covered);
+    expect(report.watched).toBe(fight.muster!.watched);
     expect(report.late).toBe(fight.muster!.late);
   });
 });
@@ -129,12 +130,11 @@ describe("the diplomacy panel's raid outlook", () => {
         // …and so does a real raid.
         const report = apply(s, calm, { type: "raid", neighbor: id, warriors: 5 }).region!.reports.at(-1)!;
         expect(report.defense).toBe(outlook.defense);
-        // Shoreline: of the landing points a raid picks from, those a standing Kuta covers.
+        // Shoreline: of the landing points a raid picks from, those a staffed Bantayan watches.
         const points = closestLandings(village.map, d.aiRaid.landingChoices);
-        const forts = village.buildings.filter((b) => b.type === "kuta" && !b.damaged);
         expect(outlook.points).toBe(points.length);
-        expect(outlook.covered).toBe(points.filter((p) => forts.some((k) => kutaCovers(calm, k, p))).length);
-        expect(outlook.covered).toBeLessThanOrEqual(outlook.points);
+        expect(outlook.watched).toBe(points.filter((p) => isWatched(setup.village, calm, p)).length);
+        expect(outlook.watched).toBeLessThanOrEqual(outlook.points);
       }
     }
   });

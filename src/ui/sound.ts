@@ -198,6 +198,16 @@ export const sfx = {
       gong(196, 0.45, 0.3, "effects", 1.4);
     });
   },
+  /** A Bantayan's alarm: two long, low calls of a bamboo horn over a quick drum roll. */
+  alarm() {
+    once("alarm", 3000, () => {
+      for (const start of [0, 0.9]) {
+        tone(175, 168, start, 0.7, "triangle", 0.16);
+        tone(350, 336, start, 0.6, "sine", 0.05);
+      }
+      for (let i = 0; i < 8; i++) noise(0.1 + i * 0.11, 0.12, 140, 1.4, 0.6);
+    });
+  },
   /** Battle drums, then a gong. */
   battleStart() {
     once("battle", 1000, () => {

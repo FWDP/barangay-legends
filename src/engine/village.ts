@@ -10,14 +10,15 @@
 // a GameState serialized like a save, so the visit screen can show a real player's snapshot the
 // same way later. Pure: nothing it is given is changed.
 import type { Content, NeighborDef } from "./content";
-import { newGame, unreachableWorkplaces, warriorCap, type GameState, type PlacedBuilding } from "./game";
+import { newGame, unreachableWorkplaces, warriorCap, type GameState } from "./game";
 import { levelForRenown } from "./kabantugan";
 import type { VillageBand } from "./content";
 import { entranceOf, solidTiles, updateDoors, walkReach } from "./doors";
 import { isReserved } from "./plaza";
 import { canPlace, isPlaza, isReachable, setTiles, tileAt, type Point } from "./map";
 import { findPath } from "./paths";
-import { chooseLanding, kutaCovers } from "./border";
+import { chooseLanding } from "./border";
+import { sees, staffedBantayan } from "./watch";
 import { type NeighborState } from "./region";
 
 /** The village band for a barangay level (rules.villages). */
@@ -53,6 +54,8 @@ export function villagePlan(content: Content, n: NeighborState, def: NeighborDef
   };
   const plan: Record<string, number> = { ...real };
   for (const id of CIVIC) plan[id] = Math.max(real[id] ?? 0, civic[id] ?? 0);
+  // A barangay that keeps a Kuta keeps watch too: a Bantayan at the shore for every two Kutas.
+  if (plan.kuta && content.buildings.some((d) => d.id === "bantayan")) plan.bantayan = Math.max(plan.bantayan ?? 0, Math.ceil(plan.kuta / 2));
   // At least a house and a field: a barangay is never drawn empty.
   plan["bahay-kubo"] = Math.max(1, plan["bahay-kubo"] ?? 0);
   plan.palayan = Math.max(1, plan.palayan ?? 0);
@@ -139,7 +142,7 @@ function layPaths(state: GameState, content: Content, band: VillageBand): GameSt
 }
 
 /** The order buildings are placed in: those with the strictest places first. */
-const ORDER = ["fishing-dock", "balangay-dock", "babaylan-hut", "dambana", "kuta", "kamalig", "bahay-kubo", "palayan", "woodcutter-camp", "libingan"];
+const ORDER = ["fishing-dock", "balangay-dock", "bantayan", "babaylan-hut", "dambana", "kuta", "kamalig", "bahay-kubo", "palayan", "woodcutter-camp", "libingan"];
 
 /** The open ring right around the plaza: kept free for the plaza's crowd. */
 const byPlaza = (plaza: Point, x: number, y: number) => Math.max(Math.abs(x - plaza.x), Math.abs(y - plaza.y)) <= 1;
@@ -164,7 +167,7 @@ function placeAll(state: GameState, content: Content, plan: Record<string, numbe
       let tile: Point | null = null;
       for (let tries = 0; tries < 6 && !tile; tries++) {
         if (forestMap !== s.map) [forest, forestMap] = [distanceTo(s, ["forest", "balete"], 8), s.map];
-        const forts = s.buildings.filter((b) => b.type === "kuta");
+        const forts = s.buildings.filter((b) => b.type === id);
         const score = (x: number, y: number) => {
           const d = Math.hypot(x - plaza.x, y - plaza.y);
           const w = water[y * W + x];
@@ -173,10 +176,15 @@ function placeAll(state: GameState, content: Content, plan: Record<string, numbe
               return w * 2 + d * 0.5;
             case "woodcutter-camp":
               return forest[y * W + x] * 2 + d * 0.3;
-            case "kuta": {
-              // Toward the shore, spread apart.
+            case "bantayan": {
+              // Watchtowers at the shore, spread along it.
               const apart = forts.length ? Math.min(...forts.map((f) => Math.hypot(f.x - x, f.y - y))) : 10;
-              return w * 1.5 + d * 0.3 - Math.min(apart, 8) * 0.6;
+              return w * 3 + d * 0.2 - Math.min(apart, 8) * 0.6;
+            }
+            case "kuta": {
+              // Near the Bahay ng Datu and the houses, a little apart from each other.
+              const apart = forts.length ? Math.min(...forts.map((f) => Math.hypot(f.x - x, f.y - y))) : 10;
+              return d - Math.min(apart, 4) * 0.5;
             }
             case "libingan":
               // Away from the houses, at the edge of the clearing.
@@ -283,12 +291,12 @@ export const villageBuildingCount = (content: Content, n: NeighborState, def: Ne
 
 /**
  * A raid on this village, before it is sent: where the raiders land (one of the landing spots
- * nearest the village, picked with the seeded roll for `key`: see battle.ts raidKey, the same
- * pick the raid itself makes) and the Kutas that would defend it in full there.
+ * nearest the village, picked with the seeded roll for `key`, preferring what no Bantayan
+ * watches: see battle.ts raidKey, the same pick the raid itself makes) and the staffed Bantayan
+ * that would see it coming.
  */
-export function raidPreview(village: GameState, content: Content, key: number): { landing: { x: number; y: number } | null; covering: PlacedBuilding[] } {
+export function raidPreview(village: GameState, content: Content, key: number): { landing: { x: number; y: number } | null; watching: Point[] } {
   const landing = chooseLanding(village, content, key);
-  if (!landing) return { landing: null, covering: [] };
-  const forts = new Set(content.buildings.filter((b) => b.defense).map((b) => b.id));
-  return { landing, covering: village.buildings.filter((b) => forts.has(b.type) && !b.damaged && kutaCovers(content, b, landing)) };
+  if (!landing) return { landing: null, watching: [] };
+  return { landing, watching: staffedBantayan(village, content).filter((t) => sees(content, t, landing)) };
 }

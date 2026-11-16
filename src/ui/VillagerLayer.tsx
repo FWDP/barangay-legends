@@ -53,7 +53,8 @@ import {
 } from "./visitors";
 import { hasDatuUnlock } from "../engine/datu";
 import { alliedDefenders } from "../engine/region";
-import { raidLanding } from "../engine/border";
+import { raidLanding, raidWindow } from "../engine/border";
+import { landingKnown } from "../engine/defense";
 import { solidTiles } from "../engine/doors";
 import { gatheringSpots, houseFront } from "../engine/plaza";
 import { householdOf } from "../engine/household";
@@ -222,6 +223,22 @@ const TAPIS = ["#7f1d1d", "#1e3a8a", "#3f6212", "#7c2d12", "#164e63", "#a16207"]
  * tradition, the tube cloth for both. Children are smaller; elders grey, a little stooped, with a
  * stick. The skirt-or-legs silhouette keeps women and men apart even at 375px.
  */
+/** A kampilan held upright: a dark hilt with a cross-guard and a long blade with a forked tip. */
+function drawKampilan(g: CanvasRenderingContext2D, x: number, hand: number, s: number) {
+  g.fillStyle = "#3f2a16";
+  g.fillRect(x - s * 0.025, hand - s * 0.02, s * 0.05, s * 0.14);
+  g.fillRect(x - s * 0.06, hand - s * 0.03, s * 0.12, s * 0.025);
+  g.fillStyle = "#d6d3d1";
+  g.beginPath();
+  g.moveTo(x - s * 0.025, hand - s * 0.03);
+  g.lineTo(x - s * 0.035, hand - s * 0.78);
+  g.lineTo(x - s * 0.005, hand - s * 0.72);
+  g.lineTo(x + s * 0.02, hand - s * 0.8);
+  g.lineTo(x + s * 0.045, hand - s * 0.03);
+  g.closePath();
+  g.fill();
+}
+
 export function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, tile: number, id: number, role: Look, sprite: Sprite, t: number, alpha = 1, lookIn?: Appearance) {
   const look = lookIn ?? lookFor(id, role);
   const child = look.age === "child";
@@ -383,18 +400,23 @@ export function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, ti
     // A putong (head cloth: red for the barangay's own, blue for another's, gold for allies) and a spear.
     g.fillStyle = role === "defender" ? "#1d4ed8" : role === "ally" ? "#ca8a04" : "#b91c1c";
     g.fillRect(x - s * 0.14, top - s * 0.2, s * 0.28, s * 0.06);
-    g.strokeStyle = "#6b4a1c";
-    g.lineWidth = Math.max(1, s * 0.05);
-    g.beginPath();
-    g.moveTo(x + s * 0.24, y - s * 0.05);
-    g.lineTo(x + s * 0.24, top - s * 0.4);
-    g.stroke();
-    g.fillStyle = "#d6d3d1";
-    g.beginPath();
-    g.moveTo(x + s * 0.24, top - s * 0.55);
-    g.lineTo(x + s * 0.3, top - s * 0.38);
-    g.lineTo(x + s * 0.18, top - s * 0.38);
-    g.fill();
+    if (look.malong) {
+      // Maranao tradition: a kampilan, a long single-edged blade with a forked tip, held upright.
+      drawKampilan(g, x + s * 0.24, top + s * 0.3, s);
+    } else {
+      g.strokeStyle = "#6b4a1c";
+      g.lineWidth = Math.max(1, s * 0.05);
+      g.beginPath();
+      g.moveTo(x + s * 0.24, y - s * 0.05);
+      g.lineTo(x + s * 0.24, top - s * 0.4);
+      g.stroke();
+      g.fillStyle = "#d6d3d1";
+      g.beginPath();
+      g.moveTo(x + s * 0.24, top - s * 0.55);
+      g.lineTo(x + s * 0.3, top - s * 0.38);
+      g.lineTo(x + s * 0.18, top - s * 0.38);
+      g.fill();
+    }
   } else if (raider) {
     // A red head cloth, a long shield and a blade.
     g.fillStyle = "#dc2626";
@@ -406,8 +428,14 @@ export function drawPerson(g: CanvasRenderingContext2D, x: number, y: number, ti
     g.strokeStyle = "#e7e5e4";
     g.lineWidth = Math.max(1, s * 0.05);
     g.beginPath();
-    g.moveTo(x + s * 0.2, top + s * 0.25);
-    g.lineTo(x + s * 0.32, top - s * 0.15);
+    if (look.malong) {
+      // Raiders of the Maranao tradition: a kris, its wavy blade.
+      g.moveTo(x + s * 0.2, top + s * 0.25);
+      for (let k = 1; k <= 4; k++) g.lineTo(x + s * (0.2 + k * 0.03) + (k % 2 ? s * 0.04 : -s * 0.02), top + s * (0.25 - k * 0.1));
+    } else {
+      g.moveTo(x + s * 0.2, top + s * 0.25);
+      g.lineTo(x + s * 0.32, top - s * 0.15);
+    }
     g.stroke();
     if (role === "looter") {
       g.fillStyle = "#a16207";
@@ -629,7 +657,11 @@ export function VillagerLayer(props: {
       const T = c.tile;
       // Plans only change when the game does (ten times a second), not every frame.
       // Warriors go to the landing while a raid is coming and while the battle there plays out.
-      const rally = s.region?.incomingRaid ? raidLanding(s, content) : raid.current && raid.current.retreatAt === undefined ? raid.current.landing : null;
+      // On the alarm the Mandirigma rally at the Kuta first (rules.kuta.rallySeconds), then march
+      // to the landing once it's known; until then they wait at the Kuta.
+      const incomingNow = s.region?.incomingRaid ?? null;
+      const rallied = incomingNow ? s.time - (incomingNow.warnedAt ?? incomingNow.strikeAt - raidWindow(s, content)) >= content.rules.kuta.rallySeconds : false;
+      const rally = incomingNow ? (rallied && landingKnown(s, content) ? raidLanding(s, content) : null) : raid.current && raid.current.retreatAt === undefined ? raid.current.landing : null;
       const rallyKey = rally ? `${rally.x},${rally.y}` : "";
       if (planned.current.state !== s || planned.current.rally !== rallyKey) {
         const plans = planVillagers(s, content, undefined, rally);
@@ -721,9 +753,10 @@ export function VillagerLayer(props: {
         if (b && bp) drawn.push({ x: bp.x, y: bp.y, r: T * 0.7, layer: 0, f: () => drawBoat(g, bp.x, bp.y, T, b.heading ?? Math.PI / 2, "bangka", t) });
 
         const incoming = s.region?.incomingRaid ?? null;
-        const warning = content.rules.diplomacy.aiRaid.warningSeconds;
+        const warning = raidWindow(s, content);
         let scene: { karakoa: { p: Point; heading: number } | null; raiders: Point[]; look: Look; sparks: Point | null } | null = null;
-        const landingNow = incoming ? raidLanding(s, content) : null;
+        // Unwatched raiders are seen only as their boats come close (landingKnown).
+        const landingNow = incoming && landingKnown(s, content) ? raidLanding(s, content) : null;
         if (incoming && landingNow) {
           // The warning: the karakoa sails in and beaches beside the landing, and the raiders
           // wait there. The warriors walk out to meet them (see planVillagers' rally).
@@ -785,6 +818,10 @@ export function VillagerLayer(props: {
           animating = true;
         } else raid.current = null;
         if (scene) {
+          // The raiders' gear follows their own barangay's tradition (a kris for the Maranao).
+          const raiderFrom = raid.current?.from ?? incoming?.from;
+          const raiderTradition = content.neighbors.find((x) => x.id === raiderFrom)?.tradition;
+          const raiderLook: Appearance = { gender: "man", age: "adult", malong: content.traditions.find((x) => x.id === raiderTradition)?.dress === "malong" };
           const k = scene.karakoa && visible(scene.karakoa.p);
           if (k && scene.karakoa) {
             const heading = scene.karakoa.heading;
@@ -794,7 +831,7 @@ export function VillagerLayer(props: {
             const at = person(p);
             const look = scene!.look;
             const sprite: Sprite = { p, moving: !reducedMotion && !scene!.sparks, stride: t * 9 + i };
-            if (at) drawn.push({ x: at.x, y: at.y, f: () => drawPerson(g, at.x, at.y, T, 2000 + i, look, sprite, t) });
+            if (at) drawn.push({ x: at.x, y: at.y, f: () => drawPerson(g, at.x, at.y, T, 2000 + i, look, sprite, t, 1, raiderLook) });
           });
           const sp = scene.sparks && visible(scene.sparks);
           if (sp) drawn.push({ x: sp.x, y: sp.y + T, r: T * 0.8, f: () => drawSparks(g, sp.x, sp.y, T, t) });
@@ -804,9 +841,9 @@ export function VillagerLayer(props: {
       // ---- Allies coming to the landing during a raid warning: on foot from the map's edge,
       // or by boat from the sea. Only those who will make it in time are shown. ----
       const raidNow = s.region?.incomingRaid ?? null;
-      const landAt = raidNow ? raidLanding(s, content) : null;
+      const landAt = raidNow && landingKnown(s, content) ? raidLanding(s, content) : null;
       if (raidNow && landAt) {
-        const warning = content.rules.diplomacy.aiRaid.warningSeconds;
+        const warning = raidWindow(s, content);
         const elapsed = Math.max(0, warning - (raidNow.strikeAt - s.time));
         const target = { x: landAt.x + 0.5, y: landAt.y + 0.5 };
         alliedDefenders(s, content)

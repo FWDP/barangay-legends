@@ -64,6 +64,8 @@ const onAt = (x: number, y: number) => {
  * torches at each Kuta, the Dambana, and a resin torch (sulô) at each dock: fire only, no glass lamps. Damaged buildings stay dark.
  */
 export function barangayLights(state: GameState, content: Content): Light[] {
+  // A raid a Bantayan saw: the lookouts light the signal fire.
+  const alarm = !!state.region?.incomingRaid?.watched;
   const defs = new Map(content.buildings.map((d) => [d.id, d]));
   const { plaza } = state.map;
   const lights: Light[] = [
@@ -81,12 +83,14 @@ export function barangayLights(state: GameState, content: Content): Light[] {
       if (people > 0) lights.push({ p: c, kind: "house", on: onAt(b.x, b.y), seed });
       people -= def.housing ?? 0;
     } else if (def.defense) {
-      // Torches on the palisade by the gate, and one on the lookout platform.
+      // Torches on either side of the palisade's gate.
       lights.push(
-        { p: { x: b.x + 0.15, y: b.y + 0.45 }, kind: "torch", on: onAt(b.x, b.y), seed },
-        { p: { x: b.x + 0.42, y: b.y + 0.55 }, kind: "torch", on: onAt(b.x + 1, b.y), seed: seed + 1 },
-        { p: { x: b.x + 0.75, y: b.y + 0.2 }, kind: "torch", on: onAt(b.x, b.y + 1), seed: seed + 2 },
+        { p: { x: b.x + 0.3, y: b.y + 0.62 }, kind: "torch", on: onAt(b.x, b.y), seed },
+        { p: { x: b.x + 0.7, y: b.y + 0.62 }, kind: "torch", on: onAt(b.x + 1, b.y), seed: seed + 1 },
       );
+    } else if (def.watch) {
+      // The lookouts' small fire on the platform; when they've seen raiders, the signal fire.
+      lights.push({ p: { x: b.x + 0.5, y: b.y + 0.18 }, kind: alarm ? "fire" : "torch", on: alarm ? 0 : onAt(b.x, b.y), seed });
     } else if (def.shrine) {
       lights.push({ p: c, kind: "shrine", on: onAt(b.x, b.y), seed });
     } else if (def.placeNextTo) {

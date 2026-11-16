@@ -271,17 +271,27 @@ describe("adviser and borrowing", () => {
 });
 
 describe("adviser and raids at the shore", () => {
-  it("the first raid warning explains the shore and the Kuta, once", () => {
+  it("the first raid warning explains the rally at the Kuta and the Bantayan, once", () => {
     const base = withState({ resources: { rice: 1000, wood: 0, gold: 0 }, villagers: 2, time: 10 });
     const g = newGame(content, 3);
     const raid = { ...base, map: g.map, region: { ...g.region!, incomingRaid: { from: "batong-buhay", strikeAt: 40, landing: { x: g.map.plaza.x, y: 0 } } } };
     const m = advise(tipsModel(raid), input(raid));
     expect(m.message?.kind === "tip" && m.message.lineId).toBe("raid-shore-1");
-    expect(m.message!.text).toMatch(/north bank/);
-    expect(m.message!.text).toMatch(/Kuta built near the river/);
+    expect(m.message!.text).toMatch(/rally at the Kuta/);
+    expect(m.message!.text).toMatch(/Bantayan/);
     // Next raids use the other lines.
     const again = advise({ ...newModel({ ...NEW_MEMORY, tutorial: "done", shown: { "raid-shore-1": 1 } }, raid, content) }, input(raid));
     expect(again.message?.kind === "tip" && again.message.lineId).not.toBe("raid-shore-1");
+  });
+
+  it("after a raid lands unwatched, suggests a Bantayan once; after an old save's change, explains it once", () => {
+    const g = newGame(content, 3);
+    const base = withState({ resources: { rice: 1000, wood: 0, gold: 0 }, villagers: 2, time: 50 });
+    const report = { id: 1, time: 45, kind: "defense" as const, neighbor: "batong-buhay", win: false, watched: false, landing: { x: 1, y: 4 } };
+    const s = { ...base, region: { ...g.region!, reports: [report] } };
+    expect(advise(tipsModel(s), input(s)).message).toMatchObject({ kind: "tip", lineId: "bantayan-shore-1" });
+    const changed = { ...base, flags: ["defense-rework"] };
+    expect(advise(tipsModel(changed), input(changed)).message).toMatchObject({ kind: "tip", lineId: "defense-rework-1" });
   });
 });
 
