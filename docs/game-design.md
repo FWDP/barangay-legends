@@ -50,6 +50,20 @@ different form, and some (prestige and Dangal, export codes) isn't built yet.
   ng Datu spends Palay, rice wine and Pagkain for happiness, renown and allies' trust. Old saves
   split their rice into Pagkain and Palay and eat Palay without waste for a grace period.
   Labour costs (clearing, warriors, replanting, early buildings) are paid in Pagkain.
+- **War, feuds and peace (W, `engine/warfare.ts`, `feud.ts`, `honor.ts`, `rules.military.battle`,
+  `rules.feud`, `rules.honor`):** battles end when one side's morale breaks; most hurt are
+  wounded (they heal at the healer's hut), deaths are rare and named, and some beaten warriors are
+  held for ransom and always come home. With no Kuta villagers flee into the forest from an
+  overwhelming raid. Deaths leave blood debts: feuds bring vengeance raids (fiercer, a few houses
+  set alight) and cool very slowly; the Make peace flow at the Bahay ng Datu settles them
+  (go-between, blood price in gold, Palay and rice wine for now, then a sandugo, shared Pista or
+  marriage). Breaking a sealed peace costs trust everywhere. Warriors earn honor (batok for
+  Visayan warriors, ornaments elsewhere). Suyak stakes at the shore slow raiders.
+- **A lively barangay (W.6-W.8, `engine/social.ts`, `rules.social`, `rules.bayanihan`):**
+  evenings under the silong and by the fire, music (agong and flutes; kulintang for Maranao),
+  children's play, and a Pista with dancing and guests; free time makes people happier, working
+  all the time tires them. The Bahay Kubo is a house on posts whose ladder is pulled up at night;
+  moving one is bayanihan. New games start with foraging, a Gabihan or Kaingin and a second kubo.
 - **Where villagers come from:** births in a Bahay Kubo (fed, room, happiness) and newcomers
   with a reason (land, marriage, alliance, a trader who stays, kin from a raided ally), told in
   the Balita; children grow up after `rules.population.childDays`, don't work and eat less;
