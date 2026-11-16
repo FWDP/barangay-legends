@@ -1,0 +1,36 @@
+{
+  "id": "games",
+  "name": "Games and children's play",
+  "description": "Children's and adults' games: kicking a woven rattan ball (sipa), a counting game with shells or seeds on a carved board (the name 'sungka' is flagged; an older recorded name is kunggit), a lines-and-runners game (Tagalog tubigan or harangang-taga; Visayan tadlas), jumping games (luksong tinik), wrestling (buno) for Tagalog barangays. Names of Spanish origin are avoided; game names are flagged for review. Some sources found so far are summaries and folklore sites: every detail here waits for a historian's review.",
+  "tradition": "Tagalog, Visayan (names by tradition, flagged)",
+  "sources": [
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)",
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Gilda Cordero-Fernando and Nik Ricio (eds.), Turn of the Century (GCF Books, 1978); later folklore and game collections (names flagged)"
+  ],
+  "aklat": {
+    "order": 78,
+    "icon": "🧶",
+    "name": {
+      "en": "Games and play",
+      "fil": "Mga laro"
+    },
+    "lore": {
+      "en": "Children ran and chased, played hide-and-seek, spun tops, and played a game of lines and runners: in Tagalog it is called tubigan or harangang-taga, in Visayan tadlas. Young people kept a woven rattan ball in the air with their feet and knees (sipa), jumped over a rising barrier of hands (luksong tinik), and wrestled (buno) at feasts. Elders played a counting game, moving shells or seeds around the hollows of a carved board; it is known today as sungka, and an older recorded name is kunggit. The names come from later records and folklore and wait for review.",
+      "fil": "Tumatakbo at naghahabulan ang mga bata, naglalaro ng taguan, nagpapaikot ng laruang kahoy na umiikot, at naglalaro ng laro ng guhit at tumatakbo: tubigan o harangang-taga sa Tagalog, tadlas sa Bisaya. Pinananatili ng kabataan sa himpapawid ang bolang sinalang yantok gamit ang paa at tuhod (sipa), lumulundag sa tumataas na harang ng mga kamay (luksong tinik), at nagbubuno sa mga piging. Naglalaro ang matatanda ng larong pagbibilang, inililipat ang mga kabibe o buto sa mga hukay ng inukit na tabla; kilala ito ngayon bilang sungka, at ang mas lumang naitalang pangalan ay kunggit. Mula sa mga tala at alamat sa kalaunan ang mga pangalan at naghihintay ng pagsusuri."
+    },
+    "inGame": {
+      "en": "By day children play near the houses; at a Pista there are sipa contests and wrestling, written in the winners' stories. No game in Barangay Legends involves betting.",
+      "fil": "Sa araw ay naglalaro ang mga bata malapit sa mga bahay; sa Pista ay may paligsahan sa sipa at buno, na nakasulat sa kuwento ng nagwagi. Walang laro sa Barangay Legends na may pustahan."
+    },
+    "hint": {
+      "en": "Let your people enjoy their evenings.",
+      "fil": "Hayaang masiyahan ang mga tao sa kanilang mga gabi."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "social"
+    }
+  },
+  "reviewed": false
+}

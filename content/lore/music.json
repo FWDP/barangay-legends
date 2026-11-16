@@ -1,0 +1,36 @@
+{
+  "id": "music",
+  "name": "Music and instruments",
+  "description": "Music filled evenings and feasts: bronze gongs (agong), sets of small gongs (kulintang, in Mindanao and Sulu traditions), bamboo flutes and nose flutes, bamboo zithers and drums, as Pigafetta and later writers describe. Some sources found so far are summaries and folklore sites: every detail here waits for a historian's review.",
+  "tradition": "Widespread; kulintang Maranao and other Mindanao traditions",
+  "sources": [
+    "Antonio Pigafetta, The First Voyage Around the World (1521), in Blair and Robertson, The Philippine Islands 1493–1898, vols. 33–34",
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)"
+  ],
+  "aklat": {
+    "order": 76,
+    "icon": "🎶",
+    "name": {
+      "en": "Music and instruments",
+      "fil": "Musika at mga instrumento"
+    },
+    "lore": {
+      "en": "Visitors in 1521 heard music everywhere: women playing sets of gongs, men with drums, and people of all ages with bamboo flutes, nose flutes and zithers. The large bronze gong (agong) marked feasts and gatherings. In Mindanao and Sulu, rows of small gongs on a carved frame (the kulintang) became an art of their own, still played by the Maranao and others today. Bronze gongs came by trade and were treasured heirlooms.",
+      "fil": "Saanman ay may naririnig na musika ang mga dayuhan noong 1521: mga babaeng tumutugtog ng mga gong, mga lalaking may tambol, at mga tao sa lahat ng edad na may plawtang kawayan, plawtang ilong at kawayang may kuwerdas. Minamarkahan ng malaking gong na tanso (agong) ang mga piging at pagtitipon. Sa Mindanao at Sulu, naging sariling sining ang hanay ng maliliit na gong sa inukit na balangkas (kulintang), na tinutugtog pa rin ng mga Maranao at iba pa ngayon. Dumating sa kalakalan ang mga gong na tanso at itinuring na mahahalagang pamana."
+    },
+    "inGame": {
+      "en": "In the evening some villagers play the agong and bamboo flutes by the fire (a kulintang in Maranao barangays), and soft music joins the night's sound. Never while the barangay mourns.",
+      "fil": "Sa gabi, may ilang tumutugtog ng agong at plawtang kawayan sa tabi ng apoy (kulintang sa mga barangay na Maranao), at sumasama ang mahinang musika sa tunog ng gabi. Hindi kailanman habang nagluluksa ang barangay."
+    },
+    "hint": {
+      "en": "Spend an evening by the fire.",
+      "fil": "Magpalipas ng gabi sa tabi ng apoy."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "fireside-lesson"
+    }
+  },
+  "reviewed": false
+}

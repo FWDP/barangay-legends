@@ -698,7 +698,7 @@ export function raid(state: GameState, content: Content, id: string, warriors: n
   const i = region.neighbors.findIndex((n) => n.id === id);
   const neighbors = [...region.neighbors];
   neighbors[i] = next;
-  return checkVictory({ ...player, region: { ...region, neighbors } });
+  return checkVictory(warFlags({ ...player, region: { ...region, neighbors } }));
 }
 
 /** Send warriors to guard a tributary for a while: they're away from home, and its loyalty rises. */
@@ -1040,7 +1040,7 @@ function aiRaidStrikes(state: GameState, content: Content, second: number, rng: 
     { attack, defense, chance: battle.chance, attackerWins: battle.attackerWins, ourLosses, theirLosses, lost, defenders },
     next.nextReportId - 1,
   );
-  return addExpedition({ ...player, region: next }, content, record);
+  return addExpedition(warFlags({ ...player, region: next }), content, record);
 }
 
 // ---------- Allies at the border ----------
@@ -1697,7 +1697,7 @@ export function mediate(state: GameState, content: Content, id: number, by: Medi
   const roll = rollAt(state.map.seed, Math.floor(state.time) * 16 + f.id, SALT_MEDIATE);
   const ok = roll < mediationChance(state, content, f, by);
   const next: Feud = ok ? { ...f, mediated: { by, at: state.time }, price: bloodPrice(content, f) } : { ...f, failedAt: state.time };
-  return { ...state, region: replaceFeud(state.region!, next) };
+  return addFlag({ ...state, region: replaceFeud(state.region!, next) }, "mediation");
 }
 
 export type PriceOutcome = "paid" | "countered" | "short" | "blocked";
@@ -1784,4 +1784,14 @@ export function sealPeace(state: GameState, content: Content, id: number, by: Se
   };
   region = addNews(region, { time: state.time, key: "feud-settled", barangay: me, other: otherId });
   return addFlag({ ...player, region }, "peace-made");
+}
+
+/** Aklat entries met in war (W.9): a battle fought, warriors held for ransom, a feud with the player. */
+function warFlags(state: GameState): GameState {
+  const me = state.barangay.id;
+  const flags = new Set(state.flags);
+  flags.add("raid-fought");
+  if (state.region?.captives?.length) flags.add("captives");
+  if (feudsOf(state.region!).feuds.some((f) => f.wronged === me || f.offender === me)) flags.add("feud");
+  return flags.size === state.flags.length ? state : { ...state, flags: [...flags] };
 }

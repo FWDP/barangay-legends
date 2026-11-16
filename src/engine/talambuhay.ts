@@ -295,6 +295,7 @@ export function noteLifeEvents(prev: GameState, next: GameState, content: Conten
       if (gained.levels > 0) {
         s = noteLife(s, content, v.resident, { kind: "honored", level: honorLevel(content, gained.v.honor), from: r.neighbor });
         s = { ...s, kabantugan: s.kabantugan + gained.levels * content.rules.honor.renownPerLevel };
+        s = addFlag(s, "honored");
       }
     }
   }
@@ -366,7 +367,7 @@ export function noteSocialMoments(prev: GameState, next: GameState, content: Con
     if (!v || v.resident === undefined) continue;
     // Someone else in it: a friend whose wedding it was, for the agong.
     const friend = m.moment === "agong" ? s.named.find((x) => x.id !== v.id && x.resident !== undefined) : undefined;
-    s = noteLife(s, content, v.resident, { kind: "social", moment: m.moment, ...(friend ? { other: friend.resident, otherName: friend.name } : {}) });
+    s = addFlag(noteLife(s, content, v.resident, { kind: "social", moment: m.moment, ...(friend ? { other: friend.resident, otherName: friend.name } : {}) }), "social");
   }
   return s;
 }

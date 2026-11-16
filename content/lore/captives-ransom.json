@@ -1,0 +1,36 @@
+{
+  "id": "captives-ransom",
+  "name": "Captives and ransom",
+  "description": "Wounded or cornered enemies were often taken and ransomed back by their families with gold or valuables. Historically captives who were not ransomed could become dependents (alipin) of their captors; in the game nobody is enslaved: captives always return home. Some sources found so far are summaries and folklore sites: every detail here waits for a historian's review.",
+  "tradition": "Widespread",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Laura Lee Junker, Raiding, Trading, and Feasting: The Political Economy of Philippine Chiefdoms (University of Hawai'i Press, 1999)",
+    "Juan de Plasencia, Customs of the Tagalogs (1589), in Blair and Robertson, The Philippine Islands 1493–1898, vol. 7"
+  ],
+  "aklat": {
+    "order": 71,
+    "icon": "🔗",
+    "name": {
+      "en": "Captives and ransom",
+      "fil": "Bihag at tubos"
+    },
+    "lore": {
+      "en": "A raid often ended with captives: wounded or cornered fighters, and sometimes others caught in the village. Their families could ransom them back with gold, valuables or goods, and many were. Those who were not ransomed could become dependents (alipin) of the household that took them, owing it work; in time some could buy their freedom or marry into the family. This was a harsh part of life in the islands, and the accounts say so plainly.",
+      "fil": "Madalas na nagtatapos ang pagsalakay sa pagkakaroon ng bihag: mga sugatan o nakorner na mandirigma, at kung minsan ay ibang nahuli sa nayon. Maaaring tubusin sila ng kanilang pamilya ng ginto, mahahalagang bagay o kalakal, at marami ang natubos. Ang hindi natubos ay maaaring maging alipin ng sambahayang humuli sa kanila, na may utang na trabaho; sa paglipas ng panahon, may ilang nakabili ng kalayaan o naging bahagi ng pamilya sa pag-aasawa. Malupit na bahagi ito ng buhay sa kapuluan, at tahasan itong sinasabi ng mga ulat."
+    },
+    "inGame": {
+      "en": "Some beaten warriors are held for ransom. Pay it from the report to bring yours home at once; either way captives always come home in time. Nobody is enslaved in the game.",
+      "fil": "May ilang natalong mandirigma na hinahawakan para sa tubos. Bayaran ito mula sa ulat para agad na makauwi ang inyo; anuman ang mangyari, laging nakauuwi ang mga bihag. Walang inaalipin sa laro."
+    },
+    "hint": {
+      "en": "Have warriors held after a battle.",
+      "fil": "Magkaroon ng bihag pagkatapos ng labanan."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "captives"
+    }
+  },
+  "reviewed": false
+}

@@ -1,0 +1,36 @@
+{
+  "id": "blood-price",
+  "name": "Mediation and blood price",
+  "description": "Feuds were settled through respected go-betweens and a negotiated blood price (bayad sa dugo), historically paid in heirloom goods such as bronze gongs, Chinese porcelain jars and fine textiles, with gold and other valuables. Some sources found so far are summaries and folklore sites: every detail here waits for a historian's review.",
+  "tradition": "Widespread (Tagalog, Visayan)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Juan de Plasencia, Customs of the Tagalogs (1589), in Blair and Robertson, The Philippine Islands 1493–1898, vol. 7",
+    "Laura Lee Junker, Raiding, Trading, and Feasting: The Political Economy of Philippine Chiefdoms (University of Hawai'i Press, 1999)"
+  ],
+  "aklat": {
+    "order": 73,
+    "icon": "⚖️",
+    "name": {
+      "en": "Mediation and the blood price",
+      "fil": "Pamamagitan at bayad sa dugo"
+    },
+    "lore": {
+      "en": "To end a feud, both sides first had to agree to talk. A respected go-between carried the talks: an elder, a ritual specialist, or a datu trusted by both. Then a blood price (bayad sa dugo) was agreed for the dead, larger for people of rank. It was paid together by the offender's kin and community, historically in heirloom goods: bronze gongs, Chinese porcelain jars, fine textiles, along with gold and other valuables. Accepting it meant the debt was paid.",
+      "fil": "Para wakasan ang alitan, kailangan munang pumayag ang dalawang panig na mag-usap. Isang iginagalang na tagapamagitan ang nagdadala ng usapan: isang matanda, isang dalubhasa sa ritwal, o isang datung pinagkakatiwalaan ng dalawa. Pagkatapos ay pinagkakasunduan ang bayad sa dugo para sa mga namatay, mas malaki para sa may katayuan. Sama-sama itong binabayaran ng kamag-anak at pamayanan ng nagkasala, noon ay sa mga pamanang kalakal: mga gong na tanso, mga bangang porselana mula sa Tsina, magagandang tela, kasama ang ginto at iba pang mahahalagang bagay. Ang pagtanggap dito ay nangangahulugang bayad na ang utang."
+    },
+    "inGame": {
+      "en": "At the Bahay ng Datu: choose a go-between, then agree the blood price (for now paid in gold, Palay and rice wine; heirloom goods may come later), then seal the peace.",
+      "fil": "Sa Bahay ng Datu: pumili ng tagapamagitan, pagkatapos ay magkasundo sa bayad sa dugo (sa ngayon ay ginto, Palay at tapay; maaaring idagdag ang mga pamanang kalakal sa susunod), saka pagtibayin ang kapayapaan."
+    },
+    "hint": {
+      "en": "Send a go-between to end a feud.",
+      "fil": "Magpadala ng tagapamagitan para wakasan ang alitan."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "mediation"
+    }
+  },
+  "reviewed": false
+}

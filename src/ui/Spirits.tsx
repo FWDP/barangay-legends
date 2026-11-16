@@ -11,6 +11,7 @@ import { Moon } from "./Moon";
 import { useReducedMotion } from "./VillagerLayer";
 import { ART_LORE, buildingArtUrl, DAMBANA_ART } from "./buildingArt";
 import { RESOURCE_ART } from "./resourceArt";
+import { SOCIAL_ART } from "./socialArt";
 import { clock } from "./EventBanners";
 import { costText, RESOURCE_ICON } from "./format";
 import type { Lang } from "./settings";
@@ -600,6 +601,9 @@ const LORE_ART: Record<string, string | null | undefined> = {
   "palay-prestige": RESOURCE_ART.rice,
   "pista-tapay": RESOURCE_ART.wine,
   "food-storage": buildingArtUrl("kamalig"),
+  music: SOCIAL_ART.agong,
+  games: SOCIAL_ART.sipa,
+  "feasts-social": RESOURCE_ART.wine,
 };
 
 function AklatIcon({ id, icon }: { id: string; icon: string }) {

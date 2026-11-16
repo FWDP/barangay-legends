@@ -1,0 +1,36 @@
+{
+  "id": "feasts-social",
+  "name": "Feasts as social life",
+  "description": "Feasts (and the drinking and music that came with them) were the center of social life and politics: hosts gained standing by generosity, alliances were made, and debts and marriages arranged. Some sources found so far are summaries and folklore sites: every detail here waits for a historian's review.",
+  "tradition": "Widespread",
+  "sources": [
+    "Laura Lee Junker, Raiding, Trading, and Feasting: The Political Economy of Philippine Chiefdoms (University of Hawai'i Press, 1999)",
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Antonio Pigafetta, The First Voyage Around the World (1521), in Blair and Robertson, The Philippine Islands 1493–1898, vols. 33–34"
+  ],
+  "aklat": {
+    "order": 80,
+    "icon": "🍲",
+    "name": {
+      "en": "Feasts and the life of the barangay",
+      "fil": "Mga piging at buhay ng barangay"
+    },
+    "lore": {
+      "en": "Feasts were where a barangay's life came together. A datu or a family gained standing by feeding many guests; neighbors and allies came to eat and drink, marriages and alliances were arranged, disputes talked through, and music, dancing, games and storytelling went on into the night. Life was not only work: early visitors wrote of communities full of song, feasting and visiting.",
+      "fil": "Sa mga piging nagsasama-sama ang buhay ng barangay. Nagkakaroon ng katayuan ang datu o pamilya sa pagpapakain sa maraming panauhin; dumarating ang mga kapitbahay at kakampi para kumain at uminom, inaayos ang mga kasal at alyansa, pinag-uusapan ang mga alitan, at nagpapatuloy hanggang hatinggabi ang musika, sayaw, laro at kuwentuhan. Hindi lamang trabaho ang buhay: isinulat ng mga unang dayuhan ang mga pamayanang puno ng awit, piging at dalawan."
+    },
+    "inGame": {
+      "en": "A barangay with time for evening life is happier; one where everyone works all the time tires (Pagod na ang mga tao). Crowded feasts spread sickness a little faster.",
+      "fil": "Mas masaya ang barangay na may panahon para sa buhay sa gabi; napapagod ang barangay na puro trabaho (Pagod na ang mga tao). Bahagyang bumibilis ang pagkalat ng sakit sa siksikang piging."
+    },
+    "hint": {
+      "en": "Hold a Pista.",
+      "fil": "Magdaos ng Pista."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "pista"
+    }
+  },
+  "reviewed": false
+}

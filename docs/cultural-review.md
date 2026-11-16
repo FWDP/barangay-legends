@@ -174,6 +174,29 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
     name the house differently)? How far back is carrying a house together documented (it is well
     known from later records and art)? Are the house's parts (haligi, amakan, hagdan, silong,
     batalan) fair for the Tagalog and Visayan barangays?
+37. **War, captives and feuds** (`content/lore/raiding.json`, `captives-ransom.json`,
+    `blood-debts.json`, `blood-price.json`, `peace-rituals.json`, engine/warfare.ts and feud.ts):
+    is it fair that raids sought goods, captives and prestige and that battles ended when one side
+    broke? Is the honest note that unransomed captives could become dependents (alipin) well put?
+    Is "utang na dugo" and "bayad sa dugo" right for the Tagalog and Visayan barangays, and are
+    the heirloom goods (gongs, porcelain, fine textiles) named as the historical blood price fair?
+    The game avoids "wergild" (Germanic) and "adat" (Muslim and Malay contexts) for Tagalog and
+    Visayan barangays.
+38. **The mourning raid** (`engine/region.ts` mourningRaid): an AI barangay may raid a rival after
+    its datu dies (a Visayan practice). Is the practice and its name well sourced, and should it
+    be limited to Visayan barangays?
+39. **Honor marks** (`content/traditions/*.json` honorMark, `content/lore/warrior-honor.json`):
+    batok for Visayan warriors; gold ornaments for Tagalog and Maranao warriors. What did each
+    tradition actually use (e.g. colored headcloths)?
+40. **Music, dances, games and betel** (`content/lore/music.json`, `dances.json`, `games.json`,
+    `betel.json`, `feasts-social.json`, `cockfighting.json`): sources found so far include summaries
+    and folklore sites. Game names by tradition: tubigan or harangang-taga (Tagalog) and tadlas
+    (Visayan) for the lines-and-runners game, never "patintero"; sungka, noting the older kunggit;
+    luksong tinik and buno for Tagalog barangays; no bagbagto for lowland barangays; no names of
+    Spanish origin (trumpo, arnis, eskrima, balagtasan): the activities are described instead.
+    Kulintang only for Maranao and other Mindanao traditions. Cockfighting and wagering are told
+    only as recorded history (Pigafetta 1521), never as gameplay. Terms still to check before any
+    use: magahat, larao, barote, sumpit, barong.
 
 ### Notes for the future
 
@@ -249,6 +272,10 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 | content/lore/ritual-specialists-gender.json | Aklat entry: ritual specialists were mostly women; some were men in women's dress and roles (asog, bayoguin), respected; standing from lineage, wealth and skill more than sex; no modern labels, no jokes | Visayan, Tagalog | Scott 1994; Brewer 2004; Alcina 1668; Boxer Codex; San Antonio 1738–1744; see question 34 |
 | content/lore/suyak.json, content/buildings/suyak.json and src/ui/buildingArt.ts (SUYAK) | Aklat entry, building and art: sharpened bamboo stakes at the shore that slow raiders; term flagged | Widespread (term flagged) | Scott 1994; Alcina 1668; see question 35 |
 | content/lore/bahay-kubo.json, content/lore/bayanihan.json and src/ui/foodArt.ts (kuboSvg) | Aklat entries and house art: a rectangular house on posts with a steep thatched roof, woven walls, slatted floor, ladder (pulled up at night and in a raid) and a silong; moving a house together (bayanihan) | Widespread lowland; bayanihan from later records | Scott 1994; Boxer Codex; Alcina 1668; CCP Encyclopedia 1994; see question 36 |
+| content/lore/raiding.json, content/lore/captives-ransom.json and engine/warfare.ts | Aklat entries and rules: raids for goods, captives and prestige; battles end when one side breaks; most hurt are wounded; captives ransomed and always home in play (historically some became dependents) | Widespread | Scott 1994; Junker 1999; Alcina 1668; Plasencia 1589; see question 37 |
+| content/lore/blood-debts.json, content/lore/blood-price.json, content/lore/peace-rituals.json and engine/feud.ts | Aklat entries and rules: blood debts and feuds, mediation by a go-between, a blood price (historically heirloom goods; gold, Palay and rice wine in play for now), peace sealed by sandugo, a shared feast or marriage | Widespread (Tagalog, Visayan) | Scott 1994; Plasencia 1589; Junker 1999; Pigafetta 1521; see questions 37-38 |
+| content/lore/warrior-honor.json, content/traditions/*.json honorMark and src/ui/VillagerLayer.tsx (drawHonor) | Aklat entry and sprites: warriors' honor; batok drawn for Visayan warriors, gold ornaments elsewhere | Visayan; others flagged | Scott 1994; Alcina 1668; Boxer Codex; see question 39 |
+| content/lore/music.json, content/lore/dances.json, content/lore/games.json, content/lore/betel.json, content/lore/feasts-social.json, content/lore/cockfighting.json, src/ui/socialArt.ts and engine/social.ts | Aklat entries, art and evening life: gongs, kulintang (Maranao), flutes, dances, children's play and games (names by tradition, flagged), betel chewing, feasts; cockfighting and wagering as history only, no gambling in play | Widespread; names by tradition | Pigafetta 1521; Alcina 1668; Scott 1994; Junker 1999; see question 40 |
 
 ## Reviewed
 

@@ -1,0 +1,36 @@
+{
+  "id": "blood-debts",
+  "name": "Blood debts and feuds",
+  "description": "A killing created a debt of blood between families and their communities; unpaid, it led to vengeance raids. Feuds could run for years unless settled. Some sources found so far are summaries and folklore sites: every detail here waits for a historian's review.",
+  "tradition": "Widespread (Tagalog, Visayan)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Juan de Plasencia, Customs of the Tagalogs (1589), in Blair and Robertson, The Philippine Islands 1493–1898, vol. 7",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)"
+  ],
+  "aklat": {
+    "order": 72,
+    "icon": "🩸",
+    "name": {
+      "en": "Utang na dugo: blood debts",
+      "fil": "Utang na dugo"
+    },
+    "lore": {
+      "en": "When someone was killed, their family and community were owed a debt of blood. Until it was settled, kin of the dead might raid the killer's people for vengeance, and those raids could be deadlier than raids for goods. Such feuds could pass from one generation to the next. Yet the debt could also be settled: communities had ways to stop the killing, and doing so was honored.",
+      "fil": "Kapag may napatay, may utang na dugo sa kaniyang pamilya at pamayanan. Hangga't hindi ito naaayos, maaaring salakayin ng mga kamag-anak ng namatay ang mga tao ng pumatay bilang ganti, at mas mapanganib ang ganitong pagsalakay kaysa pagsalakay para sa kalakal. Maaaring magpasalin-salin sa mga henerasyon ang alitan. Ngunit maaari ring maayos ang utang: may mga paraan ang mga pamayanan para itigil ang pagpatay, at pinararangalan ang paggawa nito."
+    },
+    "inGame": {
+      "en": "A death in battle records a blood debt. An unpaid debt is a feud: the wronged side may raid for vengeance, and their kin trust the offender less. Feuds cool very slowly; making peace is better.",
+      "fil": "Ang kamatayan sa labanan ay nagtatala ng utang na dugo. Ang hindi nababayarang utang ay alitan: maaaring sumalakay ang naagrabyadong panig para gumanti, at mas kaunti ang tiwala ng kanilang kamag-anak sa nagkasala. Napakabagal lumamig ng alitan; mas mabuti ang makipagkasundo."
+    },
+    "hint": {
+      "en": "Have a blood debt with a neighbor.",
+      "fil": "Magkaroon ng utang na dugo sa kapitbahay."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "feud"
+    }
+  },
+  "reviewed": false
+}

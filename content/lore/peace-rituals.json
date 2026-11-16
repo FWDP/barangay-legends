@@ -1,0 +1,36 @@
+{
+  "id": "peace-rituals",
+  "name": "Peace rituals",
+  "description": "Peace was sealed by rites binding the two sides: the blood compact (sandugo), shared feasts with drinking from the same jar, exchanges of gifts, and marriages between the families. Some sources found so far are summaries and folklore sites: every detail here waits for a historian's review.",
+  "tradition": "Widespread",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Antonio Pigafetta, The First Voyage Around the World (1521), in Blair and Robertson, The Philippine Islands 1493–1898, vols. 33–34",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)"
+  ],
+  "aklat": {
+    "order": 74,
+    "icon": "🕊️",
+    "name": {
+      "en": "Sealing the peace",
+      "fil": "Pagpapatibay ng kapayapaan"
+    },
+    "lore": {
+      "en": "A settled feud was sealed so that both sides, and the spirits, would remember. Leaders might drink a few drops of each other's blood in rice wine (sandugo). The two communities might feast together, drinking from the same jar and exchanging gifts. Or a marriage might join the two families, so that the former enemies became kin. Breaking such a peace was a grave betrayal that everyone would hear of.",
+      "fil": "Pinagtitibay ang naayos na alitan upang maalala ito ng dalawang panig at ng mga espiritu. Maaaring uminom ang mga pinuno ng ilang patak ng dugo ng isa't isa sa alak (sandugo). Maaaring magsalo ang dalawang pamayanan, iinom sa iisang banga at magpapalitan ng regalo. O maaaring pag-isahin ng kasal ang dalawang pamilya, kaya nagiging magkamag-anak ang dating magkaaway. Mabigat na pagtataksil ang pagsira sa ganitong kapayapaan na mababalitaan ng lahat."
+    },
+    "inGame": {
+      "en": "Seal a peace with a sandugo, a shared Pista with gifts, or a marriage: the feud ends and trust rises for good. Raiding them afterwards costs trust with every barangay.",
+      "fil": "Pagtibayin ang kapayapaan sa sandugo, sa Pistang salu-salo na may regalo, o sa kasal: natatapos ang alitan at tumataas ang tiwala nang pangmatagalan. Ang pagsalakay sa kanila pagkatapos ay magpapababa ng tiwala ng lahat ng barangay."
+    },
+    "hint": {
+      "en": "Make peace.",
+      "fil": "Makipagkasundo."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "peace-made"
+    }
+  },
+  "reviewed": false
+}

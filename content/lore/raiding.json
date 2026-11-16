@@ -1,0 +1,36 @@
+{
+  "id": "raiding",
+  "name": "How raiding worked",
+  "description": "War between barangays was mostly raiding (mangayaw) for wealth, captives and prestige, not wiping out settlements; power was counted in followers. Battles were quick: the losing side withdrew after the first deaths or when a leader fell. Some sources found so far are summaries and folklore sites: every detail here waits for a historian's review.",
+  "tradition": "Widespread (Visayan mangayaw; Tagalog)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Laura Lee Junker, Raiding, Trading, and Feasting: The Political Economy of Philippine Chiefdoms (University of Hawai'i Press, 1999)",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)"
+  ],
+  "aklat": {
+    "order": 70,
+    "icon": "⚔️",
+    "name": {
+      "en": "Raiding, and why few died",
+      "fil": "Pagsalakay, at kung bakit kaunti ang namamatay"
+    },
+    "lore": {
+      "en": "Wars between barangays were mostly raids for goods, captives and renown. A datu's power lay in the people who followed him, so killing many made little sense: a raid that emptied a village of people left nothing to win. Battles were short. Once the first fighters fell, or a leader or the bravest was struck down, the losing side broke and withdrew to its boats or into the forest. Many more were wounded than killed, and wounded or cornered enemies were often held for ransom.",
+      "fil": "Karamihan sa mga digmaan ng mga barangay ay pagsalakay para sa kalakal, bihag at kabantugan. Nasa mga taong sumusunod sa kaniya ang kapangyarihan ng datu, kaya walang saysay ang pumatay ng marami: walang mapapala sa pagsalakay na umubos sa mga tao ng isang nayon. Maiikli ang labanan. Kapag nabuwal na ang mga unang mandirigma, o tinamaan ang pinuno o ang pinakamatapang, nawawalan ng loob ang natatalong panig at umaatras sa kanilang mga bangka o sa gubat. Higit na marami ang nasusugatan kaysa napapatay, at madalas na ginagawang bihag para sa tubos ang mga sugatan o nakorner."
+    },
+    "inGame": {
+      "en": "Battles end as soon as one side's morale breaks: most of the hurt are wounded and heal at the healer's hut; deaths are rare and named in the report.",
+      "fil": "Natatapos ang labanan sa sandaling mawalan ng loob ang isang panig: karamihan sa nasaktan ay sugatan at gumagaling sa kubo ng manggagamot; bihira ang namamatay at pinapangalanan sa ulat."
+    },
+    "hint": {
+      "en": "Fight a battle.",
+      "fil": "Makipaglaban."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "raid-fought"
+    }
+  },
+  "reviewed": false
+}

@@ -1,0 +1,36 @@
+{
+  "id": "betel",
+  "name": "Betel chewing",
+  "description": "Chewing betel (buyo, nganga: areca nut wrapped in betel leaf with lime) was shared when visiting, at gatherings and in rituals; offering it was a sign of welcome. Some sources found so far are summaries and folklore sites: every detail here waits for a historian's review.",
+  "tradition": "Widespread",
+  "sources": [
+    "Antonio Pigafetta, The First Voyage Around the World (1521), in Blair and Robertson, The Philippine Islands 1493–1898, vols. 33–34",
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)"
+  ],
+  "aklat": {
+    "order": 79,
+    "icon": "🍃",
+    "name": {
+      "en": "Betel: buyo and nganga",
+      "fil": "Buyo at nganga"
+    },
+    "lore": {
+      "en": "People chewed betel together: a slice of areca nut wrapped in a betel leaf with a little lime from burnt shells. It reddened the lips and was offered to every visitor as a welcome, shared at gatherings, given to the spirits, and carried in finely made boxes. Pigafetta noticed it at once in 1521. Many older Filipinos still chew it today.",
+      "fil": "Sama-samang nagnganganga ang mga tao: isang hiwa ng bunga na ibinalot sa dahon ng ikmo na may kaunting apog mula sa sinunog na kabibe. Pinapupula nito ang labi at iniaalok sa bawat panauhin bilang pagsalubong, pinagsasaluhan sa mga pagtitipon, inihahandog sa mga espiritu, at dinadala sa mga kahong magandang pagkagawa. Agad itong napansin ni Pigafetta noong 1521. Marami pa ring matatandang Pilipino ang nagnganganga hanggang ngayon."
+    },
+    "inGame": {
+      "en": "In the evening neighbors sit together under a house's silong, chewing betel and talking.",
+      "fil": "Sa gabi, sama-samang nakaupo ang magkakapitbahay sa silong ng bahay, nagnganganga at nagkukuwentuhan."
+    },
+    "hint": {
+      "en": "Spend an evening by the fire.",
+      "fil": "Magpalipas ng gabi sa tabi ng apoy."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "fireside-lesson"
+    }
+  },
+  "reviewed": false
+}

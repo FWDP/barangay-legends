@@ -1,0 +1,35 @@
+{
+  "id": "cockfighting",
+  "name": "Cockfighting and wagering (history)",
+  "description": "Pigafetta recorded cockfighting with wagers in 1521 (in Palawan). It appears here only as recorded history; there is no gambling in play. Some sources found so far are summaries and folklore sites: every detail here waits for a historian's review.",
+  "tradition": "Recorded in Palawan (1521) and elsewhere",
+  "sources": [
+    "Antonio Pigafetta, The First Voyage Around the World (1521), in Blair and Robertson, The Philippine Islands 1493–1898, vols. 33–34",
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+  ],
+  "aklat": {
+    "order": 81,
+    "icon": "🐓",
+    "name": {
+      "en": "Cockfighting and wagers: a record",
+      "fil": "Sabong at pustahan: isang tala"
+    },
+    "lore": {
+      "en": "Pigafetta, who sailed with Magellan, wrote in 1521 that people in Palawan kept fighting cocks, did not eat them, and wagered on their fights, the winnings going to the owner of the winning bird. Wagering on contests is recorded elsewhere too. This is part of the record of the time, told here as history. The game itself has no betting or gambling of any kind.",
+      "fil": "Isinulat ni Pigafetta, na kasama ni Magallanes, noong 1521 na nag-aalaga ang mga tao sa Palawan ng mga manok na panabong, hindi nila ito kinakain, at pumupusta sila sa mga laban, at napupunta ang panalo sa may-ari ng nagwaging manok. Naitala rin sa ibang lugar ang pagpusta sa mga paligsahan. Bahagi ito ng tala ng panahong iyon, na isinasalaysay dito bilang kasaysayan. Walang anumang pustahan o sugal sa laro mismo."
+    },
+    "inGame": {
+      "en": "Only history: there is no gambling in the game.",
+      "fil": "Kasaysayan lamang: walang sugal sa laro."
+    },
+    "hint": {
+      "en": "Hold a Pista.",
+      "fil": "Magdaos ng Pista."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "pista"
+    }
+  },
+  "reviewed": false
+}

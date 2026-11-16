@@ -1,0 +1,36 @@
+{
+  "id": "warrior-honor",
+  "name": "Warrior honor and batok",
+  "description": "Warriors gained renown for deeds in raids and defense. Visayan warriors were tattooed (batok) as they proved themselves, the tattoos spreading with each deed (the Spanish called the Visayans 'Pintados'); other peoples marked honor through dress and ornaments. Details by tradition flagged for review. Some sources found so far are summaries and folklore sites: every detail here waits for a historian's review.",
+  "tradition": "Visayan (batok); others by dress and ornament (flagged)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)",
+    "Boxer Codex (c. 1590), Lilly Library, Indiana University"
+  ],
+  "aklat": {
+    "order": 75,
+    "icon": "🛡️",
+    "name": {
+      "en": "Honor and batok",
+      "fil": "Dangal at batok"
+    },
+    "lore": {
+      "en": "A warrior's standing grew with deeds: a raid led well, a village defended. Among the Visayans, proven warriors were tattooed (batok), and the designs spread over the body as their deeds grew, so that the Spanish called them 'Pintados', the painted ones. Other peoples showed a warrior's honor in their dress and ornaments, such as colored headcloths and gold. How each tradition marked honor waits for a historian's review.",
+      "fil": "Lumalaki ang katayuan ng mandirigma sa kaniyang mga gawa: isang pagsalakay na mahusay na pinamunuan, isang nayong naipagtanggol. Sa mga Bisaya, binabatukan ang napatunayang mandirigma, at kumakalat ang disenyo sa katawan habang dumarami ang kaniyang gawa, kaya tinawag sila ng mga Espanyol na 'Pintados', ang mga pininturahan. Ipinakikita naman ng ibang mga bayan ang dangal ng mandirigma sa kanilang damit at palamuti, gaya ng may-kulay na putong at ginto. Naghihintay pa ng pagsusuri ng historyador kung paano minamarkahan ng bawat tradisyon ang dangal."
+    },
+    "inGame": {
+      "en": "Named warriors gain honor by fighting well. It is written in their story, adds renown, and makes your warriors steadier. In Visayan barangays honored warriors wear batok; elsewhere, gold ornaments.",
+      "fil": "Nagkakaroon ng dangal ang mga may-pangalang mandirigma sa mahusay na pakikipaglaban. Nakasulat ito sa kanilang kuwento, nagdaragdag ng kabantugan, at nagpapatatag sa inyong mga mandirigma. Sa mga barangay na Bisaya, may batok ang pinarangalang mandirigma; sa iba, gintong palamuti."
+    },
+    "hint": {
+      "en": "Have a warrior honored.",
+      "fil": "Magkaroon ng pinarangalang mandirigma."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "honored"
+    }
+  },
+  "reviewed": false
+}

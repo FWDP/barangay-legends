@@ -1,0 +1,36 @@
+{
+  "id": "dances",
+  "name": "Dances",
+  "description": "Dances at feasts imitated birds and daily work, told of courtship, and showed warriors with shield and spear; described in early Spanish accounts. Some sources found so far are summaries and folklore sites: every detail here waits for a historian's review.",
+  "tradition": "Widespread",
+  "sources": [
+    "Antonio Pigafetta, The First Voyage Around the World (1521), in Blair and Robertson, The Philippine Islands 1493–1898, vols. 33–34",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)",
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
+  ],
+  "aklat": {
+    "order": 77,
+    "icon": "💃",
+    "name": {
+      "en": "Dances",
+      "fil": "Mga sayaw"
+    },
+    "lore": {
+      "en": "At feasts people danced: dances that imitated birds and animals, dances that showed the work of planting or fishing, courtship dances between young women and men, and warriors' dances with shield and spear that showed off their skill. Spanish writers described dancing to the gongs late into the night. Which dances belonged to which people, and their names, wait for a historian's review.",
+      "fil": "Sa mga piging ay sumasayaw ang mga tao: mga sayaw na gumagaya sa mga ibon at hayop, mga sayaw na nagpapakita ng gawain sa pagtatanim o pangingisda, mga sayaw ng panliligaw ng mga dalaga at binata, at mga sayaw ng mandirigma na may kalasag at sibat na nagpapakita ng kanilang husay. Inilarawan ng mga manunulat na Espanyol ang pagsasayaw sa saliw ng mga gong hanggang hatinggabi. Naghihintay pa ng pagsusuri ng historyador kung aling sayaw ang sa aling bayan, at ang mga pangalan nito."
+    },
+    "inGame": {
+      "en": "At a Pista the clearing fills with dancers: a warriors' dance after a victory, courtship at a wedding.",
+      "fil": "Sa Pista ay napupuno ng mananayaw ang liwasan: sayaw ng mandirigma pagkatapos ng tagumpay, panliligaw sa kasal."
+    },
+    "hint": {
+      "en": "Hold a Pista.",
+      "fil": "Magdaos ng Pista."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "pista"
+    }
+  },
+  "reviewed": false
+}
