@@ -161,6 +161,11 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
     Maranao ones either, until sourced). Individual names are flagged, not presented as certain:
     Dayang Kalangitan (partly from genealogical tradition) and "Queen Sima" (usually placed in
     Java, not Cotabato).
+34. **Ritual specialists, women and men** (`content/lore/ritual-specialists-gender.json`): most
+    babaylan and katalonan were women; some were men who took on women's dress and roles,
+    recorded as asog (Visayan) and bayoguin (Tagalog). Is the wording accurate and respectful? It
+    avoids modern labels and describes what the sources record; the Spanish sources are often
+    hostile. Are the terms right for each tradition?
 
 ### Notes for the future
 
@@ -233,6 +238,7 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 | src/ui/foodArt.ts and src/ui/resourceArt.tsx | Art for the food buildings (taro patch, swidden with yams and millet, banana stand, sago palms and trough, coconut palms, shore basket, hunters' lean-to, pen with pig or chickens, salt beds, fish corral) and for Pagkain (a bilao with gabi, banana and fish), Palay (a sheaf), Asin and rice wine (a tapayan). Generic, the same for every tradition | Widespread | Scott 1994 |
 | content/traditions/*.json foodYield, pigs | Which food each tradition grows more of (rice for the Tagalog; root crops and sago for the Visayans and Maranao) and whether pigs are kept; playtest numbers, not a historical claim | Tagalog, Visayan, Maranao | see questions 26 and 28 |
 | content/lore/women-rulers.json, content/traditions/tagalog.json (womanHonorific) and engine/household.ts | Aklat entry and rule: the ruler can be a woman or a man; bilateral inheritance; "Datu" for both, "Dayang" offered only for a Tagalog woman ruler; individual historical names flagged | Widespread lowland; Dayang (Tagalog) | Scott 1994; Plasencia 1589; Boxer Codex; Brewer 2004; Noceda and Sanlúcar 1754; see question 33 |
+| content/lore/ritual-specialists-gender.json | Aklat entry: ritual specialists were mostly women; some were men in women's dress and roles (asog, bayoguin), respected; standing from lineage, wealth and skill more than sex; no modern labels, no jokes | Visayan, Tagalog | Scott 1994; Brewer 2004; Alcina 1668; Boxer Codex; San Antonio 1738–1744; see question 34 |
 
 ## Reviewed
 

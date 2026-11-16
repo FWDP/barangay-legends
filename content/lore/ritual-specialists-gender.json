@@ -1,0 +1,38 @@
+{
+  "id": "ritual-specialists-gender",
+  "name": "Ritual specialists, women and men",
+  "description": "Most ritual specialists (Visayan babaylan, Tagalog katalonan) were women. Spanish accounts also record men who took on women's dress, work and ritual roles and were accepted as ritual specialists: the Visayan asog and the Tagalog bayoguin. The game describes what the sources record without modern labels, presents them as respected members of the community, and makes no jokes or stereotypes. Standing came more from lineage, wealth and skill than from sex. Terms and descriptions flagged for review.",
+  "tradition": "Visayan (babaylan, asog) and Tagalog (katalonan, bayoguin)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Carolyn Brewer, Shamanism, Catholicism and Gender Relations in Colonial Philippines, 1521–1685 (Ashgate, 2004)",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)",
+    "Boxer Codex (c. 1590), Lilly Library, Indiana University",
+    "Juan Francisco de San Antonio, Crónicas de la Apostólica Provincia de San Gregorio (Manila, 1738–1744)"
+  ],
+  "aklat": {
+    "order": 6,
+    "icon": "🌿",
+    "name": {
+      "en": "Ritual specialists, women and men",
+      "fil": "Mga dalubhasa sa ritwal, babae at lalaki"
+    },
+    "lore": {
+      "en": "Most of the people who spoke with the spirits, healed the sick and led the offerings were women: babaylan among the Visayans, katalonan among the Tagalogs. Some were men who took on the dress, work and ritual roles of women, and were respected as ritual specialists too. Spanish writers recorded them as asog in the Visayas and bayoguin among the Tagalogs. In these societies a person's standing came more from lineage, wealth and skill than from being a woman or a man. Missionaries worked hard to replace all of them, women and men alike, and their records are often hostile, so historians read them with care.",
+      "fil": "Karamihan sa mga nakikipag-usap sa mga espiritu, nagpapagaling ng maysakit at namumuno sa mga handog ay mga babae: babaylan sa mga Bisaya, katalonan sa mga Tagalog. Ang ilan ay mga lalaking nagsusuot ng damit, gumagawa ng gawain at gumaganap ng tungkuling panritwal ng mga babae, at iginagalang din bilang mga dalubhasa sa ritwal. Itinala sila ng mga manunulat na Espanyol bilang asog sa Kabisayaan at bayoguin sa mga Tagalog. Sa mga lipunang ito, mas nakasalalay ang katayuan ng tao sa angkan, yaman at husay kaysa sa pagiging babae o lalaki. Pinagsikapan ng mga misyonero na palitan silang lahat, babae man o lalaki, at madalas na mapanlait ang kanilang mga tala, kaya maingat itong binabasa ng mga historyador."
+    },
+    "inGame": {
+      "en": "The healer at your hut can be a woman or a man. Both are honored members of the barangay.",
+      "fil": "Maaaring babae o lalaki ang manggagamot sa inyong kubo. Kapwa sila iginagalang na kasapi ng barangay."
+    },
+    "hint": {
+      "en": "Build a Babaylan's Hut.",
+      "fil": "Magtayo ng kubo ng Babaylan."
+    },
+    "unlock": {
+      "type": "built",
+      "building": "babaylan-hut"
+    }
+  },
+  "reviewed": false
+}
