@@ -31,10 +31,13 @@
         "➕",
         "🪵"
       ],
-      "title": "Palay at kahoy",
+      "title": "Pagkain, Palay at kahoy",
       "body": [
-        "Pindutin ang Gather Rice o Gather Wood para sa +{gatherPerClick} bawat pindot.",
-        "Bawat taga-barangay ay kumakain ng {riceEaten} palay bawat segundo. Kapag naubos ang palay, walang magtatrabaho, at maya-maya ay aalis ang mga pamilya.",
+        "Pindutin ang Mangalap ng pagkain o Mangahoy para sa +{gatherPerClick} bawat pindot.",
+        "Bawat tao ay kumakain ng {riceEaten} Pagkain bawat segundo: gabi, ube, dawa, saging, sago, niyog, isda at karne. Kapag naubos ang pagkain, Palay ang kinakain, na nasasayang; kapag wala nang natira, walang nagtatrabaho at pagkaraan ng ilang sandali ay umaalis ang mga pamilya.",
+        "Iniimbak ang pagkain sa lumang paraan: nananatili sa Gabihan at Kaingin ang lamang-ugat (hindi nasisira at nakaliligtas sa bagyo), buháy ang isda sa Baklad, pinauusukan at inaasinan ng bawat bahay ang sariwang pagkain para sa mga banga, at nasa Kamalig ang Palay, tuyong pagkain at Asin. Nasisira ang sariwang pagkaing nakalantad.",
+        "Mas masaya ang mga tao kung iba-iba ang pagkain (lamang-ugat at butil, isda, karne, prutas at gulay). Kapag iisa lamang nang matagal, nalulungkot sila at nagkakasakit.",
+        "Ang Palay ay butil na may dangal: para sa handog, regalo, alyansa sa kasal, tapay at Pista sa Bahay ng Datu.",
         "Pindutin ang isang yaman sa itaas para makita kung saan ito nanggagaling at saan napupunta."
       ]
     },
@@ -50,9 +53,9 @@
       "title": "Mga gusali at manggagawa",
       "body": [
         "Pumili ng gusali sa ibaba, saka pindutin ang isang may-ilaw na tile. Mas mahal nang kaunti ang bawat bagong kopya.",
-        "Ang Bahay Kubo ay tirahan ng mas maraming tao. Darating ang mga bagong pamilya habang may lugar at may palay.",
+        "Ang Bahay Kubo ay tirahan ng mas maraming tao. Darating ang mga bagong pamilya habang may lugar at may pagkain.",
         "Kusang nagtatrabaho ang malulusog na taga-barangay sa mga palayan at kampo. Pindutin ang isang gusali para makita kung sino ang nagtatrabaho roon, o para ilipat o gibain ito.",
-        "Pindutin ang gubat sa tabi ng iyong lupa para piliin ito (o hilahin ang mouse sa ibabaw nito), saka pindutin ang Clear. May kaunting bayad na palay ang bawat tile, at hahawanin ito isa-isa ng mga taong walang ginagawa. Pindutin ang tile na hinahawan para itigil ito."
+        "Pindutin ang gubat sa tabi ng iyong lupa para piliin ito (o hilahin ang mouse sa ibabaw nito), saka pindutin ang Clear. May kaunting bayad na Pagkain ang bawat tile, at hahawanin ito isa-isa ng mga taong walang ginagawa. Pindutin ang tile na hinahawan para itigil ito."
       ]
     },
     {
@@ -67,7 +70,7 @@
       ],
       "title": "Mga panahon at pangyayari",
       "body": [
-        "Nagpapalit ang taon sa pagitan ng Tag-ulan at Tag-araw, kung kailan mas kaunti ang ani. Mag-ipon ng palay bago ang tag-araw.",
+        "Nagpapalit ang taon sa pagitan ng Tag-ulan at Tag-araw, kung kailan mas kaunti ang ani. Pinakatinatamaan ng tag-araw ang palay at gabi; matibay ang ube, dawa at sago. Binabawasan ng maalong dagat ang huli, at pinababagsak ng bagyo ang saging at palay, pero nakaliligtas ang lamang-ugat sa lupa.",
         "May babala bago dumating ang bagyo: magtabi ng kahoy para sa pagkukumpuni. Pindutin ang nasusunog na bahay para patayin ang apoy bago ito kumalat. Hindi makapagtrabaho ang maysakit; tumutulong ang kubo ng Babaylan para gumaling sila."
       ]
     },

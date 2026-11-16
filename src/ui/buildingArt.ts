@@ -3,6 +3,7 @@
 // deck and has no icon on the map; a few have custom flat SVG art instead (generic for now, the
 // same for every tradition: see docs/cultural-review.md). Display only.
 import type { BuildingDef } from "../engine/content";
+import { ASINAN, BAKLAD, babuyanSvg, GABIHAN, KAINGIN, LUMBIA, NIYUGAN, PANGANGALAP, PANGANGASO, SAGINGAN } from "./foodArt";
 
 /**
  * The Dambana: a small shrine raised on thin bamboo poles, a thatched roof with a hanging fringe
@@ -214,14 +215,28 @@ const ART: Record<string, string> = {
   "woodcutter-camp": url(WOODCUTTER_CAMP),
   tulay: url(TULAY),
   kamalig: url(kamaligSvg(1)),
+  // Food (foodArt.ts).
+  gabihan: url(GABIHAN),
+  kaingin: url(KAINGIN),
+  sagingan: url(SAGINGAN),
+  lumbia: url(LUMBIA),
+  niyugan: url(NIYUGAN),
+  pangangalap: url(PANGANGALAP),
+  pangangaso: url(PANGANGASO),
+  babuyan: url(babuyanSvg(true)),
+  asinan: url(ASINAN),
+  baklad: url(BAKLAD),
 };
+
+/** The pen where the tradition keeps no pigs: chickens only (content/traditions pigs). */
+const MANUKAN = url(babuyanSvg(false));
 
 /** The Kamalig at each level (1-3): wider, on more posts. */
 const KAMALIG_LEVELS = [1, 2, 3].map((l) => url(kamaligSvg(l)));
 
 /** Custom art for a building type (at an upgrade level, for those drawn by level), as an image URL, or null (it is drawn as its icon). */
-export const buildingArtUrl = (type: string, level = 1): string | null =>
-  type === "kamalig" ? KAMALIG_LEVELS[Math.min(3, Math.max(1, Math.round(level))) - 1] : (ART[type] ?? null);
+export const buildingArtUrl = (type: string, level = 1, pigs = true): string | null =>
+  type === "kamalig" ? KAMALIG_LEVELS[Math.min(3, Math.max(1, Math.round(level))) - 1] : type === "babuyan" && !pigs ? MANUKAN : (ART[type] ?? null);
 
 /** The types that have custom art (for preloading on the share card). */
 export const ART_TYPES = Object.keys(ART);
@@ -245,4 +260,4 @@ export const DAMBANA_ART = ART.dambana;
 export const mapIcon = (def: Pick<BuildingDef, "icon" | "bridge">): string | null => (def.bridge ? null : def.icon);
 
 /** The lore note (content/lore) about how a building with custom art is drawn. */
-export const ART_LORE: Record<string, string> = { dambana: "dambana-art", kuta: "kuta", bantayan: "bantayan", "babaylan-hut": "babaylan", kamalig: "kamalig" };
+export const ART_LORE: Record<string, string> = { dambana: "dambana-art", kuta: "kuta", bantayan: "bantayan", "babaylan-hut": "babaylan", kamalig: "kamalig", gabihan: "gabi", kaingin: "kaingin-food", sagingan: "saging", lumbia: "lumbia", niyugan: "niyog", pangangalap: "pangangalap", pangangaso: "pangangaso", babuyan: "babuyan", asinan: "asin", baklad: "baklad", "fishing-dock": "pangingisda" };

@@ -188,10 +188,10 @@ export interface Workforce {
 
 const workforceCache = new WeakMap<GameState, WeakMap<Content, Workforce>>();
 
-/** Is there enough rice to lend out the workers of a protected workplace (e.g. a Palayan)? */
+/** Is there enough food to lend out the workers of a protected workplace (e.g. a Gabihan)? */
 export function riceIsSafe(state: GameState, content: Content): boolean {
-  const eatenPerSecond = riceEaters(state, content) * content.rules.riceEatenPerVillagerPerSecond;
-  return state.resources.rice >= content.rules.clearing.borrow.protectBelowRiceSeconds * eatenPerSecond;
+  const eatenPerSecond = riceEaters(state, content) * content.rules.foodEatenPerVillagerPerSecond;
+  return state.resources.food >= content.rules.clearing.borrow.protectBelowRiceSeconds * eatenPerSecond;
 }
 
 /**

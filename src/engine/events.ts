@@ -1,6 +1,7 @@
 // Pressure and events: seasons, hunger, sickness, fire and typhoons.
 // Deterministic: all randomness comes from the seeded RNG stored in GameState, and random
 // rolls happen only on whole game seconds, so the outcome does not depend on frame rate.
+import { dietSicknessFactor } from "./food";
 import type { Content, Resource, Season } from "./content";
 import type { GameState, PlacedBuilding } from "./game";
 import { Rng } from "./rng";
@@ -40,8 +41,9 @@ export function seasonMultiplier(content: Content, time: number, r: Resource): n
 // ---------- Hunger ----------
 
 /** Gutom: with no rice left, villagers are too hungry to work. */
+/** Gutom: no Pagkain and no Palay left (food.ts eats Palay when Pagkain runs out). */
 export function isHungry(state: GameState): boolean {
-  return state.resources.rice <= 0 && state.villagers > 0;
+  return state.resources.food <= 0 && state.resources.rice <= 0 && state.villagers > 0;
 }
 
 /** Seconds until hungry families start leaving, or 0 once they are. Null when not hungry. */
@@ -175,7 +177,8 @@ function onSecond(state: GameState, content: Content, second: number, rng: Rng):
   if (sickness && s.sick.length === 0 && s.villagers > 0 && ready(sickness.id, sickness.startsAfterSeconds)) {
     // Slightly more likely while the forest spirits are angry.
     const angry = !content.ai && s.forest.stage >= 2 ? 1 + content.rules.forest.sicknessPercent / 100 : 1;
-    if (rng.next() < sickness.chancePerSecond * angry) {
+    // Eating one kind of food for a long time makes sickness likelier (food.ts).
+    if (rng.next() < sickness.chancePerSecond * angry * dietSicknessFactor(s, content)) {
       const cases = Math.min(sickness.firstCases, s.villagers);
       s = {
         ...s,
@@ -203,15 +206,37 @@ function onSecond(state: GameState, content: Content, second: number, rng: Rng):
 
 function typhoonStrikes(state: GameState, content: Content, second: number, rng: Rng): GameState {
   const typhoon = content.events.typhoon!;
-  const standing = state.buildings.map((b, i) => [b, i] as const).filter(([b]) => !b.damaged);
+  const defs = new Map(content.buildings.map((d) => [d.id, d]));
+  // Root crops in the ground and sago palms ride it out; bananas and rice are flattened most often.
+  const standing = state.buildings.map((b, i) => [b, i] as const).filter(([b]) => !b.damaged && !defs.get(b.type)?.typhoonProof);
   const count = Math.min(standing.length, rng.int(typhoon.damagedBuildings.min, typhoon.damagedBuildings.max));
   const hit = new Set<number>();
   for (let n = 0; n < count; n++) {
     const remaining = standing.filter(([, i]) => !hit.has(i));
-    hit.add(remaining[rng.int(0, remaining.length - 1)][1]);
+    const weights = remaining.map(([b]) => defs.get(b.type)?.typhoonWeight ?? 1);
+    let roll = rng.next() * weights.reduce((a, b) => a + b, 0);
+    let pick = remaining.length - 1;
+    for (let k = 0; k < remaining.length; k++) {
+      roll -= weights[k];
+      if (roll < 0) {
+        pick = k;
+        break;
+      }
+    }
+    hit.add(remaining[pick][1]);
+  }
+  // Fresh food left out is lost in the storm; the ground, the Baklad and the jars keep theirs.
+  let foodStore = state.foodStore;
+  let food = state.resources.food;
+  if (foodStore && !content.ai) {
+    const lost = (foodStore.fresh * content.rules.food.typhoonFreshPercent) / 100;
+    foodStore = { ...foodStore, fresh: foodStore.fresh - lost };
+    food = Math.max(0, food - lost);
   }
   return {
     ...state,
+    resources: { ...state.resources, food },
+    foodStore,
     typhoon: null,
     buildings: state.buildings.map((b, i) => {
       if (!hit.has(i)) return b;

@@ -1,7 +1,7 @@
 {
   "id": "kamalig",
   "name": "Kamalig",
-  "description": "A raised granary of bamboo and thatch. Each one stores more rice, and it can be raised to level 3 to hold more.",
+  "description": "A raised storehouse for grains and dried goods only: Palay, dawa, dried fish, sago flour and Asin, kept off the ground away from rats and damp. Raise it to level 3 to hold more.",
   "icon": "🌾",
   "order": 4.5,
   "category": "pagkain",
@@ -12,7 +12,9 @@
     "wood": 8
   },
   "storage": {
-    "rice": 1500
+    "rice": 1500,
+    "food": 150,
+    "salt": 100
   },
   "unlock": {
     "villagers": 10
@@ -29,7 +31,9 @@
         "gold": 20
       },
       "storage": {
-        "rice": 2500
+        "rice": 2500,
+        "food": 250,
+        "salt": 160
       }
     },
     {
@@ -39,7 +43,9 @@
         "gold": 60
       },
       "storage": {
-        "rice": 4000
+        "rice": 4000,
+        "food": 400,
+        "salt": 250
       }
     }
   ]

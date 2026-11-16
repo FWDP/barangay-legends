@@ -48,7 +48,8 @@ export function recommended(state: GameState, content: Content, adviserTrigger: 
   if (task?.condition.type === "built") out.add(task.condition.building);
   if (task?.condition.type === "connected") out.add(DAAN);
   if (task?.condition.type === "datuLevel" && state.datuLevel < task.condition.count) out.add(DATU);
-  const rice = content.buildings.filter((b) => (b.produces?.rice ?? 0) > 0).map((b) => b.id);
+  // Food workplaces the barangay can build now (Pagkain, not the prestige Palay).
+  const rice = content.buildings.filter((b) => (b.produces?.food ?? 0) > 0 && b.unlock.start).map((b) => b.id);
   switch (adviserTrigger) {
     case "dambana":
       for (const b of content.buildings) if (b.shrine) out.add(b.id);

@@ -35,11 +35,13 @@ describe("seeded RNG", () => {
 });
 
 describe("Gutom (hunger)", () => {
-  const hungry = withState({ resources: { rice: 0, wood: 0, gold: 0 }, villagers: 5, buildings: [...fields, at("bahay-kubo", 5, 3)] });
+  const hungry = withState({ resources: { rice: 0, wood: 0, gold: 0, food: 0, salt: 0, wine: 0 }, villagers: 5, buildings: [...fields, at("bahay-kubo", 5, 3)] });
 
-  it("stops all work at 0 rice", () => {
+  it("stops all work with no Pagkain and no Palay", () => {
     expect(availableWorkers(hungry)).toBe(0);
-    expect(rates(hungry, calm).produced).toEqual({ rice: 0, wood: 0, gold: 0 });
+    expect(rates(hungry, calm).produced).toEqual({ food: 0, rice: 0, wood: 0, gold: 0, salt: 0, wine: 0 });
+    // With Palay still in store, nobody is hungry yet: they eat it (wastefully).
+    expect(availableWorkers({ ...hungry, resources: { ...hungry.resources, rice: 10 } })).toBeGreaterThan(0);
   });
 
   it("lets nobody leave for the first 30 seconds", () => {
@@ -59,9 +61,9 @@ describe("Gutom (hunger)", () => {
     expect(secondsUntilLeaving(withState({}), calm)).toBeNull();
   });
 
-  it("is recoverable: gathering rice puts villagers back to work and resets hunger", () => {
+  it("is recoverable: gathering food puts villagers back to work and resets hunger", () => {
     let s = run(hungry, 41);
-    s = apply(s, calm, { type: "gather", resource: "rice" });
+    s = apply(s, calm, { type: "gather", resource: "food" });
     expect(availableWorkers(s)).toBe(4);
     s = run(s, 0.5);
     expect(s.hunger).toBe(0);
@@ -88,7 +90,7 @@ describe("Seasons", () => {
   });
 
   it("advance with game time", () => {
-    const s = run(withState({ resources: { rice: 1000, wood: 0, gold: 0 } }), 305);
+    const s = run(withState({ resources: { rice: 1000, wood: 0, gold: 0, food: 1000, salt: 0, wine: 0 } }), 305);
     expect(s.time).toBeCloseTo(305);
     expect(seasonAt(content, s.time)?.season.id).toBe("tag-araw");
   });
@@ -215,7 +217,7 @@ describe("Bagyo (typhoon)", () => {
   const bagyo = content.events.typhoon!;
   const always = withEvents({ typhoon: { chancePerSecond: 1 } }, calm);
   const village = withState({
-    resources: { rice: 1000, wood: 0, gold: 0 },
+    resources: { rice: 1000, wood: 0, gold: 0, food: 1000, salt: 0, wine: 0 },
     buildings: [at("bahay-kubo", 5, 3), at("bahay-kubo", 4, 3), at("palayan", 1, 4), at("woodcutter-camp", 8, 4), at("palayan", 1, 5)],
   });
 
@@ -239,10 +241,10 @@ describe("Bagyo (typhoon)", () => {
   });
 
   it("damaged buildings produce nothing until repaired with wood", () => {
-    const s = withState({ villagers: 2, resources: { rice: 100, wood: 0, gold: 0 }, buildings: [{ ...at("palayan", 3, 6), damaged: true }] });
+    const s = withState({ villagers: 2, resources: { food: 100, rice: 100, wood: 0, gold: 0 }, buildings: [{ ...at("palayan", 3, 6), damaged: true }] });
     expect(rates(s, calm).produced.rice).toBe(0);
     expect(apply(s, calm, { type: "repair", x: 3, y: 6 })).toBe(s); // can't afford 8 wood yet
-    const rich = { ...s, resources: { rice: 100, wood: 10, gold: 0 } };
+    const rich = { ...s, resources: { ...s.resources, wood: 10 } };
     const fixed = apply(rich, calm, { type: "repair", x: 3, y: 6 });
     expect(fixed.resources.wood).toBe(2);
     expect(damaged(fixed)).toHaveLength(0);
@@ -253,7 +255,7 @@ describe("Bagyo (typhoon)", () => {
 describe("every loss is recoverable", () => {
   it("brings a battered barangay back: repair everything, feed it, and villagers return", () => {
     let s = withState({
-      resources: { rice: 0, wood: 100, gold: 0 },
+      resources: { rice: 0, wood: 100, gold: 0, food: 0, salt: 0, wine: 0 },
       villagers: 2,
       buildings: [
         { ...at("bahay-kubo", 5, 3), damaged: true },
@@ -263,7 +265,7 @@ describe("every loss is recoverable", () => {
     });
     for (const b of [...s.buildings]) s = apply(s, calm, { type: "repair", x: b.x, y: b.y });
     expect(damaged(s)).toHaveLength(0);
-    for (let i = 0; i < 20; i++) s = apply(s, calm, { type: "gather", resource: "rice" });
+    for (let i = 0; i < 20; i++) s = apply(s, calm, { type: "gather", resource: "food" });
     s = run(s, 120);
     expect(s.villagers).toBe(housing(s, calm));
     expect(s.villagers).toBeGreaterThan(2);
@@ -278,7 +280,7 @@ describe("determinism", () => {
   });
   const start = (seed: number) => ({
     ...newGame(busy, seed),
-    resources: { rice: 5000, wood: 0, gold: 0 },
+    resources: { rice: 5000, wood: 0, gold: 0, food: 5000, salt: 0, wine: 0 },
     buildings: [
       at("bahay-kubo", 5, 3),
       at("bahay-kubo", 4, 3),

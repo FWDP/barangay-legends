@@ -6,6 +6,7 @@
 // finishes, seasons turn, happiness drifts, tasks (Mga Gawain) met are credited, neighbors grow
 // and tributaries send tribute. Nothing harmful: no disasters, no raids, nobody leaves or
 // dies. Warnings that were running (a fire, a typhoon, a raid) wait for the player.
+import { feed } from "./food";
 import { ageResidents, growPopulation } from "./population";
 import { RESOURCES, type Content, type Resource } from "./content";
 import { healRate, isHungry } from "./events";
@@ -73,17 +74,21 @@ export function gentleStep(state: GameState, content: Content, dt: number): Step
   const r = rates(state, content, { offline: true, span: dt });
   const resources = { ...state.resources };
   const produced = zero();
-  // The share of the step the barangay is fed (workers stop at 0 rice).
+  // The share of the step the barangay is fed: Pagkain, then Palay (wastefully), then nothing.
+  const waste = content.ai || state.time < (state.foodGraceUntil ?? 0) ? 1 : content.rules.food.riceWastePercent / 100;
+  const need = r.eaten.food * dt;
+  const has = resources.food + r.produced.food * dt + Math.max(0, resources.rice + r.net.rice * dt) / waste;
   let fed = isHungry(state) ? 0 : 1;
-  if (fed && r.net.rice < 0 && resources.rice + r.net.rice * dt < 0) fed = resources.rice / -r.net.rice / dt;
+  if (fed && need > 0 && has < need) fed = Math.max(0, has / need);
   for (const res of RESOURCES) produced[res] = r.produced[res] * dt * fed;
-  const eaten = Math.min(resources.rice + produced.rice, r.eaten.rice * dt);
-  for (const res of RESOURCES) resources[res] = Math.max(0, resources[res] + produced[res] - (res === "rice" ? eaten : 0));
+  for (const res of RESOURCES) if (res !== "food") resources[res] = Math.max(0, resources[res] + produced[res] - r.eaten[res] * dt);
   // Full granaries: what doesn't fit isn't stored (and isn't counted as brought in).
   const capped = capGrowth(state.resources.rice, resources.rice, riceCap(state, content));
   produced.rice -= resources.rice - capped;
   resources.rice = capped;
-  let s: GameState = { ...state, resources, time: state.time + dt, lastBuild: null, happiness: nextHappiness(state, content, dt) };
+  // Pagkain: kept, preserved, spoiling and eaten as online (food.ts), over the whole step.
+  const ate = feed({ ...state, resources }, content, dt, r.foodByBuilding.map((x) => x * fed), r.eaten.food);
+  let s: GameState = { ...state, resources: ate.resources, foodStore: ate.foodStore, time: state.time + dt, lastBuild: null, happiness: nextHappiness(state, content, dt) };
 
   // Births and newcomers, only while fed and there's room (no Balita lines: the away story
   // counts them). Never anyone leaving. AI barangays keep the simple arrivals.
@@ -91,14 +96,14 @@ export function gentleStep(state: GameState, content: Content, dt: number): Step
   let born = 0;
   const room = Math.max(0, housing(s, content) - s.villagers);
   if (content.ai) {
-    if (room > 0 && fed === 1 && resources.rice > 0) {
+    if (room > 0 && fed === 1 && (s.resources.food > 0 || s.resources.rice > 0)) {
       const migration = Math.max(0, s.migration) + dt / content.rules.secondsPerNewVillager;
       arrived = Math.min(room, Math.floor(migration));
       s = { ...s, villagers: s.villagers + arrived, migration: arrived === room ? 0 : migration - arrived };
     }
   } else {
     const before = s.residents.length;
-    if (fed === 1 && resources.rice > 0) s = growPopulation({ ...s, hunger: 0 }, content, dt, true);
+    if (fed === 1 && (s.resources.food > 0 || s.resources.rice > 0)) s = growPopulation({ ...s, hunger: 0 }, content, dt, true);
     const added = s.residents.slice(before);
     born = added.filter((r) => r.came === "born").length;
     arrived = added.length - born;
@@ -131,7 +136,7 @@ export function gentleStep(state: GameState, content: Content, dt: number): Step
   s = updateDoors(state, s, content);
   if (!content.ai) s = trackRanking(state, applyRenown(state, s, content), content);
   s = checkTasks(reconcilePeople(state, s, content), content);
-  return { state: s, produced, eaten, hungry: dt * (1 - fed), arrived, born, recovered, cleared };
+  return { state: s, produced, eaten: need * fed, hungry: dt * (1 - fed), arrived, born, recovered, cleared };
 }
 
 /** Neighbors grow, decide and pay tribute; nothing hostile, and loyalty doesn't drift. */

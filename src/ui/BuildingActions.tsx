@@ -43,13 +43,15 @@ export function BuildingMenu(props: {
   /** Open a lore note (how a building with custom art is drawn, and its sources). */
   onLore?: (id: string) => void;
   aboutLabel?: string;
+  /** Rest a worn-out kaingin (food.ts restKaingin). */
+  onRestKaingin?: (x: number, y: number) => void;
   /** Raise a building with upgrades (a Kamalig) one level. */
   onUpgrade?: (x: number, y: number) => void;
   /** In-game text (content/ui.json) for the upgrade lines. */
   game?: GameText;
   lang?: Lang;
 }) {
-  const { state, content, target, onClose, onMove, onDemolish, onPause, onShrine, onRemembered, onTrainBoat, onLore, aboutLabel, onUpgrade, game, lang = "en" } = props;
+  const { state, content, target, onClose, onMove, onDemolish, onPause, onShrine, onRemembered, onTrainBoat, onLore, aboutLabel, onUpgrade, onRestKaingin, game, lang = "en" } = props;
   const box = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; top: number } | null>(null);
   const building = target ? buildingAt(state, target.x, target.y) : undefined;
@@ -153,9 +155,33 @@ export function BuildingMenu(props: {
       )}
       {def.upgrades && game && (
         <p className="px-1 pb-1.5 text-xs text-stone-600">
-          {fill(game.kamalig.level[lang], { level: levelOf(building), max: maxLevelOf(def) })} · {fill(game.kamalig.stores[lang], { amount: formatAmount(storageAt(def, levelOf(building)).rice ?? 0) })}
+          {fill(game.kamalig.level[lang], { level: levelOf(building), max: maxLevelOf(def) })}
+          <span className="block">
+            {(() => {
+              const store = storageAt(def, levelOf(building));
+              return fill(game.kamalig.holds[lang], { rice: formatAmount(store.rice ?? 0), food: formatAmount(store.food ?? 0), salt: formatAmount(store.salt ?? 0) });
+            })()}
+          </span>
         </p>
       )}
+      {def.wearsOut && game && (() => {
+        const left = Math.max(0, 100 - Math.round((100 * (building.harvested ?? 0)) / content.rules.food.kaingin.fertileHarvest));
+        return (
+          <div className="px-1 pb-1.5 text-xs text-stone-700">
+            <p className={left <= 0 ? "font-semibold text-amber-800" : ""}>{left <= 0 ? game.kaingin.tired[lang] : fill(game.kaingin.soil[lang], { percent: left })}</p>
+            {onRestKaingin && (
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => onRestKaingin(target.x, target.y)}
+                className="game-btn mt-1 w-full border-2 border-green-950 bg-green-700 px-3 py-1.5 text-sm font-semibold text-white"
+              >
+                🌱 {game.kaingin.rest[lang]}
+              </button>
+            )}
+          </div>
+        );
+      })()}
       <div className="flex flex-col gap-1.5">
         {def.upgrades && onUpgrade && game && (() => {
           const next = nextUpgrade(content, building);

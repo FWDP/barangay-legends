@@ -1,0 +1,35 @@
+{
+  "id": "niyog",
+  "name": "Niyog: the coconut palm",
+  "description": "Coconut palms (niyog) gave food, drink, oil, leaves and timber; palm wine (tuba) was tapped from them. Distilled drinks such as lambanog may be later and are not in the game.",
+  "tradition": "Widespread (coastal)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Antonio Pigafetta, The First Voyage Around the World (1521), in Blair and Robertson, The Philippine Islands 1493–1898, vols. 33–34"
+  ],
+  "aklat": {
+    "order": 44,
+    "icon": "🥥",
+    "name": {
+      "en": "Niyog: the coconut palm",
+      "fil": "Niyog"
+    },
+    "lore": {
+      "en": "Coconut palms grew along every coast. Their nuts gave food and drink, their leaves thatch and mats, their trunks timber. Pigafetta, who came with Magellan in 1521, wrote at length about how many things the islanders made from one palm, including palm wine tapped from its flowers.",
+      "fil": "Tumutubo ang niyog sa bawat baybayin. Pagkain at inumin ang bunga nito, pang-atip at banig ang dahon, at kahoy ang puno. Mahabang isinulat ni Pigafetta, na kasama ni Magallanes noong 1521, kung gaano karaming bagay ang ginagawa ng mga taga-isla mula sa iisang puno, kasama ang alak na kinukuha sa bulaklak nito."
+    },
+    "inGame": {
+      "en": "A Niyugan gives fruit and coconut water to the diet.",
+      "fil": "Nagbibigay ang Niyugan ng prutas at buko sa hapag."
+    },
+    "hint": {
+      "en": "Plant a Niyugan.",
+      "fil": "Magtanim ng Niyugan."
+    },
+    "unlock": {
+      "type": "built",
+      "building": "niyugan"
+    }
+  },
+  "reviewed": false
+}

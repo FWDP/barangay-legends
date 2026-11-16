@@ -78,8 +78,8 @@
       "fil": "Umalis si {name} sa barangay."
     },
     "leftHunger": {
-      "en": "{name} left: there was not enough rice.",
-      "fil": "Umalis si {name}: kulang ang bigas."
+      "en": "{name} left: there was not enough food.",
+      "fil": "Umalis si {name}: kulang ang pagkain."
     },
     "leftCrowded": {
       "en": "{name} left: there was no house for {them}.",
@@ -384,8 +384,8 @@
       "fil": "Balisa ang mga espiritu: nagtatago ng kasangkapan ang anito ng balete, at nanliligaw ang tigbalang."
     },
     "stage2": {
-      "en": "The spirits are angry: rice −{percent}%, more sickness.",
-      "fil": "Galit ang mga espiritu: bigas −{percent}%, mas maraming sakit."
+      "en": "The spirits are angry: harvests −{percent}%, more sickness.",
+      "fil": "Galit ang mga espiritu: ani −{percent}%, mas maraming sakit."
     },
     "replant": {
       "en": "Magtanim (replant) · {cost}",
@@ -418,8 +418,8 @@
       "fil": "Binitawan ng ahas ang buwan! +{favor} Favor, +{gold} ginto."
     },
     "eclipseLost": {
-      "en": "The serpent ate part of the night: you lost {rice} rice.",
-      "fil": "Kinain ng ahas ang bahagi ng gabi: nawalan ka ng {rice} bigas."
+      "en": "The serpent ate part of the night: you lost {rice} Palay.",
+      "fil": "Kinain ng ahas ang bahagi ng gabi: nawalan ka ng {rice} palay."
     },
     "tikbalang": {
       "en": "A tigbalang led {n} workers astray! Answer its riddle:",
@@ -1498,7 +1498,7 @@
       "fil": "Lv {level}"
     },
     "stores": {
-      "en": "🧺 Holds {amount} rice",
+      "en": "🧺 Holds {amount} Palay",
       "fil": "🧺 Nag-iimbak ng {amount} palay"
     },
     "upgrade": {
@@ -1524,6 +1524,10 @@
     "fullTip": {
       "en": "Full: raise a Kamalig to store more, or spend rice (offerings at the Dambana, a Handog, a trade).",
       "fil": "Puno na: itaas ang isang Kamalig para mag-imbak ng mas marami, o gamitin ang palay (handog sa Dambana, Handog, kalakalan)."
+    },
+    "holds": {
+      "en": "Holds Palay {rice} · dried goods {food} · Asin {salt}",
+      "fil": "Nag-iimbak: Palay {rice} · tuyong pagkain {food} · Asin {salt}"
     }
   },
   "defense": {
@@ -1764,6 +1768,160 @@
     "general": {
       "en": "General terms until a historian reviews this tradition's.",
       "fil": "Pangkalahatang tawag habang hindi pa nasusuri ng isang historyador ang sa tradisyong ito."
+    }
+  },
+  "food": {
+    "variety": {
+      "en": "Iba't ibang pagkain: {n} of {total}",
+      "fil": "Iba't ibang pagkain: {n} sa {total}"
+    },
+    "varietyTip": {
+      "en": "A varied diet (starches, fish, meat, fruit and greens) makes people happier; one kind for too long makes them unhappy and sickly.",
+      "fil": "Mas masaya ang mga tao kung iba-iba ang pagkain (lamang-ugat at butil, isda, karne, prutas at gulay); kung iisa lamang nang matagal, nalulungkot sila at nagkakasakit."
+    },
+    "monotony": {
+      "en": "Only one kind of food for too long: people are unhappy and fall sick more easily.",
+      "fil": "Iisang uri lamang ng pagkain nang matagal: malungkot ang mga tao at mas madaling magkasakit."
+    },
+    "kept": {
+      "en": "In the ground {ground} · fresh {fresh} · alive in a Baklad {live} · preserved {preserved}",
+      "fil": "Nasa lupa {ground} · sariwa {fresh} · buháy sa Baklad {live} · naipreserba {preserved}"
+    },
+    "spoils": {
+      "en": "Fresh food spoils unless it's eaten, kept alive in a Baklad, or preserved in jars and the Kamalig (salt helps).",
+      "fil": "Nasisira ang sariwang pagkain maliban kung kainin, panatilihing buháy sa Baklad, o ipreserba sa mga banga at Kamalig (nakatutulong ang asin)."
+    },
+    "roughSeas": {
+      "en": "Rough seas this season: fishing and gathering on the shore bring in less.",
+      "fil": "Maalon ang dagat ngayong panahon: mas kaunti ang huli sa pangingisda at pangangalap sa dalampasigan."
+    },
+    "eatingRice": {
+      "en": "No Pagkain left: the people are eating Palay, which wastes it.",
+      "fil": "Wala nang Pagkain: Palay ang kinakain ng mga tao, na nasasayang."
+    }
+  },
+  "pista": {
+    "title": {
+      "en": "Pista",
+      "fil": "Pista"
+    },
+    "intro": {
+      "en": "A feast at the Bahay ng Datu: it spends Palay, rice wine and Pagkain, makes the people happy for a while, adds renown, and invited allies and bloc mates trust you more.",
+      "fil": "Isang piging sa Bahay ng Datu: gumagastos ito ng Palay, tapay at Pagkain, nagpapasaya sa mga tao nang ilang panahon, nagdaragdag ng kabantugan, at mas nagtitiwala ang mga inanyayahang kakampi at kasapi sa alyansa."
+    },
+    "occasion": {
+      "en": "Occasion",
+      "fil": "Okasyon"
+    },
+    "harvest": {
+      "en": "A good harvest",
+      "fil": "Masaganang ani"
+    },
+    "victory": {
+      "en": "A victory",
+      "fil": "Isang tagumpay"
+    },
+    "marriage": {
+      "en": "A marriage alliance",
+      "fil": "Alyansa sa kasal"
+    },
+    "peace": {
+      "en": "Friendship with allies",
+      "fil": "Pakikipagkaibigan sa kakampi"
+    },
+    "mourning": {
+      "en": "The end of mourning",
+      "fil": "Pagtatapos ng pagluluksa"
+    },
+    "hold": {
+      "en": "Hold a Pista · {cost}",
+      "fil": "Magdaos ng Pista · {cost}"
+    },
+    "raid": {
+      "en": "Not while raiders are coming.",
+      "fil": "Hindi habang may paparating na mananalakay."
+    },
+    "hunger": {
+      "en": "Not while the people go hungry.",
+      "fil": "Hindi habang nagugutom ang mga tao."
+    },
+    "cooldown": {
+      "en": "The last Pista is still fresh in memory: another in {time}.",
+      "fil": "Sariwa pa ang huling Pista: muli sa loob ng {time}."
+    },
+    "cost": {
+      "en": "Not enough to share yet.",
+      "fil": "Kulang pa ang maihahain."
+    },
+    "joy": {
+      "en": "The Pista is still remembered: +{happiness} happiness for {time}.",
+      "fil": "Naaalala pa ang Pista: +{happiness} saya sa loob ng {time}."
+    },
+    "guests": {
+      "en": "Guests: {n} barangay",
+      "fil": "Mga panauhin: {n} barangay"
+    },
+    "held": {
+      "en": "A Pista for {occasion}! The people feast; renown +{renown}.",
+      "fil": "Pista para sa {occasion}! Nagsasalo ang mga tao; kabantugan +{renown}."
+    },
+    "wine": {
+      "en": "Rice wine (tapay): {wine}",
+      "fil": "Tapay: {wine}"
+    },
+    "brew": {
+      "en": "Brew {n} jars of tapay · {cost}",
+      "fil": "Gumawa ng {n} banga ng tapay · {cost}"
+    }
+  },
+  "kaingin": {
+    "soil": {
+      "en": "Soil: {percent}% of its strength left",
+      "fil": "Lupa: {percent}% pa ang lakas"
+    },
+    "tired": {
+      "en": "The soil is worn out: rest this kaingin and clear a new plot elsewhere.",
+      "fil": "Pagod na ang lupa: pagpahingahin ang kaingin na ito at maglinis ng bagong bukid sa iba."
+    },
+    "rest": {
+      "en": "Rest it (back to forest)",
+      "fil": "Pagpahingahin (balik-gubat)"
+    }
+  },
+  "pests": {
+    "rats": {
+      "en": "Rats got into the Palay kept outside a Kamalig: {amount} eaten. A Kamalig keeps grain safe.",
+      "fil": "Pinasok ng daga ang Palay na nasa labas ng Kamalig: {amount} ang nakain. Ligtas ang butil sa Kamalig."
+    },
+    "locustComing": {
+      "en": "A swarm of balang (locusts) is coming: Palayan and Kaingin yields will fall for a while in {time}.",
+      "fil": "May paparating na kawan ng balang: bababa ang ani ng Palayan at Kaingin nang ilang panahon sa loob ng {time}."
+    },
+    "locust": {
+      "en": "Balang are in the fields: Palayan and Kaingin bring in less for {time}.",
+      "fil": "Nasa bukid ang balang: mas kaunti ang ani ng Palayan at Kaingin sa loob ng {time}."
+    },
+    "boar": {
+      "en": "Wild boar trampled a field by the forest. A Bantayan or a hunters' camp nearby keeps them away.",
+      "fil": "Tinapakan ng baboy-ramo ang isang bukid malapit sa gubat. Inilalayo sila ng kalapit na Bantayan o kampo ng mangangaso."
+    }
+  },
+  "gather": {
+    "food": {
+      "en": "Forage",
+      "fil": "Mangalap ng pagkain"
+    },
+    "foodLabel": {
+      "en": "Forage for food in the forest and on the shore (+{amount})",
+      "fil": "Mangalap ng pagkain sa gubat at dalampasigan (+{amount})"
+    },
+    "wood": {
+      "en": "Gather Wood",
+      "fil": "Mangahoy"
+    },
+    "woodLabel": {
+      "en": "Gather wood (+{amount})",
+      "fil": "Mangahoy (+{amount})"
     }
   }
 }

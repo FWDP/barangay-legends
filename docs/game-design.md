@@ -37,6 +37,19 @@ different form, and some (prestige and Dangal, export codes) isn't built yet.
   the fire pit and a shade tree (`map.gathering`, seeded per map, v28). It is walkable, never
   built on, counts as part of the Daan network, and is where gatherings stand first. New maps
   clear one extra row behind the start square to make up for the land it keeps open.
+- **Food (V.2, v34, `engine/food.ts`, `rules.food`, `rules.pests`):** villagers eat Pagkain
+  (everyday food) from many sources: Gabihan and Kaingin (root crops kept in the ground: they
+  don't spoil and survive typhoons; a kaingin tires and is rested back to forest), Sagingan,
+  Lumbia (dried sago), Niyugan, the Pangisdaan (the old fishing dock), shore gathering, the
+  hunters' camp and the Babuyan. Palay (rice) is a prestige grain for offerings, gifts, marriage,
+  rice wine, the Pista and the datu's household; villagers eat it only with no Pagkain, wasting
+  it. Asin from the Asinan salts fresh food into household jars; the Kamalig holds Palay, dried
+  goods and Asin only; a Baklad keeps fish alive. Fresh food left out spoils. A varied diet makes
+  people happier, one kind for long makes them unhappy and sickly. Seasons and rough seas change
+  yields by crop; rats, locusts and wild boar are warned about and pass. The Pista at the Bahay
+  ng Datu spends Palay, rice wine and Pagkain for happiness, renown and allies' trust. Old saves
+  split their rice into Pagkain and Palay and eat Palay without waste for a grace period.
+  Labour costs (clearing, warriors, replanting, early buildings) are paid in Pagkain.
 - **Where villagers come from:** births in a Bahay Kubo (fed, room, happiness) and newcomers
   with a reason (land, marriage, alliance, a trader who stays, kin from a raided ally), told in
   the Balita; children grow up after `rules.population.childDays`, don't work and eat less;

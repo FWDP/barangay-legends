@@ -47,7 +47,7 @@ describe("card states", () => {
 
   it("badges a tab when something new unlocks in it, until it has been seen", () => {
     const s = withState({ villagers: 10 });
-    const seenBefore = ["bahay-kubo", "palayan", "woodcutter-camp", "babaylan-hut", "dambana"];
+    const seenBefore = ["bahay-kubo", "palayan", "woodcutter-camp", "babaylan-hut", "dambana", ...content.buildings.filter((b) => b.category === "pagkain" && b.id !== "kamalig").map((b) => b.id)];
     const fresh = tabsWithNew(s, content, seenBefore);
     expect(fresh).toEqual(new Set(["pagkain", "depensa"])); // Kamalig, Kuta and Bantayan at 10 villagers
     expect(tabsWithNew(s, content, [...seenBefore, "kamalig", "kuta"]).size).toBe(1);
@@ -58,15 +58,15 @@ describe("card states", () => {
 describe("recommended", () => {
   it("glows what the current task asks for", () => {
     const s = withState({ gawainDone: [] });
-    expect(recommended(s, content, null)).toEqual(new Set(["palayan"]));
-    const daanTask = withState({ gawainDone: ["first-palayan", "first-camp", "ten-villagers", "clear-five"] });
+    expect(recommended(s, content, null)).toEqual(new Set(["gabihan"]));
+    const daanTask = withState({ gawainDone: ["first-gabihan", "first-camp", "ten-villagers", "first-palayan", "clear-five"] });
     expect(recommended(daanTask, content, null).has(DAAN)).toBe(true);
   });
 
   it("and what the adviser is talking about, if it can be built", () => {
     const s = withState({ buildings: [at("babaylan-hut", 2, 2)] });
     expect(recommended(s, content, "dambana").has("dambana")).toBe(true);
-    expect(recommended(s, content, "rice-low").has("palayan")).toBe(true);
+    expect(recommended(s, content, "rice-low").has("gabihan")).toBe(true);
     expect(recommended(s, content, "roads").has(DAAN)).toBe(true);
     // A locked building is never pointed at.
     const early = withState({ villagers: 3, gawainDone: content.quests.slice(0, 7).map((q) => q.id) });

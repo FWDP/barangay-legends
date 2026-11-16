@@ -16,7 +16,7 @@ const k = content.rules.kabantugan;
 /** A barangay whose level rewards are live (the test helper turns them off). */
 const live = (patch: Partial<GameState> = {}) => withState({ levelRewarded: 1, kabantugan: 0, ...patch });
 const world = (patch: Partial<GameState> = {}): GameState => {
-  const s = live({ resources: { rice: 5000, wood: 5000, gold: 500 }, villagers: 20, ...patch });
+  const s = live({ resources: { rice: 5000, wood: 5000, gold: 500, food: 5000, salt: 0, wine: 0 }, villagers: 20, ...patch });
   return { ...s, region: createRegion(calm, 0, 7, s.barangay.id) };
 };
 const nb = (s: GameState, id: string) => s.region!.neighbors.find((n) => n.id === id)!;
@@ -73,7 +73,7 @@ describe("renown sources", () => {
     expect(traded.stats.trades).toBe(1);
     expect(traded.kabantugan).toBe(s.kabantugan + k.perTrade);
     // Hard times don't take it away.
-    const hungry = tick({ ...traded, resources: { rice: 0, wood: 0, gold: 0 } }, calm, 120);
+    const hungry = tick({ ...traded, resources: { rice: 0, wood: 0, gold: 0, food: 0, salt: 0, wine: 0 } }, calm, 120);
     expect(hungry.kabantugan).toBeGreaterThanOrEqual(traded.kabantugan);
   });
 
@@ -92,7 +92,7 @@ describe("renown sources", () => {
   });
 
   it("is credited for what is achieved while away", () => {
-    const s = live({ villagers: 9, resources: { rice: 500, wood: 0, gold: 0 }, buildings: [at("palayan", 1, 1), at("bahay-kubo", 5, 3), at("bahay-kubo", 4, 3), at("bahay-kubo", 6, 3), at("bahay-kubo", 4, 5)] });
+    const s = live({ villagers: 9, resources: { rice: 500, wood: 0, gold: 0, food: 500, salt: 0, wine: 0 }, buildings: [at("palayan", 1, 1), at("bahay-kubo", 5, 3), at("bahay-kubo", 4, 3), at("bahay-kubo", 6, 3), at("bahay-kubo", 4, 5)] });
     const { state } = offlineProgress(s, calm, 600);
     expect(state.villagers).toBeGreaterThanOrEqual(10);
     expect(state.kabantugan).toBeGreaterThanOrEqual(k.perTenVillagers);
@@ -103,7 +103,7 @@ describe("Bahay ng Datu upgrades need a barangay level", () => {
   it("level 2 needs barangay level 3; 3 → 6; 4 → 9; 5 → 12", () => {
     const mins = content.datuHouse!.datuHouse.levels.map((l) => l.minBarangayLevel ?? 1);
     expect(mins).toEqual([1, 3, 6, 9, 12]);
-    const s = live({ resources: { rice: 9000, wood: 9000, gold: 9000 } });
+    const s = live({ resources: { rice: 9000, wood: 9000, gold: 9000, food: 9000, salt: 0, wine: 0 } });
     expect(datuLevelNeeded(s, content)).toBe(3);
     expect(apply(s, calm, { type: "upgradeDatu" })).toBe(s);
     const known = { ...s, kabantugan: k.levelAt[1] };
@@ -149,7 +149,9 @@ describe("save migration v20 → v21", () => {
     expect(back.kabantugan).toBe(expected);
     expect(back.levelRewarded).toBe(levelForRenown(content, expected));
     expect(back.stats.bestTens).toBe(2);
-    expect(back.resources).toEqual(s.resources);
+    // The v34 food migration splits the old rice into Pagkain and Palay.
+    const share = Math.floor((s.resources.rice * content.rules.food.migration.foodSharePercent) / 100);
+    expect(back.resources).toEqual({ ...s.resources, rice: s.resources.rice - share, food: share });
   });
 });
 
@@ -169,7 +171,7 @@ describe("generated villages for AI barangays", () => {
     // Any change to their people or buildings makes a new one; their goods don't.
     expect(villageKey(content, { ...n, state: { ...n.state, villagers: n.state.villagers + 1 } })).not.toBe(villageKey(content, n));
     expect(villageKey(content, { ...n, state: { ...n.state, buildings: [...n.state.buildings, { type: "palayan", x: 0, y: 0 }] } })).not.toBe(villageKey(content, n));
-    expect(villageKey(content, { ...n, state: { ...n.state, resources: { rice: 1, wood: 2, gold: 3 } } })).toBe(villageKey(content, n));
+    expect(villageKey(content, { ...n, state: { ...n.state, resources: { rice: 1, wood: 2, gold: 3, food: 1, salt: 0, wine: 0 } } })).toBe(villageKey(content, n));
   });
 
   it("follow the trait: traders more fields and docks, aggressive more Kuta", () => {

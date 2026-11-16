@@ -1,0 +1,44 @@
+{
+  "id": "food-storage",
+  "name": "How food was kept",
+  "description": "Grains and dried goods were kept in raised storehouses (kamalig); root crops were left in the ground and dug as needed; each household kept fish paste, salted fish and palm wine in clay jars (tapayan, banga) and smoked fish on racks over the hearth; fish corrals (baklad) kept fish alive.",
+  "tradition": "Widespread lowland",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)"
+  ],
+  "aklat": {
+    "order": 53,
+    "icon": "🏺",
+    "name": {
+      "en": "How food was kept",
+      "fil": "Paano iniimbak ang pagkain"
+    },
+    "lore": {
+      "en": "There was no single storehouse for everything. Grain and dried goods (unhusked rice, millet, dried fish, salt) went into a kamalig raised on posts, out of reach of rats and damp. Root crops like gabi and yams were simply left in the ground and dug up as needed. Every house kept clay jars (tapayan and banga) of fermented fish paste, salted fish and palm wine, and smoked fish on a rack above the hearth. Fish corrals (baklad) kept fish alive in the water until they were wanted.",
+      "fil": "Walang iisang imbakan para sa lahat. Sa kamalig na nakaangat sa haligi inilalagay ang butil at tuyong pagkain (palay, dawa, tuyong isda, asin), malayo sa daga at halumigmig. Iniiwan lamang sa lupa ang gabi at ube at hinuhukay kapag kailangan. Bawat bahay ay may tapayan at banga ng bagoong, inasnang isda at alak, at pinausukang isda sa salalayan sa ibabaw ng kalan. Pinananatiling buhay ng baklad ang isda sa tubig hanggang kailanganin."
+    },
+    "inGame": {
+      "en": "Root crops stay in the Gabihan and Kaingin; fish live in a Baklad; every house smokes and salts fresh food into its jars; the Kamalig holds Palay, dried goods and Asin. Only fresh food left out spoils. Raiders take from the Kamalig and the jars, never from the ground.",
+      "fil": "Nananatili sa Gabihan at Kaingin ang lamang-ugat; buhay ang isda sa Baklad; pinauusukan at inaasinan ng bawat bahay ang sariwang pagkain para sa banga; Palay, tuyong pagkain at Asin ang nasa Kamalig. Sariwang pagkaing nakalantad lamang ang nasisira. Sa Kamalig at banga kumukuha ang mananalakay, hindi sa lupa."
+    },
+    "hint": {
+      "en": "Build a Baklad or a Kamalig.",
+      "fil": "Magtayo ng Baklad o Kamalig."
+    },
+    "unlock": {
+      "type": "any",
+      "of": [
+        {
+          "type": "built",
+          "building": "baklad"
+        },
+        {
+          "type": "built",
+          "building": "kamalig"
+        }
+      ]
+    }
+  },
+  "reviewed": false
+}

@@ -27,9 +27,11 @@ describe("gold", () => {
 
 describe("Fishing Dock", () => {
   it("has the numbers from docs/game-design.md", () => {
-    expect(dock.cost).toEqual({ wood: 40, rice: 20 });
+    // The labor is paid in Pagkain now (rice is a prestige grain).
+    expect(dock.cost).toEqual({ wood: 40, food: 20 });
     // 0.2 in docs/game-design.md at first; halved by the balance pass (npm run simulate).
-    expect(dock.produces).toEqual({ gold: 0.1 });
+    // Now the Pangisdaan: fresh fish for the barangay too (food.ts).
+    expect(dock.produces).toEqual({ food: 0.35, gold: 0.1 });
     expect(dock.workers).toBe(3);
     expect(dock.unlock.villagers).toBe(15);
   });
@@ -39,14 +41,14 @@ describe("Fishing Dock", () => {
     const s = withState({ villagers: 15 });
     expect(canPlace(s, content, dock, 1, 2)).toBe(true);
     expect(canPlace(s, content, dock, 2, 2)).toBe(false);
-    const built = apply({ ...s, resources: { rice: 100, wood: 100, gold: 0 } }, calm, { type: "build", building: "fishing-dock", x: 1, y: 2 });
+    const built = apply({ ...s, resources: { ...s.resources, rice: 100, wood: 100 } }, calm, { type: "build", building: "fishing-dock", x: 1, y: 2 });
     expect(built.buildings.at(-1)).toMatchObject(at("fishing-dock", 1, 2));
-    const refused = { ...s, resources: { rice: 100, wood: 100, gold: 0 } };
+    const refused = { ...s, resources: { ...s.resources, rice: 100, wood: 100 } };
     expect(apply(refused, calm, { type: "build", building: "fishing-dock", x: 3, y: 2 })).toBe(refused);
   });
 
   it("earns 0.1 gold a second per worker", () => {
-    const s = withState({ villagers: 3, resources: { rice: 500, wood: 0, gold: 0 }, buildings: [at("fishing-dock", 1, 2)] });
+    const s = withState({ villagers: 3, resources: { rice: 500, wood: 0, gold: 0, food: 500, salt: 0, wine: 0 }, buildings: [at("fishing-dock", 1, 2)] });
     expect(buildingWorkers(s, calm)).toEqual([3]);
     const steady = { ...s, happiness: h.start };
     expect(rates(steady, calm).produced.gold).toBeCloseTo(0.3);
@@ -54,7 +56,7 @@ describe("Fishing Dock", () => {
   });
 
   it("follows the workplace rules: pause, reachability and the borrowing order", () => {
-    const s = withState({ villagers: 3, resources: { rice: 500, wood: 0, gold: 0 }, buildings: [at("fishing-dock", 1, 2)] });
+    const s = withState({ villagers: 3, resources: { rice: 500, wood: 0, gold: 0, food: 500, salt: 0, wine: 0 }, buildings: [at("fishing-dock", 1, 2)] });
     const paused = apply(s, calm, { type: "pause", x: 1, y: 2, paused: true });
     expect(buildingWorkers(paused, calm)).toEqual([0]);
     expect(buildingWorkers(apply(paused, calm, { type: "pause", x: 1, y: 2, paused: false }), calm)).toEqual([3]);
@@ -72,7 +74,7 @@ describe("Fishing Dock", () => {
     const busy = withState({
       map: mapFrom(["TTTTTTT", "~.....T", "~..P..T", "~.....T", "TTTTTTT"]),
       villagers: 5,
-      resources: { rice: 500, wood: 0, gold: 0 },
+      resources: { rice: 500, wood: 0, gold: 0, food: 500, salt: 0, wine: 0 },
       buildings: [at("woodcutter-camp", 5, 1), at("fishing-dock", 1, 2)],
     });
     const queued = apply(busy, calm, { type: "clearArea", tiles: [{ x: 6, y: 2 }] });
@@ -96,33 +98,34 @@ describe("Kamalig and the rice cap", () => {
 
   it("stops production and gathering at the cap", () => {
     const fields = [at("palayan", 1, 1), at("palayan", 1, 3), at("bahay-kubo", 5, 3)];
-    const s = withState({ villagers: 4, resources: { rice: base - 1, wood: 0, gold: 0 }, buildings: fields });
+    const s = withState({ villagers: 4, resources: { food: 500, rice: base - 1, wood: 0, gold: 0 }, buildings: fields });
     expect(tick(s, calm, 30).resources.rice).toBe(base);
     const full = { ...s, resources: { ...s.resources, rice: base } };
     expect(apply(full, calm, { type: "gather", resource: "rice" })).toBe(full);
     // With a Kamalig there's room for more.
-    const roomy = withState({ villagers: 4, resources: { rice: base, wood: 0, gold: 0 }, buildings: [...fields, at("kamalig", 3, 3)] });
+    const roomy = withState({ villagers: 4, resources: { food: 500, rice: base, wood: 0, gold: 0 }, buildings: [...fields, at("kamalig", 3, 3)] });
     expect(tick(roomy, calm, 10).resources.rice).toBeGreaterThan(base);
   });
 
   it("never throws away rice already stored above the cap", () => {
     // A trade or a reward can bring more than the cap: it's kept, it just doesn't grow.
-    const s = withState({ villagers: 2, resources: { rice: base + 50, wood: 0, gold: 0 }, buildings: [at("palayan", 1, 1), at("palayan", 1, 3)] });
+    const s = withState({ villagers: 2, resources: { food: 500, rice: base + 50, wood: 0, gold: 0 }, buildings: [at("palayan", 1, 1), at("palayan", 1, 3)] });
     const later = tick(s, calm, 10);
     expect(later.resources.rice).toBeLessThanOrEqual(base + 50);
     expect(later.resources.rice).toBeGreaterThan(base);
   });
 
   it("is respected offline too", () => {
-    const s = withState({ villagers: 4, resources: { rice: base - 20, wood: 0, gold: 0 }, buildings: [at("palayan", 1, 1), at("palayan", 1, 3), at("bahay-kubo", 5, 3)] });
+    const s = withState({ villagers: 4, resources: { food: 2000, rice: base - 20, wood: 0, gold: 0 }, buildings: [at("palayan", 1, 1), at("palayan", 1, 3), at("bahay-kubo", 5, 3)] });
     const { state, report } = offlineProgress(s, calm, 3600);
     expect(state.resources.rice).toBeLessThanOrEqual(base);
-    expect(report.produced.rice - report.eaten).toBeLessThanOrEqual(20 + 1e-6);
+    // Palay brought in counts only what fit (the datu's household eats a little of it too).
+    expect(report.produced.rice).toBeLessThanOrEqual(20 + calm.rules.food.datuRicePerLevel * 3600 + 1e-6);
   });
 });
 
 describe("happiness", () => {
-  const plain = (patch: Partial<GameState> = {}) => withState({ buildings: [], villagers: 5, resources: { rice: 100, wood: 0, gold: 0 }, ...patch });
+  const plain = (patch: Partial<GameState> = {}) => withState({ buildings: [], villagers: 5, resources: { rice: 100, wood: 0, gold: 0, food: 100, salt: 0, wine: 0 }, ...patch });
 
   it("starts at 60, the level that changes nothing", () => {
     expect(h.start).toBe(60);
@@ -158,15 +161,15 @@ describe("happiness", () => {
   });
 
   it("falls with hunger and sickness", () => {
-    expect(happinessTarget(plain({ resources: { rice: 0, wood: 0, gold: 0 } }), content).target).toBe(h.start + h.hungry);
+    expect(happinessTarget(plain({ resources: { rice: 0, wood: 0, gold: 0, food: 0, salt: 0, wine: 0 } }), content).target).toBe(h.start + h.hungry);
     expect(happinessTarget(plain({ sick: [10, 10] }), content).target).toBe(h.start + 2 * h.perSick);
     expect(happinessTarget(plain({ sick: Array(5).fill(10), villagers: 5 }), content).sickness).toBe(Math.max(h.maxFromSick, 5 * h.perSick));
-    const hungry = tick(plain({ resources: { rice: 0, wood: 0, gold: 0 } }), calm, 20);
+    const hungry = tick(plain({ resources: { rice: 0, wood: 0, gold: 0, food: 0, salt: 0, wine: 0 } }), calm, 20);
     expect(hungry.happiness).toBeLessThan(h.start);
   });
 
   it("stays within 0–100", () => {
-    const sad = plain({ resources: { rice: 0, wood: 0, gold: 0 }, sick: [99, 99, 99, 99, 99], happiness: 1 });
+    const sad = plain({ resources: { rice: 0, wood: 0, gold: 0, food: 0, salt: 0, wine: 0 }, sick: [99, 99, 99, 99, 99], happiness: 1 });
     expect(tick(sad, calm, 60).happiness).toBeGreaterThanOrEqual(0);
   });
 });

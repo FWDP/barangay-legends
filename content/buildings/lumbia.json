@@ -1,0 +1,28 @@
+{
+  "id": "lumbia",
+  "name": "Lumbia",
+  "description": "A stand of sago palms. Felling a palm and washing the starch from its pith is hard work, but one palm gives a great deal of sago flour, which keeps well.",
+  "icon": "🌴",
+  "order": 2.5,
+  "category": "pagkain",
+  "cost": {
+    "wood": 25
+  },
+  "repairCost": {
+    "wood": 10
+  },
+  "produces": {
+    "food": 0.45
+  },
+  "workers": 3,
+  "foodKind": "dried",
+  "foodGroup": "starch",
+  "typhoonProof": true,
+  "unlock": {
+    "villagers": 20
+  },
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Costs, staffing and yields are playtest guesses (npm run simulate)"
+  ]
+}

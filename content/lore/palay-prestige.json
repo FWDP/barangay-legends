@@ -1,0 +1,36 @@
+{
+  "id": "palay-prestige",
+  "name": "Palay: rice as a prestige food",
+  "description": "Rice was grown widely but in much of the islands was a prestige food: for feasts, offerings, rice wine, bride-price and the households of the datu; a daily staple mainly in some lowland river basins (e.g. around Manila Bay). Scott 1994.",
+  "tradition": "Widespread; Tagalog river basins grew more",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Juan de Plasencia, Customs of the Tagalogs (1589), in Blair and Robertson, The Philippine Islands 1493–1898, vol. 7",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)"
+  ],
+  "aklat": {
+    "order": 51,
+    "icon": "🌾",
+    "name": {
+      "en": "Palay: rice for feasts and offerings",
+      "fil": "Palay: bigas para sa piging at handog"
+    },
+    "lore": {
+      "en": "Rice was grown in many places, but in much of the islands it was a prestige food. It was served at feasts, offered to the spirits, brewed into rice wine, given in bride-price and eaten every day in the datu's household. Commoners ate mostly root crops, bananas and sago with their fish. In some lowland river basins, such as around Manila Bay, rice was grown in larger amounts and eaten more often.",
+      "fil": "Itinatanim ang palay sa maraming lugar, pero sa malaking bahagi ng kapuluan ay pagkaing may dangal ito. Inihahain ito sa piging, inihahandog sa mga espiritu, ginagawang alak, ibinibigay bilang bigay-kaya at kinakain araw-araw sa sambahayan ng datu. Lamang-ugat, saging at sago ang karaniwang kinakain ng karaniwang tao kasama ng isda. Sa ilang mababang lambak-ilog, gaya ng paligid ng Look ng Maynila, mas marami ang itinatanim na palay at mas madalas itong kinakain."
+    },
+    "inGame": {
+      "en": "Palay is for offerings, Handog gifts, marriage alliances, rice wine and the Pista. Villagers eat it only when there is no Pagkain, and that wastes it. Keep it in a Kamalig, safe from rats.",
+      "fil": "Para sa handog, Handog, alyansa sa kasal, tapay at Pista ang Palay. Kinakain lamang ito ng mga tao kapag walang Pagkain, at nasasayang iyon. Itago ito sa Kamalig, ligtas sa daga."
+    },
+    "hint": {
+      "en": "Plant a Palayan.",
+      "fil": "Magtanim ng Palayan."
+    },
+    "unlock": {
+      "type": "built",
+      "building": "palayan"
+    }
+  },
+  "reviewed": false
+}

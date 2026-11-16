@@ -31,7 +31,7 @@ describe("help and adviser content", () => {
   it("fills help numbers from the rules", () => {
     const ui = loadUiContent(content);
     const all = ui.help.en.sections.flatMap((s) => s.body).map((p) => fill(p, helpVars(content)));
-    expect(all.some((p) => p.includes(String(content.rules.riceEatenPerVillagerPerSecond)))).toBe(true);
+    expect(all.some((p) => p.includes(String(content.rules.foodEatenPerVillagerPerSecond)))).toBe(true);
     expect(all.every((p) => placeholders(p).length === 0)).toBe(true);
   });
 

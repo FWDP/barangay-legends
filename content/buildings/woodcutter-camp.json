@@ -6,7 +6,7 @@
   "order": 3,
   "category": "pagkain",
   "cost": {
-    "rice": 10
+    "food": 10
   },
   "repairCost": {
     "wood": 5

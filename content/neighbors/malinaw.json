@@ -13,8 +13,9 @@
     "villagers": 6,
     "warriors": 0,
     "resources": {
-      "rice": 60,
-      "wood": 40
+      "rice": 20,
+      "wood": 40,
+      "food": 60
     },
     "buildings": {
       "bahay-kubo": 3,

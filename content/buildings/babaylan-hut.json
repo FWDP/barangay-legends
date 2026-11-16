@@ -7,7 +7,7 @@
   "category": "pananampalataya",
   "cost": {
     "wood": 40,
-    "rice": 20
+    "food": 20
   },
   "repairCost": {
     "wood": 20

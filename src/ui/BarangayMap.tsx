@@ -110,6 +110,8 @@ interface BuildingInfo {
   repairText: string;
   /** A Libingan's look, from the barangay's tradition. */
   burialLook: "jars" | "longon";
+  /** A Babuyan's pigs (false: chickens only), from the barangay's tradition. */
+  pigs: boolean;
   /** A healer's hut: how many sick villagers rest inside (engine/healing.ts). */
   inside: number;
 }
@@ -261,6 +263,7 @@ export function BarangayMap(props: {
     const defs = new Map(content.buildings.map((d) => [d.id, d]));
     const byTile = new Map<string, BuildingInfo>();
     const look = content.traditions.find((t) => t.id === state.tradition)?.burialLook ?? "jars";
+    const pigs = content.traditions.find((t) => t.id === state.tradition)?.pigs !== false;
     const insideAt = new Map(healerStays(state, content).map((h) => [h.index, h.count]));
     state.buildings.forEach((b, i) => {
       const def = defs.get(b.type);
@@ -279,6 +282,7 @@ export function BarangayMap(props: {
         burning: b.burningSince !== undefined,
         repairText: repair || "free",
         burialLook: look,
+        pigs,
         inside: insideAt.get(i) ?? 0,
       });
     });
@@ -1537,7 +1541,7 @@ function Building(props: {
   onActivate: (x: number, y: number, el: Element) => void;
 }) {
   const { x, y, info, fresh, lifted, onActivate } = props;
-  const { def, bonus, damaged, burning, repairText, connected, noPath, paused, lent, burialLook, level, inside } = info;
+  const { def, bonus, damaged, burning, repairText, connected, noPath, paused, lent, burialLook, level, inside, pigs } = info;
   // Decided once, at mount: only buildings that were just built bounce in.
   const [bounce] = useState(fresh);
   const label = burning
@@ -1576,8 +1580,8 @@ function Building(props: {
         {/* A bridge is drawn as its deck; the button over it is just the tap target. */}
         {def.bridge ? (
           <span className="inline-block size-[0.9em]" />
-        ) : buildingArtUrl(def.id, level) ? (
-          <img src={buildingArtUrl(def.id, level)!} alt="" draggable={false} className="inline-block size-[1.05em] align-bottom" />
+        ) : buildingArtUrl(def.id, level, pigs) ? (
+          <img src={buildingArtUrl(def.id, level, pigs)!} alt="" draggable={false} className="inline-block size-[1.05em] align-bottom" />
         ) : def.burial && burialLook === "longon" ? (
           "⚰️"
         ) : (

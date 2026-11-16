@@ -3,9 +3,10 @@ import { loadContent } from "../engine/content";
 import { costText, formatDuration, baleteWarning, bonusPreviewText, bonusRuleText, formatBreakdown, formatRate, groveRuleText } from "./format";
 
 const rates = {
-  produced: { rice: 5, wood: 0.8, gold: 0 },
-  eaten: { rice: 2, wood: 0, gold: 0 },
-  net: { rice: 3, wood: 0.8, gold: 0 },
+  produced: { food: 5, rice: 0, wood: 0.8, gold: 0, salt: 0, wine: 0 },
+  eaten: { food: 2, rice: 0, wood: 0, gold: 0, salt: 0, wine: 0 },
+  net: { food: 3, rice: 0, wood: 0.8, gold: 0, salt: 0, wine: 0 },
+  foodByBuilding: [],
 };
 
 describe("format", () => {
@@ -16,7 +17,7 @@ describe("format", () => {
   });
 
   it("explains where a rate comes from", () => {
-    expect(formatBreakdown(rates, "rice")).toBe("+5.0 farmed · −2.0 eaten = +3.0/s");
+    expect(formatBreakdown(rates, "food")).toBe("+5.0 gathered · −2.0 eaten = +3.0/s");
     expect(formatBreakdown(rates, "wood")).toBe("+0.8 chopped = +0.8/s");
   });
 });
@@ -59,7 +60,7 @@ describe("durations", () => {
 describe("costText", () => {
   it("lists the resources that cost something, or says free", () => {
     expect(costText({ rice: 0, wood: 9 })).toBe("🪵 9");
-    expect(costText({ rice: 2, wood: 3 })).toBe("🍚 2 🪵 3");
+    expect(costText({ rice: 2, wood: 3 })).toBe("🌾 2 🪵 3");
     expect(costText({ rice: 0, wood: 0 })).toBe("free");
   });
 });

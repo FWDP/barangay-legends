@@ -15,7 +15,7 @@ const village = (patch: Partial<GameState> = {}) =>
     villagers: 6,
     warriors: 4,
     // Wood under the stockpile limit (stockpile.ts), so the camp's work shows in the rates.
-    resources: { rice: 1000, wood: 300, gold: 0 },
+    resources: { rice: 1000, wood: 300, gold: 0, food: 1000, salt: 0, wine: 0 },
     buildings: [at("bahay-kubo", 5, 3), at("palayan", 1, 1), at("woodcutter-camp", 7, 1), at("kuta", 3, 6)],
     region: region(),
     ...patch,
@@ -89,12 +89,12 @@ describe("the Kuta cap", () => {
 
 describe("food first when rice is short", () => {
   it("fills the fields before other workplaces", () => {
-    const fields = [at("palayan", 1, 1), at("palayan", 2, 1)];
-    const s = withState({ villagers: 4, resources: { rice: 1, wood: 0, gold: 0 }, buildings: [at("woodcutter-camp", 7, 1), ...fields] });
+    const fields = [at("gabihan", 1, 1), at("gabihan", 1, 2)];
+    const s = withState({ villagers: 4, resources: { rice: 1, wood: 0, gold: 0, food: 1, salt: 0, wine: 0 }, buildings: [at("woodcutter-camp", 7, 1), ...fields] });
     expect(riceIsLow(s, calm)).toBe(true);
-    expect(assignWorkers(s, calm)).toMatchObject({ palayan: 4, "woodcutter-camp": 0 });
-    const plenty = { ...s, resources: { rice: 1000, wood: 0, gold: 0 } };
-    expect(assignWorkers(plenty, calm)).toMatchObject({ palayan: 2, "woodcutter-camp": 2 });
+    expect(assignWorkers(s, calm)).toMatchObject({ gabihan: 4, "woodcutter-camp": 0 });
+    const plenty = { ...s, resources: { rice: 1000, wood: 0, gold: 0, food: 1000, salt: 0, wine: 0 } };
+    expect(assignWorkers(plenty, calm)).toMatchObject({ gabihan: 2, "woodcutter-camp": 2 });
   });
 });
 
@@ -112,7 +112,7 @@ describe("migrating an all-warrior save", () => {
     place("palayan", 6);
     place("woodcutter-camp", 3);
     place("kuta", 5);
-    const s = withState({ villagers: 29, warriors: 29, resources: { rice: 0, wood: 40, gold: 0 }, hunger: 80, buildings, region: region() });
+    const s = withState({ villagers: 29, warriors: 29, resources: { rice: 0, wood: 40, gold: 0, food: 0, salt: 0, wine: 0 }, hunger: 80, buildings, region: region() });
     return { ...s, version: 13 };
   }
 
@@ -124,12 +124,12 @@ describe("migrating an all-warrior save", () => {
     expect(tick(loaded, calm, 20).villagers).toBe(29);
   });
 
-  it("goes back to work as soon as there's a little rice, fields first", () => {
+  it("goes back to work as soon as there's a little food", () => {
     let s = parseSave(JSON.stringify(oldSave()), content)!;
-    for (let i = 0; i < 5; i++) s = apply(s, calm, { type: "gather", resource: "rice" });
+    for (let i = 0; i < 5; i++) s = apply(s, calm, { type: "gather", resource: "food" });
     const workers = buildingWorkers(s, calm);
     const inFields = s.buildings.reduce((n, b, i) => n + (b.type === "palayan" ? workers[i] : 0), 0);
-    expect(inFields).toBe(12); // every field full: rice is short, so food first
+    expect(inFields).toBe(12); // every field full
     // Fields and camps all staffed, and the Kutas nearer the river than the Bahay ng Datu became
     // Bantayan (the v33 migration), each with its lookouts.
     const towers = s.buildings.filter((b) => b.type === "bantayan").length;

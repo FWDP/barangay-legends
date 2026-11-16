@@ -17,7 +17,7 @@ const town = (patch: Partial<GameState> = {}): GameState =>
     residents: [adult(1, "woman"), adult(2, "man"), adult(3, "woman"), adult(4, "man")],
     residentsNext: 5,
     buildings: kubo,
-    resources: { rice: 500, wood: 0, gold: 0 },
+    resources: { rice: 500, wood: 0, gold: 0, food: 500, salt: 0, wine: 0 },
     happiness: 70,
     ...patch,
   });
@@ -25,7 +25,7 @@ const town = (patch: Partial<GameState> = {}): GameState =>
 describe("births", () => {
   it("need food, housing room, happiness and a Bahay Kubo", () => {
     expect(canHaveChild(town(), content)).toBe(true);
-    expect(canHaveChild(town({ resources: { rice: 0, wood: 0, gold: 0 } }), content)).toBe(false);
+    expect(canHaveChild(town({ resources: { rice: 0, wood: 0, gold: 0, food: 0, salt: 0, wine: 0 } }), content)).toBe(false);
     expect(canHaveChild(town({ hunger: 5 }), content)).toBe(false);
     expect(canHaveChild(town({ happiness: p.birthMinHappiness - 1 }), content)).toBe(false);
     expect(canHaveChild(town({ buildings: [] }), content)).toBe(false);
@@ -61,7 +61,7 @@ describe("births", () => {
   it("come about every secondsPerBirth while the barangay can have children", () => {
     // Plenty of houses, so there is room all along.
     const roomy = [...kubo, ...[0, 1, 2, 3, 4, 5].flatMap((x) => [at("bahay-kubo", 5 + (x % 3), 6 + Math.floor(x / 3)), at("bahay-kubo", 1 + x, 8)])];
-    const s = tick(town({ buildings: roomy, resources: { rice: 5000, wood: 0, gold: 0 } }), content, p.secondsPerBirth * 2.5);
+    const s = tick(town({ buildings: roomy, resources: { rice: 5000, wood: 0, gold: 0, food: 5000, salt: 0, wine: 0 } }), content, p.secondsPerBirth * 2.5);
     expect(s.residents.filter((r) => r.came === "born").length).toBeGreaterThanOrEqual(2);
     // Too unhappy: no births (newcomers still come).
     const sad = growPopulation(town({ happiness: 10, buildings: roomy }), content, p.secondsPerBirth * 3);

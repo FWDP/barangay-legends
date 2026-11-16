@@ -1,0 +1,35 @@
+{
+  "id": "lumbia",
+  "name": "Lumbia: sago from the palm",
+  "description": "Sago (lumbia, Metroxylon) was made by felling the palm, pounding the pith and washing out the starch; it was an important food in parts of the Visayas and Mindanao. Hard work for a large yield.",
+  "tradition": "Visayan, Maranao and other Mindanao peoples",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)"
+  ],
+  "aklat": {
+    "order": 43,
+    "icon": "🌴",
+    "name": {
+      "en": "Lumbia: sago from the palm",
+      "fil": "Lumbia: sago mula sa palma"
+    },
+    "lore": {
+      "en": "In parts of the Visayas and Mindanao, people made sago from the lumbia palm. They felled a palm, split the trunk, pounded the soft pith and washed it in a trough until the starch settled out as flour. It was heavy work, but one palm gave food for many days, and sago kept well once dried.",
+      "fil": "Sa ilang bahagi ng Kabisayaan at Mindanao, gumagawa ng sago mula sa palmang lumbia. Pinuputol ang palma, binibiyak ang puno, binabayo ang malambot na ubod at hinuhugasan sa labangan hanggang tumining ang almirol bilang harina. Mabigat na gawain ito, pero pagkain na para sa maraming araw ang isang palma, at tumatagal ang sago kapag tuyo na."
+    },
+    "inGame": {
+      "en": "A Lumbia takes more workers but yields a lot of dried food that keeps; it grows better in Visayan and Maranao barangays and rides out typhoons.",
+      "fil": "Mas maraming manggagawa ang kailangan ng Lumbia pero malaki ang ani ng tuyong pagkain na tumatagal; mas mabuti ito sa mga barangay na Bisaya at Maranao at nakaliligtas sa bagyo."
+    },
+    "hint": {
+      "en": "Build a Lumbia.",
+      "fil": "Magtayo ng Lumbia."
+    },
+    "unlock": {
+      "type": "built",
+      "building": "lumbia"
+    }
+  },
+  "reviewed": false
+}

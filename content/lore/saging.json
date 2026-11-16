@@ -1,0 +1,35 @@
+{
+  "id": "saging",
+  "name": "Saging: starchy bananas",
+  "description": "Bananas (saging), especially starchy cooking varieties, were an old food plant of the islands, eaten boiled or roasted. Banana stands are easily flattened by typhoons.",
+  "tradition": "Widespread",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)"
+  ],
+  "aklat": {
+    "order": 42,
+    "icon": "🍌",
+    "name": {
+      "en": "Saging: bananas for every day",
+      "fil": "Saging: pang-araw-araw na pagkain"
+    },
+    "lore": {
+      "en": "Bananas are among the oldest food plants of island Southeast Asia. Starchy kinds were boiled or roasted like root crops, and the leaves wrapped food for cooking. A banana stand grows quickly but its soft trunks are the first thing a strong typhoon flattens.",
+      "fil": "Ang saging ay kabilang sa pinakamatatandang halamang pagkain sa Timog-silangang Asya. Nilalaga o iniihaw ang malalambot na uri gaya ng lamang-ugat, at ibinabalot sa dahon ang pagkaing niluluto. Mabilis tumubo ang sagingan pero ang malalambot nitong puno ang unang pinababagsak ng malakas na bagyo."
+    },
+    "inGame": {
+      "en": "A Sagingan gives fresh food that spoils if it isn't eaten or preserved, and typhoons often flatten it.",
+      "fil": "Nagbibigay ang Sagingan ng sariwang pagkain na nasisira kung hindi kakainin o ipreserba, at madalas itong pabagsakin ng bagyo."
+    },
+    "hint": {
+      "en": "Plant a Sagingan.",
+      "fil": "Magtanim ng Sagingan."
+    },
+    "unlock": {
+      "type": "built",
+      "building": "sagingan"
+    }
+  },
+  "reviewed": false
+}

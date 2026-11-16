@@ -1,0 +1,17 @@
+{
+  "id": "first-pista",
+  "text": {
+    "en": "Hold your first Pista at the Bahay ng Datu",
+    "fil": "Magdaos ng unang Pista sa Bahay ng Datu"
+  },
+  "condition": {
+    "type": "pistas",
+    "count": 1
+  },
+  "reward": {
+    "resources": {
+      "gold": 20
+    }
+  },
+  "next": "first-kuta"
+}

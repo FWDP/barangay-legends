@@ -34,18 +34,18 @@ describe("ui.json", () => {
 
 describe("task text", () => {
   it("describes rewards: resources, a title, or both", () => {
-    expect(rewardText(quest("first-palayan"), game, "en")).toBe("🪵 10");
+    expect(rewardText(quest("first-gabihan"), game, "en")).toBe("🪵 10");
     expect(rewardText(quest("first-dock"), game, "en")).toBe("the title Datu ng Ilog");
     expect(rewardText(quest("tag-araw"), game, "fil")).toContain("Datu ng Tag-araw");
   });
 
   it("announces a task done, its reward and the next task", () => {
-    const done = checkTasks(fresh({ buildings: [at("palayan", 1, 1)] }), content);
-    const text = taskNews("first-palayan", done, content, game, "en");
-    expect(text).toContain("Task done: Build your first Palayan!");
+    const done = checkTasks(fresh({ buildings: [at("gabihan", 1, 1)] }), content);
+    const text = taskNews("first-gabihan", done, content, game, "en");
+    expect(text).toContain("Task done: Plant a Gabihan by the river!");
     expect(text).toContain("Reward: 🪵 10");
     expect(text).toContain(`Next: ${quest("first-camp").text.en}.`);
-    expect(taskNews("first-palayan", done, content, game, "fil")).toContain(quest("first-camp").text.fil);
+    expect(taskNews("first-gabihan", done, content, game, "fil")).toContain(quest("first-camp").text.fil);
   });
 
   it("says when the chain is over", () => {
@@ -64,9 +64,9 @@ describe("task text", () => {
 
 describe("history lines", () => {
   it("tells each kind of entry", () => {
-    expect(historyLine({ at: 1, kind: "task", task: "first-palayan" }, content, game, "en")).toBe("Task done: Build your first Palayan.");
+    expect(historyLine({ at: 1, kind: "task", task: "first-gabihan" }, content, game, "en")).toBe("Task done: Plant a Gabihan by the river.");
     expect(historyLine({ at: 1, kind: "named", name: "Diwa", story: "first-child" }, content, game, "en")).toBe("Diwa, the first child born in your barangay joined the barangay.");
-    expect(historyLine({ at: 1, kind: "left", name: "Diwa", cause: "hunger" }, content, game, "en")).toBe("Diwa left: there was not enough rice.");
+    expect(historyLine({ at: 1, kind: "left", name: "Diwa", cause: "hunger" }, content, game, "en")).toBe("Diwa left: there was not enough food.");
     expect(historyLine({ at: 1, kind: "left", name: "Diwa", cause: "crowded" }, content, game, "en")).toContain("no house");
     expect(historyLine({ at: 1, kind: "left", name: "Diwa" }, content, game, "en")).toBe("Diwa left the barangay.");
     expect(historyLine({ at: 1, kind: "fell", name: "Malakas" }, content, game, "fil")).toContain("Malakas");
@@ -82,7 +82,7 @@ describe("history lines", () => {
     const after = {
       ...before,
       time: 400,
-      gawainDone: ["first-palayan"],
+      gawainDone: ["first-gabihan"],
       history: [
         { at: 50, kind: "named" as const, name: "Old", story: "singer" },
         { at: 200, kind: "named" as const, name: "Diwa", story: "first-child" },
@@ -90,8 +90,8 @@ describe("history lines", () => {
       ],
     };
     const lines = awayPeopleLines(before, after, content, game, "en");
-    expect(lines[0]).toBe("Task done: Build your first Palayan. Reward: 🪵 10");
-    expect(lines.slice(1)).toEqual(["Diwa, the first child born in your barangay joined the barangay.", "Ulan left: there was not enough rice."]);
+    expect(lines[0]).toBe("Task done: Plant a Gabihan by the river. Reward: 🪵 10");
+    expect(lines.slice(1)).toEqual(["Diwa, the first child born in your barangay joined the barangay.", "Ulan left: there was not enough food."]);
   });
 
   it("names warriors in battle reports", () => {
@@ -119,14 +119,14 @@ describe("the adviser's news", () => {
   });
 
   it("announces a finished task right away, even inside the tip gap", () => {
-    const s = fresh({ time: 10, resources: { rice: 1000, wood: 0, gold: 0 }, villagers: 2 });
+    const s = fresh({ time: 10, resources: { rice: 1000, wood: 0, gold: 0, food: 1000, salt: 0, wine: 0 }, villagers: 2 });
     let m = advise(model(s), input(s));
     m = { ...m, session: { ...m.session, lastShownAt: s.time } };
-    const done = tick({ ...s, buildings: [...s.buildings, at("palayan", 1, 1)] }, calm, 1);
-    expect(done.gawainDone).toContain("first-palayan");
+    const done = tick({ ...s, buildings: [...s.buildings, at("gabihan", 1, 1)] }, calm, 1);
+    expect(done.gawainDone).toContain("first-gabihan");
     m = advise(m, input(done));
     expect(m.message).toMatchObject({ kind: "news" });
-    expect(m.message?.text).toContain("Build your first Palayan");
+    expect(m.message?.text).toContain("Plant a Gabihan by the river");
     expect(done.time - (m.session.lastShownAt ?? 0)).toBeLessThan(TIP_GAP_SECONDS);
     // It stays up for NEWS_SECONDS, then goes.
     m = advise(m, input({ ...done, time: done.time + NEWS_SECONDS - 1 }));
@@ -136,21 +136,21 @@ describe("the adviser's news", () => {
   });
 
   it("mentions a named villager leaving", () => {
-    const s = fresh({ time: 10, resources: { rice: 1000, wood: 0, gold: 0 }, villagers: 2 });
+    const s = fresh({ time: 10, resources: { rice: 1000, wood: 0, gold: 0, food: 1000, salt: 0, wine: 0 }, villagers: 2 });
     let m = advise(model(s), input(s));
     const left = { ...s, history: [{ at: 11, kind: "left" as const, name: "Diwa", cause: "hunger" as const }], time: 11 };
     m = advise(m, input(left));
-    expect(m.message).toMatchObject({ kind: "news", text: "Diwa left: there was not enough rice." });
+    expect(m.message).toMatchObject({ kind: "news", text: "Diwa left: there was not enough food." });
   });
 
   it("doesn't repeat what was already in the history when the game loaded", () => {
-    const s = fresh({ time: 10, history: [{ at: 5, kind: "left", name: "Old" }], resources: { rice: 1000, wood: 0, gold: 0 }, villagers: 2 });
+    const s = fresh({ time: 10, history: [{ at: 5, kind: "left", name: "Old" }], resources: { rice: 1000, wood: 0, gold: 0, food: 1000, salt: 0, wine: 0 }, villagers: 2 });
     const m = advise(model(s), input(s));
     expect(m.message?.kind).not.toBe("news");
   });
 
   it("tells no news with tips off", () => {
-    const s = fresh({ time: 10, resources: { rice: 1000, wood: 0, gold: 0 }, villagers: 2 });
+    const s = fresh({ time: 10, resources: { rice: 1000, wood: 0, gold: 0, food: 1000, salt: 0, wine: 0 }, villagers: 2 });
     let m = advise(model(s), { ...input(s), tipsOn: false });
     const left = { ...s, history: [{ at: 11, kind: "fell" as const, name: "Malakas" }], time: 11 };
     m = advise(m, { ...input(left), tipsOn: false });
@@ -163,8 +163,8 @@ describe("named villagers on the map", () => {
   it("gives each named villager a sprite, preferring one at their kind of work", () => {
     const s = withState({
       villagers: 6,
-      resources: { rice: 500, wood: 0, gold: 0 },
-      buildings: [at("palayan", 1, 1), at("woodcutter-camp", 8, 1), at("bahay-kubo", 5, 3), at("bahay-kubo", 4, 3)],
+      resources: { rice: 500, wood: 0, gold: 0, food: 500, salt: 0, wine: 0 },
+      buildings: [at("gabihan", 1, 1), at("woodcutter-camp", 8, 1), at("bahay-kubo", 5, 3), at("bahay-kubo", 4, 3)],
       named: [named(1, { role: "farmer", story: "rain-smell" }), named(2, { role: "woodcutter", story: "bamboo" }), named(3)],
     });
     const plans = planVillagers(s, content);
@@ -205,9 +205,9 @@ describe("share card", () => {
 
 describe("stale news", () => {
   it("drops news from long ago (told in the away story instead)", () => {
-    const s = fresh({ time: 1000, resources: { rice: 1000, wood: 0, gold: 0 }, villagers: 2 });
+    const s = fresh({ time: 1000, resources: { rice: 1000, wood: 0, gold: 0, food: 1000, salt: 0, wine: 0 }, villagers: 2 });
     let m = advise(newModel({ ...NEW_MEMORY, tutorial: "done" }, s, content), { state: s, content, advisor: ui.advisor, lang: "en", tipsOn: true, blocked: false, game });
-    const back = { ...s, history: [{ at: 10, kind: "task" as const, task: "first-palayan" }] };
+    const back = { ...s, history: [{ at: 10, kind: "task" as const, task: "first-gabihan" }] };
     m = advise(m, { state: back, content, advisor: ui.advisor, lang: "en", tipsOn: true, blocked: false, game });
     expect(m.message?.kind).not.toBe("news");
   });
@@ -225,7 +225,7 @@ describe("worship and the spirits in words", () => {
   });
 
   it("announces Aklat finds and the spirits' anger as news", () => {
-    const s = fresh({ time: 10, resources: { rice: 1000, wood: 0, gold: 0 }, villagers: 2 });
+    const s = fresh({ time: 10, resources: { rice: 1000, wood: 0, gold: 0, food: 1000, salt: 0, wine: 0 }, villagers: 2 });
     const input = (state: GameState) => ({ state, content, advisor: ui.advisor, lang: "en" as const, tipsOn: true, blocked: false, game });
     let m = advise(newModel({ ...NEW_MEMORY, tutorial: "done" }, s, content), input(s));
     m = advise(m, input({ ...s, time: 11, history: [{ at: 11, kind: "aklat", entry: "babaylan" }] }));
@@ -270,7 +270,7 @@ describe("tapping any villager", () => {
 
   it("noble families live nearest the Bahay ng Datu", () => {
     const houses = Array.from({ length: 10 }, (_, i) => at("bahay-kubo", 1 + (i % 5), i < 5 ? 1 : 7));
-    const s = withState({ villagers: 20, buildings: houses, resources: { rice: 100, wood: 0, gold: 0 } });
+    const s = withState({ villagers: 20, buildings: houses, resources: { rice: 100, wood: 0, gold: 0, food: 100, salt: 0, wine: 0 } });
     const plans = planVillagers(s, content).filter((p) => p.homeDoor);
     const d = (p: (typeof plans)[number]) => Math.hypot(p.home.x - s.map.plaza.x, p.home.y - s.map.plaza.y);
     const nobles = plans.filter((p) => p.look?.cls === "nobility");

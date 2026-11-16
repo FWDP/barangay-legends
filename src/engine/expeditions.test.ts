@@ -20,7 +20,7 @@ function seedWhere(pred: (roll: number) => boolean): number {
 }
 
 function world(patch: Partial<GameState> = {}): GameState {
-  const s = withState({ resources: { rice: 2000, wood: 2000, gold: 0 }, villagers: 20, buildings: [], ...patch });
+  const s = withState({ resources: { rice: 2000, wood: 2000, gold: 0, food: 2000, salt: 0, wine: 0 }, villagers: 20, buildings: [], ...patch });
   return { ...s, region: patch.region ?? acquainted(createRegion(calm, s.time, 7)) };
 }
 const nb = (s: GameState, id: string) => s.region!.neighbors.find((n) => n.id === id)!;
@@ -35,7 +35,7 @@ const warrior = (id: number, name: string): NamedVillager => ({ id, name, story:
 describe("expedition records: the player's raids", () => {
   const target = "talampas";
   const ready = (pred: (r: number) => boolean, patch: Partial<GameState> = {}) =>
-    setNbState(world({ warriors: 10, rng: seedWhere(pred), ...patch }), target, { warriors: 3, resources: { rice: 400, wood: 200, gold: 0 } });
+    setNbState(world({ warriors: 10, rng: seedWhere(pred), ...patch }), target, { warriors: 3, resources: { rice: 400, wood: 200, gold: 0, food: 400, salt: 0, wine: 0 } });
 
   it("match the engine's result exactly", () => {
     for (const pred of [(r: number) => r < 0.2, (r: number) => r > 0.99]) {
@@ -116,10 +116,10 @@ describe("expedition records: trades", () => {
   });
 
   it("by Balangay keep the voyage's departure and arrival", () => {
-    let s = withState({ resources: { rice: 5000, wood: 5000, gold: 500 }, villagers: 20, buildings: [at("balangay-dock", 1, 2)], datuLevel: 3, balangays: 1 });
+    let s = withState({ resources: { rice: 5000, wood: 5000, gold: 500, food: 5000, salt: 0, wine: 0 }, villagers: 20, buildings: [at("balangay-dock", 1, 2)], datuLevel: 3, balangays: 1 });
     s = { ...s, region: acquainted(createRegion(calm, s.time, 7, ME)) };
     const far = s.region!.neighbors.find((n) => !sameIsland(s.region!.places, ME, n.id))!.id;
-    s = setNb(s, far, { trust: 90, grudge: 0, state: { ...nb(s, far).state, resources: { rice: 1000, wood: 1000, gold: 0 } } });
+    s = setNb(s, far, { trust: 90, grudge: 0, state: { ...nb(s, far).state, resources: { rice: 1000, wood: 1000, gold: 0, food: 1000, salt: 0, wine: 0 } } });
     const sailing = apply(s, calm, { type: "proposeTrade", neighbor: far, give: { resource: "rice", amount: 20 }, want: { resource: "wood", amount: 10 } });
     expect(sailing.expeditions).toEqual([]);
     const t = voyageSeconds(s, calm, far);
@@ -147,7 +147,7 @@ describe("expedition records: trades", () => {
 describe("expedition records: raids on the player", () => {
   const surely: Content = { ...calm, rules: { ...calm.rules, diplomacy: { ...d, aiRaid: { ...d.aiRaid, chancePerSecond: 1 } } } };
   const strike = (seed: number) => {
-    let s = world({ resources: { rice: 1000, wood: 1000, gold: 0 }, buildings: [at("bahay-kubo", 5, 3), at("kuta", 4, 6)], warriors: 4, rng: seed });
+    let s = world({ resources: { rice: 1000, wood: 1000, gold: 0, food: 1000, salt: 0, wine: 0 }, buildings: [at("bahay-kubo", 5, 3), at("kuta", 4, 6)], warriors: 4, rng: seed });
     s = { ...s, time: 659.5, region: { ...s.region!, truceUntil: 0, nextAiRaidAt: 9999, incomingRaid: { from: "batong-buhay", strikeAt: 660, landing: { x: 1, y: 4 } } } };
     s = setNbState(s, "batong-buhay", { warriors: 6, villagers: 11 });
     return { s, after: tick(s, surely, 1) };

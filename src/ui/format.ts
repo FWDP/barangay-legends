@@ -1,8 +1,9 @@
 import { RESOURCES, type BuildingDef, type Content, type Resource } from "../engine/content";
 import type { Rates } from "../engine/game";
 
-export const RESOURCE_ICON: Record<Resource, string> = { rice: "🍚", wood: "🪵", gold: "🪙" };
-const PRODUCED_LABEL: Record<Resource, string> = { rice: "farmed", wood: "chopped", gold: "earned" };
+/** A good's symbol in plain text (costs in sentences); the HUD and the toolbar draw their art (resourceArt.tsx). */
+export const RESOURCE_ICON: Record<Resource, string> = { food: "🥣", rice: "🌾", wood: "🪵", gold: "🪙", salt: "Asin", wine: "🏺" };
+const PRODUCED_LABEL: Record<Resource, string> = { food: "gathered", rice: "farmed", wood: "chopped", gold: "earned", salt: "made", wine: "brewed" };
 
 /** A cost or refund as icons, e.g. "🪵 9" or "🍚 2 🪵 3"; "free" when it is all zero. */
 export function costText(amounts: Partial<Record<Resource, number>>): string {

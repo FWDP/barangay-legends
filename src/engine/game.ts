@@ -1,5 +1,6 @@
 // Game state and rules. Pure functions only: no React, no browser APIs, and no unseeded
 // randomness or wall-clock time. Time is passed in; randomness comes from the RNG in the state.
+import { brewWine, emptyStore, feed, holdPista, restKaingin, foodCaps, foodGroups, updateFoodLand, updatePests, yieldFactor, type FoodStore, type PestEvent, type PistaOccasion } from "./food";
 import { syncResidents, type Resident } from "./residents";
 import { makeHousehold, type Household } from "./household";
 import { RESOURCES, SOCIAL_CLASSES, type BuildingDef, type Content, type Resource, type ResourceAmounts, type SocialClass } from "./content";
@@ -80,7 +81,7 @@ import {
   type TikbalangTrick,
 } from "./worship";
 
-export const STATE_VERSION = 33;
+export const STATE_VERSION = 34;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -101,6 +102,12 @@ export interface PlacedBuilding {
   legacyDoor?: true;
   /** Raised to this level (upgrades.ts); missing means level 1. */
   level?: number;
+  /** A kaingin: food harvested from it so far (its soil tires: food.ts). */
+  harvested?: number;
+  /** A fishing or hunting ground: how worked-out it is, 0..1 (food.ts). */
+  depletion?: number;
+  /** Trampled by wild boar until this time (food.ts updatePests). */
+  trampledUntil?: number;
 }
 
 /** The most recent build, so it can be undone for a few seconds (rules.placement.undoSeconds). */
@@ -158,6 +165,18 @@ export interface GameState {
   sick: number[];
   /** A typhoon on its way (warning shown), or null. */
   typhoon: { strikeAt: number } | null;
+  /** Where the Pagkain is kept (food.ts); its total is resources.food. */
+  foodStore: FoodStore;
+  /** Seconds the barangay has eaten only one kind of food (food.ts), and the food groups it brings in now. */
+  monotonyFor: number;
+  dietGroups?: number;
+  /** Rats, locusts or boar (food.ts updatePests), or null. */
+  pest: PestEvent | null;
+  /** The last Pista (food.ts holdPista): its occasion, when, how long its joy lasts, the guests. */
+  pista: { occasion: PistaOccasion; at: number; until: number; guests: string[] } | null;
+  lastPistaAt: number | null;
+  /** An old save's grace: until then villagers eat Palay without waste (v34 migration). */
+  foodGraceUntil?: number;
   /** Earliest game second each disaster may start again (cooldowns). */
   nextEventAt: Record<string, number>;
   /** The generated map, including every tile the player has cleared or bridged. */
@@ -280,6 +299,11 @@ export function newGame(
     hunger: 0,
     sick: [],
     typhoon: null,
+    foodStore: { ...emptyStore(), preserved: resources.food },
+    monotonyFor: 0,
+    pest: null,
+    pista: null,
+    lastPistaAt: null,
     nextEventAt: {},
     map: generateMap(content, seed),
     clearing: [],
@@ -441,10 +465,10 @@ export function warriorCap(state: GameState, content: Content): number {
   return state.buildings.filter((b) => forts.has(b.type)).length * content.rules.military.warriorsPerKuta;
 }
 
-/** Rice is short: it would last less than staffing.foodFirstBelowRiceSeconds at the current eating rate. */
+/** Food is short: Pagkain would last less than staffing.foodFirstBelowRiceSeconds at the current eating rate. */
 export function riceIsLow(state: GameState, content: Content): boolean {
-  const eaten = riceEaters(state, content) * content.rules.riceEatenPerVillagerPerSecond;
-  return state.resources.rice < content.rules.staffing.foodFirstBelowRiceSeconds * eaten;
+  const eaten = riceEaters(state, content) * content.rules.foodEatenPerVillagerPerSecond;
+  return state.resources.food < content.rules.staffing.foodFirstBelowRiceSeconds * eaten;
 }
 
 /**
@@ -482,7 +506,7 @@ export function assignWorkers(state: GameState, content: Content): Record<string
     }
   };
   // Short of rice: food workplaces are filled first.
-  if (riceIsLow(state, content)) fill(producers.filter((b) => (b.produces?.rice ?? 0) > 0));
+  if (riceIsLow(state, content)) fill(producers.filter((b) => (b.produces?.food ?? 0) > 0));
   fill(producers);
   return assigned;
 }
@@ -539,11 +563,14 @@ export interface Rates {
   /** Consumption per second. */
   eaten: Record<Resource, number>;
   net: Record<Resource, number>;
+  /** Pagkain each building brings in a second (food.ts keeps it by kind). */
+  foodByBuilding: number[];
 }
 
 /**
  * Production and eating per second. `offline` leaves out the forest spirits' reactions (the
- * diwata withholding rice), which never happen during offline catch-up.
+ * diwata withholding the harvest), which never happen during offline catch-up. Villagers eat
+ * Pagkain (food.ts eats Palay instead when there's none); the datu's household eats Palay.
  */
 export function rates(state: GameState, content: Content, opts: { offline?: boolean; span?: number } = {}): Rates {
   // Work slows at night (over a long offline step, by the share of it that is night).
@@ -553,28 +580,33 @@ export function rates(state: GameState, content: Content, opts: { offline?: bool
   const groves = buildingGroveBonuses(state, content);
   const roads = roadBonuses(state, content);
   const defs = new Map(content.buildings.map((d) => [d.id, d]));
+  const mood = happinessMultiplier(state, content) * (1 + ritualProductionBonus(state, content) + datuProductionBonus(state, content));
+  // The diwata withhold part of the harvest while the forest spirits are angry.
+  const withheld = !opts.offline && !content.ai && state.forest.stage >= 2 ? 1 - content.rules.forest.riceWithheldPercent / 100 : 1;
+  const factor = Object.fromEntries(
+    RESOURCES.map((r) => [r, seasonMultiplier(content, state.time, r) * mood * softCapFactor(state, content, r) * (r === "rice" || r === "food" ? withheld : 1)]),
+  ) as Record<Resource, number>;
   const produced = Object.fromEntries(RESOURCES.map((r) => [r, 0])) as Record<Resource, number>;
+  const foodByBuilding = state.buildings.map(() => 0);
   state.buildings.forEach((b, i) => {
     const def = defs.get(b.type);
+    if (!def?.produces || workers[i] === 0) return;
+    // The crop's season, the tradition, worn-out soil or grounds, pests (food.ts).
+    const crop = yieldFactor(state, content, b, def);
     for (const r of RESOURCES) {
       // Adjacency and grove bonuses add up: a camp by the forest in the Anito ng Balete's grove gets +10% +25%.
       // Connected by Daan adds on top: +10% by the river and +5% connected is +15%.
-      produced[r] += workers[i] * (def?.produces?.[r] ?? 0) * (1 + bonuses[i] + roads[i] + (groves[i][r] ?? 0)) * (def?.nightWork ? 1 : night);
+      const out = workers[i] * (def.produces[r] ?? 0) * (1 + bonuses[i] + roads[i] + (groves[i][r] ?? 0)) * (def.nightWork ? 1 : night) * factor[r] * (r === "food" || r === "rice" ? crop : 1);
+      produced[r] += out;
+      if (r === "food") foodByBuilding[i] = out;
     }
   });
-  const mood = happinessMultiplier(state, content) * (1 + ritualProductionBonus(state, content) + datuProductionBonus(state, content));
-  // Above the stockpile's soft cap, work brings in much less wood or gold (stockpile.ts).
-  for (const r of RESOURCES) produced[r] *= seasonMultiplier(content, state.time, r) * mood * softCapFactor(state, content, r);
-  // The diwata withhold part of the harvest while the forest spirits are angry.
-  if (!opts.offline && !content.ai && state.forest.stage >= 2) produced.rice *= 1 - content.rules.forest.riceWithheldPercent / 100;
   const eaten = Object.fromEntries(RESOURCES.map((r) => [r, 0])) as Record<Resource, number>;
-  // Children eat less (population.ts).
-  eaten.rice = riceEaters(state, content) * content.rules.riceEatenPerVillagerPerSecond;
-  const net = Object.fromEntries(RESOURCES.map((r) => [r, produced[r] - eaten[r]])) as Record<
-    Resource,
-    number
-  >;
-  return { produced, eaten, net };
+  // Children eat less (population.ts); the datu's household eats Palay.
+  eaten.food = riceEaters(state, content) * content.rules.foodEatenPerVillagerPerSecond;
+  eaten.rice = content.ai ? 0 : content.rules.food.datuRicePerLevel * state.datuLevel;
+  const net = Object.fromEntries(RESOURCES.map((r) => [r, produced[r] - eaten[r]])) as Record<Resource, number>;
+  return { produced, eaten, net, foodByBuilding };
 }
 
 /** A tap on Gather: gatherPerClick of a gatherable resource, up to the storage cap. */
@@ -856,6 +888,10 @@ export type Command =
   | { type: "gong"; at?: number; held?: boolean }
   /** Sound the tambuli during a raid warning: allies send volunteers too. */
   | { type: "callForHelp" }
+  /** Food (food.ts): brew rice wine from Palay, hold a Pista, rest a worn-out kaingin. */
+  | { type: "brew"; amount: number }
+  | { type: "pista"; occasion: PistaOccasion }
+  | { type: "restKaingin"; x: number; y: number }
   | { type: "answerRiddle"; option: number }
   | { type: "replant"; x: number; y: number }
   | { type: "cancelReplant"; x: number; y: number }
@@ -956,6 +992,12 @@ function applyCommand(state: GameState, content: Content, command: Command): Gam
       return gong(state, content, command.at, command.held === true);
     case "callForHelp":
       return callForHelp(state, content);
+    case "brew":
+      return brewWine(state, content, command.amount);
+    case "pista":
+      return holdPista(state, content, command.occasion);
+    case "restKaingin":
+      return restKaingin(state, content, command.x, command.y);
     case "answerRiddle":
       return answerRiddle(state, content, command.option);
     case "replant":
@@ -1027,15 +1069,20 @@ export function tick(state: GameState, content: Content, seconds: number): GameS
 
 function step(state: GameState, content: Content, dt: number): GameState {
   const { rules } = content;
-  const { net } = rates(state, content);
+  const r0 = rates(state, content);
+  const { net } = r0;
   const resources = { ...state.resources };
-  for (const r of RESOURCES) resources[r] += net[r] * dt;
-  if (resources.rice < 0) resources.rice = 0;
-  // Full stores: production stops at the cap (rice already above it isn't lost).
+  // Everything but Pagkain adds up here; Pagkain is kept, preserved and eaten by food.ts (feed).
+  for (const r of RESOURCES) if (r !== "food") resources[r] += net[r] * dt;
+  for (const r of RESOURCES) if (resources[r] < 0) resources[r] = 0;
+  // Full stores: production stops at the cap (what's already above it isn't lost).
   resources.rice = capGrowth(state.resources.rice, resources.rice, riceCap(state, content));
+  resources.salt = capGrowth(state.resources.salt, resources.salt, foodCaps(state, content).salt);
+  const fed = feed({ ...state, resources }, content, dt, r0.foodByBuilding, r0.eaten.food);
+  Object.assign(resources, fed.resources);
 
-  // Gutom: out of rice. Workers stop (see availableWorkers); after the grace period, families leave.
-  const hungry = resources.rice <= 0 && state.villagers > 0;
+  // Gutom: no Pagkain and no Palay. Workers stop (see availableWorkers); after the grace period, families leave.
+  const hungry = resources.food <= 0 && resources.rice <= 0 && state.villagers > 0;
   const hunger = hungry ? state.hunger + dt : 0;
   const gutom = content.events.hunger;
 
@@ -1066,7 +1113,7 @@ function step(state: GameState, content: Content, dt: number): GameState {
     if (villagers <= homes || Math.abs(migration) < EPSILON) migration = 0;
   } else if (!content.ai) {
     // The player's barangay grows by births and newcomers (population.ts, below).
-  } else if (villagers < cap && resources.rice > 0) {
+  } else if (villagers < cap && (resources.food > 0 || resources.rice > 0)) {
     migration = Math.max(migration, 0) + dt / rules.secondsPerNewVillager;
     while (migration >= 1 - EPSILON && villagers < cap) {
       villagers++;
@@ -1080,7 +1127,9 @@ function step(state: GameState, content: Content, dt: number): GameState {
   // Warriors are villagers: if families leave, warriors go with them.
   const warriors = Math.min(state.warriors, villagers);
   const happiness = nextHappiness(state, content, dt);
-  let next: GameState = { ...state, resources, villagers, migration, hunger, warriors, happiness };
+  let next: GameState = { ...state, resources, foodStore: fed.foodStore, villagers, migration, hunger, warriors, happiness };
+  // Worn kaingin soil, worked fishing and hunting grounds, the diet's monotony clock (food.ts).
+  if (!content.ai) next = updateFoodLand(next, content, dt, r0.foodByBuilding, foodGroups(state, content, r0.foodByBuilding).length);
   // Births and newcomers, and children growing up (the player's barangay; AI ones grow above).
   if (!content.ai) next = ageResidents(growPopulation(next, content, dt), content);
   const beforeClearing = next;
@@ -1102,6 +1151,8 @@ function step(state: GameState, content: Content, dt: number): GameState {
     next = updateDeaths(state, next, content, dt);
     // Elders teach the children by the evening fire (talambuhay.ts).
     next = teach(state, next, content);
+    // Rats, locusts and wild boar (food.ts), only while playing.
+    next = updatePests(next, content, state.time, next.time);
   }
   next = reconcilePeople(state, next, content, crowded ? "crowded" : "other");
   next = markFallen(state, next);

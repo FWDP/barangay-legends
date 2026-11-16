@@ -1,0 +1,18 @@
+{
+  "id": "make-salt",
+  "text": {
+    "en": "Make salt: build an Asinan on the coast",
+    "fil": "Gumawa ng asin: magtayo ng Asinan sa baybayin"
+  },
+  "condition": {
+    "type": "built",
+    "building": "asinan",
+    "count": 1
+  },
+  "reward": {
+    "resources": {
+      "wood": 30
+    }
+  },
+  "next": "first-trade"
+}

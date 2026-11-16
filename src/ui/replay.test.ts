@@ -14,7 +14,7 @@ function seedWhere(pred: (roll: number) => boolean): number {
   for (let seed = 1; ; seed++) if (pred(nextRandom(seed)[0])) return seed;
 }
 function world(patch: Partial<GameState> = {}): GameState {
-  const s = withState({ resources: { rice: 2000, wood: 2000, gold: 0 }, villagers: 30, buildings: [], ...patch });
+  const s = withState({ resources: { rice: 2000, wood: 2000, gold: 0, food: 2000, salt: 0, wine: 0 }, villagers: 30, buildings: [], ...patch });
   return { ...s, region: acquainted(createRegion(calm, s.time, 7)) };
 }
 const nb = (s: GameState, id: string) => s.region!.neighbors.find((n) => n.id === id)!;
@@ -25,7 +25,7 @@ const setNbState = (s: GameState, id: string, patch: Partial<GameState>): GameSt
 
 function raidOn(win: boolean, warriors = 10) {
   let s = world({ warriors: 20, villagers: 30, rng: seedWhere((r) => (win ? r < 0.1 : r > 0.99)) });
-  s = setNbState(s, "talampas", { warriors: 4, resources: { rice: 400, wood: 200, gold: 0 } });
+  s = setNbState(s, "talampas", { warriors: 4, resources: { rice: 400, wood: 200, gold: 0, food: 400, salt: 0, wine: 0 } });
   const after = apply(s, calm, { type: "raid", neighbor: "talampas", warriors });
   const village = generateVillage(calm, nb(s, "talampas"), neighborDef(calm, "talampas")!, s.time);
   return { s, after, e: after.expeditions.at(-1)!, village };
@@ -140,7 +140,7 @@ describe("expedition replays", () => {
 
   it("replay raids on the player in the player's own village", () => {
     const surely = { ...calm, rules: { ...calm.rules, diplomacy: { ...calm.rules.diplomacy, aiRaid: { ...calm.rules.diplomacy.aiRaid, chancePerSecond: 1 } } } };
-    let s = world({ resources: { rice: 1000, wood: 1000, gold: 0 }, buildings: [at("bahay-kubo", 5, 3), at("kuta", 4, 6)], warriors: 4, rng: 3 });
+    let s = world({ resources: { rice: 1000, wood: 1000, gold: 0, food: 1000, salt: 0, wine: 0 }, buildings: [at("bahay-kubo", 5, 3), at("kuta", 4, 6)], warriors: 4, rng: 3 });
     s = { ...s, time: 659.5, region: { ...s.region!, truceUntil: 0, nextAiRaidAt: 9999, incomingRaid: { from: "batong-buhay", strikeAt: 660, landing: { x: 1, y: 4 } } } };
     s = setNbState(s, "batong-buhay", { warriors: 6, villagers: 11 });
     const after = tick(s, surely, 1);

@@ -1,0 +1,35 @@
+{
+  "id": "pangangaso",
+  "name": "Pangangaso: hunting boar and deer",
+  "description": "Inland and upland people hunted wild boar and deer with spears, nets, pit traps and dogs; meat was shared and dried.",
+  "tradition": "Widespread (inland and upland)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)"
+  ],
+  "aklat": {
+    "order": 47,
+    "icon": "🏹",
+    "name": {
+      "en": "Pangangaso: the hunt",
+      "fil": "Pangangaso"
+    },
+    "lore": {
+      "en": "Away from the sea, wild boar (baboy-ramo) and deer were the main meat. Hunters used spears, nets, pit traps and dogs, and the meat was shared out and dried or smoked to keep. Hunters also kept boar away from the fields.",
+      "fil": "Malayo sa dagat, baboy-ramo at usa ang pangunahing karne. Gumagamit ang mga mangangaso ng sibat, lambat, bitag na hukay at aso, at pinaghahatian ang karne at pinatutuyo o pinauusok para tumagal. Inilalayo rin ng mga mangangaso ang baboy-ramo sa mga bukid."
+    },
+    "inGame": {
+      "en": "A hunters' camp brings meat and keeps wild boar from trampling nearby fields. Hunting the same forest too hard lowers the catch for a while.",
+      "fil": "Nagdadala ng karne ang kampo ng mangangaso at inilalayo ang baboy-ramo sa kalapit na bukid. Kapag sobra ang pangangaso sa iisang gubat, bumababa ang huli nang ilang panahon."
+    },
+    "hint": {
+      "en": "Build a hunters' camp.",
+      "fil": "Magtayo ng kampo ng mangangaso."
+    },
+    "unlock": {
+      "type": "built",
+      "building": "pangangaso"
+    }
+  },
+  "reviewed": false
+}

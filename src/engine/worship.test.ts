@@ -18,7 +18,7 @@ const dambana = content.buildings.find((b) => b.id === "dambana")!;
 const shrine = (patch: Partial<GameState> = {}) =>
   withState({
     villagers: 6,
-    resources: { rice: 500, wood: 500, gold: 100 },
+    resources: { rice: 500, wood: 500, gold: 100, food: 500, salt: 0, wine: 0 },
     buildings: [at("bahay-kubo", 5, 3), at("babaylan-hut", 3, 3), at("dambana", 3, 4), at("palayan", 1, 1), at("palayan", 1, 3)],
     tradition: "tagalog",
     lastRitualAt: 0,
@@ -56,7 +56,7 @@ describe("the Dambana", () => {
   });
 
   it("asks for a tradition on first building: free the first time, then at a cost", () => {
-    let s = withState({ villagers: 6, resources: { rice: 0, wood: 0, gold: 100 }, buildings: [at("babaylan-hut", 3, 3), at("dambana", 3, 4)] });
+    let s = withState({ villagers: 6, resources: { rice: 0, wood: 0, gold: 100, food: 0, salt: 0, wine: 0 }, buildings: [at("babaylan-hut", 3, 3), at("dambana", 3, 4)] });
     expect(s.tradition).toBeNull();
     expect(traditionChangeCost(s, content).gold).toBe(0);
     s = apply(s, calm, { type: "chooseTradition", tradition: "visayan" });
@@ -114,7 +114,7 @@ describe("blessings", () => {
 
   it("Diwata's favor: minutes of the fields' rice at once, then a 15-minute cooldown", () => {
     // Kamalig make room, so the storage cap doesn't cut the harvest short.
-    const s = shrine({ favor: 100, resources: { rice: 50, wood: 0, gold: 0 } });
+    const s = shrine({ favor: 100, resources: { rice: 50, wood: 0, gold: 0, food: 50, salt: 0, wine: 0 } });
     s.buildings.push(at("kamalig", 6, 6), at("kamalig", 7, 6), at("kamalig", 8, 6));
     const perSecond = rates(s, calm).produced.rice;
     const done = apply(s, calm, { type: "ritual", ritual: "diwata-favor" });

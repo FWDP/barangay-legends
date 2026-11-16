@@ -9,7 +9,8 @@ import type { Command, GameState } from "../engine/game";
 import { eclipseAutoStrikes, eclipseProgress, isActive, offeringFavor, ritualBlocker, traditionChangeCost, traditionOf, worshipBlocker } from "../engine/worship";
 import { Moon } from "./Moon";
 import { useReducedMotion } from "./VillagerLayer";
-import { DAMBANA_ART } from "./buildingArt";
+import { ART_LORE, buildingArtUrl, DAMBANA_ART } from "./buildingArt";
+import { RESOURCE_ART } from "./resourceArt";
 import { clock } from "./EventBanners";
 import { costText, RESOURCE_ICON } from "./format";
 import type { Lang } from "./settings";
@@ -122,7 +123,7 @@ export function AklatDialog(props: { open: boolean; state: GameState; content: C
               </button>
               <div className="flex items-center gap-3">
                 <span aria-hidden className={`flex size-16 shrink-0 items-center justify-center rounded-xl border-2 border-amber-900/30 bg-amber-100 text-4xl ${found ? "" : "brightness-0 opacity-40"}`}>
-                  {entry.aklat.icon}
+                  <AklatIcon id={entry.id} icon={entry.aklat.icon} />
                 </span>
                 <div>
                   <h3 className="font-display text-lg text-amber-900">{found ? entry.aklat.name[lang] : t.locked[lang]}</h3>
@@ -167,7 +168,7 @@ export function AklatDialog(props: { open: boolean; state: GameState; content: C
                       className="flex w-full flex-col items-center gap-1 rounded-xl border-2 border-amber-900/25 bg-amber-50 p-2 text-center hover:bg-amber-100"
                     >
                       <span aria-hidden className={`text-3xl ${has ? "" : "brightness-0 opacity-30"}`}>
-                        {e.aklat.icon}
+                        <AklatIcon id={e.id} icon={e.aklat.icon} />
                       </span>
                       <span className={`text-[11px] leading-tight font-semibold ${has ? "text-amber-950" : "text-stone-400"}`}>{has ? e.aklat.name[lang] : "?"}</span>
                     </button>
@@ -221,7 +222,7 @@ export function DambanaDialog(props: {
 }) {
   const { open, state, content, game, lang, dispatch, onRitual, onClose } = props;
   const dialog = useModal(open);
-  const [gift, setGift] = useState<Record<Resource, number>>({ rice: 20, wood: 0, gold: 0 });
+  const [gift, setGift] = useState<Record<Resource, number>>({ food: 0, rice: 20, wood: 0, gold: 0, salt: 0, wine: 0 });
   const [choosing, setChoosing] = useState(false);
   const t = game.dambana;
   const tradition = traditionOf(state, content);
@@ -591,4 +592,17 @@ export function ReplantBar(props: { state: GameState; content: Content; game: Ga
       </button>
     </div>
   );
+}
+
+/** Entries whose subject has art in the game show that art (the same as on the map), not an emoji. */
+const LORE_ART: Record<string, string | null | undefined> = {
+  ...Object.fromEntries(Object.entries(ART_LORE).map(([building, lore]) => [lore, buildingArtUrl(building)])),
+  "palay-prestige": RESOURCE_ART.rice,
+  "pista-tapay": RESOURCE_ART.wine,
+  "food-storage": buildingArtUrl("kamalig"),
+};
+
+function AklatIcon({ id, icon }: { id: string; icon: string }) {
+  const art = LORE_ART[id];
+  return art ? <img src={art} alt="" draggable={false} className="inline-block size-[1em]" /> : <>{icon}</>;
 }

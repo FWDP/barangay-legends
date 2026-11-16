@@ -126,7 +126,7 @@ describe("raids strike at the landing", () => {
       time: 659.5,
       villagers: 10,
       warriors: 4,
-      resources: { rice: 500, wood: 500, gold: 0 },
+      resources: { rice: 500, wood: 500, gold: 0, food: 500, salt: 0, wine: 0 },
       buildings: [...g.buildings, at("kuta", plaza.x + 1, plaza.y + 1)],
     };
     const landing = chooseLanding(s, content, 600)!;

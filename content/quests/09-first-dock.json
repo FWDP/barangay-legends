@@ -1,8 +1,8 @@
 {
   "id": "first-dock",
   "text": {
-    "en": "Build a Fishing Dock",
-    "fil": "Magtayo ng Fishing Dock"
+    "en": "Build a Pangisdaan",
+    "fil": "Magtayo ng Pangisdaan"
   },
   "condition": {
     "type": "built",
@@ -15,5 +15,5 @@
       "fil": "Datu ng Ilog"
     }
   },
-  "next": "first-trade"
+  "next": "make-salt"
 }

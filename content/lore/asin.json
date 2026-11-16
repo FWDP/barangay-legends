@@ -1,0 +1,35 @@
+{
+  "id": "asin",
+  "name": "Asin: making salt on the coast",
+  "description": "Salt (asin) was made on the coast by evaporating seawater in beds or by boiling, and traded inland; with it fish was salted and fermented into paste (bagoong).",
+  "tradition": "Widespread (coastal)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)"
+  ],
+  "aklat": {
+    "order": 49,
+    "icon": "🧂",
+    "name": {
+      "en": "Asin: salt from the sea",
+      "fil": "Asin mula sa dagat"
+    },
+    "lore": {
+      "en": "Coastal people made salt by letting seawater dry in shallow beds, or by boiling brine, and traded it inland for rice, forest goods and gold. Salt preserved the catch: salted fish and fermented fish paste (bagoong) kept for months in clay jars.",
+      "fil": "Gumagawa ng asin ang mga tao sa baybayin sa pamamagitan ng pagpapatuyo ng tubig-dagat sa mababaw na kama, o pagpapakulo ng tubig-alat, at ipinagpapalit ito sa looban kapalit ng palay, produkto ng gubat at ginto. Pinapanatili ng asin ang huli: tumatagal nang ilang buwan sa banga ang inasnang isda at bagoong."
+    },
+    "inGame": {
+      "en": "An Asinan makes Asin on the shore. Each house uses Asin to salt fresh food into its jars, so it doesn't spoil. Asin is kept in the Kamalig.",
+      "fil": "Gumagawa ng Asin ang Asinan sa dalampasigan. Ginagamit ng bawat bahay ang Asin para asnan ang sariwang pagkain at ilagay sa banga, para hindi masira. Sa Kamalig iniimbak ang Asin."
+    },
+    "hint": {
+      "en": "Build an Asinan.",
+      "fil": "Magtayo ng Asinan."
+    },
+    "unlock": {
+      "type": "built",
+      "building": "asinan"
+    }
+  },
+  "reviewed": false
+}

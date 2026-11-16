@@ -7,7 +7,7 @@
   "category": "depensa",
   "cost": {
     "wood": 25,
-    "rice": 5
+    "food": 5
   },
   "repairCost": {
     "wood": 8

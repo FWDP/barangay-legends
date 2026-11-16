@@ -1,9 +1,8 @@
 {
   "id": "first-palayan",
-  "first": true,
   "text": {
-    "en": "Build your first Palayan",
-    "fil": "Magtayo ng unang Palayan"
+    "en": "Plant your first Palayan: Palay for offerings, gifts and feasts",
+    "fil": "Magtanim ng unang Palayan: Palay para sa handog, regalo at piging"
   },
   "condition": {
     "type": "built",
@@ -15,5 +14,5 @@
       "wood": 10
     }
   },
-  "next": "first-camp"
+  "next": "clear-five"
 }

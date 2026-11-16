@@ -1,0 +1,36 @@
+{
+  "id": "pista-tapay",
+  "name": "Pista and rice wine",
+  "description": "Feasts marked harvests, victories, marriages, alliances and the end of mourning; rice wine (Tagalog tapay; Visayan pangasi) was brewed from rice and drunk from jars through reeds at feasts and pacts. Distilled drinks (lambanog) may be later; flagged.",
+  "tradition": "Widespread (Tagalog tapay, Visayan pangasi)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Antonio Pigafetta, The First Voyage Around the World (1521), in Blair and Robertson, The Philippine Islands 1493–1898, vols. 33–34",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)"
+  ],
+  "aklat": {
+    "order": 52,
+    "icon": "🏺",
+    "name": {
+      "en": "Pista and rice wine",
+      "fil": "Pista at tapay"
+    },
+    "lore": {
+      "en": "Feasts marked the big moments of a barangay: a harvest, a victory, a marriage, an alliance, the end of mourning. The host's generosity showed his standing, and guests from other barangays came to share food and drink. Rice wine, called tapay by the Tagalogs and pangasi by the Visayans, was brewed from rice and drunk from large jars through reeds. Pigafetta describes such drinking at the feasts he attended in 1521.",
+      "fil": "Minamarkahan ng piging ang malalaking sandali ng barangay: ani, tagumpay, kasal, alyansa, at pagtatapos ng pagluluksa. Ipinapakita ng kagandahang-loob ng nagpipista ang kaniyang katayuan, at dumarating ang mga panauhin mula sa ibang barangay upang makisalo. Ang alak na bigas, tapay sa Tagalog at pangasi sa Bisaya, ay ginagawa mula sa palay at iniinom mula sa malalaking banga gamit ang tubong tambo. Inilarawan ni Pigafetta ang ganitong pag-inom sa mga piging na dinaluhan niya noong 1521."
+    },
+    "inGame": {
+      "en": "At the Bahay ng Datu, brew rice wine from Palay and hold a Pista: it spends Palay, rice wine and Pagkain, raises happiness for a while, adds renown and strengthens trust with invited allies. No Pista during a raid or famine.",
+      "fil": "Sa Bahay ng Datu, gumawa ng tapay mula sa Palay at magdaos ng Pista: gumagastos ito ng Palay, tapay at Pagkain, nagpapasaya nang ilang panahon, nagdaragdag ng kabantugan at nagpapatibay ng tiwala ng mga inanyayahang kakampi. Walang Pista habang may pagsalakay o taggutom."
+    },
+    "hint": {
+      "en": "Hold a Pista.",
+      "fil": "Magdaos ng Pista."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "pista"
+    }
+  },
+  "reviewed": false
+}

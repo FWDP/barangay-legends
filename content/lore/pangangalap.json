@@ -1,0 +1,35 @@
+{
+  "id": "pangangalap",
+  "name": "Pangangalap: gathering on the shore",
+  "description": "Shellfish, sea urchins and seaweed gathered at low tide, mostly by women and children, were a steady part of the coastal diet.",
+  "tradition": "Widespread (coastal)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)"
+  ],
+  "aklat": {
+    "order": 46,
+    "icon": "🐚",
+    "name": {
+      "en": "Pangangalap: low tide",
+      "fil": "Pangangalap sa pagkati"
+    },
+    "lore": {
+      "en": "At low tide, people walked the flats and reefs gathering shellfish, crabs, sea urchins and seaweed into baskets. It was everyday work that fed a family between bigger catches.",
+      "fil": "Sa pagkati, naglalakad ang mga tao sa bahura at mababaw na dagat at nangangalap ng kabibe, alimango, sea urchin at damong-dagat sa mga basket. Pang-araw-araw na gawain ito na nagpapakain sa pamilya sa pagitan ng malalaking huli."
+    },
+    "inGame": {
+      "en": "Shore gathering gives a little fresh fish and shellfish without boats.",
+      "fil": "Nagbibigay ang pangangalap ng kaunting sariwang lamang-dagat nang walang bangka."
+    },
+    "hint": {
+      "en": "Build a shore gathering place.",
+      "fil": "Magtayo ng pangangalapan."
+    },
+    "unlock": {
+      "type": "built",
+      "building": "pangangalap"
+    }
+  },
+  "reviewed": false
+}

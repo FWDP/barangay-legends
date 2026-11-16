@@ -17,7 +17,7 @@ const ME = "barangay-1";
 
 /** A player with a region, plenty of goods, 20 villagers and a Bahay ng Datu at `level`. */
 function world(patch: Partial<GameState> = {}, seed = 7): GameState {
-  const s = withState({ resources: { rice: 5000, wood: 5000, gold: 500 }, villagers: 20, buildings: [], ...patch });
+  const s = withState({ resources: { rice: 5000, wood: 5000, gold: 500, food: 5000, salt: 0, wine: 0 }, villagers: 20, buildings: [], ...patch });
   return { ...s, region: patch.region ?? createRegion(calm, s.time, seed, ME) };
 }
 const nb = (s: GameState, id: string) => s.region!.neighbors.find((n) => n.id === id)!;
@@ -137,7 +137,7 @@ describe("sea travel", () => {
   it("an action aimed at another island sails, takes its time, and happens on arrival", () => {
     let s = world({ datuLevel: 3, balangays: 1, buildings: [at("balangay-dock", 1, 2)] });
     const far = farOne(s);
-    s = setNb(s, far, { trust: 90, grudge: 0, state: { ...nb(s, far).state, resources: { rice: 1000, wood: 1000, gold: 0 } } });
+    s = setNb(s, far, { trust: 90, grudge: 0, state: { ...nb(s, far).state, resources: { rice: 1000, wood: 1000, gold: 0, food: 1000, salt: 0, wine: 0 } } });
     const cmd = { type: "proposeTrade" as const, neighbor: far, give: { resource: "rice" as const, amount: 20 }, want: { resource: "wood" as const, amount: 10 } };
     expect(needsBoat(s, cmd)).toBe(true);
     const sailing = apply(s, calm, cmd);

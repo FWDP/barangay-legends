@@ -1,10 +1,15 @@
 // A balance simulation: plays the engine for a number of game days with a simple, reasonable
-// strategy (houses and fields to keep rice positive, Kamalig, clearing land, warriors within the
+// strategy (houses and food workplaces to keep Pagkain positive, a few Palayan for Palay, Kamalig, clearing land, warriors within the
 // cap, a trade now and then) and records the barangay and its AI rivals once per day. Used by
 // `npm run simulate` (scripts/simulate.ts) to tune content/rules.json, and by a test that checks
 // the balance targets. Pure and deterministic: the same seed gives the same run.
 import { RESOURCES, type Content, type Resource } from "./content";
 import { apply, buildingCost, canAfford, housing, newGame, owned, rates, tick, warriorCap, type Command, type GameState } from "./game";
+import { pistaBlocker, wornOut } from "./food";
+import { currentTask } from "./gawain";
+import { findPath } from "./paths";
+import { isConnected } from "./map";
+import { inClearing, isReserved } from "./plaza";
 import { autoPlaceTile, isUnlocked } from "./map";
 import { nearestClearable } from "./clearing";
 import { riceCap } from "./storage";
@@ -16,6 +21,10 @@ import { softCap } from "./stockpile";
 
 export interface DayRow {
   day: number;
+  /** Pagkain, everyday food. */
+  food: number;
+  /** Food groups the barangay brings in (variety). */
+  diet: number;
   rice: number;
   riceCap: number;
   wood: number;
@@ -29,7 +38,7 @@ export interface DayRow {
   renown: number;
   /** Price of the next Bahay Kubo (wood). */
   kuboCost: number;
-  /** Seconds of the day spent with no rice. */
+  /** Seconds of the day spent with no Pagkain and no Palay. */
   hungrySeconds: number;
   /** Seconds of the day the rice store was full. */
   fullSeconds: number;
@@ -51,8 +60,11 @@ export interface SimResult {
   unlockTimes: number[];
   /** Everything new in the order it came: buildings unlocked, barangay levels, Bahay ng Datu levels. */
   milestones: { t: number; what: string }[];
-  /** Raids on the barangay: how many came, how many were beaten off, and the rice and wood they took. */
-  raids: { defenses: number; won: number; lostRice: number; lostWood: number };
+  /** Raids on the barangay: how many came, how many were beaten off, and the rice, food and wood they took. */
+  raids: { defenses: number; won: number; lostRice: number; lostWood: number; lostFood: number };
+  /** Seconds spent eating Palay because there was no Pagkain. */
+  eatingRiceSeconds: number;
+  pistas: number;
 }
 
 /** Seconds between the bot's decisions. */
@@ -70,7 +82,23 @@ export function botDecide(state: GameState, content: Content): GameState {
     return next === state ? null : next;
   };
   const r = rates(state, content);
-  const fields = owned(state, "palayan");
+  // Food workplaces (Pagkain), in the order the bot spreads them for a varied diet.
+  const FOOD = ["gabihan", "kaingin", "sagingan", "fishing-dock", "pangangalap", "pangangaso", "niyugan", "babuyan", "lumbia"];
+  const foodPlaces = FOOD.reduce((n, id) => n + owned(state, id), 0);
+  const tryFood = (): GameState | null => {
+    // The kind it has fewest of first, among what it can build now.
+    const order = [...FOOD].sort((a, b) => owned(state, a) - owned(state, b));
+    for (const id of order) {
+      const next = tryBuild(id);
+      if (next) return next;
+    }
+    return null;
+  };
+  const paddies = owned(state, "palayan");
+  const fields = foodPlaces + paddies;
+  // Hands to spare: a player doesn't build workplaces nobody can staff.
+  const slots = state.buildings.reduce((n, b) => n + (content.buildings.find((d) => d.id === b.type)?.workers ?? 0), 0);
+  const spare = state.villagers - slots;
   const camps = owned(state, "woodcutter-camp");
   const docks = owned(state, "fishing-dock");
   const kamalig = owned(state, "kamalig");
@@ -81,17 +109,20 @@ export function botDecide(state: GameState, content: Content): GameState {
   const woodNeed = 2 * buildingCost(content, kuboDef, owned(state, "bahay-kubo")).wood + 100;
   const goldNeed = 200;
   // Gather by hand only at the very start.
-  if (fields === 0 && state.resources.wood < 15) {
+  if (foodPlaces === 0 && state.resources.wood < 15) {
     let s = state;
     for (let i = 0; i < 5; i++) s = apply(s, content, { type: "gather", resource: "wood" });
     return s;
   }
-  // Out of rice: gather by hand (as a player would tap) until the fields work again.
-  if (state.resources.rice < 3) {
+  // Out of food: forage by hand (as a player would tap) until the food workplaces catch up.
+  if (state.resources.food < 3) {
     let s = state;
-    for (let i = 0; i < 10; i++) s = apply(s, content, { type: "gather", resource: "rice" });
+    for (let i = 0; i < 10; i++) s = apply(s, content, { type: "gather", resource: "food" });
     return s;
   }
+  // A worn-out kaingin is rested (back to forest); a new one is cleared elsewhere later.
+  const tired = state.buildings.find((b) => wornOut(content, content.buildings.find((d) => d.id === b.type), b));
+  if (tired) return run({ type: "restKaingin", x: tired.x, y: tired.y });
   // Fires out, damage repaired, a waiting choice answered (the first option it can pay for).
   const burning = state.buildings.find((b) => b.burningSince !== undefined);
   if (burning) return run({ type: "extinguish", x: burning.x, y: burning.y });
@@ -108,12 +139,19 @@ export function botDecide(state: GameState, content: Content): GameState {
     }
   }
   const steps: (() => GameState | null)[] = [
-    () => (r.net.rice < 0.3 ? tryBuild("palayan") : null),
+    () => (r.net.food < 0.3 && (spare > 0 || state.resources.food < 50) ? tryFood() : null),
     // Camps and docks when wood or gold runs short for what comes next, as a player would.
-    () => (camps === 0 || (camps * 2 < fields && state.resources.wood < woodNeed) ? tryBuild("woodcutter-camp") : null),
-    () => (state.villagers >= housing(state, content) - 1 && (r.net.rice > 0.5 || state.resources.rice > cap * 0.5) ? tryBuild("bahay-kubo") : null),
+    () => (camps === 0 || (camps * 2 < fields && state.resources.wood < woodNeed && spare > 0) ? tryBuild("woodcutter-camp") : null),
+    () => (state.villagers >= housing(state, content) - 1 && (r.net.food > 0.5 || state.resources.food > 100) ? tryBuild("bahay-kubo") : null),
+    // A Palayan for every four food workplaces: Palay for offerings, wine and feasts.
+    () => (paddies === 0 || (paddies * 6 < foodPlaces && state.resources.rice < 500 && spare > 0) ? tryBuild("palayan") : null),
+    () => (owned(state, "asinan") === 0 && spare > 0 ? tryBuild("asinan") : null),
+    () => (owned(state, "baklad") < owned(state, "fishing-dock") && owned(state, "baklad") < 2 ? tryBuild("baklad") : null),
+    // Rice wine and a Pista when there's Palay to spare.
+    () => (state.resources.wine < content.rules.food.pista.cost.wine! && state.resources.rice > 100 ? run({ type: "brew", amount: 5 }) : null),
+    () => (pistaBlocker(state, content) === null ? run({ type: "pista", occasion: "harvest" }) : null),
     // A Kamalig for every 7 fields; upgrade one when the store is nearly full.
-    () => (kamalig * 7 < fields ? tryBuild("kamalig") : null),
+    () => (kamalig === 0 || kamalig * 7 < paddies ? tryBuild("kamalig") : null),
     () => {
       if (state.resources.rice < cap * 0.9) return null;
       const k = state.buildings.find((b) => b.type === "kamalig" && nextUpgrade(content, b) && canAfford(state, upgradeCost(content, b)));
@@ -123,7 +161,7 @@ export function botDecide(state: GameState, content: Content): GameState {
       }
       return null;
     },
-    () => ((docks === 0 || state.resources.gold < goldNeed) && docks * 15 < state.villagers ? tryBuild("fishing-dock") : null),
+    () => ((docks === 0 || state.resources.gold < goldNeed) && docks * 15 < state.villagers && spare > 0 ? tryBuild("fishing-dock") : null),
     // Full granaries: rice goes to the anito at the Dambana.
     () => {
       if (state.resources.rice < cap * 0.95 || owned(state, "dambana") === 0) return null;
@@ -150,11 +188,31 @@ export function botDecide(state: GameState, content: Content): GameState {
       return next === state ? null : next;
     },
     // More fields when there is spare wood and room for the people.
-    () => (r.net.rice < 1 + state.villagers * 0.03 ? tryBuild("palayan") : null),
+    () => (r.net.food < 1 + state.villagers * 0.03 && spare > 0 ? tryFood() : null),
   ];
   for (const step of steps) {
     const next = step();
     if (next) return next;
+  }
+  // The task asks for buildings joined by a Daan: lay one from the clearing to the nearest
+  // workplace not yet joined, as a player following the task would.
+  if (currentTask(state, content)?.condition.type === "connected") {
+    const { plaza } = state.map;
+    const loose = state.buildings
+      .filter((b) => (content.buildings.find((d) => d.id === b.type)?.workers ?? 0) > 0 && !isConnected(state.map, b.x, b.y))
+      .sort((a, b) => Math.hypot(a.x - plaza.x, a.y - plaza.y) - Math.hypot(b.x - plaza.x, b.y - plaza.y));
+    // Around the clearing, tiles kept for the Bahay ng Datu take no Daan: walk around them, and
+    // around other buildings.
+    const W = state.map.width;
+    const blocked = new Uint8Array(W * state.map.height);
+    for (let y = 0; y < state.map.height; y++) for (let x = 0; x < W; x++) if (isReserved(state, content, x, y) && !inClearing(state.map, x, y) && !(x === plaza.x && y === plaza.y)) blocked[y * W + x] = 1;
+    for (const o of state.buildings) blocked[o.y * W + o.x] = 1;
+    for (const b of loose) {
+      const path = findPath(state.map, plaza, b, blocked);
+      if (!path || path.length <= 2) continue;
+      const next = run({ type: "road", tiles: path.slice(1, -1) });
+      if (next !== state) return next;
+    }
   }
   // Clear land when the barangay is running out of room near the plaza.
   const kubo = content.buildings.find((b) => b.id === "bahay-kubo")!;
@@ -164,7 +222,7 @@ export function botDecide(state: GameState, content: Content): GameState {
   }
   // Ahead of need, a few tiles more than the land the house's clearing keeps open (plaza.ts).
   const kept = state.map.gathering?.length ?? 0;
-  if (state.clearing.length === 0 && state.tilesCleared < 6 + kept + fields * 2 + state.buildings.length && state.resources.rice > 40) {
+  if (state.clearing.length === 0 && state.tilesCleared < 6 + kept + fields * 2 + state.buildings.length && state.resources.food > 40) {
     const next = run({ type: "clearArea", tiles: nearestClearable(state, 2) });
     if (next !== state) return next;
   }
@@ -185,14 +243,16 @@ export function simulate(content: Content, days: number, seed = 12345): SimResul
   let lastDatu = s.datuLevel;
   let hungry = 0;
   let full = 0;
-  const raids = { defenses: 0, won: 0, lostRice: 0, lostWood: 0 };
+  const raids = { defenses: 0, won: 0, lostRice: 0, lostWood: 0, lostFood: 0 };
+  let eatingRiceSeconds = 0;
   let seenReport = 0;
   const end = days * daySeconds;
   while (s.time < end) {
     s = botDecide(s, content);
     for (let i = 0; i < THINK_SECONDS; i++) {
       s = tick(s, content, 1);
-      if (s.resources.rice <= 0) hungry++;
+      if (s.resources.food <= 0 && s.resources.rice <= 0) hungry++;
+      else if (s.resources.food <= 0) eatingRiceSeconds++;
       if (s.resources.rice >= riceCap(s, content) - 0.01) full++;
     }
     for (const r of s.region?.reports ?? []) {
@@ -203,6 +263,7 @@ export function simulate(content: Content, days: number, seed = 12345): SimResul
       if (r.win) raids.won++;
       raids.lostRice += r.lost?.rice ?? 0;
       raids.lostWood += r.lost?.wood ?? 0;
+      raids.lostFood += r.lost?.food ?? 0;
     }
     for (const b of s.buildings) if (firsts[b.type] === undefined) firsts[b.type] = s.time;
     if (firstIncomeAt === null && RESOURCES.some((r: Resource) => rates(s, content).produced[r] > 0)) firstIncomeAt = s.time;
@@ -222,6 +283,8 @@ export function simulate(content: Content, days: number, seed = 12345): SimResul
       const kubo = content.buildings.find((b) => b.id === "bahay-kubo")!;
       rows.push({
         day: dayAt(content, s.foundedAt, s.time) - 1,
+        food: Math.round(s.resources.food),
+        diet: s.dietGroups ?? 0,
         rice: Math.round(s.resources.rice),
         riceCap: riceCap(s, content),
         wood: Math.round(s.resources.wood),
@@ -245,5 +308,5 @@ export function simulate(content: Content, days: number, seed = 12345): SimResul
       full = 0;
     }
   }
-  return { rows, firsts, firstIncomeAt, unlockTimes, milestones, raids };
+  return { rows, firsts, firstIncomeAt, unlockTimes, milestones, raids, eatingRiceSeconds, pistas: s.stats.pistas ?? 0 };
 }

@@ -146,8 +146,10 @@ export function perform(state: GameState, content: Content, id: string): GameSta
   if (def.cooldownSeconds > 0) timer.readyAt = state.time + def.cooldownSeconds;
   s = { ...s, blessings: { ...s.blessings, [id]: timer } };
   if (def.riceMinutes) {
-    const gain = rates(state, content).produced.rice * 60 * def.riceMinutes;
-    s = { ...s, resources: { ...s.resources, rice: capGrowth(s.resources.rice, s.resources.rice + gain, riceCap(s, content)) } };
+    // The harvest: Palay from the fields and Pagkain from every food source.
+    const made = rates(state, content).produced;
+    const gain = made.rice * 60 * def.riceMinutes;
+    s = { ...s, resources: { ...s.resources, rice: capGrowth(s.resources.rice, s.resources.rice + gain, riceCap(s, content)), food: s.resources.food + made.food * 60 * def.riceMinutes } };
   }
   if (def.mourningShortenPercent) s = { ...s, mourning: s.mourning * (1 - def.mourningShortenPercent / 100) };
   if (def.forestRestore > 0) s = { ...s, forest: { ...s.forest, balance: clamp(s.forest.balance + def.forestRestore, 100) } };

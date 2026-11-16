@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
-import type { Content, Resource } from "../engine/content";
+import { FOOD_GROUPS, RESOURCES, type Content, type Resource } from "../engine/content";
+import { foodCaps } from "../engine/food";
 import { isHungry, seasonAt } from "../engine/events";
 import { freeVillagers } from "../engine/clearing";
 import { happinessMultiplier, happinessTarget } from "../engine/happiness";
@@ -9,9 +10,10 @@ import { homeWarriors } from "../engine/region";
 import { buildingWorkers, housing, rates, warriorCap, type GameState, type Rates } from "../engine/game";
 import { clock } from "./EventBanners";
 import { formatAmount, formatBreakdown, formatRate, RESOURCE_ICON } from "./format";
+import { ResourceIcon } from "./resourceArt";
 
 /** Slim top bar: title, resources, and whatever controls are passed as children. */
-export function Hud(props: { state: GameState; content: Content; children: ReactNode; extraChips?: ReactNode; level?: ReactNode; day?: ReactNode; full?: FullText; stockpile?: StockpileText; mood?: MoodText }) {
+export function Hud(props: { state: GameState; content: Content; children: ReactNode; extraChips?: ReactNode; level?: ReactNode; day?: ReactNode; full?: FullText; stockpile?: StockpileText; mood?: MoodText; food?: FoodText }) {
   const { state, content, children, extraChips, level, day } = props;
   const r = rates(state, content);
   const working = buildingWorkers(state, content).reduce((a, b) => a + b, 0);
@@ -29,9 +31,12 @@ export function Hud(props: { state: GameState; content: Content; children: React
       </h1>
       {level}
       {day}
+      <ResourceChip resource="food" amount={state.resources.food} rates={r} note={notes(state, content).food} extra={props.food ? <FoodTip state={state} content={content} text={props.food} /> : null} />
       <ResourceChip resource="rice" amount={state.resources.rice} rates={r} note={notes(state, content).rice} cap={riceCap(state, content)} full={props.full} />
       <ResourceChip resource="wood" amount={state.resources.wood} rates={r} note={notes(state, content).wood} soft={softCap(state, content, "wood")} stop={stopCap(state, content, "wood")} stockpile={props.stockpile} />
       {(state.resources.gold > 0 || r.net.gold !== 0) && <ResourceChip resource="gold" amount={state.resources.gold} rates={r} note={notes(state, content).gold} soft={softCap(state, content, "gold")} stop={stopCap(state, content, "gold")} stockpile={props.stockpile} />}
+      {(state.resources.salt > 0 || r.net.salt !== 0) && <ResourceChip resource="salt" amount={state.resources.salt} rates={r} note={null} cap={foodCaps(state, content).salt} full={props.full} />}
+      {state.resources.wine > 0 && <ResourceChip resource="wine" amount={state.resources.wine} rates={r} note={null} />}
       <Chip
         icon={
           <>
@@ -93,12 +98,12 @@ export function Hud(props: { state: GameState; content: Content; children: React
 function notes(state: GameState, content: Content): Record<Resource, string | null> {
   if (isHungry(state)) {
     const n = `${content.events.hunger?.name ?? "Hunger"}: nobody is working`;
-    return { rice: n, wood: n, gold: n };
+    return Object.fromEntries(RESOURCES.map((r) => [r, n])) as Record<Resource, string | null>;
   }
   const season = seasonAt(content, state.time)?.season;
   const pct = (r: Resource) => season?.productionPercent[r];
   const note = (r: Resource) => (pct(r) !== undefined ? `${season!.icon} ${season!.name}: ${r} ×${pct(r)! / 100}` : null);
-  return { rice: note("rice"), wood: note("wood"), gold: note("gold") };
+  return Object.fromEntries(RESOURCES.map((r) => [r, note(r)])) as Record<Resource, string | null>;
 }
 
 const moodFace = (h: number) => (h >= 75 ? "😄" : h >= 55 ? "🙂" : h >= 35 ? "😐" : "😟");
@@ -221,7 +226,36 @@ function Chip(props: { icon: ReactNode; label: string; title?: string; tip?: Rea
   );
 }
 
-const RESOURCE_LABEL: Record<Resource, string> = { rice: "Rice", wood: "Wood", gold: "Gold" };
+/** The words for the Pagkain tooltip (content/ui.json food). */
+export interface FoodText {
+  variety: (n: number, total: number) => string;
+  varietyTip: string;
+  monotony: string;
+  kept: (ground: string, fresh: string, live: string, preserved: string) => string;
+  spoils: string;
+  roughSeas: string;
+  eatingRice: string;
+}
+
+/** Under the Pagkain breakdown: where it's kept, the variety of the diet, rough seas. */
+function FoodTip({ state, content, text }: { state: GameState; content: Content; text: FoodText }) {
+  const s = state.foodStore;
+  const groups = state.dietGroups ?? 0;
+  const season = seasonAt(content, state.time)?.season.id;
+  const monotonous = (state.monotonyFor ?? 0) >= content.rules.food.variety.monotonySeconds;
+  return (
+    <span className="block max-w-72 whitespace-normal">
+      {s && <span className="block text-amber-100/80">{text.kept(formatAmount(s.ground), formatAmount(s.fresh), formatAmount(s.live), formatAmount(s.preserved))}</span>}
+      <span className={`block ${monotonous ? "text-amber-300" : "text-lime-200"}`}>{text.variety(groups, FOOD_GROUPS.length)}</span>
+      <span className="block text-amber-100/70">{monotonous ? text.monotony : text.varietyTip}</span>
+      {s && s.fresh > 1 && <span className="block text-amber-100/70">{text.spoils}</span>}
+      {season && content.rules.food.roughSeas.includes(season) && <span className="block text-sky-200">{text.roughSeas}</span>}
+      {state.resources.food <= 0 && state.resources.rice > 0 && <span className="block text-amber-300">{text.eatingRice}</span>}
+    </span>
+  );
+}
+
+const RESOURCE_LABEL: Record<Resource, string> = { food: "Pagkain", rice: "Palay", wood: "Wood", gold: "Gold", salt: "Asin", wine: "Tapay" };
 
 /** A resource chip that explains its rate on hover (desktop) or tap (phone). */
 /** The words for a full store (content/ui.json kamalig.full, kamalig.fullTip). */
@@ -239,7 +273,7 @@ export interface StockpileText {
   tip: (cap: string, stop: string, over: boolean, stopped: boolean) => string;
 }
 
-function ResourceChip(props: { resource: Resource; amount: number; rates: Rates; note: string | null; cap?: number; full?: FullText; soft?: number; stop?: number; stockpile?: StockpileText }) {
+function ResourceChip(props: { resource: Resource; amount: number; rates: Rates; note: string | null; cap?: number; full?: FullText; soft?: number; stop?: number; stockpile?: StockpileText; extra?: ReactNode }) {
   const { resource, amount, rates, note, cap, soft, stop, stockpile } = props;
   const slow = soft !== undefined && Number.isFinite(soft) && amount >= soft;
   const stopped = slow && stop !== undefined && amount >= stop;
@@ -262,7 +296,7 @@ function ResourceChip(props: { resource: Resource; amount: number; rates: Rates;
         onBlur={() => setOpen(false)}
       >
         <span className="text-lg sm:text-xl" aria-hidden>
-          {RESOURCE_ICON[resource]}
+          <ResourceIcon resource={resource} symbol={RESOURCE_ICON[resource]} className="inline-block size-[1.15em] align-[-0.2em]" />
         </span>
         <span className="text-left">
           <span className={`block font-display text-base leading-none tabular-nums sm:text-lg ${full || slow ? "text-amber-300" : ""}`}>{formatAmount(amount)}</span>
@@ -276,6 +310,7 @@ function ResourceChip(props: { resource: Resource; amount: number; rates: Rates;
       >
         {formatBreakdown(rates, resource)}
         {note && <span className="block text-amber-300">{note}</span>}
+        {props.extra}
         {cap !== undefined && (
           <span className={`block ${full ? "text-amber-300" : "text-amber-100/80"}`}>
             🧺 Storage {formatAmount(amount)}/{formatAmount(cap)}

@@ -13,6 +13,7 @@ import { nearestClearable } from "./clearing";
 import { Rng } from "./rng";
 import { proposeTrade, type CounterOffer, type Proposal } from "./trading";
 import { chooseLanding, raidLanding, raidWindow, sheltered } from "./border";
+import { lootableFood } from "./food";
 import { isWatched, warningFor } from "./watch";
 import { dayPhaseAt, isNightAt } from "./daynight";
 import { seasonAt } from "./events";
@@ -385,10 +386,13 @@ function loseWarriors(state: GameState, n: number): GameState {
   return { ...state, warriors: Math.max(0, state.warriors - n), villagers, sick: state.sick.slice(0, villagers) };
 }
 
-/** Takes `percent` of each resource from one state: returns what was taken. */
+/**
+ * Takes `percent` of each resource from one state: returns what was taken. Of Pagkain only what's
+ * preserved in jars and the Kamalig can be carried off, never root crops in the ground.
+ */
 function takeShare(from: GameState, percent: number): Partial<Record<Resource, number>> {
   const out: Partial<Record<Resource, number>> = {};
-  for (const r of RESOURCES) out[r] = Math.floor((from.resources[r] * percent) / 100);
+  for (const r of RESOURCES) out[r] = Math.floor(((r === "food" ? lootableFood(from) : from.resources[r]) * percent) / 100);
   return out;
 }
 
@@ -492,7 +496,8 @@ export function tradingPaused(state: GameState): boolean {
 /** The standard parcel: give rules.diplomacy.trade.give of one resource for the other at the usual rate. */
 export function standardProposal(content: Content, id: string, give: Resource): Proposal {
   const t = content.rules.diplomacy.trade;
-  const get = RESOURCES.find((r) => r !== give)!;
+  // The standard parcel swaps Palay and wood (anything else is asked for wood's worth of Palay).
+  const get: Resource = give === "rice" ? "wood" : "rice";
   const receive = Math.floor((t.give * (t.receivePercent + traitOf(content, id).tradeBonusPercent)) / 100);
   return { give: { resource: give, amount: t.give }, want: { resource: get, amount: receive } };
 }
@@ -728,8 +733,8 @@ function checkVictory(state: GameState): GameState {
 export function aiDecide(state: GameState, content: Content, trait: TraitDef): GameState {
   const ai = aiContent(content);
   let s = state;
-  if (s.resources.rice < 5) {
-    for (let i = 0; i < 20; i++) s = apply(s, ai, { type: "gather", resource: "rice" });
+  if (s.resources.food < 5 && s.resources.rice < 5) {
+    for (let i = 0; i < 20; i++) s = apply(s, ai, { type: "gather", resource: "food" });
   }
   // Room to build at all (a house's tile)? If not, every build waits for land to be cleared.
   const house = ai.buildings.find((b) => b.id === "bahay-kubo");
@@ -743,17 +748,20 @@ export function aiDecide(state: GameState, content: Content, trait: TraitDef): G
     const built = apply(s, ai, { type: "build", building: id, x: tile.x, y: tile.y });
     return built === s ? null : built;
   };
-  const net = rates(s, ai).net.rice;
+  // AI barangays eat Pagkain too (a simple pool: food.ts feed), and keep some Palay.
+  const net = rates(s, ai).net.food;
+  const food = () => tryBuild("gabihan") ?? tryBuild("kaingin") ?? tryBuild("palayan");
   const wantWarriors = Math.floor((s.villagers * trait.warriorPercent) / 100);
   const walls = ai.buildings.filter((b) => b.defense).reduce((n, b) => n + owned(s, b.id), 0);
   const camps = owned(s, "woodcutter-camp");
-  const fields = owned(s, "palayan");
+  const fields = owned(s, "palayan") + owned(s, "gabihan") + owned(s, "kaingin");
+  const rice = owned(s, "palayan");
   const plan: (() => GameState | null)[] = [
-    () => (net < 0.2 ? tryBuild("palayan") : null),
+    () => (net < 0.2 ? food() : null),
     () => (s.villagers >= housing(s, ai) ? tryBuild("bahay-kubo") : null),
     () => (s.warriors < wantWarriors ? (train(s, ai) === s ? null : train(s, ai)) : null),
     () => (walls < 1 + Math.floor(s.villagers / 15) ? tryBuild("kuta") : null),
-    () => (camps * 2 < fields ? tryBuild("woodcutter-camp") : tryBuild("palayan")),
+    () => (camps * 2 < fields ? tryBuild("woodcutter-camp") : rice * 3 < fields ? tryBuild("palayan") : food()),
   ];
   for (const step of plan) {
     const next = step();
@@ -878,7 +886,7 @@ function onRegionSecond(state: GameState, content: Content, second: number, rng:
       if (second < d.offers.startsAfterSeconds) continue;
       // They offer what they have more of, for the other resource.
       const give = n.state.resources.rice >= n.state.resources.wood ? "rice" : "wood";
-      const want = RESOURCES.find((r) => r !== give)!;
+      const want: Resource = give === "rice" ? "wood" : "rice";
       if (n.state.resources[give] < d.offers.give) continue;
       region = {
         ...region,

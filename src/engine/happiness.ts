@@ -1,6 +1,7 @@
 // Happiness (0–100): houses near the plaza raise it a little; hunger and sickness lower it.
 // It moves slowly toward its target and changes production by up to ±maxEffectPercent.
 // rules.happiness.start is both the starting level and the level that changes nothing.
+import { dietHappiness, pistaHappiness } from "./food";
 import type { Content } from "./content";
 import { isHungry } from "./events";
 import type { GameState } from "./game";
@@ -24,6 +25,9 @@ export interface HappinessParts {
   neglect: number;
   /** Mourning the dead (0 or below). */
   mourning: number;
+  /** A varied diet (or the monotony of one kind of food), and the joy of a recent Pista (food.ts). */
+  diet: number;
+  pista: number;
   target: number;
 }
 
@@ -35,8 +39,10 @@ export function happinessTarget(state: GameState, content: Content): HappinessPa
   const sickness = Math.max(h.maxFromSick, state.sick.length * h.perSick);
   const neglect = neglectPenalty(state, content);
   const mourning = state.mourning > 0 ? content.rules.mourning.happiness : 0;
-  const target = Math.min(100, Math.max(0, h.start + houses + hunger + sickness + neglect + mourning));
-  return { base: h.start, houses, hunger, sickness, neglect, mourning, target };
+  const diet = content.ai ? 0 : dietHappiness(state, content);
+  const pista = pistaHappiness(state, content);
+  const target = Math.min(100, Math.max(0, h.start + houses + hunger + sickness + neglect + mourning + diet + pista));
+  return { base: h.start, houses, hunger, sickness, neglect, mourning, diet, pista, target };
 }
 
 /** Happiness after dt seconds: pointsPerSecond closer to its target. */

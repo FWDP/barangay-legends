@@ -17,7 +17,7 @@ const small = mapFrom([
 const { cost, growth, baseSeconds, wood } = content.rules.clearing;
 const f = (n: number) => curveFactor(growth, n);
 const start = (patch: Partial<GameState> = {}) =>
-  withState({ map: small, buildings: [], resources: { rice: 500, wood: 0, gold: 0 }, villagers: 3, ...patch });
+  withState({ map: small, buildings: [], resources: { rice: 500, wood: 0, gold: 0, food: 500, salt: 0, wine: 0 }, villagers: 3, ...patch });
 const run = (s: GameState, seconds: number) => tick(s, calm, seconds);
 const T = (x: number, y: number) => ({ x, y });
 
@@ -55,32 +55,32 @@ describe("selection rules", () => {
 describe("total cost and partial affordability", () => {
   it("each tile costs a bit more than the last", () => {
     const s = start();
-    expect(jobCost(s, content).rice).toBe(Math.ceil(cost.rice! * f(0)));
-    expect(jobCost(s, content, 20).rice).toBe(Math.ceil(cost.rice! * f(20)));
-    const total = [0, 1, 2, 3].reduce((n, i) => n + Math.ceil(cost.rice! * f(i)), 0);
-    expect(selectionCost(s, content, 4).rice).toBe(total);
+    expect(jobCost(s, content).food).toBe(Math.ceil(cost.food! * f(0)));
+    expect(jobCost(s, content, 20).food).toBe(Math.ceil(cost.food! * f(20)));
+    const total = [0, 1, 2, 3].reduce((n, i) => n + Math.ceil(cost.food! * f(i)), 0);
+    expect(selectionCost(s, content, 4).food).toBe(total);
   });
 
   it("prices follow the tiles already cleared and queued", () => {
     const s = start({ tilesCleared: 10 });
-    expect(jobCost(s, content).rice).toBe(Math.ceil(cost.rice! * f(10)));
+    expect(jobCost(s, content).food).toBe(Math.ceil(cost.food! * f(10)));
     const queued = apply(s, calm, { type: "clearArea", tiles: [T(0, 1)] });
-    expect(jobCost(queued, content).rice).toBe(Math.ceil(cost.rice! * f(11)));
+    expect(jobCost(queued, content).food).toBe(Math.ceil(cost.food! * f(11)));
   });
 
   it("is paid upfront for the whole selection", () => {
     const s = start();
     const after = apply(s, calm, { type: "clearArea", tiles: [T(0, 1), T(0, 2), T(0, 3)] });
     expect(after.clearing).toHaveLength(3);
-    expect(after.resources.rice).toBe(s.resources.rice - selectionCost(s, content, 3).rice);
+    expect(after.resources.food).toBe(s.resources.food - selectionCost(s, content, 3).food);
   });
 
   it("clears just the tiles the barangay can afford", () => {
-    const s = start({ resources: { rice: selectionCost(start(), content, 2).rice + 1, wood: 0, gold: 0 } });
+    const s = start({ resources: { rice: 0, wood: 0, gold: 0, food: selectionCost(start(), content, 2).food + 1, salt: 0, wine: 0 } });
     expect(affordableTiles(s, content, 5)).toBe(2);
     const after = apply(s, calm, { type: "clearArea", tiles: [T(0, 1), T(0, 2), T(0, 3), T(6, 1), T(6, 2)] });
     expect(after.clearing).toHaveLength(2);
-    expect(after.resources.rice).toBe(1);
+    expect(after.resources.food).toBe(1);
   });
 });
 
@@ -129,25 +129,25 @@ describe("worker limits and queueing", () => {
 describe("cancelling", () => {
   it("refunds in full before work starts", () => {
     const s = apply(start({ villagers: 1 }), calm, { type: "clearArea", tiles: [T(0, 1), T(0, 2)] });
-    const paid = s.clearing[1].paid.rice;
+    const paid = s.clearing[1].paid.food!;
     const after = apply(s, calm, { type: "cancelClearing", x: 0, y: 2 });
     expect(after.clearing).toHaveLength(1);
-    expect(after.resources.rice).toBe(s.resources.rice + paid);
+    expect(after.resources.food).toBe(s.resources.food + paid);
   });
 
   it("refunds half once work has started", () => {
     const s = run(apply(start({ villagers: 1 }), calm, { type: "clearArea", tiles: [T(0, 1)] }), 1);
-    const paid = s.clearing[0].paid.rice;
+    const paid = s.clearing[0].paid.food!;
     const after = apply(s, calm, { type: "cancelClearing", x: 0, y: 1 });
     expect(after.clearing).toEqual([]);
-    expect(after.resources.rice).toBe(s.resources.rice + Math.floor(paid / 2));
+    expect(after.resources.food).toBe(s.resources.food + Math.floor(paid / 2));
   });
 
   it("also cancels tiles that only connected through the cancelled one", () => {
     const s = apply(start(), calm, { type: "clearArea", tiles: [T(0, 1), T(0, 0)] });
     const after = apply(s, calm, { type: "cancelClearing", x: 0, y: 1 });
     expect(after.clearing).toEqual([]);
-    expect(after.resources.rice).toBe(start().resources.rice);
+    expect(after.resources.food).toBe(start().resources.food);
   });
 
   it("ignores a tile that isn't queued", () => {
@@ -171,7 +171,7 @@ describe("offline", () => {
     const ring = [];
     for (let y = 0; y < 5; y++) for (let x = 0; x < 7; x++) if (tileAt(small, x, y) === "forest") ring.push(T(x, y));
     // Well into the clearing curve, so every tile takes a while.
-    const s = apply(start({ villagers: 1, tilesCleared: 200, resources: { rice: 9000, wood: 0, gold: 0 } }), calm, { type: "clearArea", tiles: ring });
+    const s = apply(start({ villagers: 1, tilesCleared: 200, resources: { rice: 9000, wood: 0, gold: 0, food: 9000, salt: 0, wine: 0 } }), calm, { type: "clearArea", tiles: ring });
     expect(s.clearing.length).toBe(ring.length);
     const { state, report } = offlineProgress(s, content, 300);
     expect(report.cleared).toBeGreaterThan(0);

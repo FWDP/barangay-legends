@@ -101,7 +101,7 @@ describe("solid buildings and doorways", () => {
     expect(entrancesBlockedBy(s, calm, 1, 2)).toEqual([s.buildings[0]]);
     const kubo = calm.buildings.find((b) => b.id === "bahay-kubo")!;
     expect(canPlace(s, calm, kubo, 1, 2)).toBe(false);
-    expect(apply({ ...s, resources: { rice: 100, wood: 100, gold: 0 } }, calm, { type: "build", building: "bahay-kubo", x: 1, y: 2 }).buildings).toHaveLength(2);
+    expect(apply({ ...s, resources: { rice: 100, wood: 100, gold: 0, food: 100, salt: 0, wine: 0 } }, calm, { type: "build", building: "bahay-kubo", x: 1, y: 2 }).buildings).toHaveLength(2);
     // Elsewhere is fine.
     expect(canPlace(s, calm, kubo, 3, 4)).toBe(true);
   });
@@ -135,7 +135,7 @@ describe("solid buildings and doorways", () => {
   it("entrances follow changes: a Daan laid beside a building becomes its door", () => {
     let s = base([at("palayan", 2, 3)]);
     expect(s.buildings[0].door).toBeDefined();
-    s = apply({ ...s, resources: { rice: 100, wood: 100, gold: 10 } }, calm, { type: "road", tiles: [{ x: 3, y: 3 }] });
+    s = apply({ ...s, resources: { rice: 100, wood: 100, gold: 10, food: 100, salt: 0, wine: 0 } }, calm, { type: "road", tiles: [{ x: 3, y: 3 }] });
     expect(s.buildings[0].door).toEqual({ x: 3, y: 3 });
   });
 
@@ -212,7 +212,7 @@ describe("generated villages follow the barangay's level", () => {
 
 describe("anti-spam", () => {
   const world = (): GameState => {
-    const s = withState({ villagers: 20, resources: { rice: 5000, wood: 5000, gold: 500 }, time: 10 });
+    const s = withState({ villagers: 20, resources: { rice: 5000, wood: 5000, gold: 500, food: 5000, salt: 0, wine: 0 }, time: 10 });
     return { ...s, region: acquainted(createRegion(calm, 0, 7, s.barangay.id)) };
   };
   const nb = (s: GameState, id = "malinaw") => s.region!.neighbors.find((n) => n.id === id)!;
@@ -267,7 +267,7 @@ describe("anti-spam", () => {
   });
 
   it("marriage needs days since first contact; sandugo needs a marriage or a longer relationship", () => {
-    const s = withState({ villagers: 20, resources: { rice: 5000, wood: 5000, gold: 500 }, time: 10 });
+    const s = withState({ villagers: 20, resources: { rice: 5000, wood: 5000, gold: 500, food: 5000, salt: 0, wine: 50 }, time: 10 });
     let w: GameState = { ...s, region: createRegion(calm, 0, 7, s.barangay.id) };
     w = { ...w, region: { ...w.region!, neighbors: w.region!.neighbors.map((n) => (n.id === "malinaw" ? { ...n, trust: 90 } : n)) } };
     expect(nb(w).metAt).toBeNull();
@@ -288,7 +288,7 @@ describe("anti-spam", () => {
 
 describe("save export and import", () => {
   it("round-trips a game through a save code and a save file", () => {
-    const s = tick({ ...withState({ villagers: 8, resources: { rice: 300, wood: 40, gold: 2 }, barangay: { id: "b-1", region: { x: 0, y: 0 }, name: "Sapang Ñino", datu: "Lakas" } }), region: createRegion(calm, 0, 7, "b-1") }, calm, 30);
+    const s = tick({ ...withState({ villagers: 8, resources: { rice: 300, wood: 40, gold: 2, food: 300, salt: 0, wine: 0 }, barangay: { id: "b-1", region: { x: 0, y: 0 }, name: "Sapang Ñino", datu: "Lakas" } }), region: createRegion(calm, 0, 7, "b-1") }, calm, 30);
     const code = exportCode(s);
     expect(code.startsWith(SAVE_CODE_PREFIX)).toBe(true);
     expect(importSave(code, content)).toEqual(parseSave(JSON.stringify(s), content));

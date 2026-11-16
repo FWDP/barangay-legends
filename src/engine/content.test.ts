@@ -18,7 +18,10 @@ describe("content", () => {
   it("loads every building file in content/ and passes the schema check", () => {
     const content = loadContent();
     // In menu order ("order" in each file), not file-name order.
-    expect(content.buildings.map((b) => b.id)).toEqual(["bahay-kubo", "palayan", "woodcutter-camp", "babaylan-hut", "dambana", "libingan", "kamalig", "tulay", "bantayan", "kuta", "fishing-dock", "balangay-dock"]);
+    expect(content.buildings.map((b) => b.id)).toEqual([
+      "bahay-kubo", "gabihan", "kaingin", "sagingan", "niyugan", "palayan", "lumbia", "woodcutter-camp", "babaylan-hut", "dambana", "libingan", "kamalig",
+      "tulay", "bantayan", "kuta", "fishing-dock", "pangangalap", "pangangaso", "babuyan", "balangay-dock", "asinan", "baklad",
+    ]);
   });
 
   it("matches the Week 1 numbers in docs/game-design.md", () => {
@@ -26,8 +29,8 @@ describe("content", () => {
     const byId = Object.fromEntries(buildings.map((b) => [b.id, b]));
     expect(byId["bahay-kubo"]).toMatchObject({ cost: { wood: 10 }, housing: 2 });
     expect(byId["palayan"]).toMatchObject({ cost: { wood: 15 }, produces: { rice: 0.5 }, workers: 2 });
-    expect(byId["woodcutter-camp"]).toMatchObject({ cost: { rice: 10 }, produces: { wood: 0.4 }, workers: 2 });
-    expect(rules.riceEatenPerVillagerPerSecond).toBe(0.1);
+    expect(byId["woodcutter-camp"]).toMatchObject({ cost: { food: 10 }, produces: { wood: 0.4 }, workers: 2 });
+    expect(rules.foodEatenPerVillagerPerSecond).toBe(0.1);
     // A gentle cost curve (curve.ts): the 50th Bahay Kubo costs hundreds of wood, not thousands.
     expect(rules.costCurve.linear).toBeGreaterThan(0);
     expect(10 * (1 + rules.costCurve.linear * 49 + rules.costCurve.quadratic * 49 * 49)).toBeLessThan(1000);
@@ -35,7 +38,7 @@ describe("content", () => {
     expect(byId["woodcutter-camp"].adjacencyBonus).toEqual({ nextTo: ["forest"], percent: 10 });
     expect(byId["babaylan-hut"].heals).toEqual({ percentFaster: 100 });
     for (const b of buildings) expect(b.repairCost.wood).toBeGreaterThan(0); // every loss can be repaired with wood
-    expect(rules.start).toMatchObject({ villagers: 5, resources: { rice: 10 }, buildings: { "bahay-kubo": 1 } });
+    expect(rules.start).toMatchObject({ villagers: 5, resources: { food: 40 }, buildings: { "bahay-kubo": 1 } });
   });
 
   it("accepts a valid building", () => {
@@ -72,7 +75,7 @@ describe("content", () => {
   it("has map, clearing and Tulay values in content", () => {
     const { buildings, rules, lore } = loadContent();
     expect(rules.map).toMatchObject({ width: 60, height: 40, startClearRadius: 3 });
-    expect(rules.clearing).toMatchObject({ baseSeconds: 6, workers: 1, wood: 3, cost: { rice: 3 } });
+    expect(rules.clearing).toMatchObject({ baseSeconds: 6, workers: 1, wood: 3, cost: { food: 3 } });
     expect(buildings.find((b) => b.id === "tulay")).toMatchObject({ placeOn: "river", unlock: { villagers: 20 }, bridge: { maxSpan: 3 } });
     expect(lore.balete.sources.length).toBeGreaterThan(0);
   });

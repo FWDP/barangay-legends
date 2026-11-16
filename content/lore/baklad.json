@@ -1,0 +1,35 @@
+{
+  "id": "baklad",
+  "name": "Baklad: the fish corral",
+  "description": "Fish corrals (baklad) of bamboo screens staked in rivers and tidal shallows guide fish into a pen where they stay alive until taken.",
+  "tradition": "Widespread (coastal and riverine; Tagalog term)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)"
+  ],
+  "aklat": {
+    "order": 50,
+    "icon": "🐟",
+    "name": {
+      "en": "Baklad: the fish corral",
+      "fil": "Baklad"
+    },
+    "lore": {
+      "en": "In rivers and tidal shallows, people staked long bamboo screens in a funnel that led fish into a closed pen. The fish stayed alive there until they were wanted, so nothing spoiled. Fish corrals are still built along Philippine coasts and lakes today.",
+      "fil": "Sa ilog at mababaw na dagat, nagtutusok ang mga tao ng mahahabang tabing na kawayan na hugis-imbudo na nagdadala sa isda sa saradong kulungan. Nananatiling buhay doon ang isda hanggang kailanganin, kaya walang nasisira. Nagtatayo pa rin ng baklad sa mga baybayin at lawa ng Pilipinas ngayon."
+    },
+    "inGame": {
+      "en": "A Baklad keeps caught fish alive until they're eaten, so they never spoil. Raiders can't carry live fish off.",
+      "fil": "Pinananatiling buhay ng Baklad ang nahuling isda hanggang kainin, kaya hindi nasisira. Hindi madadala ng mananalakay ang buhay na isda."
+    },
+    "hint": {
+      "en": "Build a Baklad.",
+      "fil": "Magtayo ng Baklad."
+    },
+    "unlock": {
+      "type": "built",
+      "building": "baklad"
+    }
+  },
+  "reviewed": false
+}

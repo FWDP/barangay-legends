@@ -16,7 +16,7 @@ const d = calm.rules.diplomacy;
 const m = calm.rules.military;
 
 function world(patch: Partial<GameState> = {}, seed = 7): GameState {
-  const s = withState({ resources: { rice: 2000, wood: 2000, gold: 0 }, villagers: 30, warriors: 20, buildings: [], ...patch });
+  const s = withState({ resources: { rice: 2000, wood: 2000, gold: 0, food: 2000, salt: 0, wine: 0 }, villagers: 30, warriors: 20, buildings: [], ...patch });
   return { ...s, region: acquainted(createRegion(calm, s.time, seed)) };
 }
 const nb = (s: GameState, id: string) => s.region!.neighbors.find((n) => n.id === id)!;
@@ -95,7 +95,7 @@ describe("one battle function for both directions", () => {
 
   it("decides AI raids on the player the same way", () => {
     const surely: Content = { ...calm, rules: { ...calm.rules, diplomacy: { ...d, aiRaid: { ...d.aiRaid, chancePerSecond: 1 } } } };
-    let s = world({ resources: { rice: 1000, wood: 1000, gold: 0 }, buildings: [at("bahay-kubo", 5, 3), at("kuta", 4, 6)], warriors: 4, rng: 5 });
+    let s = world({ resources: { rice: 1000, wood: 1000, gold: 0, food: 1000, salt: 0, wine: 0 }, buildings: [at("bahay-kubo", 5, 3), at("kuta", 4, 6)], warriors: 4, rng: 5 });
     s = { ...s, time: 659.5, region: { ...s.region!, truceUntil: 0, nextAiRaidAt: 9999, incomingRaid: { from: "batong-buhay", strikeAt: 660, landing: { x: 1, y: 4 } } } };
     s = setNbState(s, "batong-buhay", { warriors: 6, villagers: 11 });
     const after = tick(s, surely, 1);

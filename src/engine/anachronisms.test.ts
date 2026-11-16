@@ -46,6 +46,6 @@ describe("no candles or modern tools in the world", () => {
   });
 
   it("lowland rice fields aren't terraces", () => {
-    expect(content.buildings.find((b) => b.id === "palayan")!.description).toBe("A rice field worked by two villagers.");
+    expect(content.buildings.find((b) => b.id === "palayan")!.description.toLowerCase()).not.toContain("terrace");
   });
 });

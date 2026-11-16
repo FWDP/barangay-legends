@@ -3,19 +3,32 @@
   "title": "Burn a kaingin?",
   "icon": "🔥",
   "story": "The dry season has come. The elders point to a hillside of forest: cut and burned now, it could be planted with upland rice before the rains.",
-  "conditions": { "season": "tag-araw", "minVillagers": 6 },
+  "conditions": {
+    "season": "tag-araw",
+    "minVillagers": 6
+  },
   "choices": [
     {
       "id": "burn",
       "label": "Clear and burn it",
       "result": "Smoke hangs over the hills for days. The ashes feed the soil, and the first upland rice is promising.",
-      "effects": { "resources": { "rice": 20, "wood": 10 } }
+      "effects": {
+        "resources": {
+          "wood": 10,
+          "food": 20
+        }
+      }
     },
     {
       "id": "small",
       "label": "Only a small patch",
       "result": "A careful patch is cleared and planted. A modest crop, and the forest mostly stands.",
-      "effects": { "resources": { "rice": 8, "wood": 4 } }
+      "effects": {
+        "resources": {
+          "wood": 4,
+          "food": 8
+        }
+      }
     },
     {
       "id": "leave",

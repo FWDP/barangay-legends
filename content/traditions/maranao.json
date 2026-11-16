@@ -57,5 +57,11 @@
   "sources": [
     "https://en.wikipedia.org/wiki/Maranao_people",
     "https://en.wikipedia.org/wiki/Sarimanok"
-  ]
+  ],
+  "foodYield": {
+    "palayan": 100,
+    "lumbia": 120
+  },
+  "pigs": false,
+  "_foodComment": "foodYield: percent of each food building's yield in this tradition (river-basin rice for the Tagalog, root crops and sago for the Visayans and Maranao); pigs: whether the Babuyan keeps pigs (false: chickens only). Playtest guesses; pork customs flagged for review (docs/cultural-review.md)."
 }

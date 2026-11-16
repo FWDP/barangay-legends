@@ -1,0 +1,28 @@
+{
+  "id": "sagingan",
+  "name": "Sagingan",
+  "description": "A stand of starchy saging (bananas). Fresh fruit spoils unless it's eaten or preserved, and a typhoon can flatten the stand.",
+  "icon": "🍌",
+  "order": 1.8,
+  "category": "pagkain",
+  "cost": {
+    "wood": 10
+  },
+  "repairCost": {
+    "wood": 5
+  },
+  "produces": {
+    "food": 0.45
+  },
+  "workers": 1,
+  "foodKind": "fresh",
+  "foodGroup": "starch",
+  "unlock": {
+    "villagers": 8
+  },
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Costs, staffing and yields are playtest guesses (npm run simulate)"
+  ],
+  "typhoonWeight": 3
+}

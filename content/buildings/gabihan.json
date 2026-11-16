@@ -1,0 +1,31 @@
+{
+  "id": "gabihan",
+  "name": "Gabihan",
+  "description": "A taro patch on wet ground by the river. The gabi stays in the soil until it's needed: it doesn't spoil, and a typhoon can't reach it.",
+  "icon": "🥔",
+  "order": 1.6,
+  "category": "pagkain",
+  "cost": {
+    "wood": 12
+  },
+  "repairCost": {
+    "wood": 6
+  },
+  "produces": {
+    "food": 0.5
+  },
+  "workers": 2,
+  "foodKind": "root",
+  "foodGroup": "starch",
+  "typhoonProof": true,
+  "placeNextTo": [
+    "river"
+  ],
+  "unlock": {
+    "start": true
+  },
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Costs, staffing and yields are playtest guesses (npm run simulate)"
+  ]
+}

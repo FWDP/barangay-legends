@@ -68,6 +68,10 @@ export function taskProgress(state: GameState, content: Content, q: QuestDef): {
       return { have: state.region?.victory ? 1 : 0, need: 1 };
     case "shoreWatched":
       return { have: shoreWatched(state, content).watched, need: c.count };
+    case "rested":
+      return { have: state.stats.kainginRested ?? 0, need: c.count };
+    case "pistas":
+      return { have: state.stats.pistas ?? 0, need: c.count };
     case "kutaNearDatu":
       return { have: standingKutas(state, content).filter((k) => sheltered(content, k, state.map.plaza)).length, need: c.count };
   }

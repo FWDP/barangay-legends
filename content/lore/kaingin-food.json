@@ -1,0 +1,36 @@
+{
+  "id": "kaingin-food",
+  "name": "Kaingin: swidden fields of yams and millet",
+  "description": "Swidden (kaingin) farming: a forest plot is cut and burned, planted for a few seasons with yams (ube, tugi), millet (dawa) and upland rice, then left fallow to return to forest while a new plot is cleared. Described for the Visayas by Alcina and summarized by Scott. Camote (sweet potato) and corn came from the Americas after contact and are left out.",
+  "tradition": "Widespread upland (Visayan, Tagalog, Maranao)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)",
+    "Joseph E. Spencer, Shifting Cultivation in Southeastern Asia (University of California Press, 1966)"
+  ],
+  "aklat": {
+    "order": 41,
+    "icon": "🌱",
+    "name": {
+      "en": "Kaingin: fields that rest",
+      "fil": "Kaingin: bukid na nagpapahinga"
+    },
+    "lore": {
+      "en": "In the hills, people farmed by kaingin: they cut a patch of forest, burned it, and planted yams (ube and tugi), millet (dawa) and upland rice in the ashes. After a few harvests the soil grew tired, so the field was left to rest and grow back into forest while a new patch was cleared. Done slowly and in turn, this let the forest recover. Camote and corn, common today, came from the Americas only after the Spanish arrived.",
+      "fil": "Sa kabundukan, nagsasaka ang mga tao sa pamamagitan ng kaingin: pinuputol at sinusunog ang isang bahagi ng gubat, at itinatanim sa abo ang ube, tugi, dawa at palay-kabundukan. Pagkaraan ng ilang ani, napapagod ang lupa, kaya pinagpapahinga ang bukid at hinahayaang muling maging gubat habang naglilinis ng bagong bahagi. Kapag dahan-dahan at salitan, nakababawi ang gubat. Ang kamote at mais, karaniwan ngayon, ay dumating mula sa Amerika matapos dumating ang mga Espanyol."
+    },
+    "inGame": {
+      "en": "A Kaingin grows yams and millet that keep in the ground. After many harvests its soil wears out: rest it and it returns to forest (Forest Balance recovers a little), then clear a new plot.",
+      "fil": "Nagtatanim ang Kaingin ng ube at dawa na nananatili sa lupa. Pagkaraan ng maraming ani, napapagod ang lupa: pagpahingahin ito at babalik itong gubat (bahagyang bumabawi ang Balanse ng Gubat), saka maglinis ng bagong bukid."
+    },
+    "hint": {
+      "en": "Plant a Kaingin.",
+      "fil": "Magtanim ng Kaingin."
+    },
+    "unlock": {
+      "type": "built",
+      "building": "kaingin"
+    }
+  },
+  "reviewed": false
+}

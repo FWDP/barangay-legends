@@ -7,6 +7,8 @@ import { currentTask, earnedTitles, taskProgress } from "../engine/gawain";
 import { datuLevelNeeded, maxDatuLevel, nextDatuLevel } from "../engine/datu";
 import { datuHouseUrl, houseStyleFor } from "./datuHouseArt";
 import { asCost, canAfford } from "../engine/game";
+import { pistaBlocker, pistaOccasions, type PistaOccasion } from "../engine/food";
+import { clock } from "./EventBanners";
 import { costText } from "./format";
 import type { Lang } from "./settings";
 import { useModal } from "./StoryDialogs";
@@ -219,8 +221,18 @@ export function HistoryDialog(props: { open: boolean; state: GameState; content:
 }
 
 /** The Bahay ng Datu: its level, what each level gives, and raising it. */
-export function DatuDialog(props: { open: boolean; state: GameState; content: Content; game: GameText; lang: Lang; onUpgrade: () => void; onClose: () => void }) {
-  const { open, state, content, game, lang, onUpgrade, onClose } = props;
+export function DatuDialog(props: {
+  open: boolean;
+  state: GameState;
+  content: Content;
+  game: GameText;
+  lang: Lang;
+  onUpgrade: () => void;
+  onPista?: (occasion: PistaOccasion) => void;
+  onBrew?: (amount: number) => void;
+  onClose: () => void;
+}) {
+  const { open, state, content, game, lang, onUpgrade, onPista, onBrew, onClose } = props;
   const dialog = useModal(open);
   const house = content.datuHouse;
   const d = game.datu;
@@ -271,6 +283,7 @@ export function DatuDialog(props: { open: boolean; state: GameState; content: Co
               </button>
             )}
           </div>
+          {onPista && onBrew && <PistaPanel state={state} content={content} game={game} lang={lang} onPista={onPista} onBrew={onBrew} />}
           <div className="flex justify-end">
             <button type="button" autoFocus onClick={onClose} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-4 py-1.5 text-sm font-semibold text-amber-950">
               {d.close[lang]}
@@ -366,5 +379,63 @@ export function RememberedDialog(props: { open: boolean; state: GameState; conte
         </div>
       )}
     </dialog>
+  );
+}
+
+/** The Pista at the Bahay ng Datu (food.ts holdPista): the occasion, its cost, and rice wine to brew for it. */
+function PistaPanel(props: { state: GameState; content: Content; game: GameText; lang: Lang; onPista: (o: PistaOccasion) => void; onBrew: (n: number) => void }) {
+  const { state, content, game, lang, onPista, onBrew } = props;
+  const t = game.pista;
+  const p = content.rules.food.pista;
+  const occasions = pistaOccasions(state, content);
+  const [pick, setPick] = useState<PistaOccasion>("harvest");
+  const occasion = occasions.includes(pick) ? pick : occasions[0];
+  const why = pistaBlocker(state, content);
+  const brewN = Math.max(1, (p.cost.wine ?? 0) - Math.floor(state.resources.wine)) || 5;
+  const brewCost = { rice: brewN * content.rules.food.brew.ricePerWine };
+  const reason =
+    why === "raid" ? t.raid[lang] : why === "hunger" ? t.hunger[lang] : why === "cost" ? t.cost[lang] : why === "cooldown" ? fill(t.cooldown[lang], { time: clock((state.lastPistaAt ?? 0) + p.cooldownSeconds - state.time) }) : null;
+  const joy = state.pista && state.time < state.pista.until ? state.pista : null;
+  return (
+    <section className="space-y-1.5 border-t border-amber-900/20 pt-2">
+      <h3 className="font-display text-base text-amber-900">{t.title[lang]}</h3>
+      <p className="text-xs text-stone-600">{t.intro[lang]}</p>
+      {joy && (
+        <p className="text-xs font-semibold text-green-800">
+          {fill(t.joy[lang], { happiness: p.happiness, time: clock(joy.until - state.time) })}
+          {joy.guests.length > 0 && <span className="block font-normal">{fill(t.guests[lang], { n: joy.guests.length })}</span>}
+        </p>
+      )}
+      <label className="flex items-center gap-2 text-xs">
+        <span>{t.occasion[lang]}</span>
+        <select value={occasion} onChange={(e) => setPick(e.target.value as PistaOccasion)} className="min-w-0 flex-1 rounded border border-amber-900/30 bg-amber-50 px-1 py-0.5">
+          {occasions.map((o) => (
+            <option key={o} value={o}>
+              {t[o][lang]}
+            </option>
+          ))}
+        </select>
+      </label>
+      <button
+        type="button"
+        disabled={why !== null}
+        onClick={() => onPista(occasion)}
+        className="game-btn w-full border-2 border-amber-950 bg-amber-600 px-3 py-1.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {fill(t.hold[lang], { cost: costText(asCost(p.cost)) })}
+      </button>
+      {reason && <p className="text-xs text-red-800">{reason}</p>}
+      <div className="flex items-center justify-between gap-2 text-xs">
+        <span>{fill(t.wine[lang], { wine: Math.floor(state.resources.wine) })}</span>
+        <button
+          type="button"
+          disabled={!canAfford(state, asCost(brewCost))}
+          onClick={() => onBrew(brewN)}
+          className="game-btn border-2 border-amber-950/60 bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-950 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {fill(t.brew[lang], { n: brewN, cost: costText(asCost(brewCost)) })}
+        </button>
+      </div>
+    </section>
   );
 }

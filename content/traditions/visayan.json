@@ -103,5 +103,13 @@
     "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
     "Boxer Codex (c. 1590), Lilly Library, Indiana University",
     "https://en.wikipedia.org/wiki/Boxer_Codex"
-  ]
+  ],
+  "foodYield": {
+    "palayan": 80,
+    "gabihan": 110,
+    "kaingin": 115,
+    "lumbia": 130
+  },
+  "pigs": true,
+  "_foodComment": "foodYield: percent of each food building's yield in this tradition (river-basin rice for the Tagalog, root crops and sago for the Visayans and Maranao); pigs: whether the Babuyan keeps pigs (false: chickens only). Playtest guesses; pork customs flagged for review (docs/cultural-review.md)."
 }

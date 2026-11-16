@@ -133,7 +133,7 @@ export function canHaveChild(state: GameState, content: Content): boolean {
 /** Is a household expecting a child (all but the room: a child waits for room before newcomers do)? */
 function expecting(state: GameState, content: Content): boolean {
   const p = content.rules.population;
-  if (state.hunger > 0 || state.resources.rice <= 0) return false;
+  if (state.hunger > 0 || (state.resources.food <= 0 && state.resources.rice <= 0)) return false;
   if (state.happiness < p.birthMinHappiness) return false;
   if (!state.buildings.some((b) => b.type === "bahay-kubo" && !b.damaged)) return false;
   return couples(state).length > 0 || (singles(state, "woman").length > 0 && singles(state, "man").length > 0);
@@ -369,7 +369,7 @@ export function arrival(state: GameState, content: Content, quiet = false): Game
  */
 export function growPopulation(state: GameState, content: Content, dt: number, quiet = false): GameState {
   const p = content.rules.population;
-  const fed = state.hunger === 0 && state.resources.rice > 0;
+  const fed = state.hunger === 0 && (state.resources.food > 0 || state.resources.rice > 0);
   let s = state;
   if (!fed) {
     // Nothing comes while hungry: progress waits (leaving is handled in game.ts).

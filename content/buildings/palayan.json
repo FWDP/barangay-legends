@@ -1,7 +1,7 @@
 {
   "id": "palayan",
   "name": "Palayan",
-  "description": "A rice field worked by two villagers.",
+  "description": "A rice field worked by two villagers. Palay is a prestige grain: for offerings, gifts, rice wine, feasts and the datu's household. Villagers eat it only when there's no other food.",
   "icon": "🌾",
   "order": 2,
   "category": "pagkain",
@@ -28,5 +28,6 @@
   "sources": [
     "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
     "https://whc.unesco.org/en/list/722"
-  ]
+  ],
+  "typhoonWeight": 3
 }

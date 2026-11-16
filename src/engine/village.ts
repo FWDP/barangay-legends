@@ -59,6 +59,9 @@ export function villagePlan(content: Content, n: NeighborState, def: NeighborDef
   // At least a house and a field: a barangay is never drawn empty.
   plan["bahay-kubo"] = Math.max(1, plan["bahay-kubo"] ?? 0);
   plan.palayan = Math.max(1, plan.palayan ?? 0);
+  // Everyday food: a taro patch at least, and swidden plots for bigger villages.
+  plan.gabihan = Math.max(1, plan.gabihan ?? 0);
+  if (level >= 3) plan.kaingin = Math.max(1, plan.kaingin ?? 0);
   return Object.fromEntries(Object.entries(plan).filter(([, k]) => k > 0));
 }
 
@@ -142,7 +145,7 @@ function layPaths(state: GameState, content: Content, band: VillageBand): GameSt
 }
 
 /** The order buildings are placed in: those with the strictest places first. */
-const ORDER = ["fishing-dock", "balangay-dock", "bantayan", "babaylan-hut", "dambana", "kuta", "kamalig", "bahay-kubo", "palayan", "woodcutter-camp", "libingan"];
+const ORDER = ["fishing-dock", "balangay-dock", "bantayan", "asinan", "pangangalap", "baklad", "gabihan", "babaylan-hut", "dambana", "kuta", "kamalig", "bahay-kubo", "babuyan", "palayan", "kaingin", "sagingan", "niyugan", "lumbia", "woodcutter-camp", "pangangaso", "libingan"];
 
 /** The open ring right around the plaza: kept free for the plaza's crowd. */
 const byPlaza = (plaza: Point, x: number, y: number) => Math.max(Math.abs(x - plaza.x), Math.abs(y - plaza.y)) <= 1;

@@ -9,7 +9,7 @@ const vc = content.villagers;
 const growing = (patch: Partial<GameState> = {}) =>
   withState({
     villagers: 5,
-    resources: { rice: 1000, wood: 0, gold: 0 },
+    resources: { rice: 1000, food: 1000, wood: 0, gold: 0 },
     buildings: [at("palayan", 1, 1), at("woodcutter-camp", 8, 1), ...[2, 3, 4, 5, 6, 7, 8].flatMap((x) => [at("bahay-kubo", x, 6), at("bahay-kubo", x, 7)])],
     ...patch,
   });

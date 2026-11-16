@@ -1,0 +1,35 @@
+{
+  "id": "babuyan",
+  "name": "Babuyan and manukan: pigs and chickens",
+  "description": "Domestic pigs and chickens were raised under and near houses and were central to feasts and offerings in many traditions. Pork customs differ by tradition (Muslim Maranao communities do not keep pigs); flagged for review.",
+  "tradition": "Widespread; pigs not in Maranao tradition (flagged)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)"
+  ],
+  "aklat": {
+    "order": 48,
+    "icon": "🐓",
+    "name": {
+      "en": "Babuyan and manukan",
+      "fil": "Babuyan at manukan"
+    },
+    "lore": {
+      "en": "Pigs and chickens were kept under and around the houses. In many communities they were not everyday food but were killed for feasts, offerings and to honor guests. Customs differ: in Muslim communities such as the Maranao, pigs are not kept. How each tradition kept animals is waiting for a historian's review.",
+      "fil": "Inaalagaan ang baboy at manok sa ilalim at paligid ng bahay. Sa maraming pamayanan, hindi ito pang-araw-araw na pagkain kundi kinakatay sa piging, handog at pagpaparangal sa panauhin. Iba-iba ang kaugalian: sa mga pamayanang Muslim gaya ng Maranao, hindi nag-aalaga ng baboy. Naghihintay pa ng pagsusuri ng historyador kung paano nag-aalaga ng hayop ang bawat tradisyon."
+    },
+    "inGame": {
+      "en": "A small pen brings meat to the diet; where the tradition keeps no pigs it holds chickens only and gives less.",
+      "fil": "Nagdadala ng karne ang maliit na kulungan; kung saan hindi nag-aalaga ng baboy ang tradisyon, manok lamang ang laman at mas kaunti ang bigay."
+    },
+    "hint": {
+      "en": "Build a Babuyan.",
+      "fil": "Magtayo ng Babuyan."
+    },
+    "unlock": {
+      "type": "built",
+      "building": "babuyan"
+    }
+  },
+  "reviewed": false
+}

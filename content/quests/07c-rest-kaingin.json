@@ -1,0 +1,17 @@
+{
+  "id": "rest-kaingin",
+  "text": {
+    "en": "Rest a tired kaingin and let the forest grow back",
+    "fil": "Pagpahingahin ang pagod na kaingin at hayaang tumubo muli ang gubat"
+  },
+  "condition": {
+    "type": "rested",
+    "count": 1
+  },
+  "reward": {
+    "resources": {
+      "wood": 30
+    }
+  },
+  "next": "fifteen-villagers"
+}

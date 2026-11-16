@@ -2,6 +2,7 @@
 // and even here the storage is passed in so tests can use a fake.
 import { AGE_GROUPS, classFor, GENDERS, syncResidents, type AgeGroup, type Gender, type Resident } from "./residents";
 import { linkNamed, parseLife, parseStory } from "./talambuhay";
+import { emptyStore, PISTA_OCCASIONS, type PistaOccasion } from "./food";
 import { rollAt } from "./rng";
 import { makeHousehold } from "./household";
 import { clearingShape } from "./plaza";
@@ -332,7 +333,28 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
   31: (raw) => ({ ...raw, version: 32, ...(isObject(raw.eclipse) && finiteNonNeg(raw.eclipse.taps) ? { eclipse: { ...raw.eclipse, strength: raw.eclipse.taps } } : {}) }),
   // v32 → v33: the Bantayan and the reworked Kuta (watch.ts, border.ts). See migrateDefenseV33.
   32: (raw, content) => migrateDefenseV33(raw, content),
+  // v33 → v34: food (food.ts). See migrateFoodV34.
+  33: (raw, content) => migrateFoodV34(raw, content),
 };
+
+// ---------- Food (v33 → v34) ----------
+
+/**
+ * Old saves fed everyone on rice. Now villagers eat Pagkain and rice (Palay) is a prestige
+ * grain: the stored rice is split (rules.food.migration.foodSharePercent becomes Pagkain, kept
+ * preserved), the Palayan stay, the fishing dock becomes the Pangisdaan (same building), and for
+ * a grace period villagers eat Palay without waste, so nobody goes hungry because of the change.
+ */
+export function migrateFoodV34(raw: RawSave, content: Content): RawSave {
+  const m = content.rules.food.migration;
+  const resources: RawSave = isObject(raw.resources) ? { ...raw.resources } : {};
+  const rice = finiteNonNeg(resources.rice) ? resources.rice : 0;
+  const food = Math.floor((rice * m.foodSharePercent) / 100);
+  resources.rice = rice - food;
+  resources.food = food;
+  const time = finiteNonNeg(raw.time) ? raw.time : 0;
+  return { ...raw, version: 34, resources, foodStore: { ground: 0, fresh: 0, live: 0, preserved: food }, foodGraceUntil: time + m.graceSeconds };
+}
 
 // ---------- The Bantayan and the reworked Kuta (v32 → v33) ----------
 
@@ -596,6 +618,7 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean, withRegi
   if (isObject(data.typhoon) && finiteNonNeg(data.typhoon.strikeAt) && content.events.typhoon) {
     state.typhoon = { strikeAt: data.typhoon.strikeAt };
   }
+  parseFood(data, content, state);
   if (isObject(data.nextEventAt)) {
     state.nextEventAt = Object.fromEntries(
       Object.entries(data.nextEventAt).filter((e): e is [string, number] => finiteNonNeg(e[1])),
@@ -637,6 +660,10 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean, withRegi
     if (item.legacyDoor === true) building.legacyDoor = true;
     // A raised building's level (upgrades.ts), within the levels its type has.
     if (Number.isInteger(item.level) && (item.level as number) > 1) building.level = Math.min(item.level as number, 1 + (def.upgrades?.length ?? 0));
+    // Food land (food.ts): a kaingin's harvests, a worked fishing or hunting ground, boar damage.
+    if (def.wearsOut && finiteNonNeg(item.harvested)) building.harvested = item.harvested;
+    if (def.depletes && finiteNonNeg(item.depletion)) building.depletion = Math.min(1, item.depletion);
+    if (finiteNonNeg(item.trampledUntil) && item.trampledUntil > state.time) building.trampledUntil = item.trampledUntil;
     if (building.level === 1) delete building.level;
     if (isObject(item.door) && Number.isInteger(item.door.x) && Number.isInteger(item.door.y)) building.door = { x: item.door.x as number, y: item.door.y as number };
     if (item.damaged === true) building.damaged = true;
@@ -760,6 +787,27 @@ const HISTORY_KINDS: HistoryKind[] = ["named", "left", "fell", "task", "spirits"
 const DEATH_CAUSES = ["age", "sickness", "hunger", "raid"];
 const EVENTS = ["eclipseWon", "eclipseLost", "sarimanok", "riddleRight"];
 const isPoint = (v: unknown): v is { x: number; y: number } => isObject(v) && Number.isFinite(v.x) && Number.isFinite(v.y);
+
+/** Where the Pagkain is kept, the diet, pests, the Pista (food.ts). Anything that doesn't fit is dropped. */
+function parseFood(data: RawSave, content: Content, state: GameState) {
+  const fs = data.foodStore;
+  const n = (v: unknown) => (finiteNonNeg(v) ? v : 0);
+  if (isObject(fs)) state.foodStore = { ground: n(fs.ground), fresh: n(fs.fresh), live: n(fs.live), preserved: n(fs.preserved) };
+  else state.foodStore = { ...emptyStore(), preserved: state.resources.food };
+  if (finiteNonNeg(data.monotonyFor)) state.monotonyFor = data.monotonyFor;
+  if (finiteNonNeg(data.dietGroups)) state.dietGroups = Math.floor(data.dietGroups);
+  if (finiteNonNeg(data.foodGraceUntil) && data.foodGraceUntil > state.time) state.foodGraceUntil = data.foodGraceUntil;
+  if (finiteNonNeg(data.lastPistaAt) && data.lastPistaAt <= state.time) state.lastPistaAt = data.lastPistaAt;
+  const p = data.pest;
+  if (isObject(p) && (p.kind === "rats" || p.kind === "locust" || p.kind === "boar") && finiteNonNeg(p.at) && finiteNonNeg(p.until) && p.until > state.time) {
+    state.pest = { kind: p.kind, at: p.at, until: p.until, ...(finiteNonNeg(p.strikeAt) ? { strikeAt: p.strikeAt } : {}), ...(finiteNonNeg(p.amount) ? { amount: p.amount } : {}), ...(Number.isInteger(p.x) && Number.isInteger(p.y) ? { x: p.x as number, y: p.y as number } : {}) };
+  }
+  const f = data.pista;
+  if (isObject(f) && (PISTA_OCCASIONS as readonly unknown[]).includes(f.occasion) && finiteNonNeg(f.at) && finiteNonNeg(f.until)) {
+    state.pista = { occasion: f.occasion as PistaOccasion, at: f.at, until: f.until, guests: Array.isArray(f.guests) ? f.guests.filter((g): g is string => typeof g === "string").slice(0, 20) : [] };
+  }
+  void content;
+}
 
 /** The Bahay ng Datu's level, mourning, the long-sickness clock and the remembered dead. */
 function parseDatuAndDeaths(data: RawSave, content: Content, state: GameState) {
@@ -895,6 +943,8 @@ function parsePeople(data: RawSave, content: Content, state: GameState, isPlayer
     voyages: count(st.voyages),
     trades: count(st.trades),
     bestTens: count(st.bestTens),
+    ...(count(st.pistas) > 0 ? { pistas: count(st.pistas) } : {}),
+    ...(count(st.kainginRested) > 0 ? { kainginRested: count(st.kainginRested) } : {}),
   };
   if (!isPlayer) return;
   const quests = new Set(content.quests.map((q) => q.id));

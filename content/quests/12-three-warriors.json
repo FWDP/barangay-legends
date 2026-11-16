@@ -10,7 +10,7 @@
   },
   "reward": {
     "resources": {
-      "rice": 30
+      "food": 30
     }
   },
   "next": "datu-three"

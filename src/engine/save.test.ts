@@ -63,7 +63,7 @@ describe("save", () => {
     };
     const loaded = roundTrip(saved)!;
     expect(loaded.buildings).toMatchObject([at("palayan", 1, 4), at("bahay-kubo", 4, 5)]);
-    expect(loaded.resources).toEqual({ rice: newGame(content).resources.rice, wood: 7, gold: 0 });
+    expect(loaded.resources).toEqual({ ...newGame(content).resources, wood: 7 });
   });
 
   it("rejects a save whose map is broken", () => {
@@ -130,7 +130,7 @@ describe("migration from v3 (before the generated map)", () => {
     expect(owned(s, "palayan")).toBe(2);
     expect(owned(s, "woodcutter-camp")).toBe(1);
     expect(s.buildings.filter((b) => b.damaged)).toHaveLength(1);
-    expect(s).toMatchObject({ resources: { rice: 220, wood: 140, gold: 0 }, villagers: 15, time: 120, rng: 777 });
+    expect(s).toMatchObject({ resources: { rice: 88, food: 132, wood: 140, gold: 0 }, villagers: 15, time: 120, rng: 777 });
   });
 
   it("keeps the layout around the plaza (mirrored if the river is on the other side)", () => {
@@ -177,7 +177,7 @@ describe("older saves still load through every migration", () => {
   it("v1 (building counts) → current", () => {
     const s = roundTrip(v1Save)!;
     expect(s.version).toBe(STATE_VERSION);
-    expect(s).toMatchObject({ resources: { rice: 220, wood: 140, gold: 0 }, villagers: 15, migration: 0.25 });
+    expect(s).toMatchObject({ resources: { rice: 88, food: 132, wood: 140, gold: 0 }, villagers: 15, migration: 0.25 });
     expect([owned(s, "bahay-kubo"), owned(s, "palayan"), owned(s, "woodcutter-camp")]).toEqual([6, 4, 3]);
     expect(new Set(s.buildings.map((b) => `${b.x},${b.y}`)).size).toBe(13);
     for (const b of s.buildings) expect(tileAt(s.map, b.x, b.y)).toBe("cleared");
@@ -259,7 +259,8 @@ describe("v16 → v17: gold, happiness, tasks and named villagers", () => {
   it("adds gold (0), happiness (60) and empty tasks, villagers and history", () => {
     const s = parseSave(v16(), content)!;
     expect(s.version).toBe(STATE_VERSION);
-    expect(s.resources).toEqual({ rice: 42, wood: 7, gold: 0 });
+    // v34 splits the old rice: rules.food.migration.foodSharePercent becomes Pagkain.
+    expect(s.resources).toEqual({ rice: 17, food: 25, wood: 7, gold: 0, salt: 0, wine: 0 });
     expect(s.happiness).toBe(60);
     expect(s.gawainDone).toEqual([]);
     expect(s.named).toEqual([]);
@@ -272,8 +273,8 @@ describe("v16 → v17: gold, happiness, tasks and named villagers", () => {
     const s = parseSave(v16(), content)!;
     // newGame starts with a Bahay Kubo only: nothing met yet, so the chain starts at the beginning.
     expect(tick(s, calm, 1).gawainDone).toEqual([]);
-    const withField = { ...s, buildings: [...s.buildings, at("palayan", s.map.plaza.x + 1, s.map.plaza.y + 1)] };
-    expect(tick(withField, calm, 1).gawainDone).toEqual(["first-palayan"]);
+    const withField = { ...s, buildings: [...s.buildings, at("gabihan", s.map.plaza.x + 1, s.map.plaza.y + 1)] };
+    expect(tick(withField, calm, 1).gawainDone).toEqual(["first-gabihan"]);
   });
 
   it("round-trips the new fields", () => {

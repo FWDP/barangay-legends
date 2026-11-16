@@ -1,9 +1,57 @@
 // Content schema and validation. Buildings, events and balance rules live in content/ as JSON.
 import type { Curve } from "./curve";
 
-export const RESOURCES = ["rice", "wood", "gold"] as const;
+/** Pagkain (everyday food), Palay (rice: a prestige grain), wood, gold, Asin (salt) and rice wine (tapay). */
+export const RESOURCES = ["food", "rice", "wood", "gold", "salt", "wine"] as const;
 export type Resource = (typeof RESOURCES)[number];
 export type ResourceAmounts = Partial<Record<Resource, number>>;
+
+/** Where a food is kept (food.ts): root crops in the ground, fresh food that spoils, or dried and preserved. */
+export const FOOD_KINDS = ["root", "fresh", "dried"] as const;
+export type FoodKind = (typeof FOOD_KINDS)[number];
+/** Food groups for a varied diet: starches, fish and shellfish, meat, fruit and greens. */
+export const FOOD_GROUPS = ["starch", "fish", "meat", "fruit"] as const;
+export type FoodGroup = (typeof FOOD_GROUPS)[number];
+
+export interface FoodRules {
+  riceWastePercent: number;
+  datuRicePerLevel: number;
+  groundPerPlot: number;
+  jarsPerHouse: number;
+  livePerBaklad: number;
+  datuStorePerLevel: ResourceAmounts;
+  spoilPercentPerMinute: number;
+  smokePerHousePerSecond: number;
+  saltPerHousePerSecond: number;
+  saltPreservesPerUnit: number;
+  variety: { perGroupHappiness: number; monotonySeconds: number; monotonyHappiness: number; monotonySickPercent: number };
+  kaingin: { fertileHarvest: number; fallowBalance: number };
+  depletion: { radius: number; perUnit: number; recoveryPerMinute: number; maxPenaltyPercent: number };
+  /** Percent of a building's yield by season id and building id. */
+  seasonYield: Record<string, Record<string, number>>;
+  /** Seasons of rough seas (shown in the HUD). */
+  roughSeas: string[];
+  typhoonFreshPercent: number;
+  brew: { ricePerWine: number };
+  pista: { cost: ResourceAmounts; happiness: number; happinessSeconds: number; renown: number; trust: number; cooldownSeconds: number };
+  migration: { foodSharePercent: number; graceSeconds: number };
+}
+
+export interface PestRules {
+  startsAfterSeconds: number;
+  ratsChancePerSecond: number;
+  ratsPercent: number;
+  locustChancePerSecond: number;
+  locustWarningSeconds: number;
+  locustSeconds: number;
+  locustPercent: number;
+  boarChancePerSecond: number;
+  boarSeconds: number;
+  boarPercent: number;
+  boarStock: number;
+  boarGuardRadius: number;
+  cooldownSeconds: number;
+}
 /** An amount of every resource. */
 export type Resources = Record<Resource, number>;
 
@@ -50,6 +98,19 @@ export interface BuildingDef {
   defense?: number;
   /** A Bantayan: when staffed, it watches the landing points within rules.watch.radius (watch.ts). */
   watch?: boolean;
+  /** Food it brings in (produces.food): where it's kept (food.ts) and its food group (variety). */
+  foodKind?: FoodKind;
+  foodGroup?: FoodGroup;
+  /** Root crops in the ground, or a sago stand: a typhoon can't damage it. */
+  typhoonProof?: boolean;
+  /** How much likelier a typhoon is to flatten it (bananas, rice): default 1. */
+  typhoonWeight?: number;
+  /** Fishing and hunting grounds wear out when worked too hard (rules.food.depletion). */
+  depletes?: boolean;
+  /** A kaingin: its soil tires after rules.food.kaingin.fertileHarvest and must be rested. */
+  wearsOut?: boolean;
+  /** A Baklad: keeps caught fish alive (rules.food.livePerBaklad). */
+  keepsFishAlive?: boolean;
   adjacencyBonus?: AdjacencyBonus;
   /** Where it can be built. Default "cleared" land; a bridge goes on the river. */
   placeOn?: "cleared" | "river";
@@ -85,7 +146,8 @@ export interface Rules {
     buildings: Record<string, number>;
   };
   baseHousing: number;
-  riceEatenPerVillagerPerSecond: number;
+  /** Pagkain each villager eats a second (children less: population.ts). */
+  foodEatenPerVillagerPerSecond: number;
   /** How each copy's price rises: base × (1 + linear·n + quadratic·n²) after n copies (curve.ts). */
   costCurve: Curve;
   gatherPerClick: number;
@@ -139,7 +201,11 @@ export interface Rules {
   villages: { bands: VillageBand[] };
   mourning: { seconds: number; maxSeconds: number; happiness: number };
   /** Rice the barangay holds with no Kamalig. */
-  storage: { baseRice: number };
+  storage: { baseRice: number; baseDried: number; baseSalt: number };
+  /** How a barangay eats and stores food (food.ts). */
+  food: FoodRules;
+  /** Rats, locusts and wild boar (food.ts updatePests). */
+  pests: PestRules;
   /** Shares of women, children and elders among new residents (residents.ts). */
   residents: { womanPercent: number; childPercent: number; elderPercent: number; classPercent: Record<SocialClass, number> };
   population: PopulationRules;
@@ -317,6 +383,9 @@ export interface TraditionDef extends Heritage {
   forestSpirit: { name: Text; stage1: Text; stage2: Text; sources: string[] };
   /** How much more often the Sarimanok visits (1 = the base rate). */
   sarimanokChance: number;
+  /** Food by tradition: percent of a building's yield (river-basin rice, upland roots and sago), and whether pigs are kept (food.ts). */
+  foodYield?: Record<string, number>;
+  pigs?: boolean;
 }
 
 /** A ritual at the Dambana, paid for with Favor. */
@@ -453,9 +522,12 @@ export type QuestCondition =
   /** Landing points on the barangay's shore within a standing Kuta's radius (defense.ts). */
   | { type: "shoreWatched"; count: number }
   /** A standing Kuta whose shelter reaches the Bahay ng Datu. */
-  | { type: "kutaNearDatu"; count: number };
+  | { type: "kutaNearDatu"; count: number }
+  /** Kaingin rested, feasts held (food.ts). */
+  | { type: "rested"; count: number }
+  | { type: "pistas"; count: number };
 
-export const QUEST_CONDITIONS = ["built", "villagers", "tilesCleared", "connected", "survivedSeason", "traded", "warriors", "raidsDefended", "tributaries", "aklat", "replanted", "permittedClears", "datuLevel", "voyages", "leadBloc", "blocMembers", "paramount", "shoreWatched", "kutaNearDatu"] as const;
+export const QUEST_CONDITIONS = ["built", "villagers", "tilesCleared", "connected", "survivedSeason", "traded", "warriors", "raidsDefended", "tributaries", "aklat", "replanted", "permittedClears", "datuLevel", "voyages", "leadBloc", "blocMembers", "paramount", "shoreWatched", "kutaNearDatu", "rested", "pistas"] as const;
 
 /** One of the Mga Gawain: a task in a chain, with a reward (resources and/or a title for the datu). */
 export interface QuestDef {
@@ -1023,6 +1095,11 @@ export function validateBuilding(raw: unknown, file = "building"): BuildingDef {
   }
   if (raw.defense !== undefined && !isNonNegNumber(raw.defense)) throw new Error(`${file}: "defense" must be a number >= 0`);
   if (raw.watch !== undefined && raw.watch !== true) throw new Error(`${file}: "watch" must be true if given`);
+  if (raw.foodKind !== undefined && !(FOOD_KINDS as readonly unknown[]).includes(raw.foodKind)) throw new Error(`${file}: "foodKind" must be one of ${FOOD_KINDS.join(", ")}`);
+  if (raw.foodGroup !== undefined && !(FOOD_GROUPS as readonly unknown[]).includes(raw.foodGroup)) throw new Error(`${file}: "foodGroup" must be one of ${FOOD_GROUPS.join(", ")}`);
+  if (isObject(raw.produces) && raw.produces.food !== undefined && (!raw.foodKind || !raw.foodGroup)) throw new Error(`${file}: a building that produces food needs "foodKind" and "foodGroup"`);
+  for (const k of ["typhoonProof", "depletes", "wearsOut", "keepsFishAlive"]) if (raw[k] !== undefined && typeof raw[k] !== "boolean") throw new Error(`${file}: "${k}" must be true or false`);
+  if (raw.typhoonWeight !== undefined && !isNonNegNumber(raw.typhoonWeight)) throw new Error(`${file}: "typhoonWeight" must be a number >= 0`);
   if (raw.produces !== undefined && !raw.workers) {
     throw new Error(`${file}: a building that produces needs "workers"`);
   }
@@ -1088,7 +1165,7 @@ export function validateRules(raw: unknown): Rules {
   if (!isObject(raw.start.buildings)) throw new Error("rules: start.buildings must be an object");
   for (const key of [
     "baseHousing",
-    "riceEatenPerVillagerPerSecond",
+    "foodEatenPerVillagerPerSecond",
     "gatherPerClick",
     "secondsPerNewVillager",
   ]) {
@@ -1211,7 +1288,9 @@ export function validateRules(raw: unknown): Rules {
   if (!Array.isArray(raw.gatherable) || !raw.gatherable.every((r) => (RESOURCES as readonly unknown[]).includes(r))) {
     throw new Error('rules: "gatherable" must list resources');
   }
-  if (!isObject(raw.storage) || !isNonNegNumber(raw.storage.baseRice)) throw new Error('rules: "storage.baseRice" must be a number >= 0');
+  if (!isObject(raw.storage)) throw new Error('rules: missing "storage"');
+  checkNumbers(raw.storage, ["baseRice", "baseDried", "baseSalt"], "rules: storage");
+  validateFoodRules(raw.food, raw.pests);
   if (!isObject(raw.stockpile) || !isNonNegNumber(raw.stockpile.multiple) || !isNonNegNumber(raw.stockpile.slowPercent) || (raw.stockpile.slowPercent as number) > 100 || typeof raw.stockpile.stopMultiple !== "number" || (raw.stockpile.stopMultiple as number) < 1) throw new Error('rules: "stockpile" needs "multiple", "slowPercent" (0-100) and "stopMultiple" (>= 1)');
   checkAmounts(raw.stockpile.minimum, "rules: stockpile.minimum");
   if (!isObject(raw.residents)) throw new Error('rules: missing "residents"');
@@ -1329,6 +1408,33 @@ function checkStrings(raw: Record<string, unknown>, keys: string[], file: string
   for (const key of keys) {
     if (typeof raw[key] !== "string" || raw[key] === "") throw new Error(`${file}: "${key}" must be a non-empty string`);
   }
+}
+
+function validateFoodRules(food: unknown, pests: unknown) {
+  if (!isObject(food)) throw new Error('rules: missing "food"');
+  checkNumbers(food, ["riceWastePercent", "datuRicePerLevel", "groundPerPlot", "jarsPerHouse", "livePerBaklad", "spoilPercentPerMinute", "smokePerHousePerSecond", "saltPerHousePerSecond", "saltPreservesPerUnit", "typhoonFreshPercent"], "rules: food");
+  for (const [k, keys] of [
+    ["variety", ["perGroupHappiness", "monotonySeconds", "monotonySickPercent"]],
+    ["kaingin", ["fertileHarvest", "fallowBalance"]],
+    ["depletion", ["radius", "perUnit", "recoveryPerMinute", "maxPenaltyPercent"]],
+    ["brew", ["ricePerWine"]],
+    ["pista", ["happiness", "happinessSeconds", "renown", "trust", "cooldownSeconds"]],
+    ["migration", ["foodSharePercent", "graceSeconds"]],
+  ] as const) {
+    if (!isObject(food[k])) throw new Error(`rules: missing "food.${k}"`);
+    checkNumbers(food[k] as Record<string, unknown>, [...keys], `rules: food.${k}`);
+  }
+  if (typeof (food.variety as Record<string, unknown>).monotonyHappiness !== "number") throw new Error('rules: "food.variety.monotonyHappiness" must be a number');
+  checkAmounts((food.pista as Record<string, unknown>).cost, "rules: food.pista.cost");
+  checkAmounts(food.datuStorePerLevel, "rules: food.datuStorePerLevel");
+  if (!isObject(food.seasonYield)) throw new Error('rules: "food.seasonYield" must be an object');
+  for (const [season, byType] of Object.entries(food.seasonYield)) {
+    if (!isObject(byType)) throw new Error(`rules: food.seasonYield.${season} must be an object`);
+    checkNumbers(byType, Object.keys(byType), `rules: food.seasonYield.${season}`);
+  }
+  if (!Array.isArray(food.roughSeas) || !food.roughSeas.every((x) => typeof x === "string")) throw new Error('rules: "food.roughSeas" must list season ids');
+  if (!isObject(pests)) throw new Error('rules: missing "pests"');
+  checkNumbers(pests, ["startsAfterSeconds", "ratsChancePerSecond", "ratsPercent", "locustChancePerSecond", "locustWarningSeconds", "locustSeconds", "locustPercent", "boarChancePerSecond", "boarSeconds", "boarPercent", "boarStock", "boarGuardRadius", "cooldownSeconds"], "rules: pests");
 }
 
 function checkNumbers(raw: Record<string, unknown>, keys: string[], file: string, positive = false) {
@@ -1757,6 +1863,11 @@ export function validateTradition(raw: unknown, file = "tradition"): TraditionDe
   for (const k of ["name", "stage1", "stage2"]) checkText(fs[k], `${file}: forestSpirit.${k}`);
   if (!Array.isArray(fs.sources) || fs.sources.length === 0) throw new Error(`${file}: forestSpirit needs a source`);
   checkNumbers(raw, ["sarimanokChance"], file);
+  if (raw.foodYield !== undefined) {
+    if (!isObject(raw.foodYield)) throw new Error(`${file}: "foodYield" must map building ids to percents`);
+    checkNumbers(raw.foodYield, Object.keys(raw.foodYield), `${file}: foodYield`);
+  }
+  if (raw.pigs !== undefined && typeof raw.pigs !== "boolean") throw new Error(`${file}: "pigs" must be true or false`);
   if (raw.burialLook !== "jars" && raw.burialLook !== "longon") throw new Error(`${file}: "burialLook" must be "jars" or "longon"`);
   if (raw.houseStyle !== undefined && raw.houseStyle !== "lowland" && raw.houseStyle !== "torogan") throw new Error(`${file}: "houseStyle" must be "lowland" or "torogan"`);
   if (raw.dress !== undefined && raw.dress !== "malong") throw new Error(`${file}: "dress" must be "malong" when given`);

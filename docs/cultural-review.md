@@ -129,6 +129,32 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
     Was the water buffalo widespread before contact? Is there a better-sourced account of signal
     fires and drums along the coast?
 
+26. **Food staples** (`content/lore/gabi.json`, `kaingin-food.json`, `saging.json`, `lumbia.json`,
+    `niyog.json`): the game makes root crops and other starches (gabi, ube, tugi, dawa, sago,
+    starchy bananas) the everyday food and rice a prestige grain, eaten daily only in some
+    lowland river basins (Scott 1994). Is this fair for each tradition? Is the Visayan and
+    Maranao lean toward sago and root crops, and the Tagalog lean toward rice, right?
+27. **Rice as a prestige food** (`content/lore/palay-prestige.json`): rice for feasts, offerings,
+    rice wine, bride-price and the datu's household. Is "pagkaing may dangal" an apt Filipino
+    phrase, and is the Manila Bay example fair?
+28. **Fishing, salt, hunting and animals** (`pangingisda.json`, `pangangalap.json`, `asin.json`,
+    `baklad.json`, `pangangaso.json`, `babuyan.json`): is "baklad" (a Tagalog term) right as the
+    general name for fish corrals? **Pork customs by tradition**: Maranao barangays keep chickens
+    only (`content/traditions/maranao.json` "pigs": false); are pigs right for the Tagalog and
+    Visayan barangays, and for feasts and offerings?
+29. **Feasts and rice wine** (`content/lore/pista-tapay.json`): is "tapay" (Tagalog) and "pangasi"
+    (Visayan) right for rice wine? **Distilled drinks** such as lambanog may be later and are not
+    in the game: please confirm.
+30. **How food was kept** (`content/lore/food-storage.json`): kamalig for grain, dried goods and
+    salt; root crops left in the ground; household jars (tapayan, banga) of bagoong, salted fish
+    and palm wine; smoked fish on racks over the hearth; baklad corrals. Is this fair?
+31. **Greens and seasonings to check**: which greens were present before contact (for example
+    malunggay)? Okra is likely post-contact and is left out. **Garlic and onions** are not shown
+    yet: were they present before contact? **Chilies** came from the Americas after contact and
+    are never shown, nor camote (sweet potato) or corn.
+32. **Dish names**: the game uses no dish names of Spanish origin (no "adobo"). If dishes are named
+    later, which native names (e.g. kinilaw) are well sourced?
+
 ### Notes for the future
 
 - **Earth spirits**: if spirits of the ground are added, use precolonial names (for example the
@@ -192,6 +218,13 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 | content/villagers/talambuhay.json | Life-story templates: skills, personal details, family sentences, life events and the lessons elders teach. Skills are open to women and men alike (fighting only to the Mandirigma, men for now). Elders are called by name, not "Lola/Lolo" (Spanish-derived) | Widespread lowland | Scott 1994; see questions 19–20 |
 | content/lore/kamalig.json and src/ui/buildingArt.ts (kamaligSvg) | Aklat entry and Kamalig art: a granary raised on posts, woven bamboo walls, steep thatched roof, ladder, palay sheaves; wider on more posts at levels 2-3. Generic, the same for every tradition | Widespread lowland (Tagalog, Visayan) | Scott 1994; Noceda and Sanlúcar 1754; Barton 1922 |
 | content/lore/tambuli.json and src/ui/EventBanners.tsx (TambuliIcon) | Aklat entry and icon: the tambuli (horn) and budyong (conch trumpet) blown to call for help; drums and fires passing warnings; the call-for-help action | Tagalog (tambuli), Visayan (budyong) | Scott 1994; see question 25 |
+| content/lore/gabi.json, content/lore/kaingin-food.json, content/lore/saging.json, content/lore/lumbia.json, content/lore/niyog.json and content/buildings (gabihan, kaingin, sagingan, lumbia, niyugan) | Aklat entries and food buildings: root crops, millet, sago, starchy bananas and coconuts as everyday food; kaingin plots that tire and rest back to forest; no camote, corn or chilies | Widespread; sago more Visayan and Maranao | Scott 1994; Alcina 1668; Spencer 1966; Pigafetta 1521; see questions 26 and 31 |
+| content/lore/palay-prestige.json and content/buildings/palayan.json | Aklat entry: rice as a prestige food (feasts, offerings, rice wine, bride-price, the datu's household); villagers eat it only when there is no other food | Widespread; Tagalog river basins grew more | Scott 1994; Plasencia 1589; Alcina 1668; see question 27 |
+| content/lore/pangingisda.json, content/lore/pangangalap.json, content/lore/asin.json, content/lore/baklad.json, content/lore/pangangaso.json, content/lore/babuyan.json and content/buildings (fishing-dock as the Pangisdaan, pangangalap, asinan, baklad, pangangaso, babuyan) | Aklat entries and buildings: fishing with bubo and nets from a bangka, shore gathering at low tide, salt-making, fish corrals, hunting boar and deer, pigs and chickens (chickens only for Maranao) | Widespread; pork customs by tradition | Scott 1994; Alcina 1668; see question 28 |
+| content/lore/pista-tapay.json and engine/food.ts (holdPista, brewWine) | Aklat entry and action: the Pista for a harvest, victory, marriage, peace or the end of mourning; rice wine (tapay, pangasi) brewed from Palay; no distilled drinks | Widespread (Tagalog tapay, Visayan pangasi) | Scott 1994; Pigafetta 1521; Alcina 1668; see question 29 |
+| content/lore/food-storage.json and engine/food.ts (foodCaps, feed) | Aklat entry and rules: kamalig for grain, dried goods and salt; root crops in the ground; household jars and smoking racks; baklad keeping fish alive | Widespread lowland | Scott 1994; Alcina 1668; see question 30 |
+| src/ui/foodArt.ts and src/ui/resourceArt.tsx | Art for the food buildings (taro patch, swidden with yams and millet, banana stand, sago palms and trough, coconut palms, shore basket, hunters' lean-to, pen with pig or chickens, salt beds, fish corral) and for Pagkain (a bilao with gabi, banana and fish), Palay (a sheaf), Asin and rice wine (a tapayan). Generic, the same for every tradition | Widespread | Scott 1994 |
+| content/traditions/*.json foodYield, pigs | Which food each tradition grows more of (rice for the Tagalog; root crops and sago for the Visayans and Maranao) and whether pigs are kept; playtest numbers, not a historical claim | Tagalog, Visayan, Maranao | see questions 26 and 28 |
 
 ## Reviewed
 

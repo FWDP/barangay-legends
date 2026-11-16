@@ -23,7 +23,7 @@ import { SettingsMenu } from "./SettingsMenu";
 import { AdvisorBubble, useAdvisor } from "./Advisor";
 import { HelpPanel } from "./HelpPanel";
 import { TitleScreen } from "./TitleScreen";
-import { useLang, useSettings } from "./settings";
+import { useLang, useSettings, type Lang } from "./settings";
 import { initSound, isMuted, setMuted, sfx } from "./sound";
 import { loadUiContent } from "./uiContent";
 import { content as baseContent, useGame } from "./useGame";
@@ -53,7 +53,7 @@ import { LevelChip } from "./LevelBadge";
 import { localRanking, RankingDialog } from "./Ranking";
 import { Celebration } from "./Celebration";
 import { ReportDialog as ProblemReportDialog, SaveDialog } from "./SaveTools";
-import { fill } from "./uiContent";
+import { fill, type GameText } from "./uiContent";
 import { VERSION_TEXT } from "./version";
 import { arawText, DayChip } from "./Days";
 import { DevPanel, devMode } from "./DevPanel";
@@ -600,11 +600,10 @@ export function App() {
     return () => document.removeEventListener("keydown", onKey);
   }, [selected, moving, roadMode, cancelPlacing]);
 
-  // Once the player owns every starting producer (a palayan and a woodcutter camp), gathering
-  // is no longer the main income, so the buttons step back.
-  const hasAutomation = content.buildings
-    .filter((b) => b.unlock.start && b.produces)
-    .every((b) => owned(state, b.id) > 0);
+  // Once a food workplace and a wood workplace stand, gathering by hand is no longer the main
+  // income, so the buttons step back.
+  const producing = (r: Resource) => content.buildings.some((b) => (b.produces?.[r] ?? 0) > 0 && owned(state, b.id) > 0);
+  const hasAutomation = producing("food") && producing("wood");
 
   // Keep the top of the map clear: placing shows one event banner, otherwise two.
   // Every notification that wants the banner, and how each looks (full banner, one line for the list).
@@ -678,13 +677,19 @@ export function App() {
           // The raid warning: who, where (once known), and whether a Bantayan saw them early.
           node: (
             <EventBanner
-              banner={b.id === "raid" ? { ...b, title: fill(ui.game.defense.raidTitle[lang], { time: clock((state.region?.incomingRaid?.strikeAt ?? state.time) - state.time) }), text: raidBannerText(state, content, ui.game, lang) } : b}
+              banner={
+                b.id === "raid"
+                  ? { ...b, title: fill(ui.game.defense.raidTitle[lang], { time: clock((state.region?.incomingRaid?.strikeAt ?? state.time) - state.time) }), text: raidBannerText(state, content, ui.game, lang) }
+                  : b.id === "pest"
+                    ? { ...b, title: pestTitle(state, ui.game, lang), text: "" }
+                    : b
+              }
               extra={b.id === "raid" && raidCover ? (raidCover.watched ? ui.game.defense.warnWatched[lang] : ui.game.defense.warnUnwatched[lang]) : undefined}
               danger={!!raidCover && !raidCover.watched}
               action={b.id === "raid" ? tambuliAction : undefined}
             />
           ),
-          label: `${b.icon} ${b.title}`,
+          label: `${b.icon} ${b.id === "pest" ? pestTitle(state, ui.game, lang) : b.title}`,
         },
       ]),
     ),
@@ -857,6 +862,15 @@ export function App() {
   return (
     <div className="fixed inset-0 flex flex-col bg-green-800 pt-[env(safe-area-inset-top)] text-stone-800">
       <Hud state={state} content={content} full={{ label: ui.game.kamalig.full[lang], tip: ui.game.kamalig.fullTip[lang] }}
+        food={{
+          variety: (n, total) => fill(ui.game.food.variety[lang], { n, total }),
+          varietyTip: ui.game.food.varietyTip[lang],
+          monotony: ui.game.food.monotony[lang],
+          kept: (ground, fresh, live, preserved) => fill(ui.game.food.kept[lang], { ground, fresh, live, preserved }),
+          spoils: ui.game.food.spoils[lang],
+          roughSeas: ui.game.food.roughSeas[lang],
+          eatingRice: ui.game.food.eatingRice[lang],
+        }}
         mood={{ housesNear: ui.game.doors.housesNear[lang], tip: ui.game.doors.moodTip[lang] }}
         stockpile={{
           label: ui.game.stockpile.label[lang],
@@ -1179,7 +1193,7 @@ export function App() {
           </div>
         )}
         <AdvisorBubble message={advisor.message} advisor={ui.advisor} lang={lang} onDismiss={advisor.dismiss} onSkip={advisor.skip} />
-        {view === "barangay" && <GatherButtons amount={content.rules.gatherPerClick} quiet={hasAutomation} onGather={gather} />}
+        {view === "barangay" && <GatherButtons amount={content.rules.gatherPerClick} quiet={hasAutomation} game={ui.game} lang={lang} onGather={gather} />}
       </main>
 
       {view === "barangay" && (
@@ -1233,6 +1247,11 @@ export function App() {
           setMenu(null);
           setDemolishing({ x, y });
         }}
+        onRestKaingin={(x, y) => {
+          setMenu(null);
+          dispatch({ type: "restKaingin", x, y });
+          sfx.click();
+        }}
         onPause={(x, y, paused) => {
           dispatch({ type: "pause", x, y, paused });
           sfx.click();
@@ -1257,7 +1276,20 @@ export function App() {
         game={ui.game}
         lang={lang}
       />
-      <DatuDialog open={datuOpen} state={state} content={content} game={ui.game} lang={lang} onUpgrade={upgradeDatu} onClose={() => setDatuOpen(false)} />
+      <DatuDialog
+        open={datuOpen}
+        state={state}
+        content={content}
+        game={ui.game}
+        lang={lang}
+        onUpgrade={upgradeDatu}
+        onPista={(occasion) => {
+          dispatch({ type: "pista", occasion });
+          sfx.click();
+        }}
+        onBrew={(amount) => dispatch({ type: "brew", amount })}
+        onClose={() => setDatuOpen(false)}
+      />
       <RememberedDialog open={rememberedOpen} state={state} content={content} game={ui.game} lang={lang} onClose={() => setRememberedOpen(false)} />
       <DambanaDialog
         open={dambanaOpen}
@@ -1389,4 +1421,15 @@ export function App() {
       />
     </div>
   );
+}
+
+/** The line for rats, locusts or boar (food.ts updatePests), in the player's language. */
+function pestTitle(state: GameState, game: GameText, lang: Lang): string {
+  const p = state.pest;
+  if (!p) return "";
+  const t = game.pests;
+  if (p.kind === "rats") return fill(t.rats[lang], { amount: p.amount ?? 0 });
+  if (p.kind === "boar") return t.boar[lang];
+  if (p.strikeAt !== undefined && state.time < p.strikeAt) return fill(t.locustComing[lang], { time: clock(p.strikeAt - state.time) });
+  return fill(t.locust[lang], { time: clock(p.until - state.time) });
 }

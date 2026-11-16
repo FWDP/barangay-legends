@@ -20,7 +20,7 @@ const woods = mapFrom([
   "TTTTTTT",
 ]);
 const base = (patch: Partial<GameState> = {}) =>
-  withState({ map: woods, villagers: 4, resources: { rice: 500, wood: 0, gold: 0 }, buildings: [at("bahay-kubo", 2, 2)], ...patch });
+  withState({ map: woods, villagers: 4, resources: { rice: 500, wood: 0, gold: 0, food: 500, salt: 0, wine: 0 }, buildings: [at("bahay-kubo", 2, 2)], ...patch });
 const clearTiles = (s: GameState, tiles: [number, number][]) => {
   const q = apply(s, calm, { type: "clearArea", tiles: tiles.map(([x, y]) => ({ x, y })) });
   return tick(q, calm, 60);
@@ -111,10 +111,10 @@ describe("replanting (Magtanim)", () => {
   it("turns an empty cleared tile back into forest with one villager's work, raising the balance", () => {
     const s = base({ villagers: 2, forest: { balance: 50, stage: 1, permission: 0, lastClearAt: 0 } });
     const started = apply(s, calm, { type: "replant", x: 4, y: 3 });
-    expect(started.resources.rice).toBe(500 - f.replant.cost.rice!);
+    expect(started.resources.food).toBe(500 - f.replant.cost.food!);
     expect(started.replanting).toEqual([{ x: 4, y: 3, progress: 0, seconds: f.replant.seconds }]);
     // Nothing can be built or laid there meanwhile.
-    expect(apply({ ...started, resources: { rice: 500, wood: 500, gold: 0 } }, calm, { type: "build", building: "palayan", x: 4, y: 3 }).buildings).toHaveLength(1);
+    expect(apply({ ...started, resources: { rice: 500, wood: 500, gold: 0, food: 500, salt: 0, wine: 0 } }, calm, { type: "build", building: "palayan", x: 4, y: 3 }).buildings).toHaveLength(1);
     const grown = tick(started, calm, f.replant.seconds + 1);
     expect(tileAt(grown.map, 4, 3)).toBe("forest");
     expect(grown.replanting).toEqual([]);

@@ -4,6 +4,7 @@ import { syncResidents } from "./residents";
 import { namedGender } from "./people";
 import { loadContent, RESOURCES, type Content, type Events, type ResourceAmounts, type Resources } from "./content";
 import { newGame, type GameState, type PlacedBuilding } from "./game";
+import { emptyStore } from "./food";
 import { updateDoors } from "./doors";
 import { TILE_CODE, type MapState, type Point } from "./map";
 import type { RegionState } from "./region";
@@ -47,6 +48,9 @@ export const TEST_MAP = mapFrom([
 export function withState(patch: Omit<Partial<GameState>, "resources"> & { buildings?: PlacedBuilding[]; resources?: ResourceAmounts }): GameState {
   const { resources, ...rest } = patch;
   const base = newGame(content);
+  // Tests written before Pagkain gave rice as the barangay's food: unless a test sets food, it
+  // gets as much Pagkain as rice.
+  const res = resources ? { ...zero(), food: resources.food ?? resources.rice ?? 0, ...resources } : base.resources;
   // Entrances worked out as the game does, and residents and named villagers' genders filled in
   // as loading a save does, so states compare equal after a save round trip.
   return withDoors(asLoaded({
@@ -62,7 +66,9 @@ export function withState(patch: Omit<Partial<GameState>, "resources"> & { build
     // Every level already rewarded, so level rewards don't change other tests either.
     levelRewarded: content.rules.kabantugan.levelAt.length + 1,
     ...rest,
-    resources: resources ? { ...zero(), ...resources } : base.resources,
+    resources: res,
+    // The Pagkain a test starts with is kept preserved (it doesn't spoil), as a save would load it.
+    foodStore: rest.foodStore ?? { ...emptyStore(), preserved: res.food },
     // Villager milestones already counted for the villagers the test starts with.
     stats: { ...base.stats, ...rest.stats, bestTens: rest.stats?.bestTens ?? Math.floor((rest.villagers ?? base.villagers) / 10) },
   }));

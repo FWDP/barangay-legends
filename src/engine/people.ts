@@ -79,6 +79,9 @@ export interface Stats {
   trades: number;
   /** The most tens of villagers ever reached (renown is paid once per ten). */
   bestTens: number;
+  /** Feasts held (food.ts holdPista) and kaingin rested (restKaingin), for tasks. */
+  pistas?: number;
+  kainginRested?: number;
 }
 
 export const MAX_HISTORY = 60;

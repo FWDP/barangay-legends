@@ -1,0 +1,27 @@
+{
+  "id": "niyugan",
+  "name": "Niyugan",
+  "description": "Coconut palms: meat and water from the nuts, fronds and timber. Coconuts add fruit to the barangay's meals.",
+  "icon": "🥥",
+  "order": 1.9,
+  "category": "pagkain",
+  "cost": {
+    "wood": 12
+  },
+  "repairCost": {
+    "wood": 6
+  },
+  "produces": {
+    "food": 0.35
+  },
+  "workers": 1,
+  "foodKind": "fresh",
+  "foodGroup": "fruit",
+  "unlock": {
+    "villagers": 12
+  },
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Costs, staffing and yields are playtest guesses (npm run simulate)"
+  ]
+}

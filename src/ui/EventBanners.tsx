@@ -51,16 +51,18 @@ export function activeBanners(state: GameState, content: Content): Banner[] {
     banners.push({
       id: "hunger",
       icon: hunger.icon,
-      title: `${hunger.name}! No rice`,
+      title: `${hunger.name}! No food`,
       text:
         leaving > 0
-          ? `Nobody can work. Gather rice! Families leave in ${Math.ceil(leaving)}s.`
+          ? `Nobody can work. Forage for food! Families leave in ${Math.ceil(leaving)}s.`
           : state.hunger < hungerDeathAt(content)
-            ? `A family leaves every ${hunger.secondsPerVillagerLeaving}s. If the hunger goes on, people will die in ${Math.ceil(hungerDeathAt(content) - state.hunger)}s. Gather rice!`
-            : `Families have left and people are dying. Gather rice!`,
+            ? `A family leaves every ${hunger.secondsPerVillagerLeaving}s. If the hunger goes on, people will die in ${Math.ceil(hungerDeathAt(content) - state.hunger)}s. Forage for food!`
+            : `Families have left and people are dying. Forage for food!`,
       tone: "danger",
     });
   }
+  // Rats, locusts or boar (food.ts updatePests): its words are in the player's language (App: pestText).
+  if (state.pest && state.time < state.pest.until) banners.push({ id: "pest", icon: "⚠️", title: "", text: "", tone: "warning" });
   const homeless = overcrowded(state, content);
   if (homeless > 0 && leaving === null) {
     const house = content.buildings.find((b) => b.housing);

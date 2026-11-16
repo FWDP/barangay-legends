@@ -10,8 +10,8 @@
   },
   "reward": {
     "resources": {
-      "rice": 20
+      "food": 20
     }
   },
-  "next": "clear-five"
+  "next": "first-palayan"
 }

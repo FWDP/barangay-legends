@@ -164,10 +164,18 @@ export const GAME_TEXT = {
     legendTitle: [], legendOpen: [], legendCovered: [], legendRange: [], legendLanding: [], legendTap: [],
     tipOpen: [], tipCovered: [], tipRange: [], tipLanding: [],
   },
+  food: { variety: ["n", "total"], varietyTip: [], monotony: [], kept: ["ground", "fresh", "live", "preserved"], spoils: [], roughSeas: [], eatingRice: [] },
+  pista: {
+    title: [], intro: [], occasion: [], harvest: [], victory: [], marriage: [], peace: [], mourning: [], hold: ["cost"], raid: [], hunger: [], cooldown: ["time"], cost: [],
+    joy: ["happiness", "time"], guests: ["n"], held: ["occasion", "renown"], wine: ["wine"], brew: ["n", "cost"],
+  },
+  kaingin: { soil: ["percent"], tired: [], rest: [] },
+  gather: { food: [], foodLabel: ["amount"], wood: [], woodLabel: ["amount"] },
+  pests: { rats: ["amount"], locustComing: ["time"], locust: ["time"], boar: [] },
   stockpile: { label: [], tip: ["cap"], over: ["cap", "percent"], stop: ["stop"], stopLabel: [] },
   healing: { inside: ["n"], others: ["n"], none: [], home: ["n"], badge: ["n"] },
   classes: { nobility: [], warrior: [], commoner: [], dependent: [], general: [] },
-  kamalig: { level: ["level", "max"], badge: ["level"], stores: ["amount"], upgrade: ["level"], top: [], cost: ["cost"], damaged: [], full: [], fullTip: [] },
+  kamalig: { level: ["level", "max"], badge: ["level"], stores: ["amount"], holds: ["rice", "food", "salt"], upgrade: ["level"], top: [], cost: ["cost"], damaged: [], full: [], fullTip: [] },
   notices: {
     more: ["n"], moreLabel: ["n"], soon: [], list: [], dismiss: [], show: [], eclipse: [], tikbalang: [], offer: ["barangay"], choice: [], expedition: ["barangay"], sailing: [],
     prank: [], mourning: ["time"], embargo: ["names"], tradePaused: [], blessings: ["names"], status: [],
@@ -227,7 +235,7 @@ export function fill(text: string, vars: Record<string, string | number>): strin
 const HELP_VARS = ["riceEaten", "gatherPerClick"];
 /** Numbers the help text may mention, taken from the rules so they never go stale. */
 export const helpVars = (content: Content) => ({
-  riceEaten: content.rules.riceEatenPerVillagerPerSecond,
+  riceEaten: content.rules.foodEatenPerVillagerPerSecond,
   gatherPerClick: content.rules.gatherPerClick,
 });
 

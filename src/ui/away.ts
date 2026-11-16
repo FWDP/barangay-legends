@@ -59,19 +59,20 @@ export function awayStory(before: GameState, after: GameState, content: Content,
   const s1 = seasonAt(content, after.time)?.season;
   if (s0 && s1 && s0.id !== s1.id) lines.push(`${s0.name} gave way to ${s1.name}. ${s1.description}`);
 
-  // Rice and wood.
+  // Food, Palay and wood.
+  const food = Math.round(after.resources.food - before.resources.food);
   const rice = Math.round(after.resources.rice - before.resources.rice);
   const wood = Math.round(after.resources.wood - before.resources.wood);
   const gold = Math.round(after.resources.gold - before.resources.gold);
-  const gains = [rice > 0 && `${rice} rice`, wood > 0 && `${wood} wood`, gold > 0 && `${gold} gold`].filter(Boolean);
-  if (gains.length) lines.push(`Your people brought in ${gains.join(" and ")}.`);
-  if (rice < 0) lines.push(`The barangay ate through ${-rice} rice${after.resources.rice <= 0 ? ", and the granary is empty" : ""}.`);
+  const gains = [food > 0 && `${food} food`, rice > 0 && `${rice} Palay`, wood > 0 && `${wood} wood`, gold > 0 && `${gold} gold`].filter(Boolean);
+  if (gains.length) lines.push(`Your people brought in ${andList(gains as string[])}.`);
+  if (food < 0) lines.push(`The barangay ate through ${-food} food${after.resources.food <= 0 ? ", and the jars are empty" : ""}.`);
 
   // People.
   const villagers = after.villagers - before.villagers;
   if (villagers > 0) lines.push(`${plural(villagers, "newcomer", "newcomers")} settled in the barangay.`);
   if (villagers < 0) {
-    const why = after.hunger > 0 || before.hunger > 0 ? " There was not enough rice." : "";
+    const why = after.hunger > 0 || before.hunger > 0 ? " There was not enough food." : "";
     lines.push(`${plural(-villagers, "villager", "villagers")} left.${why}`);
   }
   if (after.sick.length > before.sick.length) lines.push(`Sickness spread: ${plural(after.sick.length, "villager is", "villagers are")} sick now.`);
@@ -118,20 +119,21 @@ export function offlineStory(report: OfflineReport, before: GameState, after: Ga
   if (s1 && year > 0 && report.seconds >= year) lines.push(`The seasons turned while you were gone. Now it is ${s1.name}.`);
   else if (s0 && s1 && s0.id !== s1.id) lines.push(`${s0.name} gave way to ${s1.name}. ${s1.description}`);
 
+  const food = Math.round(report.produced.food);
   const rice = Math.round(report.produced.rice);
   const wood = Math.round(report.produced.wood);
   const gold = Math.round(report.produced.gold);
-  const work = [rice > 0 && `${rice} rice from the fields`, wood > 0 && `${wood} wood from the forest`, gold > 0 && `${gold} gold from the fishing docks`].filter(Boolean);
-  if (work.length) lines.push(`Your people brought in ${work.join(" and ")}, and ate ${Math.round(report.eaten)} rice.`);
-  else if (report.eaten > 0) lines.push(`Your people ate ${Math.round(report.eaten)} rice.`);
-  if (report.hungrySeconds >= 60) lines.push("For a while the granary was empty, so the work stopped, but everyone waited for your return. Gather rice!");
+  const work = [food > 0 && `${food} food`, rice > 0 && `${rice} Palay from the fields`, wood > 0 && `${wood} wood from the forest`, gold > 0 && `${gold} gold from fishing and trade`].filter(Boolean);
+  if (work.length) lines.push(`Your people brought in ${andList(work as string[])}, and ate ${Math.round(report.eaten)} food.`);
+  else if (report.eaten > 0) lines.push(`Your people ate ${Math.round(report.eaten)} food.`);
+  if (report.hungrySeconds >= 60) lines.push("For a while the food ran out, so the work stopped, but everyone waited for your return. Forage for food!");
   if (report.born > 0) lines.push(`${report.born === 1 ? "A child was" : `${report.born} children were`} born in the barangay.`);
   if (report.arrived > 0) lines.push(`${plural(report.arrived, "newcomer", "newcomers")} settled in the barangay.`);
   if (report.recovered > 0) lines.push(`${plural(report.recovered, "sick villager", "sick villagers")} got well again.`);
   if (report.cleared > 0) lines.push(`The villagers cleared ${plural(report.cleared, "tile", "tiles")} of forest.`);
   lines.push(...people);
 
-  const tribute = [report.tribute.rice > 0 && `${report.tribute.rice} rice`, report.tribute.wood > 0 && `${report.tribute.wood} wood`, report.tribute.gold > 0 && `${report.tribute.gold} gold`].filter(Boolean);
+  const tribute = [report.tribute.food > 0 && `${report.tribute.food} food`, report.tribute.rice > 0 && `${report.tribute.rice} Palay`, report.tribute.wood > 0 && `${report.tribute.wood} wood`, report.tribute.gold > 0 && `${report.tribute.gold} gold`].filter(Boolean);
   if (tribute.length) lines.push(`Your tributaries sent ${tribute.join(" and ")} as tribute.`);
   if (report.offerExpired) lines.push(`A bangka from ${neighborDef(content, report.offerExpired)?.name ?? report.offerExpired} waited at the dock, then sailed home.`);
 
@@ -148,3 +150,6 @@ export function offlineStory(report: OfflineReport, before: GameState, after: Ga
   if (lines.length === 1) lines.push("The barangay went about its days quietly.");
   return lines;
 }
+
+/** "a", "a and b", "a, b and c". */
+const andList = (items: string[]) => (items.length <= 1 ? (items[0] ?? "") : `${items.slice(0, -1).join(", ")} and ${items.at(-1)}`);

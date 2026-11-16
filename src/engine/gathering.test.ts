@@ -65,7 +65,7 @@ describe("the clearing's shape", () => {
 
 describe("the clearing on the map", () => {
   it("is walkable and nothing can be built, paved or replanted on it", () => {
-    const s = withClearing({ datuLevel: 1, resources: { rice: 500, wood: 500, gold: 0 } });
+    const s = withClearing({ datuLevel: 1, resources: { rice: 500, wood: 500, gold: 0, food: 500, salt: 0, wine: 0 } });
     const reach = walkReach(s, content);
     const solid = solidTiles(s, content);
     for (const p of MAP.gathering!) {

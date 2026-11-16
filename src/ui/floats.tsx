@@ -6,7 +6,7 @@ export interface Float {
   x: number;
   y: number;
   text: string;
-  tone: "rice" | "wood" | "gold" | "info";
+  tone: "food" | "rice" | "wood" | "gold" | "salt" | "wine" | "info";
 }
 
 let floats: Float[] = [];
@@ -36,7 +36,7 @@ const subscribe = (l: () => void) => {
 };
 
 /** Crisp chips (index.css map-chip): a solid pill with dark text, no outline on the letters. */
-const TONE = { rice: "map-chip-good", wood: "map-chip-good", gold: "map-chip-good", info: "" } as const;
+const TONE = { food: "map-chip-good", rice: "map-chip-good", wood: "map-chip-good", gold: "map-chip-good", salt: "map-chip-good", wine: "map-chip-good", info: "" } as const;
 
 export function FloatLayer() {
   const list = useSyncExternalStore(subscribe, () => floats);

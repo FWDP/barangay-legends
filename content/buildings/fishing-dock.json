@@ -1,18 +1,19 @@
 {
   "id": "fishing-dock",
-  "name": "Fishing Dock",
-  "description": "A bamboo landing on the riverbank. Three villagers fish, and the catch is traded at market for gold.",
+  "name": "Pangisdaan",
+  "description": "A fishing landing on the riverbank. Three villagers fish with traps (bubo) and nets from a bangka: fresh fish for the barangay, and some to trade for gold. Fishing the same waters too hard lowers the catch for a while.",
   "icon": "🐟",
   "order": 7,
   "category": "pagkain",
   "cost": {
     "wood": 40,
-    "rice": 20
+    "food": 20
   },
   "repairCost": {
     "wood": 12
   },
   "produces": {
+    "food": 0.35,
     "gold": 0.1
   },
   "workers": 3,
@@ -26,5 +27,8 @@
   "sources": [
     "docs/game-design.md (cost, 3 workers, unlock at 15 villagers; gold per worker lowered from 0.2 to 0.1 by the balance pass, npm run simulate)",
     "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)"
-  ]
+  ],
+  "foodKind": "fresh",
+  "foodGroup": "fish",
+  "depletes": true
 }

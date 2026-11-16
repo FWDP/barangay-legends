@@ -1,21 +1,32 @@
 import type { MouseEvent } from "react";
 import type { Resource } from "../engine/content";
 import { RESOURCE_ICON } from "./format";
+import { ResourceIcon } from "./resourceArt";
+import type { Lang } from "./settings";
+import { fill, type GameText } from "./uiContent";
 
-/** Big labelled buttons while clicking is the main income; small round ones once production runs itself. */
+/**
+ * Big labelled buttons while gathering by hand is the main income; small round ones once food
+ * and wood come in on their own. Forage brings in everyday food (Pagkain), never rice: rice is a
+ * prestige grain grown in a Palayan.
+ */
 export function GatherButtons(props: {
   amount: number;
   quiet: boolean;
+  game: GameText;
+  lang: Lang;
   onGather: (r: Resource, e: MouseEvent<HTMLButtonElement>) => void;
 }) {
-  const { amount, quiet, onGather } = props;
+  const { amount, quiet, game, lang, onGather } = props;
+  const t = game.gather;
   return (
     <div data-map-overlay className={`absolute right-3 bottom-3 z-10 flex gap-2 ${quiet ? "flex-col" : "flex-row"}`}>
-      {(["rice", "wood"] as const).map((r) => (
+      {(["food", "wood"] as const).map((r) => (
         <button
           key={r}
           type="button"
-          aria-label={`Gather ${r} (+${amount})`}
+          data-gather={r}
+          aria-label={fill(r === "food" ? t.foodLabel[lang] : t.woodLabel[lang], { amount })}
           onClick={(e) => onGather(r, e)}
           className={`game-btn border-2 font-display shadow-lg ${
             quiet
@@ -25,11 +36,14 @@ export function GatherButtons(props: {
         >
           {quiet ? (
             <>
-              <span className="text-xl leading-none">{RESOURCE_ICON[r]}</span>+{amount}
+              <span className="text-xl leading-none">
+                <ResourceIcon resource={r} symbol={RESOURCE_ICON[r]} />
+              </span>
+              +{amount}
             </>
           ) : (
             <>
-              {RESOURCE_ICON[r]} Gather {r === "rice" ? "Rice" : "Wood"}
+              <ResourceIcon resource={r} symbol={RESOURCE_ICON[r]} /> {r === "food" ? t.food[lang] : t.wood[lang]}
             </>
           )}
         </button>

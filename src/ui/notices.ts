@@ -25,7 +25,7 @@ export interface Notice {
 export const SOON_SECONDS = 15;
 
 /** Within a tier, in this order (urgent first). */
-const ORDER = ["eclipse", "fire", "raid", "hunger", "tikbalang", "typhoon", "offer", "choice", "expedition", "overcrowded", "sickness", "damaged", "prank", "sailing"];
+const ORDER = ["eclipse", "fire", "raid", "hunger", "tikbalang", "typhoon", "offer", "choice", "expedition", "overcrowded", "sickness", "damaged", "pest", "prank", "sailing"];
 
 /** Extra notices the App knows about (it holds the "seen" state for expeditions). */
 export interface NoticeContext {
@@ -44,6 +44,7 @@ export function noticeQueue(state: GameState, content: Content, ctx: NoticeConte
   for (const b of activeBanners(state, content)) {
     if (b.id === "fire" || b.id === "raid" || b.id === "hunger" || b.id === "typhoon") out.push({ id: b.id, tier: 0, ...(b.id === "raid" ? { expiresAt: state.region!.incomingRaid!.strikeAt } : {}) });
     else if (b.id === "overcrowded" || b.id === "sickness" || b.id === "damaged") out.push({ id: b.id, tier: 2, dismissKey: `${b.id}:${b.title}` });
+    else if (b.id === "pest" && state.pest) out.push({ id: "pest", tier: 2, dismissKey: `pest:${state.pest.kind}:${state.pest.at}:${state.pest.strikeAt !== undefined && state.time >= state.pest.strikeAt ? 1 : 0}` });
   }
   if (state.tikbalang && state.time < state.tikbalang.until) out.push({ id: "tikbalang", tier: 0, expiresAt: state.tikbalang.until });
   // While trade is paused the offer waits (a status icon says so), not a banner.

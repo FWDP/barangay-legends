@@ -1,0 +1,31 @@
+{
+  "id": "pangangalap",
+  "name": "Pangangalap",
+  "description": "Villagers gather shellfish and seaweed on the beach at low tide. Rough seas make it harder.",
+  "icon": "🐚",
+  "order": 7.2,
+  "category": "pagkain",
+  "cost": {
+    "wood": 8
+  },
+  "repairCost": {
+    "wood": 4
+  },
+  "produces": {
+    "food": 0.35
+  },
+  "workers": 2,
+  "foodKind": "fresh",
+  "foodGroup": "fish",
+  "depletes": true,
+  "placeNextTo": [
+    "sea"
+  ],
+  "unlock": {
+    "villagers": 10
+  },
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Costs, staffing and yields are playtest guesses (npm run simulate)"
+  ]
+}

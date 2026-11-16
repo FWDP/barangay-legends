@@ -1,0 +1,31 @@
+{
+  "id": "babuyan",
+  "name": "Babuyan",
+  "description": "A small pen near the houses for pigs and chickens (only chickens where the tradition keeps no pigs).",
+  "icon": "🐖",
+  "order": 7.45,
+  "category": "pagkain",
+  "cost": {
+    "wood": 18
+  },
+  "repairCost": {
+    "wood": 6
+  },
+  "produces": {
+    "food": 0.3
+  },
+  "workers": 1,
+  "foodKind": "fresh",
+  "foodGroup": "meat",
+  "requiresNear": {
+    "building": "bahay-kubo",
+    "radius": 3
+  },
+  "unlock": {
+    "villagers": 15
+  },
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Costs, staffing and yields are playtest guesses (npm run simulate)"
+  ]
+}

@@ -164,15 +164,16 @@ export function observe(session: AdvisorSession, state: GameState, content: Cont
   const t = state.time;
   const s = { ...session };
 
-  const rice = state.resources.rice;
-  const net = rates(state, content).net.rice;
+  // Pagkain running out (villagers eat Palay after it, wastefully: still worth a warning).
+  const food = state.resources.food;
+  const net = rates(state, content).net.food;
   const defsById = new Map(content.buildings.map((d) => [d.id, d]));
-  if (rice > 0 && net < 0 && rice / -net <= RICE_WARNING_SECONDS) active.set("rice-low", { seconds: Math.ceil(rice / -net) });
+  if (food > 0 && net < 0 && food / -net <= RICE_WARNING_SECONDS) active.set("rice-low", { seconds: Math.ceil(food / -net) });
 
-  // Rice falling while few villagers grow food (fields paused or empty). Only once there are
-  // fields: before the first Palayan, the rice-low tip says what to do.
-  const growers = buildingWorkers(state, content).reduce((n, w, i) => n + ((defsById.get(state.buildings[i].type)?.produces?.rice ?? 0) > 0 ? w : 0), 0);
-  const hasFields = state.buildings.some((b) => (defsById.get(b.type)?.produces?.rice ?? 0) > 0);
+  // Food falling while few villagers grow, fish or hunt (workplaces paused or empty). Only once
+  // there's a food workplace: before the first, the rice-low tip says what to do.
+  const growers = buildingWorkers(state, content).reduce((n, w, i) => n + ((defsById.get(state.buildings[i].type)?.produces?.food ?? 0) > 0 ? w : 0), 0);
+  const hasFields = state.buildings.some((b) => (defsById.get(b.type)?.produces?.food ?? 0) > 0);
   if (hasFields && state.villagers > 0 && net < 0 && (growers * 100) / state.villagers < content.rules.staffing.foodWorkersWarnPercent) {
     active.set("food-workers", { farmers: growers, villagers: state.villagers });
   }

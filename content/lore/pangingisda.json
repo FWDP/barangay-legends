@@ -1,0 +1,35 @@
+{
+  "id": "pangingisda",
+  "name": "Pangingisda: fishing with traps and nets",
+  "description": "Fish and shellfish were the main everyday protein on coasts and rivers: traps (bubo), nets and lines from a bangka, and fish corrals.",
+  "tradition": "Widespread (coastal and riverine)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)"
+  ],
+  "aklat": {
+    "order": 45,
+    "icon": "🐟",
+    "name": {
+      "en": "Pangingisda: fish every day",
+      "fil": "Pangingisda: isda araw-araw"
+    },
+    "lore": {
+      "en": "For people on coasts and rivers, fish and shellfish were the main everyday food besides starch. They fished with woven bamboo traps (bubo) set in the current, with nets cast or dragged from a bangka, and with lines. Fish was eaten fresh, or dried, smoked, salted or fermented into paste to keep.",
+      "fil": "Para sa mga tao sa baybayin at ilog, isda at lamang-dagat ang pangunahing pang-araw-araw na ulam. Nangingisda sila gamit ang bubo na itinatakda sa agos, lambat na inihahagis o hinihila mula sa bangka, at kawil. Kinakain nang sariwa ang isda, o pinatutuyo, pinauusok, inaasinan o binuburo para tumagal."
+    },
+    "inGame": {
+      "en": "The Pangisdaan catches fresh fish (and some gold from trade). Fish the same waters too hard and the catch drops for a while; spread out or let it rest. Rough seas in the habagat months cut the catch.",
+      "fil": "Nanghuhuli ang Pangisdaan ng sariwang isda (at kaunting ginto sa kalakalan). Kapag sobra ang pangingisda sa iisang tubig, bumababa ang huli nang ilang panahon; maghiwa-hiwalay o pagpahingahin ito. Bumababa ang huli sa maalong buwan ng habagat."
+    },
+    "hint": {
+      "en": "Build a Pangisdaan.",
+      "fil": "Magtayo ng Pangisdaan."
+    },
+    "unlock": {
+      "type": "built",
+      "building": "fishing-dock"
+    }
+  },
+  "reviewed": false
+}

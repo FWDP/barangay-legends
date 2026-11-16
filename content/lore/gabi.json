@@ -1,0 +1,35 @@
+{
+  "id": "gabi",
+  "name": "Gabi: taro by the river",
+  "description": "Gabi (taro, Colocasia esculenta) was one of the everyday starches of the precolonial Philippines, grown in wet ground by rivers and in swamps; the corm keeps in the soil and is dug up as needed. Scott describes root crops and other starches as the daily staples in much of the islands, with rice a prestige food in many places.",
+  "tradition": "Widespread (Tagalog, Visayan, Maranao)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)"
+  ],
+  "aklat": {
+    "order": 40,
+    "icon": "🌿",
+    "name": {
+      "en": "Gabi: taro by the river",
+      "fil": "Gabi sa tabi ng ilog"
+    },
+    "lore": {
+      "en": "In much of the islands the food people ate every day was not rice but root crops and other starches. Gabi (taro) grew in wet ground by rivers and in swampy patches. Its corm stays in the soil until it is needed, so a family could dig what it would eat that day and leave the rest growing. Early Spanish accounts of the Visayas describe gabi and yams as everyday food, with rice saved for feasts in many places.",
+      "fil": "Sa malaking bahagi ng kapuluan, hindi bigas ang pang-araw-araw na pagkain kundi mga lamang-ugat at iba pang almirol. Tumutubo ang gabi sa basang lupa sa tabi ng ilog at sa latian. Nananatili sa lupa ang laman nito hanggang kailanganin, kaya maaaring hukayin ng pamilya ang kakainin sa araw na iyon at iwanang tumutubo ang iba. Inilalarawan ng mga unang ulat ng Espanyol sa Kabisayaan ang gabi at ube bilang pagkaing pang-araw-araw, at sa maraming lugar, inilalaan ang bigas sa piging."
+    },
+    "inGame": {
+      "en": "A Gabihan grows Pagkain by the river. Its gabi stays in the ground: it never spoils and a typhoon can't reach it, but a long dry season slows it.",
+      "fil": "Nagbibigay ng Pagkain ang Gabihan sa tabi ng ilog. Nananatili sa lupa ang gabi: hindi nasisira at hindi naaabot ng bagyo, pero bumabagal ito sa mahabang tag-araw."
+    },
+    "hint": {
+      "en": "Plant a Gabihan.",
+      "fil": "Magtanim ng Gabihan."
+    },
+    "unlock": {
+      "type": "built",
+      "building": "gabihan"
+    }
+  },
+  "reviewed": false
+}

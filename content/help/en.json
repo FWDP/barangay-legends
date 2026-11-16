@@ -31,10 +31,13 @@
         "➕",
         "🪵"
       ],
-      "title": "Rice and wood",
+      "title": "Food, Palay and wood",
       "body": [
-        "Tap Gather Rice or Gather Wood for +{gatherPerClick} each time.",
-        "Every villager eats {riceEaten} rice a second. If the rice runs out, nobody works, and after a while families leave.",
+        "Tap Forage or Gather Wood for +{gatherPerClick} each time.",
+        "Every villager eats {riceEaten} Pagkain (everyday food) a second: gabi, yams, millet, bananas, sago, coconuts, fish and meat. If the food runs out, they eat Palay, which wastes it; with nothing left, nobody works and after a while families leave.",
+        "Food is kept the old way: root crops stay in the Gabihan and Kaingin (they don't spoil and survive typhoons), fish live in a Baklad, each house smokes and salts fresh food into its jars, and the Kamalig holds Palay, dried goods and Asin. Fresh food left out spoils.",
+        "A varied diet (starches, fish, meat, fruit and greens) makes people happier. Eating one kind for too long makes them unhappy and sickly.",
+        "Palay (rice) is a prestige grain: for offerings, gifts, marriage alliances, rice wine and the Pista at the Bahay ng Datu.",
         "Tap a resource at the top to see where it comes from and where it goes."
       ]
     },
@@ -50,9 +53,9 @@
       "title": "Buildings and workers",
       "body": [
         "Pick a building from the bar at the bottom, then tap a highlighted tile. Each copy costs a bit more than the last.",
-        "A Bahay Kubo houses more villagers. New families arrive while there is room and rice.",
+        "A Bahay Kubo houses more villagers. New families arrive while there is room and food.",
         "Healthy villagers go to work on their own, filling the fields and camps. Tap a building to see who works there, or to move or demolish it.",
-        "Tap forest next to your land to select it (or drag across it with a mouse), then press Clear. Each tile costs a little rice upfront, and free villagers clear them one by one. Tap a tile being cleared to stop it."
+        "Tap forest next to your land to select it (or drag across it with a mouse), then press Clear. Each tile costs a little Pagkain upfront, and free villagers clear them one by one. Tap a tile being cleared to stop it."
       ]
     },
     {
@@ -67,7 +70,7 @@
       ],
       "title": "Seasons and events",
       "body": [
-        "The year turns between Tag-ulan, the rainy season, and Tag-araw, the dry season, when the fields yield less. Save rice before the dry months.",
+        "The year turns between Tag-ulan, the rainy season, and Tag-araw, the dry season, when the fields yield less. The dry season hurts rice and gabi most; yams, millet and sago hold up. Rough seas cut fishing, and typhoons flatten bananas and rice, but root crops in the ground survive.",
         "Typhoons are announced before they strike: keep wood for repairs. Tap a burning house to put the fire out before it spreads. Sickness keeps villagers from work; a Babaylan's hut helps them heal."
       ]
     },

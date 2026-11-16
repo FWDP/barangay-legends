@@ -9,10 +9,12 @@ const seed = Number(args[1] ?? 12345);
 const every = Math.max(1, Math.round(days / 40));
 const content = loadContent();
 const started = performance.now();
-const { rows, firstIncomeAt, unlockTimes, firsts, milestones, raids } = simulate(content, days, seed);
+const { rows, firstIncomeAt, unlockTimes, firsts, milestones, raids, eatingRiceSeconds, pistas } = simulate(content, days, seed);
 
 const cols: [string, (r: (typeof rows)[number]) => string | number][] = [
   ["Araw", (r) => r.day],
+  ["food", (r) => r.food],
+  ["diet", (r) => r.diet],
   ["rice", (r) => r.rice],
   ["cap", (r) => r.riceCap],
   ["wood", (r) => r.wood],
@@ -39,6 +41,7 @@ console.log(`Unlocks (minutes): ${unlockTimes.map((t) => (t / 60).toFixed(1)).jo
 console.log(`New things in the first hour (minutes): ${milestones.filter((m) => m.t <= 3600).map((m) => `${(m.t / 60).toFixed(1)} ${m.what}`).join(", ")}`);
 console.log(`First built (minutes): ${Object.entries(firsts).map(([k, t]) => `${k} ${(t / 60).toFixed(1)}`).join(", ")}`);
 console.log(
-  `Raids on the barangay: ${raids.defenses}, beaten off ${raids.won} (${raids.defenses ? Math.round((raids.won * 100) / raids.defenses) : 0}%), lost ${raids.lostRice} rice and ${raids.lostWood} wood`,
+  `Raids on the barangay: ${raids.defenses}, beaten off ${raids.won} (${raids.defenses ? Math.round((raids.won * 100) / raids.defenses) : 0}%), lost ${raids.lostRice} rice, ${raids.lostFood} food and ${raids.lostWood} wood`,
 );
+console.log(`Seconds eating Palay (no Pagkain): ${eatingRiceSeconds}; Pistas held: ${pistas}`);
 console.log(`(${days} days, seed ${seed}, ${((performance.now() - started) / 1000).toFixed(1)} s)`);

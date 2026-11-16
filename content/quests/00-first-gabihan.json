@@ -1,0 +1,19 @@
+{
+  "id": "first-gabihan",
+  "first": true,
+  "text": {
+    "en": "Plant a Gabihan by the river",
+    "fil": "Magtanim ng Gabihan sa tabi ng ilog"
+  },
+  "condition": {
+    "type": "built",
+    "building": "gabihan",
+    "count": 1
+  },
+  "reward": {
+    "resources": {
+      "wood": 10
+    }
+  },
+  "next": "first-camp"
+}
