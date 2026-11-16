@@ -45,6 +45,9 @@ export interface HistoryEntry {
   cause?: "hunger" | "crowded" | "other" | "age" | "sickness" | "raid";
   /** How many died together (died, unnamed). */
   count?: number;
+  /** Fallen in battle (fell, died of raid): the other barangay, and whether we attacked it or defended. */
+  from?: string;
+  attack?: boolean;
   /** The level the Bahay ng Datu reached (datu), the barangay level reached (level), or the renown rank reached (rank). */
   level?: number;
   /** The task (task). */
@@ -104,6 +107,12 @@ export function namedGender(content: Content, v: { id: number; name: string; gen
 
 /** The history fields for a named villager (name, story and gender). */
 const about = (v: NamedVillager) => ({ name: v.name, story: v.story, ...(v.gender ? { gender: v.gender } : {}) });
+
+/** The battle fought between two states (the newest raid or defense report), as { from, attack }, or {} if none. */
+export function battleIn(prev: GameState, next: GameState): { from?: string; attack?: boolean } {
+  const r = (next.region?.reports ?? []).filter((x) => x.time >= prev.time - 1e-9 && (x.kind === "raid" || x.kind === "defense")).at(-1);
+  return r ? { from: r.neighbor, attack: r.kind === "raid" } : {};
+}
 
 export function addHistory(state: GameState, entry: HistoryEntry): GameState {
   return { ...state, history: [...state.history, entry].slice(-MAX_HISTORY) };
@@ -229,14 +238,16 @@ function reconcile(prev: GameState, nextIn: GameState, content: Content, leftBec
   if (warriorLoss > 0) {
     const before = s.named;
     let pool = prev.warriors;
+    // Where they fell: the battle fought in this step, attacking another barangay or defending ours.
+    const field = battleIn(prev, next);
     for (let i = 0; i < warriorLoss; i++, pool--) {
-      s = maybeLose(s, s.named.filter(isWarrior), pool, hungry ? { kind: "left", cause } : { kind: "fell" });
+      s = maybeLose(s, s.named.filter(isWarrior), pool, hungry ? { kind: "left", cause } : { kind: "fell", ...field });
     }
     if (!hungry) {
       // Fallen in battle: deaths, remembered by name, and mourned.
       const fallen = before.filter((v) => isWarrior(v) && !s.named.includes(v));
-      for (const v of fallen) s = remember(s, content, v, "raid", s.time);
-      if (warriorLoss > fallen.length) s = addHistory(s, { at: s.time, kind: "died", cause: "raid", count: warriorLoss - fallen.length });
+      for (const v of fallen) s = remember(s, content, v, "raid", s.time, field);
+      if (warriorLoss > fallen.length) s = addHistory(s, { at: s.time, kind: "died", cause: "raid", count: warriorLoss - fallen.length, ...field });
       s = addMourning({ ...s, stats: { ...s.stats, deaths: s.stats.deaths + warriorLoss } }, content, warriorLoss);
     }
   }

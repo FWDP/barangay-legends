@@ -31,7 +31,23 @@ const defsOf = (content: Content) => new Map(content.buildings.map((d) => [d.id,
 const standing = (b: PlacedBuilding) => !b.damaged && !b.paused;
 
 /** How much each place can hold: the ground (per plot), the Baklad (live fish), the jars and the Kamalig (preserved), Asin. */
-export function foodCaps(state: GameState, content: Content): { ground: number; live: number; preserved: number; salt: number } {
+type Caps = { ground: number; live: number; preserved: number; salt: number };
+/** foodCaps by building list (lists are never changed in place), content and datu level. */
+const capsCache = new WeakMap<PlacedBuilding[], WeakMap<Content, Map<number, Caps>>>();
+
+export function foodCaps(state: GameState, content: Content): Caps {
+  let byContent = capsCache.get(state.buildings);
+  if (!byContent) capsCache.set(state.buildings, (byContent = new WeakMap()));
+  let byLevel = byContent.get(content);
+  if (!byLevel) byContent.set(content, (byLevel = new Map()));
+  const hit = byLevel.get(state.datuLevel);
+  if (hit) return hit;
+  const caps = computeCaps(state, content);
+  byLevel.set(state.datuLevel, caps);
+  return caps;
+}
+
+function computeCaps(state: GameState, content: Content): Caps {
   const f = content.rules.food;
   const defs = defsOf(content);
   let ground = 0;

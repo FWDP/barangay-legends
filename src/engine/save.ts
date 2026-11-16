@@ -824,7 +824,8 @@ function parseDatuAndDeaths(data: RawSave, content: Content, state: GameState) {
       .slice(-MAX_REMEMBERED)
       .map((r) => {
         const story = parseStory(r.story);
-        return { name: r.name as string, cause: r.cause as Remembered["cause"], at: r.at as number, ...(story ? { story } : {}) };
+        const where = typeof r.from === "string" && r.from.length <= 40 ? { from: r.from, attack: r.attack === true } : {};
+        return { name: r.name as string, cause: r.cause as Remembered["cause"], at: r.at as number, ...where, ...(story ? { story } : {}) };
       });
   }
 }
@@ -1002,6 +1003,11 @@ function parsePeople(data: RawSave, content: Content, state: GameState, isPlayer
     if (finiteNonNeg(h.favor)) e.favor = h.favor;
     if (Number.isInteger(h.count) && (h.count as number) > 0) e.count = h.count as number;
     if (Number.isInteger(h.level) && (h.level as number) > 0) e.level = h.level as number;
+    // Where a warrior fell: the other barangay, and whether we attacked or defended.
+    if (typeof h.from === "string" && h.from.length <= 40) {
+      e.from = h.from;
+      e.attack = h.attack === true;
+    }
     const ok =
       e.kind === "task"
         ? !!e.task

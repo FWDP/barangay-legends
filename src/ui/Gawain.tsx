@@ -13,7 +13,7 @@ import { clock } from "./EventBanners";
 import { costText } from "./format";
 import type { Lang } from "./settings";
 import { useModal } from "./StoryDialogs";
-import { historyLine, rewardText, tappedCard } from "./stories";
+import { deathLine, historyLine, rewardText, tappedCard } from "./stories";
 import type { Tapped } from "./villagers";
 import { fill, type GameText } from "./uiContent";
 import { LifeStoryView, tappedFor } from "./LifeStory";
@@ -367,7 +367,7 @@ export function RememberedDialog(props: { open: boolean; state: GameState; conte
                 ) : (
                   <b>{r.name}</b>
                 )}{" "}
-                <span className="text-xs text-stone-500">· {t[r.cause][lang]}</span>
+                <span className="block text-xs text-stone-500">{deathLine({ name: r.name, cause: r.cause, from: r.from, attack: r.attack }, content, game, lang, "")}</span>
               </li>
             ))}
             {others > 0 && <li className="text-xs text-stone-500 italic">{fill(t.others[lang], { count: others })}</li>}

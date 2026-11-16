@@ -235,7 +235,7 @@ describe("worship and the spirits in words", () => {
 
 describe("deaths and the Bahay ng Datu in words", () => {
   it("tells deaths gently, frailty as a warning, and each new level with its unlock", () => {
-    expect(historyLine({ at: 1, kind: "died", cause: "age", name: "Diwa" }, content, game, "en")).toBe("Diwa died of old age. The barangay remembers them.");
+    expect(historyLine({ at: 1, kind: "died", cause: "age", name: "Diwa" }, content, game, "en")).toBe("Diwa died of old age, among family. The barangay remembers them.");
     expect(historyLine({ at: 1, kind: "died", cause: "hunger" }, content, game, "en")).toBe("One of our people died of hunger.");
     expect(historyLine({ at: 1, kind: "died", cause: "raid", count: 2 }, content, game, "en")).toBe("2 of our warriors fell in battle.");
     expect(historyLine({ at: 1, kind: "frail", name: "Diwa" }, content, game, "en")).toBe("Diwa has grown old and frail.");
@@ -246,7 +246,7 @@ describe("deaths and the Bahay ng Datu in words", () => {
   it("lists the dead by name in the away story", () => {
     const before = fresh({ time: 100 });
     const after = { ...before, time: 300, history: [{ at: 200, kind: "died" as const, cause: "sickness" as const, name: "Ulan" }] };
-    expect(awayPeopleLines(before, after, content, game, "en")).toEqual(["Ulan died of a long sickness. The barangay remembers them."]);
+    expect(awayPeopleLines(before, after, content, game, "en")).toEqual(["Ulan was taken by a long sickness. The barangay remembers them."]);
   });
 });
 
@@ -289,5 +289,43 @@ describe("the ruler in text", () => {
     expect(addressAs("Datu ng Ilog", "Dayang")).toBe("Datu ng Ilog");
     const card = tappedCard({ role: "spouse", named: null, look: { gender: "man", age: "adult", cls: "nobility" }, place: null } as never, s, content, game, "en");
     expect(card.line).toContain(game.villager.husband.en);
+  });
+});
+
+describe("death wording fits what happened (V.7)", () => {
+  const nbId = content.neighbors[0].id;
+  const nbName = content.neighbors[0].name;
+  it("tells a warrior who fell attacking from one who fell defending, in both languages", () => {
+    const attack = { at: 1, kind: "fell" as const, name: "Dagat", from: nbId, attack: true };
+    const defense = { at: 1, kind: "fell" as const, name: "Dagat", from: nbId, attack: false };
+    expect(historyLine(attack, content, game, "en")).toBe(`Dagat fell in the raid on ${nbName}.`);
+    expect(historyLine(attack, content, game, "fil")).toBe(`Nasawi si Dagat sa pag-atake sa ${nbName}.`);
+    expect(historyLine(defense, content, game, "en")).toBe("Dagat fell defending the barangay.");
+    expect(historyLine(defense, content, game, "fil")).toBe("Nasawi si Dagat sa pagtatanggol sa barangay.");
+  });
+
+  it("gives sickness, old age and hunger their own words, the same in the Libingan", async () => {
+    const { deathLine } = await import("./stories");
+    const lines = (["age", "sickness", "hunger"] as const).map((cause) => deathLine({ name: "Ulan", cause }, content, game, "en", "them"));
+    expect(new Set(lines).size).toBe(3);
+    expect(lines[2]).toContain("hunger");
+    expect(deathLine({ name: "Ulan", cause: "raid", from: nbId, attack: true }, content, game, "fil", "")).toContain("sa pag-atake sa");
+  });
+
+  it("the battle is recorded where the warrior fell, and the life story ends the same way", async () => {
+    const { battleIn } = await import("../engine/people");
+    const { finalStory } = await import("../engine/talambuhay");
+    const { lifeLine } = await import("./talambuhay");
+    const prev = withState({ time: 10 });
+    const report = { id: 1, time: 10.5, kind: "raid" as const, neighbor: nbId, win: false };
+    const next = { ...prev, time: 11, region: { reports: [report] } } as unknown as GameState;
+    expect(battleIn(prev, next)).toEqual({ from: nbId, attack: true });
+    const defended = { ...next, region: { reports: [{ ...report, kind: "defense" as const }] } } as unknown as GameState;
+    expect(battleIn(prev, defended)).toEqual({ from: nbId, attack: false });
+    const name = (id: string) => content.neighbors.find((n) => n.id === id)?.name ?? id;
+    const v = { id: 1, name: "Dagat", story: "bravest", role: "warrior" as const, since: 0 };
+    const end = (field: { from?: string; attack?: boolean }) => finalStory(prev, content, v, "raid", field).life.at(-1)!;
+    expect(lifeLine(end({ from: nbId, attack: true }), content, "fil", name)).toBe(`Nasawi sa pag-atake sa ${nbName}; inaalala ng barangay`);
+    expect(lifeLine(end({ from: nbId, attack: false }), content, "en", name)).toBe("Fell defending the barangay; remembered by the barangay");
   });
 });

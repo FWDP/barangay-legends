@@ -1691,7 +1691,7 @@ const NO_ARRIVALS: ArrivalContent = {
 };
 
 const FAMILY_KEYS = ["born", "bornNoParents", "arrived", "arrivedNoPlace", "founder", "spouse", "child", "children", "and"];
-const EVENT_KEYS = ["born", "arrived", "arrivedFrom", "married", "parent", "grewUp", "elder", "raidWon", "raidLost", "defendedWon", "defendedLost", "sick", "healed", "learned", "learnedAlone", "died", "day"];
+const EVENT_KEYS = ["born", "arrived", "arrivedFrom", "married", "parent", "grewUp", "elder", "raidWon", "raidLost", "defendedWon", "defendedLost", "sick", "healed", "learned", "learnedAlone", "died", "diedAttack", "diedDefense", "diedAge", "diedSickness", "diedHunger", "day"];
 const CAUSE_KEYS = ["age", "sickness", "raid", "hunger"];
 
 /** No life-story file (hand-made test content): one plain skill and detail, plain words. */

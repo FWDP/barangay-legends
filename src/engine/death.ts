@@ -23,6 +23,9 @@ export interface Remembered {
   name: string;
   cause: DeathCause;
   at: number;
+  /** Fallen in battle: the other barangay, and whether we attacked it (else defended). */
+  from?: string;
+  attack?: boolean;
   /** Their life story as it was when they died (named villagers since v31). */
   story?: LifeStory;
 }
@@ -40,9 +43,10 @@ export function addMourning(state: GameState, content: Content, deaths: number):
 }
 
 /** Remembers a named villager who died. */
-export function remember(state: GameState, content: Content, v: NamedVillager, cause: DeathCause, at: number): GameState {
-  const story = content.ai ? undefined : finalStory(state, content, v, cause);
-  return { ...state, remembered: [...state.remembered, { name: v.name, cause, at, ...(story ? { story } : {}) }].slice(-MAX_REMEMBERED) };
+export function remember(state: GameState, content: Content, v: NamedVillager, cause: DeathCause, at: number, field: { from?: string; attack?: boolean } = {}): GameState {
+  const story = content.ai ? undefined : finalStory(state, content, v, cause, field);
+  const where = field.from ? { from: field.from, attack: field.attack === true } : {};
+  return { ...state, remembered: [...state.remembered, { name: v.name, cause, at, ...where, ...(story ? { story } : {}) }].slice(-MAX_REMEMBERED) };
 }
 
 /**

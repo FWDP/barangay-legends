@@ -219,9 +219,11 @@ export function lifeStory(state: GameState, content: Content, v: NamedVillager):
 }
 
 /** The story kept at the Libingan: as it was when they died, with how they died at the end. */
-export function finalStory(state: GameState, content: Content, v: NamedVillager, cause: NonNullable<LifeEvent["cause"]>): LifeStory {
+export function finalStory(state: GameState, content: Content, v: NamedVillager, cause: NonNullable<LifeEvent["cause"]>, field: { from?: string; attack?: boolean } = {}): LifeStory {
   const story = lifeStory(state, content, v);
-  return { ...story, life: [...story.life, { at: state.time, kind: "died" as const, cause }].slice(-MAX_LIFE) };
+  // Fallen in battle: where (the barangay), and whether defending (as for a raid event).
+  const where = cause === "raid" && field.from ? { from: field.from, ...(field.attack ? {} : { defense: true }) } : {};
+  return { ...story, life: [...story.life, { at: state.time, kind: "died" as const, cause, ...where }].slice(-MAX_LIFE) };
 }
 
 /** A saved Libingan story (anything that doesn't fit is dropped). */

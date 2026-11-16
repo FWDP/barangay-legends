@@ -66,6 +66,11 @@ export function lifeLine(e: LifeEvent, content: Content, lang: Lang, placeName: 
       return other ? fill(ev.learned[lang], { lesson, other }) : fill(ev.learnedAlone[lang], { lesson });
     }
     case "died":
+      // The same wording as the history and the Libingan (stories.ts deathLine).
+      if (e.cause === "raid" && e.from) return e.defense ? ev.diedDefense[lang] : fill(ev.diedAttack[lang], { barangay: placeName(e.from) });
+      if (e.cause === "age") return ev.diedAge[lang];
+      if (e.cause === "sickness") return ev.diedSickness[lang];
+      if (e.cause === "hunger") return ev.diedHunger[lang];
       return fill(ev.died[lang], { cause: t.causes[e.cause ?? "age"][lang] });
   }
 }

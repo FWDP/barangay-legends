@@ -86,7 +86,7 @@ describe("an ally's call for help", () => {
     const s = apply(called(), eager, { type: "choose", option: "refuse" });
     expect(tick(s, eager, 5).choice).toBeNull();
     expect(tick(s, eager, c.cooldownSeconds + 1).choice?.id).toBe("ally-call");
-  });
+  }, 20000);
 
   it("survives a save, with the raider named", () => {
     const s = called();

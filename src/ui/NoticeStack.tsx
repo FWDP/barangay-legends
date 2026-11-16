@@ -2,6 +2,7 @@
 // small "+N" badge for the rest that opens into a list. Picking one from the list brings it
 // forward; information can be dismissed. Ongoing states are small status icons instead.
 import { useState, type ReactNode } from "react";
+import type React from "react";
 import type { Content } from "../engine/content";
 import type { GameState } from "../engine/game";
 import { clock } from "./EventBanners";
@@ -14,7 +15,13 @@ export interface NoticeView {
   node: ReactNode;
   /** One line for the waiting list (icon and words). */
   label: string;
+  /** What tapping it does (opens the trade offer, the choice, the expedition), if anything. */
+  onOpen?: () => void;
 }
+
+/** The notices sit above the map's labels and chips (z-10 and z-20 there), and their list above them all. */
+export const NOTICE_LAYER = "z-30";
+export const NOTICE_LIST_LAYER = "z-40";
 
 export function NoticeStack(props: { state: GameState; queue: Notice[]; views: Record<string, NoticeView | undefined>; game: GameText; lang: Lang }) {
   const { state, queue, views, game, lang } = props;
@@ -33,7 +40,27 @@ export function NoticeStack(props: { state: GameState; queue: Notice[]; views: R
   return (
     <div className="pointer-events-none flex w-full max-w-full flex-col items-center gap-1 sm:w-auto">
       {/* The banner, kept to the top strip of the map on phones. */}
-      <div className="pointer-events-auto relative max-h-[22vh] max-w-full overflow-y-auto overscroll-contain sm:max-h-none">
+      <div
+        className={`pointer-events-auto relative max-h-[22vh] max-w-full overflow-y-auto overscroll-contain sm:max-h-none ${views[shown.id]!.onOpen ? "cursor-pointer" : ""}`}
+        data-notice={shown.id}
+        {...(views[shown.id]!.onOpen
+          ? {
+              role: "button",
+              tabIndex: 0,
+              "aria-label": views[shown.id]!.label,
+              // A tap on the banner opens it; its own buttons (an action, ✕) keep their job.
+              onClick: (e: React.MouseEvent) => {
+                if (!(e.target as HTMLElement).closest("button,a,input,select")) views[shown.id]!.onOpen!();
+              },
+              onKeyDown: (e: React.KeyboardEvent) => {
+                if ((e.key === "Enter" || e.key === " ") && e.target === e.currentTarget) {
+                  e.preventDefault();
+                  views[shown.id]!.onOpen!();
+                }
+              },
+            }
+          : {})}
+      >
         {views[shown.id]!.node}
         {shown.dismissKey && (
           <button
@@ -50,7 +77,7 @@ export function NoticeStack(props: { state: GameState; queue: Notice[]; views: R
         )}
       </div>
       {waiting.length > 0 && (
-        <div className="pointer-events-auto flex flex-col items-center">
+        <div className={`pointer-events-auto relative flex flex-col items-center ${NOTICE_LIST_LAYER}`}>
           <button
             type="button"
             aria-expanded={open}
@@ -62,7 +89,7 @@ export function NoticeStack(props: { state: GameState; queue: Notice[]; views: R
             {soon && " ⏳"}
           </button>
           {open && (
-            <ul aria-label={t.list[lang]} className="mat-card mt-1 w-64 max-w-[calc(100vw-5rem)] space-y-0.5 rounded-xl border-2 border-amber-900/60 p-1.5 text-xs text-stone-800 shadow-lg">
+            <ul aria-label={t.list[lang]} className="mat-card relative mt-1 w-64 max-w-[calc(100vw-5rem)] space-y-0.5 rounded-xl border-2 border-amber-900/60 p-1.5 text-xs text-stone-800 shadow-lg">
               {waiting.map((n) => (
                 <li key={n.id}>
                   <button
@@ -70,6 +97,7 @@ export function NoticeStack(props: { state: GameState; queue: Notice[]; views: R
                     onClick={() => {
                       setFront(n.id);
                       setOpen(false);
+                      views[n.id]!.onOpen?.();
                     }}
                     className="flex w-full items-center justify-between gap-2 rounded-lg px-1.5 py-1 text-left hover:bg-amber-100"
                   >

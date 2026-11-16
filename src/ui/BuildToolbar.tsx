@@ -115,8 +115,11 @@ export function BuildToolbar(props: {
   /** The Defense map (landing points and Kuta coverage) is on, and turning it on or off. */
   defenseMap?: boolean;
   onDefenseMap?: () => void;
+  /** "Show connections" (the footprints on buildings joined by a Daan), in the Daan at Tulay tab. */
+  showConnections?: boolean;
+  onShowConnections?: (on: boolean) => void;
 }) {
-  const { state, content, game, lang, selected, onSelect, roadActive, onRoad, recommend, onUpgradeDatu, defenseMap = false, onDefenseMap } = props;
+  const { state, content, game, lang, selected, onSelect, roadActive, onRoad, recommend, onUpgradeDatu, defenseMap = false, onDefenseMap, showConnections = false, onShowConnections } = props;
   const t = game.build;
   const tabs = visibleTabs(content);
   const [tab, setTabState] = useState<BuildTab>(() => {
@@ -324,7 +327,7 @@ export function BuildToolbar(props: {
           className="flex snap-x snap-proximity scroll-px-2 gap-1.5 overflow-x-auto scroll-smooth px-2 pt-2 pb-1 [scrollbar-width:none] sm:gap-2"
         >
           {items.map((it, i) => (
-            <li key={it.id} className={`shrink-0 snap-start ${i === 0 ? "ml-auto" : ""} ${i === items.length - 1 && !(tab === "depensa" && onDefenseMap) ? "mr-auto" : ""}`}>
+            <li key={it.id} className={`shrink-0 snap-start ${i === 0 ? "ml-auto" : ""} ${i === items.length - 1 && !(tab === "depensa" && onDefenseMap) && !(tab === "daan" && onShowConnections) ? "mr-auto" : ""}`}>
               <button
                 type="button"
                 data-build-card
@@ -403,6 +406,20 @@ export function BuildToolbar(props: {
             </li>
           ))}
           {/* The Depensa tab's Defense map: every landing point and the Kutas' cover. */}
+          {tab === "daan" && onShowConnections && (
+            <li className="mr-auto shrink-0 snap-start">
+              <label
+                title={t.showConnectionsTip[lang]}
+                className={`mat-card flex h-full w-[5rem] cursor-pointer flex-col items-center gap-1 rounded-lg border-2 px-1 pt-1.5 pb-1 text-center text-stone-800 shadow-md sm:w-[6.6rem] ${showConnections ? "border-amber-500 ring-4 ring-amber-300" : "border-amber-900/70"}`}
+              >
+                <span aria-hidden className="text-3xl leading-none sm:text-4xl">
+                  👣
+                </span>
+                <span className="font-display text-[12px] leading-tight text-amber-950 sm:text-sm">{t.showConnections[lang]}</span>
+                <input type="checkbox" checked={showConnections} onChange={(e) => onShowConnections(e.target.checked)} className="mt-auto" />
+              </label>
+            </li>
+          )}
           {tab === "depensa" && onDefenseMap && (
             <li className="mr-auto shrink-0 snap-start">
               <button

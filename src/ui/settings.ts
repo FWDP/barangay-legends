@@ -14,9 +14,11 @@ export interface Settings {
   tips: boolean;
   /** Help and adviser language; null follows the browser. */
   language: Lang | null;
+  /** Footprints on buildings joined by a Daan, always (else only with the Daan tool or while placing). */
+  showConnections: boolean;
 }
 
-export const DEFAULT_SETTINGS: Settings = { musicVolume: 0.5, effectsVolume: 0.8, tips: true, language: null };
+export const DEFAULT_SETTINGS: Settings = { musicVolume: 0.5, effectsVolume: 0.8, tips: true, language: null, showConnections: false };
 
 const KEY = "barangay-legends/settings";
 const unit = (v: unknown, fallback: number) => (typeof v === "number" && Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : fallback);
@@ -35,6 +37,7 @@ export function parseSettings(json: string | null): Settings {
     effectsVolume: unit(raw.effectsVolume, DEFAULT_SETTINGS.effectsVolume),
     tips: typeof raw.tips === "boolean" ? raw.tips : DEFAULT_SETTINGS.tips,
     language: (LANGS as readonly unknown[]).includes(raw.language) ? (raw.language as Lang) : null,
+    showConnections: typeof raw.showConnections === "boolean" ? raw.showConnections : DEFAULT_SETTINGS.showConnections,
   };
 }
 

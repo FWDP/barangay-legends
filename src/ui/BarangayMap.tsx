@@ -2,8 +2,10 @@ import { PADDY_STYLE } from "./paddy";
 import { Bolo } from "./Bolo";
 import { closesPlaza, entrancesBlockedBy, wouldHaveEntrance } from "../engine/doors";
 import {
+  createContext,
   memo,
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -172,8 +174,11 @@ export function BarangayMap(props: {
   plazaLabel?: string;
   /** The Defense map (Depensa tab): every landing point and the Kutas' cover; and its words. */
   defense?: { on: boolean; text: GameText["defense"]; lang: Lang } | null;
+  /** The player's "Show connections" setting: footprints on buildings joined by a Daan. */
+  showConnections?: boolean;
 }) {
-  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onVillager, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null, selection = [], onSelectArea, focus = null, tradeHeld = false, onSarimanok, ritual = null, visit = null, blockedLabel, plazaLabel, wholeMap = 0, overlay, defense = null } = props;
+  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onVillager, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null, selection = [], onSelectArea, focus = null, tradeHeld = false, onSarimanok, ritual = null, visit = null, blockedLabel, plazaLabel, wholeMap = 0, overlay, defense = null, showConnections = false } = props;
+  const footprints = connectionMarksShown({ setting: showConnections, roadTool: !!road, placing: !!placing });
   // The rectangle being dragged over the forest (desktop), from its first tile to the current one.
   const [dragArea, setDragArea] = useState<{ from: Point; to: Point } | null>(null);
   // Tiles being painted with a mouse drag in road mode (laid on release).
@@ -872,6 +877,7 @@ export function BarangayMap(props: {
   const dockClear = !!dockBox && isClear(dockBox, view, avoid);
 
   return (
+    <ConnectionMarks.Provider value={footprints}>
     <div className="relative min-h-0 flex-1">
       <div
         ref={area}
@@ -984,6 +990,7 @@ export function BarangayMap(props: {
       </div>
       )}
     </div>
+    </ConnectionMarks.Provider>
   );
 }
 
@@ -1542,6 +1549,7 @@ function Building(props: {
 }) {
   const { x, y, info, fresh, lifted, onActivate } = props;
   const { def, bonus, damaged, burning, repairText, connected, noPath, paused, lent, burialLook, level, inside, pigs } = info;
+  const marks = useContext(ConnectionMarks);
   // Decided once, at mount: only buildings that were just built bounce in.
   const [bounce] = useState(fresh);
   const label = burning
@@ -1629,8 +1637,8 @@ function Building(props: {
           🚫 No path
         </span>
       )}
-      {connected && !damaged && !noPath && (
-        <span aria-hidden className="pointer-events-none absolute bottom-0 left-0.5 text-[0.28em] leading-none">
+      {connected && marks && !damaged && !noPath && (
+        <span aria-hidden data-connected className="pointer-events-none absolute bottom-0 left-0.5 text-[0.28em] leading-none">
           👣
         </span>
       )}
@@ -1769,3 +1777,13 @@ function SpiritOverlays(props: {
     </>
   );
 }
+
+/** Are the footprint marks on connected buildings shown (hidden by default)? */
+const ConnectionMarks = createContext(false);
+
+/**
+ * Footprints on buildings joined by a Daan are hidden by default: shown while laying Daan, while
+ * placing a building (to see where it would be connected), or when the player turns on "Show
+ * connections" (the Daan at Tulay tab and Settings; remembered per browser).
+ */
+export const connectionMarksShown = (o: { setting: boolean; roadTool: boolean; placing: boolean }) => o.setting || o.roadTool || o.placing;

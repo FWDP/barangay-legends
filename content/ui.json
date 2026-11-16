@@ -554,6 +554,14 @@
     "watchEffect": {
       "en": "its lookouts see raiders landing within {radius} tiles",
       "fil": "nakikita ng mga bantay nito ang mananalakay na dadaong hanggang {radius} tile"
+    },
+    "showConnections": {
+      "en": "Show connections",
+      "fil": "Ipakita ang mga ugnayan"
+    },
+    "showConnectionsTip": {
+      "en": "Footprints on buildings joined to the Bahay ng Datu by a Daan. Always shown while laying Daan or placing a building.",
+      "fil": "Mga bakas ng paa sa mga gusaling nakaugnay sa Bahay ng Datu sa pamamagitan ng Daan. Laging nakikita habang naglalagay ng Daan o gusali."
     }
   },
   "death": {
@@ -620,6 +628,30 @@
     "longon": {
       "en": "A resting place with longon coffins",
       "fil": "Pahingahan na may mga longon"
+    },
+    "fellAttack": {
+      "en": "{name} fell in the raid on {barangay}.",
+      "fil": "Nasawi si {name} sa pag-atake sa {barangay}."
+    },
+    "fellDefense": {
+      "en": "{name} fell defending the barangay.",
+      "fil": "Nasawi si {name} sa pagtatanggol sa barangay."
+    },
+    "diedAge": {
+      "en": "{name} died of old age, among family. The barangay remembers {them}.",
+      "fil": "Pumanaw si {name} sa katandaan, kapiling ang pamilya. Inaalala siya ng barangay."
+    },
+    "diedSickness": {
+      "en": "{name} was taken by a long sickness. The barangay remembers {them}.",
+      "fil": "Binawian ng buhay si {name} dahil sa matagal na sakit. Inaalala siya ng barangay."
+    },
+    "diedHunger": {
+      "en": "{name} died of hunger. The barangay remembers {them}.",
+      "fil": "Namatay sa gutom si {name}. Inaalala siya ng barangay."
+    },
+    "fellRaid": {
+      "en": "{name} fell in battle.",
+      "fil": "Nasawi si {name} sa labanan."
     }
   },
   "datu": {

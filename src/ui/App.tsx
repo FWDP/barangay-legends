@@ -23,7 +23,7 @@ import { SettingsMenu } from "./SettingsMenu";
 import { AdvisorBubble, useAdvisor } from "./Advisor";
 import { HelpPanel } from "./HelpPanel";
 import { TitleScreen } from "./TitleScreen";
-import { useLang, useSettings, type Lang } from "./settings";
+import { updateSettings, useLang, useSettings, type Lang } from "./settings";
 import { initSound, isMuted, setMuted, sfx } from "./sound";
 import { loadUiContent } from "./uiContent";
 import { content as baseContent, useGame } from "./useGame";
@@ -655,6 +655,7 @@ export function App() {
     offer: {
       node: <OfferBar state={state} content={content} dispatch={dispatch} folded={view === "barangay" && !offerOpen} sailing={sailing} held={tradeHeld} onOpen={() => !sailing && setOfferOpen(true)} />,
       label: `🛶 ${fill(nt.offer[lang], { barangay: offerFrom })}`,
+      onOpen: () => !sailing && setOfferOpen(true),
     },
     choice: {
       node: (
@@ -668,8 +669,12 @@ export function App() {
         />
       ),
       label: `📜 ${nt.choice[lang]}`,
+      onOpen: () => {
+        sfx.click();
+        setChoiceOpen(true);
+      },
     },
-    expedition: fresh ? { node: expeditionBar, label: `🎬 ${fill(nt.expedition[lang], { barangay: neighborDef(content, fresh.to)?.name ?? fresh.to })}` } : undefined,
+    expedition: fresh ? { node: expeditionBar, label: `🎬 ${fill(nt.expedition[lang], { barangay: neighborDef(content, fresh.to)?.name ?? fresh.to })}`, onOpen: () => watch(fresh.id) } : undefined,
     sailing: { node: expeditionBar, label: `⛵ ${nt.sailing[lang]}` },
     prank: { node: <PrankBar state={state} content={content} game={ui.game} lang={lang} />, label: `🪵 ${nt.prank[lang]}` },
     ...Object.fromEntries(
@@ -952,6 +957,12 @@ export function App() {
           }}
           tools={{ saveLabel: ui.game.save.button[lang], onSave: () => setSaveOpen(true), reportLabel: ui.game.report.button[lang], onReport: () => setReportOpen(true) }}
           version={fill(ui.game.version.label[lang], { version: VERSION_TEXT })}
+          connections={{
+            label: ui.game.build.showConnections[lang],
+            tip: ui.game.build.showConnectionsTip[lang],
+            on: settings.showConnections,
+            onToggle: (on: boolean) => updateSettings({ showConnections: on }),
+          }}
           ruler={(() => {
             const home = householdOf(state, content);
             const term = honorificFor(state, content);
@@ -1022,6 +1033,7 @@ export function App() {
           state={state}
           content={content}
           placing={placing}
+          showConnections={settings.showConnections}
           moveFrom={moving}
           planState={planState}
           onPlace={place}
@@ -1088,8 +1100,8 @@ export function App() {
           className={
             view === "rehiyon"
               ? // Over the Rehiyon the banners sit above the panel (on phones there is no map under them).
-                "pointer-events-none order-first z-10 flex flex-col items-center gap-1.5 bg-sky-950/40 px-2 py-1.5 empty:hidden sm:absolute sm:top-2 sm:left-1/2 sm:w-max sm:max-w-[calc(100%-1rem)] sm:-translate-x-1/2 sm:bg-transparent sm:p-0"
-              : "pointer-events-none absolute top-2 right-14 left-2 z-10 flex flex-col items-center gap-1.5 sm:right-auto sm:left-1/2 sm:w-max sm:max-w-[calc(100%-1rem)] sm:-translate-x-1/2"
+                "pointer-events-none order-first z-30 flex flex-col items-center gap-1.5 bg-sky-950/40 px-2 py-1.5 empty:hidden sm:absolute sm:top-2 sm:left-1/2 sm:w-max sm:max-w-[calc(100%-1rem)] sm:-translate-x-1/2 sm:bg-transparent sm:p-0"
+              : "pointer-events-none absolute top-2 right-14 left-2 z-30 flex flex-col items-center gap-1.5 sm:right-auto sm:left-1/2 sm:w-max sm:max-w-[calc(100%-1rem)] sm:-translate-x-1/2"
           }
         >
           {view === "barangay" && !placing && !roadMode && (
@@ -1220,6 +1232,8 @@ export function App() {
         <BuildToolbar
           state={state}
           content={content}
+          showConnections={settings.showConnections}
+          onShowConnections={(on) => updateSettings({ showConnections: on })}
           game={ui.game}
           lang={lang}
           recommend={recommended(state, content, advisor.message?.kind === "tip" ? advisor.message.trigger : null)}
@@ -1378,7 +1392,7 @@ export function App() {
         seen={seenReport}
         onSeen={setSeenReport}
         hold={clash !== null || away !== null}
-        names={(r) => battleNames(r, state, ui.game, lang)}
+        names={(r) => battleNames(r, state, ui.game, lang, content)}
         reason={(r) => (r.kind === "defense" ? defenseReasonLine(r, state, ui.game, lang) : null)}
         showLabel={ui.game.defense.showMe[lang]}
         onShowShore={(r) =>

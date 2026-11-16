@@ -58,3 +58,34 @@ describe("notifications", () => {
     expect(noticeQueue(offered, calm, ctx).some((n) => n.id === "offer")).toBe(false);
   });
 });
+
+describe("tapping notifications (V.5)", () => {
+  it("the badge is a button, a banner that does something is tappable, and they sit above the map's labels", async () => {
+    const { createElement } = await import("react");
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    const { NoticeStack, NOTICE_LAYER, NOTICE_LIST_LAYER } = await import("./NoticeStack");
+    const { loadUiContent } = await import("./uiContent");
+    const { withState: ws, content: c } = await import("../engine/testUtils");
+    const game = loadUiContent(c).game;
+    const s = ws({});
+    const queue = [
+      { id: "offer", tier: 1 as const, expiresAt: 50 },
+      { id: "choice", tier: 1 as const },
+    ];
+    const views = {
+      offer: { node: createElement("span", null, "A bangka waits"), label: "Offer", onOpen: () => {} },
+      choice: { node: createElement("span", null, "A choice"), label: "Choice", onOpen: () => {} },
+    };
+    const html = renderToStaticMarkup(createElement(NoticeStack, { state: s, queue, views, game, lang: "en" }));
+    // The shown banner (the offer) opens on a tap.
+    expect(html).toMatch(/data-notice="offer"[^>]*role="button"|role="button"[^>]*data-notice="offer"/);
+    expect(html).toContain('tabindex="0"');
+    // The "+1" badge is a real button.
+    expect(html).toMatch(/<button[^>]*aria-expanded="false"[^>]*>\+?1|<button[^>]*aria-expanded="false"/);
+    // Layers above the map's chips (z-10) and labels (z-20).
+    const z = (c: string) => Number(c.replace("z-", ""));
+    expect(z(NOTICE_LAYER)).toBeGreaterThan(20);
+    expect(z(NOTICE_LIST_LAYER)).toBeGreaterThan(z(NOTICE_LAYER));
+    expect(html).toContain(NOTICE_LIST_LAYER);
+  });
+});

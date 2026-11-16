@@ -120,12 +120,13 @@ export const GAME_TEXT = {
     active: ["time"], permission: ["cost"], permissionActive: ["tiles"], needTradition: [], needFavor: [], close: [], burial: ["style"], healer: ["name"],
   },
   forest: { label: ["balance"], tip: [], stage1: [], stage2: ["percent"], replant: ["cost"], replanting: ["time"], prank: ["building", "time"] },
-  build: {
+  build: { showConnections: [], showConnectionsTip: [],
     tirahan: [], pagkain: [], depensa: [], pananampalataya: [], daan: [], iba: [], build: [], cancel: [], locked: ["villagers"], lockedDatu: ["level"], need: ["missing"],
     recommended: [], more: [], new: [], details: [], kutaEffect: ["radius", "n"], watchEffect: ["radius"], staffed: ["staffed"], noPath: ["n"], perTile: [], daanName: [], daanText: ["percent"], layDaan: [], aboutLook: [],
   },
   death: {
-    died: ["cause"], diedNamed: ["name", "cause", "them"], diedRaid: ["count"], frail: ["name"], age: [], sickness: [], hunger: [], raid: [], mourning: ["time"],
+    died: ["cause"], diedNamed: ["name", "cause", "them"], diedRaid: ["count"], fellAttack: ["name", "barangay"], fellDefense: ["name"], fellRaid: ["name"],
+    diedAge: ["name", "them"], diedSickness: ["name", "them"], diedHunger: ["name", "them"], frail: ["name"], age: [], sickness: [], hunger: [], raid: [], mourning: ["time"],
     sickWarning: [], hungerWarning: [], remembered: [], none: [], others: ["count"], jars: [], longon: [],
   },
   datu: { title: [], level: ["level", "max"], bonus: ["production", "influence"], upgrade: ["level"], max: [], envoys: [], balangay: [], alliances: [], unlocks: ["what"], news: ["level", "what"], close: [] },

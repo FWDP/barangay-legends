@@ -37,6 +37,7 @@ export function historyLine(h: HistoryEntry, content: Content, game: GameText, l
     case "died": {
       const d = game.death;
       if (h.cause === "raid" && !h.name) return fill(d.diedRaid[lang], { count: h.count ?? 1 });
+      if (h.name && (h.cause === "age" || h.cause === "sickness" || h.cause === "hunger" || h.cause === "raid")) return deathLine({ name: h.name, cause: h.cause, from: h.from, attack: h.attack }, content, game, lang, them(game, h, lang));
       const cause = h.cause === "age" || h.cause === "sickness" || h.cause === "hunger" || h.cause === "raid" ? d[h.cause][lang] : "";
       return h.name ? fill(d.diedNamed[lang], { name: h.name, cause, them: them(game, h, lang) }) : fill(d.died[lang], { cause });
     }
@@ -65,7 +66,8 @@ export function historyLine(h: HistoryEntry, content: Content, game: GameText, l
     case "named":
       return fill(t.named[lang], { story: h.story ? storyText(content, { name: h.name ?? "", story: h.story }, lang) : (h.name ?? "") });
     case "fell":
-      return fill(t.fell[lang], { name: h.name ?? "" });
+      // Where they fell: attacking another barangay or defending ours (older entries: defending).
+      return h.from ? deathLine({ name: h.name ?? "", cause: "raid", from: h.from, attack: h.attack }, content, game, lang, "") : fill(t.fell[lang], { name: h.name ?? "" });
     case "left": {
       const line = h.cause === "hunger" ? t.leftHunger : h.cause === "crowded" ? t.leftCrowded : t.left;
       return fill(line[lang], { name: h.name ?? "", them: them(game, h, lang) });
@@ -146,9 +148,16 @@ export function villagerCard(v: NamedVillager, content: Content, game: GameText,
  * Named villagers in a battle report: the warriors who fell in it (from the history, at the
  * battle's time), or for a won defense, a named warrior who led it.
  */
-export function battleNames(r: Report, state: GameState, game: GameText, lang: Lang): string[] {
+export function battleNames(r: Report, state: GameState, game: GameText, lang: Lang, content?: Content): string[] {
   if (r.kind !== "defense" && r.kind !== "raid") return [];
-  const fell = state.history.filter((h) => h.kind === "fell" && Math.abs(h.at - r.time) <= 1.5).map((h) => fill(game.history.fell[lang], { name: h.name ?? "" }));
+  // Fallen attacking that barangay, or defending ours.
+  const fell = state.history
+    .filter((h) => h.kind === "fell" && Math.abs(h.at - r.time) <= 1.5)
+    .map((h) =>
+      r.kind === "raid"
+        ? fill(game.death.fellAttack[lang], { name: h.name ?? "", barangay: content?.neighbors.find((n) => n.id === r.neighbor)?.name ?? r.neighbor })
+        : fill(game.death.fellDefense[lang], { name: h.name ?? "" }),
+    );
   if (fell.length) return fell;
   const warriors = state.named.filter((v) => v.role === "warrior" && v.since <= r.time);
   if (r.win && warriors.length) return [fill(game.villager.ledDefense[lang], { name: warriors[r.id % warriors.length].name })];
@@ -177,4 +186,26 @@ export function awayPeopleLines(before: GameState, after: GameState, content: Co
 function them(game: GameText, h: HistoryEntry, lang: Lang): string {
   const t = game.history;
   return (h.gender === "woman" ? t.herThem : h.gender === "man" ? t.himThem : t.anyThem)[lang];
+}
+
+/**
+ * How someone died, in the words that fit (the same in the barangay's history, the life story's
+ * end and the Libingan): fallen attacking another barangay or defending ours, old age, a long
+ * sickness, hunger.
+ */
+export function deathLine(
+  d: { name: string; cause: "age" | "sickness" | "hunger" | "raid"; from?: string; attack?: boolean },
+  content: Content,
+  game: GameText,
+  lang: Lang,
+  themWord: string,
+): string {
+  const t = game.death;
+  if (d.cause === "raid") {
+    if (d.from && d.attack) return fill(t.fellAttack[lang], { name: d.name, barangay: content.neighbors.find((n) => n.id === d.from)?.name ?? d.from });
+    if (d.from) return fill(t.fellDefense[lang], { name: d.name });
+    return fill(t.fellRaid[lang], { name: d.name });
+  }
+  const key = d.cause === "age" ? "diedAge" : d.cause === "sickness" ? "diedSickness" : "diedHunger";
+  return fill(t[key][lang], { name: d.name, them: themWord || (lang === "fil" ? "siya" : "them") });
 }

@@ -93,6 +93,7 @@ describe("settings", () => {
       effectsVolume: 0,
       tips: false,
       language: "fil",
+      showConnections: false,
     });
     expect(parseSettings(JSON.stringify({ language: "xx", tips: "yes" }))).toEqual(DEFAULT_SETTINGS);
   });

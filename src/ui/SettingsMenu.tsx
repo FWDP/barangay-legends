@@ -74,6 +74,8 @@ export function SettingsMenu(props: {
   /** The game version line. */
   version?: string;
   /** The ruler: woman or man (changeable once), and the tradition's honorific for a woman ruler. */
+  /** "Show connections": footprints on buildings joined by a Daan (also in the Daan at Tulay tab). */
+  connections?: { label: string; tip: string; on: boolean; onToggle: (on: boolean) => void };
   ruler?: {
     label: string;
     woman: string;
@@ -85,7 +87,7 @@ export function SettingsMenu(props: {
     honorific?: { label: string; tip: string; on: boolean; onToggle: (on: boolean) => void };
   };
 }) {
-  const { onReset, muted, onToggleSound, share, help, tools, version, ruler } = props;
+  const { onReset, muted, onToggleSound, share, help, tools, version, ruler, connections } = props;
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -137,6 +139,12 @@ export function SettingsMenu(props: {
             </button>
           )}
           <Preferences muted={muted} onToggleSound={onToggleSound} />
+          {connections && (
+            <label className="flex items-start gap-1.5 text-xs" title={connections.tip}>
+              <input type="checkbox" checked={connections.on} onChange={(e) => connections.onToggle(e.target.checked)} className="mt-0.5" />
+              <span>👣 {connections.label}</span>
+            </label>
+          )}
           {ruler && (
             <div className="space-y-1 text-xs">
               <div className="font-semibold">{ruler.label}</div>
