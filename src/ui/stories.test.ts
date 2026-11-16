@@ -278,3 +278,16 @@ describe("tapping any villager", () => {
     if (nobles.length && commoners.length) expect(Math.max(...nobles.map(d))).toBeLessThanOrEqual(Math.max(...commoners.map(d)));
   });
 });
+
+describe("the ruler in text", () => {
+  it("names a woman ruler by her chosen honorific, and the adviser addresses her by it", async () => {
+    const { addressAs } = await import("./Advisor");
+    const { apply, newGame } = await import("../engine/game");
+    const s = apply({ ...newGame(content, 5, true, { datu: "Ligaya", gender: "woman" }), tradition: "tagalog" }, content, { type: "setHonorific", on: true });
+    expect(datuWithTitle(s, content, "en")).toMatch(/^Dayang Ligaya/);
+    expect(addressAs("Datu, the rice is falling.", "Dayang")).toBe("Dayang, the rice is falling.");
+    expect(addressAs("Datu ng Ilog", "Dayang")).toBe("Datu ng Ilog");
+    const card = tappedCard({ role: "spouse", named: null, look: { gender: "man", age: "adult", cls: "nobility" }, place: null } as never, s, content, game, "en");
+    expect(card.line).toContain(game.villager.husband.en);
+  });
+});

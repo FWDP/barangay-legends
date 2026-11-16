@@ -154,6 +154,13 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
     are never shown, nor camote (sweet potato) or corn.
 32. **Dish names**: the game uses no dish names of Spanish origin (no "adobo"). If dishes are named
     later, which native names (e.g. kinilaw) are well sourced?
+33. **Women rulers** (`content/lore/women-rulers.json`, `content/traditions/tagalog.json`
+    womanHonorific): is "Dayang" right as an honorific a Tagalog woman ruler might be called
+    (Noceda and Sanlúcar 1754; Scott 1994)? Is there a sourced Visayan one? "Bai" is a
+    Maranao/Maguindanao title and is not used for Tagalog or Visayan barangays (and not yet for
+    Maranao ones either, until sourced). Individual names are flagged, not presented as certain:
+    Dayang Kalangitan (partly from genealogical tradition) and "Queen Sima" (usually placed in
+    Java, not Cotabato).
 
 ### Notes for the future
 
@@ -225,6 +232,7 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 | content/lore/food-storage.json and engine/food.ts (foodCaps, feed) | Aklat entry and rules: kamalig for grain, dried goods and salt; root crops in the ground; household jars and smoking racks; baklad keeping fish alive | Widespread lowland | Scott 1994; Alcina 1668; see question 30 |
 | src/ui/foodArt.ts and src/ui/resourceArt.tsx | Art for the food buildings (taro patch, swidden with yams and millet, banana stand, sago palms and trough, coconut palms, shore basket, hunters' lean-to, pen with pig or chickens, salt beds, fish corral) and for Pagkain (a bilao with gabi, banana and fish), Palay (a sheaf), Asin and rice wine (a tapayan). Generic, the same for every tradition | Widespread | Scott 1994 |
 | content/traditions/*.json foodYield, pigs | Which food each tradition grows more of (rice for the Tagalog; root crops and sago for the Visayans and Maranao) and whether pigs are kept; playtest numbers, not a historical claim | Tagalog, Visayan, Maranao | see questions 26 and 28 |
+| content/lore/women-rulers.json, content/traditions/tagalog.json (womanHonorific) and engine/household.ts | Aklat entry and rule: the ruler can be a woman or a man; bilateral inheritance; "Datu" for both, "Dayang" offered only for a Tagalog woman ruler; individual historical names flagged | Widespread lowland; Dayang (Tagalog) | Scott 1994; Plasencia 1589; Boxer Codex; Brewer 2004; Noceda and Sanlúcar 1754; see question 33 |
 
 ## Reviewed
 

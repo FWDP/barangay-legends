@@ -1,8 +1,8 @@
 // Game state and rules. Pure functions only: no React, no browser APIs, and no unseeded
 // randomness or wall-clock time. Time is passed in; randomness comes from the RNG in the state.
 import { brewWine, emptyStore, feed, holdPista, restKaingin, foodCaps, foodGroups, updateFoodLand, updatePests, yieldFactor, type FoodStore, type PestEvent, type PistaOccasion } from "./food";
-import { syncResidents, type Resident } from "./residents";
-import { makeHousehold, type Household } from "./household";
+import { GENDERS, syncResidents, type Gender, type Resident } from "./residents";
+import { makeHousehold, setHonorific, setRulerGender, type Household } from "./household";
 import { RESOURCES, SOCIAL_CLASSES, type BuildingDef, type Content, type Resource, type ResourceAmounts, type SocialClass } from "./content";
 import { isHungry, seasonMultiplier, updateEvents } from "./events";
 import {
@@ -81,7 +81,7 @@ import {
   type TikbalangTrick,
 } from "./worship";
 
-export const STATE_VERSION = 34;
+export const STATE_VERSION = 35;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -279,7 +279,7 @@ export function newGame(
   content: Content,
   seed: number = DEFAULT_SEED,
   withRegion = true,
-  names: { name?: string; datu?: string } = {},
+  names: { name?: string; datu?: string; gender?: Gender } = {},
 ): GameState {
   const { start } = content.rules;
   const resources = Object.fromEntries(RESOURCES.map((r) => [r, start.resources[r] ?? 0])) as Record<
@@ -349,7 +349,7 @@ export function newGame(
     expeditions: [],
     nextExpeditionId: 1,
   };
-  if (!content.ai) state = { ...syncResidents(state, content), household: makeHousehold(content, seed, state.barangay.datu) };
+  if (!content.ai) state = { ...syncResidents(state, content), household: makeHousehold(content, seed, state.barangay.datu, names.gender) };
   if (withRegion && content.neighbors.length > 0) state.region = createRegion(content, 0, seed, state.barangay.id);
   for (const def of content.buildings) {
     for (let i = 0; i < (start.buildings[def.id] ?? 0); i++) state = placeAuto(state, content, def.id);
@@ -886,6 +886,9 @@ export type Command =
   | { type: "catchSarimanok" }
   /** A gong strike: when (game time, for the beat) and whether it's the "hold to beat" option. */
   | { type: "gong"; at?: number; held?: boolean }
+  /** The ruler (household.ts): change her or his gender once, use the tradition's honorific. */
+  | { type: "setRulerGender"; gender: Gender }
+  | { type: "setHonorific"; on: boolean }
   /** Sound the tambuli during a raid warning: allies send volunteers too. */
   | { type: "callForHelp" }
   /** Food (food.ts): brew rice wine from Palay, hold a Pista, rest a worn-out kaingin. */
@@ -992,6 +995,10 @@ function applyCommand(state: GameState, content: Content, command: Command): Gam
       return gong(state, content, command.at, command.held === true);
     case "callForHelp":
       return callForHelp(state, content);
+    case "setRulerGender":
+      return GENDERS.includes(command.gender) ? setRulerGender(state, content, command.gender) : state;
+    case "setHonorific":
+      return setHonorific(state, content, command.on === true);
     case "brew":
       return brewWine(state, content, command.amount);
     case "pista":

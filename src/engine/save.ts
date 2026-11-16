@@ -335,6 +335,9 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
   32: (raw, content) => migrateDefenseV33(raw, content),
   // v33 → v34: food (food.ts). See migrateFoodV34.
   33: (raw, content) => migrateFoodV34(raw, content),
+  // v34 → v35: the ruler's gender is a choice (household.changed, household.honorific). Older
+  // saves keep the household they had (a man unless the datu's name made her a woman).
+  34: (raw) => ({ ...raw, version: 35 }),
 };
 
 // ---------- Food (v33 → v34) ----------
@@ -926,7 +929,7 @@ function parseResidents(data: RawSave, content: Content, state: GameState, isPla
   const sp = isObject(h) && isObject(h.spouse) ? h.spouse : null;
   state.household =
     isObject(h) && GENDERS.includes(h.datuGender as Gender) && sp && typeof sp.name === "string" && sp.name.length <= 30 && GENDERS.includes(sp.gender as Gender)
-      ? { datuGender: h.datuGender as Gender, spouse: { name: sp.name, gender: sp.gender as Gender } }
+      ? { datuGender: h.datuGender as Gender, spouse: { name: sp.name, gender: sp.gender as Gender }, ...(h.changed === true ? { changed: true as const } : {}), ...(h.honorific === true ? { honorific: true as const } : {}) }
       : makeHousehold(content, state.map.seed, state.barangay.datu);
 }
 

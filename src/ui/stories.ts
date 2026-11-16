@@ -10,7 +10,7 @@ import { costText } from "./format";
 import { newsLine } from "./politicsText";
 import type { Lang } from "./settings";
 import type { Tapped } from "./villagers";
-import { householdOf } from "../engine/household";
+import { householdOf, rulerTitle } from "../engine/household";
 import { fill, type GameText } from "./uiContent";
 
 /** "🪵 10", "the title Datu ng Ilog", or both. */
@@ -98,7 +98,9 @@ export function levelNews(level: number, state: GameState, content: Content, gam
 
 /** The datu's name with their title, e.g. "Datu Lakas, Datu ng Ilog". */
 export function datuWithTitle(state: GameState, content: Content, lang: Lang): string {
-  const name = state.barangay.datu ? `Datu ${state.barangay.datu}` : "Datu";
+  // "Datu" for a woman or a man, or a woman ruler's sourced honorific if she chose it (household.ts).
+  const t = rulerTitle(state, content);
+  const name = state.barangay.datu ? `${t} ${state.barangay.datu}` : t;
   const title = levelTitle(state, content) ?? datuTitle(state, content);
   return title ? `${name}, ${title[lang]}` : name;
 }

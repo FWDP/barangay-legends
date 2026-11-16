@@ -8,6 +8,7 @@ import { datuLevelNeeded, maxDatuLevel, nextDatuLevel } from "../engine/datu";
 import { datuHouseUrl, houseStyleFor } from "./datuHouseArt";
 import { asCost, canAfford } from "../engine/game";
 import { pistaBlocker, pistaOccasions, type PistaOccasion } from "../engine/food";
+import { rulerTitle } from "../engine/household";
 import { clock } from "./EventBanners";
 import { costText } from "./format";
 import type { Lang } from "./settings";
@@ -254,7 +255,7 @@ export function DatuDialog(props: {
             <img src={datuHouseUrl(state.datuLevel, houseStyleFor(state, content))} alt="" className="inline size-12 align-middle" /> {d.title[lang]}
           </h2>
           <p className="text-xs text-stone-600">
-            {state.barangay.datu ? `Datu ${state.barangay.datu} · ` : ""}
+            {state.barangay.datu ? `${rulerTitle(state, content)} ${state.barangay.datu} · ` : ""}
             {fill(d.level[lang], { level: state.datuLevel, max: maxDatuLevel(content) })}
           </p>
           <p>{fill(d.bonus[lang], { production: (state.datuLevel - 1) * def.productionPercentPerLevel, influence: (state.datuLevel - 1) * def.influencePercentPerLevel })}</p>

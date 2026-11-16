@@ -1,0 +1,37 @@
+{
+  "id": "women-rulers",
+  "name": "Women rulers and bilateral inheritance",
+  "description": "Kinship in the lowland Philippines was bilateral: children inherited from mother and father alike, daughters as well as sons, and a woman kept her own property in marriage. Women of rank could hold authority and wealth; Spanish accounts mention women leading communities. Individual names are uncertain: Dayang Kalangitan of Tondo is known partly from later genealogical tradition, and the 'Queen Sima' sometimes placed in the Philippines is usually identified with Java. 'Dayang' is recorded as a Tagalog honorific for a woman of rank. Flagged for review.",
+  "tradition": "Widespread lowland (Tagalog, Visayan); honorific Dayang (Tagalog)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Juan de Plasencia, Customs of the Tagalogs (1589), in Blair and Robertson, The Philippine Islands 1493–1898, vol. 7",
+    "Boxer Codex (c. 1590), Lilly Library, Indiana University",
+    "Carolyn Brewer, Shamanism, Catholicism and Gender Relations in Colonial Philippines, 1521–1685 (Ashgate, 2004)"
+  ],
+  "aklat": {
+    "order": 60,
+    "icon": "👑",
+    "name": {
+      "en": "Women rulers and inheritance",
+      "fil": "Mga babaeng pinuno at mana"
+    },
+    "lore": {
+      "en": "In the barangays of the sixteenth century, kinship ran through both parents: daughters inherited as sons did, and a married woman kept her own property, which went to her children. Wealth and rank came through lineage, so a woman of a ruling family could hold great standing and, at times, lead. Spanish writers recorded women of rank addressed with honorifics such as the Tagalog dayang. Names of particular women rulers are harder to be sure of: Dayang Kalangitan of Tondo comes to us partly through later family genealogies, and the 'Queen Sima' of an old Chinese account is usually placed in Java, not the Philippines.",
+      "fil": "Sa mga barangay noong ika-16 na siglo, dumadaloy ang pagkakamag-anak sa ama at ina: nagmamana ang anak na babae gaya ng anak na lalaki, at may sariling ari-arian ang babaeng may-asawa na napupunta sa kaniyang mga anak. Sa angkan nagmumula ang yaman at katayuan, kaya maaaring magkaroon ng mataas na katayuan at, kung minsan, mamuno ang babaeng mula sa naghaharing pamilya. Itinala ng mga manunulat na Espanyol ang mga babaeng may katayuan na tinatawag sa mga tawag na gaya ng Tagalog na dayang. Mas mahirap matiyak ang mga pangalan ng partikular na babaeng pinuno: bahagyang nakarating sa atin si Dayang Kalangitan ng Tondo sa pamamagitan ng mga talaangkanan sa kalaunan, at ang 'Reyna Sima' ng isang lumang ulat na Tsino ay karaniwang inilalagay sa Java, hindi sa Pilipinas."
+    },
+    "inGame": {
+      "en": "Your ruler can be a woman or a man (chosen when the game starts, and changeable once in Settings). The title is Datu for both; in a Tagalog barangay a woman ruler may instead be called Dayang.",
+      "fil": "Maaaring babae o lalaki ang iyong pinuno (pinipili sa simula ng laro, at mababago nang isang beses sa Settings). Datu ang tawag sa dalawa; sa barangay na Tagalog, maaaring tawaging Dayang ang babaeng pinuno."
+    },
+    "hint": {
+      "en": "Lead your barangay.",
+      "fil": "Pamunuan ang iyong barangay."
+    },
+    "unlock": {
+      "type": "built",
+      "building": "bahay-kubo"
+    }
+  },
+  "reviewed": false
+}

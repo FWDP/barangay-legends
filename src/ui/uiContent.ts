@@ -81,7 +81,7 @@ export interface AdvisorDef {
 export const TITLE_TEXT = [
   "tagline", "welcomeBack", "welcomeBackUnnamed", "continue", "newGame", "start", "youWillLead", "chooseNames",
   "datuName", "barangayName", "reroll", "replaceTitle", "replaceText", "replaceConfirm", "cancel", "online",
-  "comingSoon", "help", "settings", "credits", "support", "close", "free",
+  "comingSoon", "help", "settings", "credits", "support", "close", "free", "rulerIs", "woman", "man",
 ] as const;
 export type TitleKey = (typeof TITLE_TEXT)[number];
 
@@ -170,6 +170,7 @@ export const GAME_TEXT = {
     joy: ["happiness", "time"], guests: ["n"], held: ["occasion", "renown"], wine: ["wine"], brew: ["n", "cost"],
   },
   kaingin: { soil: ["percent"], tired: [], rest: [] },
+  ruler: { label: [], woman: [], man: [], changeOnce: [], changed: [], honorific: ["term"], honorificTip: [] },
   gather: { food: [], foodLabel: ["amount"], wood: [], woodLabel: ["amount"] },
   pests: { rats: ["amount"], locustComing: ["time"], locust: ["time"], boar: [] },
   stockpile: { label: [], tip: ["cap"], over: ["cap", "percent"], stop: ["stop"], stopLabel: [] },

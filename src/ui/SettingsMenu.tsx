@@ -73,8 +73,19 @@ export function SettingsMenu(props: {
   tools?: { saveLabel: string; onSave: () => void; reportLabel: string; onReport: () => void };
   /** The game version line. */
   version?: string;
+  /** The ruler: woman or man (changeable once), and the tradition's honorific for a woman ruler. */
+  ruler?: {
+    label: string;
+    woman: string;
+    man: string;
+    value: "woman" | "man";
+    note: string;
+    canChange: boolean;
+    onChange: (g: "woman" | "man") => void;
+    honorific?: { label: string; tip: string; on: boolean; onToggle: (on: boolean) => void };
+  };
 }) {
-  const { onReset, muted, onToggleSound, share, help, tools, version } = props;
+  const { onReset, muted, onToggleSound, share, help, tools, version, ruler } = props;
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -126,6 +137,33 @@ export function SettingsMenu(props: {
             </button>
           )}
           <Preferences muted={muted} onToggleSound={onToggleSound} />
+          {ruler && (
+            <div className="space-y-1 text-xs">
+              <div className="font-semibold">{ruler.label}</div>
+              <div role="radiogroup" aria-label={ruler.label} className="flex gap-1.5">
+                {(["woman", "man"] as const).map((g) => (
+                  <button
+                    key={g}
+                    type="button"
+                    role="radio"
+                    aria-checked={ruler.value === g}
+                    disabled={!ruler.canChange && ruler.value !== g}
+                    onClick={() => ruler.value !== g && ruler.onChange(g)}
+                    className={`game-btn flex-1 border-2 px-2 py-1 text-xs font-semibold disabled:opacity-50 ${ruler.value === g ? "border-amber-950 bg-amber-300 text-amber-950" : "border-amber-950/40 bg-amber-100 text-amber-900"}`}
+                  >
+                    {g === "woman" ? ruler.woman : ruler.man}
+                  </button>
+                ))}
+              </div>
+              <p className="text-amber-100/80">{ruler.note}</p>
+              {ruler.honorific && (
+                <label className="flex items-start gap-1.5" title={ruler.honorific.tip}>
+                  <input type="checkbox" checked={ruler.honorific.on} onChange={(e) => ruler.honorific!.onToggle(e.target.checked)} className="mt-0.5" />
+                  <span>{ruler.honorific.label}</span>
+                </label>
+              )}
+            </div>
+          )}
           {share && (
             <button
               type="button"

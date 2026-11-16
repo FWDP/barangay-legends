@@ -54,6 +54,8 @@ import { localRanking, RankingDialog } from "./Ranking";
 import { Celebration } from "./Celebration";
 import { ReportDialog as ProblemReportDialog, SaveDialog } from "./SaveTools";
 import { fill, type GameText } from "./uiContent";
+import { honorificFor, householdOf, rulerTitle } from "../engine/household";
+import type { Gender } from "../engine/residents";
 import { VERSION_TEXT } from "./version";
 import { arawText, DayChip } from "./Days";
 import { DevPanel, devMode } from "./DevPanel";
@@ -950,6 +952,24 @@ export function App() {
           }}
           tools={{ saveLabel: ui.game.save.button[lang], onSave: () => setSaveOpen(true), reportLabel: ui.game.report.button[lang], onReport: () => setReportOpen(true) }}
           version={fill(ui.game.version.label[lang], { version: VERSION_TEXT })}
+          ruler={(() => {
+            const home = householdOf(state, content);
+            const term = honorificFor(state, content);
+            const r = ui.game.ruler;
+            return {
+              label: r.label[lang],
+              woman: r.woman[lang],
+              man: r.man[lang],
+              value: home.datuGender,
+              canChange: !home.changed,
+              note: home.changed ? r.changed[lang] : r.changeOnce[lang],
+              onChange: (gender: Gender) => dispatch({ type: "setRulerGender", gender }),
+              honorific:
+                home.datuGender === "woman" && term
+                  ? { label: fill(r.honorific[lang], { term }), tip: r.honorificTip[lang], on: !!home.honorific, onToggle: (on: boolean) => dispatch({ type: "setHonorific", on }) }
+                  : undefined,
+            };
+          })()}
           share={{
             label: ui.game.share.button[lang],
             onShare: () => {
@@ -1192,7 +1212,7 @@ export function App() {
           />
           </div>
         )}
-        <AdvisorBubble message={advisor.message} advisor={ui.advisor} lang={lang} onDismiss={advisor.dismiss} onSkip={advisor.skip} />
+        <AdvisorBubble message={advisor.message} advisor={ui.advisor} lang={lang} onDismiss={advisor.dismiss} onSkip={advisor.skip} title={rulerTitle(state, content)} />
         {view === "barangay" && <GatherButtons amount={content.rules.gatherPerClick} quiet={hasAutomation} game={ui.game} lang={lang} onGather={gather} />}
       </main>
 

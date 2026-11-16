@@ -55,9 +55,11 @@ function Portrait({ src, name }: { src: string; name: string }) {
 }
 
 /** The bubble. A tip closes with one tap; a tutorial step stays until done or skipped. */
-export function AdvisorBubble(props: { message: Message | null; advisor: AdvisorDef; lang: Lang; onDismiss: () => void; onSkip: () => void }) {
-  const { message, advisor, lang, onDismiss, onSkip } = props;
-  if (!message) return null;
+export function AdvisorBubble(props: { message: Message | null; advisor: AdvisorDef; lang: Lang; onDismiss: () => void; onSkip: () => void; title?: string }) {
+  const { advisor, lang, onDismiss, onSkip, title } = props;
+  if (!props.message) return null;
+  // The adviser speaks to the ruler by her or his title ("Datu", or a woman ruler's honorific).
+  const message = { ...props.message, text: addressAs(props.message.text, title ?? "Datu") };
   const tip = message.kind !== "tutorial";
   const body = (
     <>
@@ -98,3 +100,6 @@ export function AdvisorBubble(props: { message: Message | null; advisor: Advisor
     </div>
   );
 }
+
+/** The adviser's lines say "Datu" when they speak to the ruler: use the ruler's own title. */
+export const addressAs = (text: string, title: string) => (title === "Datu" ? text : text.replace(/\bDatu(?=[,.!?])/g, title));

@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import credits from "../../docs/credits.md?raw";
 import type { Content } from "../engine/content";
 import { MAX_NAME_LENGTH, type GameState } from "../engine/game";
+import type { Gender } from "../engine/residents";
 import { BarangayMap } from "./BarangayMap";
 import { Markdown } from "./markdown";
 import { canPlay, type PlayMode } from "./online";
@@ -18,6 +19,30 @@ const noop = () => {};
 export interface Names {
   name: string;
   datu: string;
+  /** The ruler: a woman or a man (household.ts); the title stays Datu for both. */
+  gender?: Gender;
+}
+
+/** Woman or man: two buttons, always on the new-game form. */
+function RulerGender(props: { t: (k: TitleKey) => string; value: Gender; onChange: (g: Gender) => void }) {
+  const { t, value, onChange } = props;
+  return (
+    <div role="radiogroup" aria-label={t("rulerIs")} className="flex items-center justify-center gap-2 text-sm">
+      <span>{t("rulerIs")}</span>
+      {(["woman", "man"] as const).map((g) => (
+        <button
+          key={g}
+          type="button"
+          role="radio"
+          aria-checked={value === g}
+          onClick={() => onChange(g)}
+          className={`game-btn border-2 px-3 py-1 text-sm font-semibold ${value === g ? "border-amber-950 bg-amber-300 text-amber-950" : "border-amber-950/40 bg-amber-100/80 text-amber-900"}`}
+        >
+          {t(g)}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 /** A modal on the title screen (settings, credits, replacing the save). */
@@ -97,7 +122,11 @@ export function TitleScreen(props: {
   const [names, setNames] = useState<Names>({ name: "", datu: "" });
   const [naming, setNaming] = useState(false);
   const [dialog, setDialog] = useState<"settings" | "credits" | "replace" | null>(null);
-  const chosen: Names = { name: names.name.trim() || defaults.name, datu: names.datu.trim() || defaults.datu };
+  const [gender, setGender] = useState<Gender | null>(null);
+  const datuName = names.datu.trim() || defaults.datu;
+  // Until the player picks, the ruler follows the name (a woman's name makes a woman ruler).
+  const ruler: Gender = gender ?? (content.villagers.datuWomen.includes(datuName) ? "woman" : "man");
+  const chosen: Names = { name: names.name.trim() || defaults.name, datu: datuName, gender: ruler };
   const start = (mode: PlayMode) => canPlay(mode) && onNewGame(chosen, mode);
   const reroll = () => setDefaults(randomNames(ui.names));
   const { support, contributors } = ui.title.links;
@@ -173,6 +202,7 @@ export function TitleScreen(props: {
           ) : (
             <>
               <p className="text-sm">{t("youWillLead", { datu: chosen.datu, barangay: chosen.name })}</p>
+              <RulerGender t={t} value={ruler} onChange={setGender} />
               <button
                 type="button"
                 autoFocus

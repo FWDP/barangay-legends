@@ -109,5 +109,13 @@
     "lumbia": 80
   },
   "pigs": true,
-  "_foodComment": "foodYield: percent of each food building's yield in this tradition (river-basin rice for the Tagalog, root crops and sago for the Visayans and Maranao); pigs: whether the Babuyan keeps pigs (false: chickens only). Playtest guesses; pork customs flagged for review (docs/cultural-review.md)."
+  "_foodComment": "foodYield: percent of each food building's yield in this tradition (river-basin rice for the Tagalog, root crops and sago for the Visayans and Maranao); pigs: whether the Babuyan keeps pigs (false: chickens only). Playtest guesses; pork customs flagged for review (docs/cultural-review.md).",
+  "womanHonorific": {
+    "term": "Dayang",
+    "sources": [
+      "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+      "Juan José de Noceda and Pedro de Sanlúcar, Vocabulario de la lengua tagala (Manila, 1754), entry \"dayang\""
+    ],
+    "reviewed": false
+  }
 }

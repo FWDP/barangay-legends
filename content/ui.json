@@ -1923,5 +1923,35 @@
       "en": "Gather wood (+{amount})",
       "fil": "Mangahoy (+{amount})"
     }
+  },
+  "ruler": {
+    "label": {
+      "en": "Your ruler",
+      "fil": "Ang iyong pinuno"
+    },
+    "woman": {
+      "en": "Woman",
+      "fil": "Babae"
+    },
+    "man": {
+      "en": "Man",
+      "fil": "Lalaki"
+    },
+    "changeOnce": {
+      "en": "You can change this once.",
+      "fil": "Mababago mo ito nang isang beses."
+    },
+    "changed": {
+      "en": "Already changed once.",
+      "fil": "Nabago na nang isang beses."
+    },
+    "honorific": {
+      "en": "Be called {term} instead of Datu",
+      "fil": "Tawagin bilang {term} sa halip na Datu"
+    },
+    "honorificTip": {
+      "en": "A sourced honorific for a woman of rank in your tradition, waiting for a historian's review.",
+      "fil": "Isang may-pinagmulang tawag sa babaeng may katayuan sa iyong tradisyon, naghihintay ng pagsusuri ng historyador."
+    }
   }
 }

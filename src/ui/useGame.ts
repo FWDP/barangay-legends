@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { loadContent } from "../engine/content";
 import { apply, newGame, tick, type Command, type GameState } from "../engine/game";
+import type { Gender } from "../engine/residents";
 import { offlineProgress, type OfflineReport } from "../engine/offline";
 import { clearSave, loadGame, parseSave, readSavedAt, saveGame, SAVE_KEY } from "../engine/save";
 
@@ -102,7 +103,7 @@ export function useGame(running = true) {
     save(next);
   }, []);
   /** A fresh barangay with the names the player chose, replacing any save. */
-  const startNew = useCallback((names: { name?: string; datu?: string }) => {
+  const startNew = useCallback((names: { name?: string; datu?: string; gender?: Gender }) => {
     clearSave();
     setState(newGame(content, newSeed(), true, names));
   }, []);
