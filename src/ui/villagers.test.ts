@@ -76,7 +76,8 @@ describe("villager sprites", () => {
       expect({ x: Math.floor(evening.p.x), y: Math.floor(evening.p.y) }).toEqual({ x: 2, y: 2 });
       expect(goal(plan(age), 0, true, s.map.plaza, false, false).inside).toBe(true);
     }
-    expect(goal(plan("adult"), 0, true, s.map.plaza, false, true).inside).toBe(true);
+    // (An adult whose turn it isn't to sit under a neighbor's silong this evening.)
+    expect(goal({ ...plan("adult"), id: 4 }, 0, true, s.map.plaza, false, true).inside).toBe(true);
   });
 
   it("idles by the datu's house instead of working while the barangay is hungry", () => {

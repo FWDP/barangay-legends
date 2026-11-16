@@ -5,7 +5,7 @@ import { happinessMultiplier, happinessTarget, housesNearPlaza, nextHappiness } 
 import { canPlace } from "./map";
 import { offlineProgress } from "./offline";
 import { riceCap } from "./storage";
-import { at, calm, content, mapFrom, withState } from "./testUtils";
+import { at, calm, content, mapFrom, unsocial, withState } from "./testUtils";
 
 const def = (id: string) => content.buildings.find((b) => b.id === id)!;
 const dock = def("fishing-dock");
@@ -149,10 +149,10 @@ describe("happiness", () => {
     // Plaza at (5, 4): two houses beside it, one far away.
     const s = plain({ buildings: [at("bahay-kubo", 5, 3), at("bahay-kubo", 4, 4), at("bahay-kubo", 1, 8)] });
     expect(housesNearPlaza(s, content)).toBe(2);
-    expect(happinessTarget(s, content).target).toBe(h.start + 2 * h.perHouseNearPlaza);
-    expect(nextHappiness(s, content, 1)).toBeCloseTo(h.start + h.pointsPerSecond);
+    expect(happinessTarget(s, unsocial(content)).target).toBe(h.start + 2 * h.perHouseNearPlaza);
+    expect(nextHappiness(s, unsocial(content), 1)).toBeCloseTo(h.start + h.pointsPerSecond);
     // Enough rice that nobody goes hungry while it rises (newcomers and births eat too).
-    expect(tick({ ...s, resources: { ...s.resources, rice: 1000 } }, calm, 120).happiness).toBe(h.start + 2 * h.perHouseNearPlaza);
+    expect(tick({ ...s, resources: { ...s.resources, rice: 1000 } }, unsocial(), 120).happiness).toBe(h.start + 2 * h.perHouseNearPlaza);
   });
 
   it("caps what houses can add", () => {
@@ -161,10 +161,10 @@ describe("happiness", () => {
   });
 
   it("falls with hunger and sickness", () => {
-    expect(happinessTarget(plain({ resources: { rice: 0, wood: 0, gold: 0, food: 0, salt: 0, wine: 0 } }), content).target).toBe(h.start + h.hungry);
-    expect(happinessTarget(plain({ sick: [10, 10] }), content).target).toBe(h.start + 2 * h.perSick);
-    expect(happinessTarget(plain({ sick: Array(5).fill(10), villagers: 5 }), content).sickness).toBe(Math.max(h.maxFromSick, 5 * h.perSick));
-    const hungry = tick(plain({ resources: { rice: 0, wood: 0, gold: 0, food: 0, salt: 0, wine: 0 } }), calm, 20);
+    expect(happinessTarget(plain({ resources: { rice: 0, wood: 0, gold: 0, food: 0, salt: 0, wine: 0 } }), unsocial(content)).target).toBe(h.start + h.hungry);
+    expect(happinessTarget(plain({ sick: [10, 10] }), unsocial(content)).target).toBe(h.start + 2 * h.perSick);
+    expect(happinessTarget(plain({ sick: Array(5).fill(10), villagers: 5 }), unsocial(content)).sickness).toBe(Math.max(h.maxFromSick, 5 * h.perSick));
+    const hungry = tick(plain({ resources: { rice: 0, wood: 0, gold: 0, food: 0, salt: 0, wine: 0 } }), unsocial(), 20);
     expect(hungry.happiness).toBeLessThan(h.start);
   });
 

@@ -6,6 +6,7 @@ import type { Content } from "../engine/content";
 import type { GameState } from "../engine/game";
 import { isActive, ritualDef } from "../engine/worship";
 import { isEmbargo } from "../engine/trading";
+import { isTired } from "../engine/social";
 import { neighborDef, tradingPaused } from "../engine/region";
 import { activeBanners } from "./EventBanners";
 
@@ -73,7 +74,7 @@ export function arrange(queue: Notice[], dismissed: ReadonlySet<string>, front: 
 /** Does any waiting notice run out soon (the badge shows it)? */
 export const endingSoon = (waiting: Notice[], time: number) => waiting.some((n) => n.expiresAt !== undefined && n.expiresAt - time <= SOON_SECONDS);
 
-export type StatusId = "mourning" | "embargo" | "tradePaused" | "blessings";
+export type StatusId = "mourning" | "embargo" | "tradePaused" | "blessings" | "tired";
 
 export interface Status {
   id: StatusId;
@@ -91,5 +92,7 @@ export function statusIcons(state: GameState, content: Content, lang: "en" | "fi
   if (tradingPaused(state) || tradeHeld) out.push({ id: "tradePaused", icon: "⏸️", detail: "" });
   const blessings = Object.keys(state.blessings).filter((id) => isActive(state, id)).map((id) => ritualDef(content, id)?.name[lang] ?? id);
   if (blessings.length) out.push({ id: "blessings", icon: "✨", detail: blessings.join(", ") });
+  // Everyone working all the time, no free evenings (social.ts): "Pagod na ang mga tao".
+  if (isTired(state, content)) out.push({ id: "tired", icon: "😮‍💨", detail: "" });
   return out;
 }

@@ -24,7 +24,8 @@ import { AdvisorBubble, useAdvisor } from "./Advisor";
 import { HelpPanel } from "./HelpPanel";
 import { TitleScreen } from "./TitleScreen";
 import { updateSettings, useLang, useSettings, type Lang } from "./settings";
-import { initSound, isMuted, setMuted, sfx } from "./sound";
+import { initSound, isMuted, setEveningMusic, setMuted, sfx } from "./sound";
+import { isNightAt } from "../engine/daynight";
 import { loadUiContent } from "./uiContent";
 import { content as baseContent, useGame } from "./useGame";
 import { withTraditionNames } from "./traditionNames";
@@ -448,6 +449,9 @@ export function App() {
     }
   }, [screen, hasShrine, state.tradition]);
   const settings = useSettings();
+  // Soft music by the evening fire (W.6): at night, not while mourning; the kulintang for Maranao barangays.
+  const eveningTune = screen === "game" && isNightAt(content, state.time) && state.mourning <= 0 ? (content.traditions.find((x) => x.id === state.tradition)?.dress === "malong" ? "kulintang" : "agong") : null;
+  useEffect(() => setEveningMusic(eveningTune), [eveningTune]);
   const lang = useLang();
   const closeLore = useCallback(() => setLoreNote(null), []);
   const closeMenu = useCallback(() => setMenu(null), []);

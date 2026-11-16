@@ -7,7 +7,7 @@ import { apply, rates, STATE_VERSION, tick, unreachableWorkplaces, type GameStat
 import { createRegion, marriageBlocker, sandugoBlocker, type NeighborState } from "./region";
 import { offlineProgress } from "./offline";
 import { exportCode, exportFile, importSave, parseSave, SAVE_CODE_PREFIX } from "./save";
-import { acquainted, at, calm, content, mapFrom, withState } from "./testUtils";
+import { acquainted, at, calm, content, mapFrom, unsocial, withState } from "./testUtils";
 import { generateVillage, villageBand, villagePlan } from "./village";
 import { levelForRenown } from "./kabantugan";
 import { autoPlaceTile, canPlace, tileAt } from "./map";
@@ -67,7 +67,8 @@ describe("night", () => {
   it("offline progress uses the same day and night share", () => {
     expect(nightFactor(content, 0, DAY)).toBeCloseTo(1 - (dn.nightTo - dn.nightFrom) * (1 - dn.nightProductionFactor), 6);
     // Wood (no season, no granary cap, and here no stockpile limit): four whole days bring in the day rate times the day's average factor.
-    const open = { ...calm, rules: { ...calm.rules, stockpile: { ...calm.rules.stockpile, slowPercent: 0, stopMultiple: Infinity } } };
+    const quiet = unsocial();
+    const open = { ...quiet, rules: { ...quiet.rules, stockpile: { ...quiet.rules.stockpile, slowPercent: 0, stopMultiple: Infinity } } };
     const s = withState({ villagers: 6, happiness: 60, resources: { rice: 900 }, buildings: [at("bahay-kubo", 5, 3), at("woodcutter-camp", 3, 3)] });
     const dayRate = rates({ ...s, time: NOON }, open).produced.wood;
     const { report } = offlineProgress(s, open, 4 * DAY);

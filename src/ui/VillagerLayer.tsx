@@ -8,6 +8,7 @@ import { overcrowded, type GameState } from "../engine/game";
 import { layOutSpan, tileAt, type BridgeTile, type Point } from "../engine/map";
 import type { NamedVillager } from "../engine/people";
 import { isEveningAt, isNightAt } from "../engine/daynight";
+import { socialScene, type Doing, type SocialScene } from "./villagers";
 import { origin, type Camera, type View } from "./camera";
 import {
   carriesTorch,
@@ -878,10 +879,22 @@ export function VillagerLayer(props: {
           });
       } else if (allyRoutes.current.size) allyRoutes.current.clear();
 
+      // Evening and feast life (W.6): who dances at a Pista, who plays music, who sits under the silong.
+      const social = socialScene(s, content);
+      // Guests from the invited barangays at a Pista, standing about the clearing.
+      if (social.pista && social.pista.guests > 0) {
+        const n = Math.min(6, social.pista.guests * 2);
+        for (let i = 0; i < n; i++) {
+          const a = (i / n) * Math.PI * 2;
+          const pos = { x: s.map.plaza.x + 0.5 + Math.cos(a) * 1.6, y: s.map.plaza.y + 0.9 + Math.sin(a) * 1.1 };
+          const v = person(pos);
+          if (v) drawn.push({ x: v.x, y: v.y, f: () => drawPerson(g, v.x, v.y, T, 9900 + i, "envoy", { p: pos, moving: false, stride: 0 }, t) });
+        }
+      }
       const seen = new Set<number>();
       for (const plan of plans) {
         seen.add(plan.id);
-        const target = goal(plan, t, nightFor(plan.id), s.map.plaza, hungry, eveningFor(plan.id));
+        const target = goal(plan, t, nightFor(plan.id), s.map.plaza, hungry, eveningFor(plan.id), social);
         const to = target.p;
         let sp = sprites.current.get(plan.id);
         if (!sp) {
@@ -915,7 +928,7 @@ export function VillagerLayer(props: {
         const alpha = sp.alpha;
         const torch = night && carriesTorch(plan) && !goingIn;
         // Walking legs, or a worker bobbing at their post.
-        if (!reducedMotion && (sp.moving || plan.role === "work")) animating = true;
+        if (!reducedMotion && (sp.moving || plan.role === "work" || target.doing === "dance" || target.doing === "play")) animating = true;
         const who = named.get(plan.id);
         // A named villager always looks like themselves: their own gender, never a child.
         const look: Appearance | undefined = who && plan.look ? { ...plan.look, gender: namedGender(content, who, s.map.seed), age: plan.look.age === "child" ? "adult" : plan.look.age } : plan.look;
@@ -923,7 +936,12 @@ export function VillagerLayer(props: {
           x: at.x,
           y: at.y,
           f: () => {
-            drawPerson(g, at.x, at.y, T, plan.id, plan.role, sprite, t, alpha, look);
+            // Dancers step in place and hop a little to the music (not with reduced motion).
+            const doing = !sprite.moving ? target.doing : undefined;
+            const hop = doing === "dance" && !reducedMotion ? Math.abs(Math.sin(t * 5 + plan.id)) * T * 0.06 : 0;
+            if (doing === "silong") drawMat(g, at.x, at.y, T);
+            drawPerson(g, at.x, at.y - hop, T, plan.id, plan.role, doing === "dance" && !reducedMotion ? { ...sprite, moving: true, stride: t * 6 + plan.id } : sprite, t, alpha, look);
+            if (doing) drawDoing(g, at.x, at.y - hop, T, t, doing, social, plan.id, reducedMotion);
             if (torch) drawTorch(g, at.x, at.y, T, t, reducedMotion);
             if (who) drawStar(g, at.x, at.y, T);
           },
@@ -1190,5 +1208,77 @@ function drawHonor(g: CanvasRenderingContext2D, x: number, top: number, y: numbe
       g.lineWidth = Math.max(0.6, s * 0.02);
       g.stroke();
     }
+  }
+}
+
+/** A woven mat under the silong, where neighbors sit together in the evening (W.6). */
+function drawMat(g: CanvasRenderingContext2D, x: number, y: number, T: number) {
+  g.fillStyle = "rgb(202 164 106 / 0.85)";
+  g.fillRect(x - T * 0.22, y - T * 0.02, T * 0.44, T * 0.08);
+}
+
+/**
+ * What a villager is doing (W.6), drawn beside them: an instrument (the agong, a kulintang row for
+ * Maranao barangays, or a bamboo flute), a dancer's raised hands (a shield in a victory's warriors'
+ * dance, a scarf at a wedding), a child's spinning top. No music or dancing while mourning.
+ */
+function drawDoing(g: CanvasRenderingContext2D, x: number, y: number, T: number, t: number, doing: Doing, scene: SocialScene, id: number, still: boolean) {
+  const s = Math.max(7, T * 0.32);
+  if (doing === "music") {
+    if (scene.music === "kulintang") {
+      g.fillStyle = "#7c2d12";
+      g.fillRect(x - s * 0.5, y - s * 0.12, s * 1.0, s * 0.1);
+      g.fillStyle = "#ca8a04";
+      for (let i = 0; i < 5; i++) {
+        g.beginPath();
+        g.arc(x - s * 0.4 + i * s * 0.2, y - s * 0.15, s * 0.07, 0, Math.PI * 2);
+        g.fill();
+      }
+    } else if (id % 3 === 0) {
+      // A bamboo flute held to the lips.
+      g.strokeStyle = "#a3a33a";
+      g.lineWidth = Math.max(1, s * 0.06);
+      g.beginPath();
+      g.moveTo(x + s * 0.05, y - s * 0.95);
+      g.lineTo(x + s * 0.45, y - s * 0.75);
+      g.stroke();
+    } else {
+      // An agong, hung from a frame, struck now and then.
+      g.fillStyle = "#b45309";
+      g.beginPath();
+      g.arc(x + s * 0.45, y - s * 0.55, s * 0.2, 0, Math.PI * 2);
+      g.fill();
+      g.fillStyle = "#facc15";
+      g.beginPath();
+      g.arc(x + s * 0.45, y - s * 0.55, s * 0.07, 0, Math.PI * 2);
+      g.fill();
+    }
+  } else if (doing === "dance") {
+    const wave = still ? 0 : Math.sin(t * 4 + id) * s * 0.1;
+    g.strokeStyle = "#7c2d12";
+    g.lineWidth = Math.max(1, s * 0.05);
+    g.beginPath();
+    g.moveTo(x - s * 0.15, y - s * 0.75);
+    g.lineTo(x - s * 0.35, y - s * 1.05 + wave);
+    g.moveTo(x + s * 0.15, y - s * 0.75);
+    g.lineTo(x + s * 0.35, y - s * 1.05 - wave);
+    g.stroke();
+    if (scene.pista?.occasion === "victory" && id % 4 === 0) {
+      g.fillStyle = "#78350f";
+      g.fillRect(x - s * 0.5, y - s * 0.75, s * 0.14, s * 0.4);
+    } else if (scene.pista?.occasion === "marriage" && id % 3 === 0) {
+      g.fillStyle = "#dc2626";
+      g.fillRect(x + s * 0.3, y - s * 1.1 - wave, s * 0.18, s * 0.06);
+    }
+  } else if (doing === "play") {
+    // A spinning top on the ground.
+    const r = still ? 0 : t * 12;
+    g.fillStyle = "#92400e";
+    g.beginPath();
+    g.moveTo(x + s * 0.35 + Math.cos(r) * s * 0.02, y - s * 0.02);
+    g.lineTo(x + s * 0.25, y - s * 0.18);
+    g.lineTo(x + s * 0.45, y - s * 0.18);
+    g.closePath();
+    g.fill();
   }
 }

@@ -17,7 +17,7 @@ import {
   type Command,
 } from "./game";
 import { tileAt } from "./map";
-import { at, content, withState } from "./testUtils";
+import { at, content, unsocial, withState } from "./testUtils";
 
 const def = (id: string) => content.buildings.find((b) => b.id === id)!;
 
@@ -202,8 +202,10 @@ describe("tick", () => {
       happiness: content.rules.happiness.start + 2 * content.rules.happiness.perHouseNearPlaza,
     });
     let small = start;
-    for (let i = 0; i < 300; i++) small = tick(small, content, 0.1);
-    const big = tick(start, content, 30);
+    // Without the evening-life happiness, so happiness (and production) stays steady.
+    const quiet = unsocial(content);
+    for (let i = 0; i < 300; i++) small = tick(small, quiet, 0.1);
+    const big = tick(start, quiet, 30);
     expect(small.villagers).toBe(big.villagers);
     expect(small.resources.rice).toBeCloseTo(big.resources.rice, 5);
   });

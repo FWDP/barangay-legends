@@ -65,6 +65,10 @@ export function lifeLine(e: LifeEvent, content: Content, lang: Lang, placeName: 
       const lesson = t.lessons.find((l) => l.id === e.lesson)?.text[lang] ?? t.lessons[0].text[lang];
       return other ? fill(ev.learned[lang], { lesson, other }) : fill(ev.learnedAlone[lang], { lesson });
     }
+    case "social": {
+      const key = e.moment === "sipa" ? "socialSipa" : e.moment === "wrestling" ? "socialWrestling" : e.moment === "song" ? "socialSong" : e.moment === "flute" ? "socialFlute" : other ? "socialAgong" : "socialAgongAlone";
+      return fill(ev[key][lang], { other });
+    }
     case "honored":
       return fill(ev.honored[lang], { barangay: e.from ? placeName(e.from) : "", level: e.level ?? 1 });
     case "died":

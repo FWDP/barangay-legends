@@ -795,5 +795,15 @@
       12
     ],
     "renownPerLevel": 5
+  },
+  "social": {
+    "_comment": "A lively barangay (W.6, engine/social.ts). With at least livelyFreePercent of villagers free (not at work) the evening life gives livelyHappiness (none while mourning); with under tiredFreeBelowPercent free for tiredAfterSeconds, people tire ('Pagod na ang mga tao'): tiredHappiness. Sickness is feastSickPercent likelier during a crowded Pista. Each evening a named villager's story gains a social moment with momentChancePerEvening. Playtest guesses.",
+    "livelyFreePercent": 15,
+    "livelyHappiness": 4,
+    "tiredFreeBelowPercent": 5,
+    "tiredAfterSeconds": 240,
+    "tiredHappiness": -6,
+    "feastSickPercent": 30,
+    "momentChancePerEvening": 0.35
   }
 }

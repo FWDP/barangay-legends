@@ -193,7 +193,7 @@ export const GAME_TEXT = {
   kamalig: { level: ["level", "max"], badge: ["level"], stores: ["amount"], holds: ["rice", "food", "salt"], upgrade: ["level"], top: [], cost: ["cost"], damaged: [], full: [], fullTip: [] },
   notices: {
     more: ["n"], moreLabel: ["n"], soon: [], list: [], dismiss: [], show: [], eclipse: [], tikbalang: [], offer: ["barangay"], choice: [], expedition: ["barangay"], sailing: [],
-    prank: [], mourning: ["time"], embargo: ["names"], tradePaused: [], blessings: ["names"], status: [],
+    prank: [], mourning: ["time"], embargo: ["names"], tradePaused: [], blessings: ["names"], status: [], tired: [],
   },
   expedition: {
     watch: [], skip: [], back: [], next: [], trade: ["barangay"], raid: ["barangay"], raidIn: ["barangay"], arrive: [], walk: [], datu: [], return: [], march: [], clash: [],

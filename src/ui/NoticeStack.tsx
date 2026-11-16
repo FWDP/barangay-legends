@@ -122,7 +122,7 @@ export function StatusIcons(props: { state: GameState; content: Content; game: G
   const list = statusIcons(state, content, lang, tradeHeld);
   if (list.length === 0) return null;
   const text = (id: string, detail: string) =>
-    id === "mourning" ? fill(t.mourning[lang], { time: clock(Number(detail)) }) : id === "embargo" ? fill(t.embargo[lang], { names: detail }) : id === "blessings" ? fill(t.blessings[lang], { names: detail }) : t.tradePaused[lang];
+    id === "mourning" ? fill(t.mourning[lang], { time: clock(Number(detail)) }) : id === "embargo" ? fill(t.embargo[lang], { names: detail }) : id === "blessings" ? fill(t.blessings[lang], { names: detail }) : id === "tired" ? t.tired[lang] : t.tradePaused[lang];
   return (
     <div role="group" aria-label={t.status[lang]} className={`pointer-events-auto relative flex flex-col items-end gap-1 ${className}`}>
       <div className="flex gap-1">

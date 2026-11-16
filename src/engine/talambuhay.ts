@@ -3,6 +3,7 @@
 // villagers keep a story; a named villager is linked to the resident they are (NamedVillager
 // .resident). Pure: no React, no browser APIs.
 import { addHonor, honorFor, honorLevel } from "./honor";
+import { SOCIAL_MOMENTS, socialMoment, type SocialMoment } from "./social";
 import type { Content, VillagerRole } from "./content";
 import type { GameState } from "./game";
 import type { Gender, Resident } from "./residents";
@@ -10,7 +11,7 @@ import type { NamedVillager } from "./people";
 import { lifeSpans, residentName } from "./population";
 import { rollAt } from "./rng";
 
-export type LifeKind = "born" | "arrived" | "married" | "parent" | "grewUp" | "elder" | "raid" | "sick" | "healed" | "learned" | "died" | "honored";
+export type LifeKind = "born" | "arrived" | "married" | "parent" | "grewUp" | "elder" | "raid" | "sick" | "healed" | "learned" | "died" | "honored" | "social";
 
 /** One dated line of a life story. Text is made by the UI from content, so it follows the language. */
 export interface LifeEvent {
@@ -34,6 +35,8 @@ export interface LifeEvent {
   cause?: "age" | "sickness" | "raid" | "hunger";
   /** The honor level reached (honored: a new batok or ornament, honor.ts). */
   level?: number;
+  /** A social moment (social): sipa, agong, song, wrestling, flute (social.ts). */
+  moment?: SocialMoment;
 }
 
 /** The most events a story keeps (the first ones, born or arrived, are always kept). */
@@ -83,7 +86,7 @@ function withName(state: GameState, content: Content, e: LifeEvent): LifeEvent {
   return name ? { ...e, otherName: name } : e;
 }
 
-const LIFE_KINDS: readonly LifeKind[] = ["born", "arrived", "married", "parent", "grewUp", "elder", "raid", "sick", "healed", "learned", "died", "honored"];
+const LIFE_KINDS: readonly LifeKind[] = ["born", "arrived", "married", "parent", "grewUp", "elder", "raid", "sick", "healed", "learned", "died", "honored", "social"];
 
 /** A saved life story: valid events only, in order, at most MAX_LIFE. */
 export function parseLife(raw: unknown): LifeEvent[] {
@@ -103,6 +106,7 @@ export function parseLife(raw: unknown): LifeEvent[] {
     if (typeof o.otherName === "string" && o.otherName !== "" && o.otherName.length <= 30) ev.otherName = o.otherName;
     if (o.cause === "age" || o.cause === "sickness" || o.cause === "raid" || o.cause === "hunger") ev.cause = o.cause;
     if (Number.isInteger(o.level) && (o.level as number) > 0 && (o.level as number) <= 10) ev.level = o.level as number;
+    if ((SOCIAL_MOMENTS as readonly unknown[]).includes(o.moment)) ev.moment = o.moment as SocialMoment;
     out.push(ev);
   }
   return out.sort((a, b) => a.at - b.at);
@@ -345,6 +349,24 @@ export function teach(prev: GameState, next: GameState, content: Content): GameS
       const e = withName(s, content, { at: s.time, ...event });
       s = { ...s, residents: s.residents.map((r) => (r.id === who.child!.id ? { ...r, lessons: [...(r.lessons ?? []), e] } : r)) };
     }
+  }
+  return s;
+}
+
+/**
+ * Evening social moments (social.ts): a named villager's story gains a line, such as a sipa contest
+ * won at a Pista, the agong played at a friend's wedding, or a song taught to the children.
+ */
+export function noteSocialMoments(prev: GameState, next: GameState, content: Content): GameState {
+  let s = next;
+  for (const k of eveningsBetween(content, prev.time, next.time)) {
+    const m = socialMoment(s, content, k);
+    if (!m) continue;
+    const v = s.named.find((x) => x.id === m.named);
+    if (!v || v.resident === undefined) continue;
+    // Someone else in it: a friend whose wedding it was, for the agong.
+    const friend = m.moment === "agong" ? s.named.find((x) => x.id !== v.id && x.resident !== undefined) : undefined;
+    s = noteLife(s, content, v.resident, { kind: "social", moment: m.moment, ...(friend ? { other: friend.resident, otherName: friend.name } : {}) });
   }
   return s;
 }

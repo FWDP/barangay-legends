@@ -12,6 +12,7 @@ import { rulerTitle } from "../engine/household";
 import { bloodPrice, scalePrice, type Mediator, type SealKind } from "../engine/feud";
 import { feudsOf, mediationBlocker, mediationChance, neutralDatu, sealBlocker, sealCost } from "../engine/region";
 import { barangayName } from "./politicsText";
+import { SOCIAL_ART } from "./socialArt";
 import { clock } from "./EventBanners";
 import { costText } from "./format";
 import type { Lang } from "./settings";
@@ -405,7 +406,10 @@ function PistaPanel(props: { state: GameState; content: Content; game: GameText;
   const joy = state.pista && state.time < state.pista.until ? state.pista : null;
   return (
     <section className="space-y-1.5 border-t border-amber-900/20 pt-2">
-      <h3 className="font-display text-base text-amber-900">{t.title[lang]}</h3>
+      <h3 className="flex items-center gap-1 font-display text-base text-amber-900">
+        <img src={content.traditions.find((x) => x.id === state.tradition)?.dress === "malong" ? SOCIAL_ART.kulintang : SOCIAL_ART.agong} alt="" className="size-6" />
+        {t.title[lang]}
+      </h3>
       <p className="text-xs text-stone-600">{t.intro[lang]}</p>
       {joy && (
         <p className="text-xs font-semibold text-green-800">

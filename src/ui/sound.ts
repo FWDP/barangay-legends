@@ -230,6 +230,14 @@ export const sfx = {
 let ambient: { river: AudioBufferSourceNode; lfo: OscillatorNode; timer: number } | null = null;
 let nextBird = 0;
 let nextGong = 0;
+let nextTune = 0;
+/** Evening music by the fire (W.6): the agong and bamboo flutes, or a kulintang (Maranao); null: none (day, mourning). */
+let eveningMusic: "agong" | "kulintang" | null = null;
+
+/** Soft music at night joins the ambient sound (on the music bus, so the sound setting mutes it). */
+export function setEveningMusic(kind: "agong" | "kulintang" | null): void {
+  eveningMusic = kind;
+}
 
 /** Starts the gentle ambient loop (if sound is on). Safe to call more than once. */
 export function startAmbient(): void {
@@ -268,6 +276,22 @@ export function startAmbient(): void {
       const phrase = 1 + Math.floor(Math.random() * 3);
       for (let i = 0; i < phrase; i++) gong(GONGS[Math.floor(Math.random() * GONGS.length)] / 2, i * 0.5, 0.09, "music", 3);
       nextGong = now + 14 + Math.random() * 16;
+    }
+    // By the evening fire: a short tune, softly, every few seconds.
+    if (eveningMusic && now >= nextTune) {
+      if (eveningMusic === "kulintang") {
+        // A run on a row of small gongs.
+        const row = [523, 587, 659, 784, 880];
+        for (let i = 0; i < 6; i++) gong(row[Math.floor(Math.random() * row.length)], i * 0.22, 0.04, "music", 1.2);
+      } else if (Math.random() < 0.5) {
+        // A bamboo flute: a few breathy notes.
+        const notes = [587, 659, 784, 880, 988];
+        for (let i = 0; i < 4; i++) {
+          const f = notes[Math.floor(Math.random() * notes.length)];
+          tone(f, f * 1.01, i * 0.45, 0.4, "sine", 0.025, "music");
+        }
+      } else for (let i = 0; i < 3; i++) gong(GONGS[i % GONGS.length] / 2, i * 0.6, 0.05, "music", 2.5);
+      nextTune = now + 6 + Math.random() * 6;
     }
   }, 500);
   ambient = { river, lfo, timer };

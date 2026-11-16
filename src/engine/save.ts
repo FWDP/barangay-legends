@@ -627,6 +627,8 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean, withRegi
     state.typhoon = { strikeAt: data.typhoon.strikeAt };
   }
   parseFood(data, content, state);
+  // Tiredness from working all the time (social.ts).
+  if (finiteNonNeg(data.tiredFor) && data.tiredFor > 0) state.tiredFor = data.tiredFor;
   // The wounded and hiding in the forest (warfare.ts).
   if (Array.isArray(data.wounded)) state.wounded = data.wounded.filter((w): w is number => finiteNonNeg(w) && w > 0).slice(0, state.warriors);
   if (isObject(data.hiding) && finiteNonNeg(data.hiding.until) && data.hiding.until > state.time) state.hiding = { until: data.hiding.until };

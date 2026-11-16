@@ -2,6 +2,7 @@
 // Deterministic: all randomness comes from the seeded RNG stored in GameState, and random
 // rolls happen only on whole game seconds, so the outcome does not depend on frame rate.
 import { dietSicknessFactor } from "./food";
+import { feastSicknessFactor } from "./social";
 import type { Content, Resource, Season } from "./content";
 import type { GameState, PlacedBuilding } from "./game";
 import { Rng } from "./rng";
@@ -178,7 +179,8 @@ function onSecond(state: GameState, content: Content, second: number, rng: Rng):
     // Slightly more likely while the forest spirits are angry.
     const angry = !content.ai && s.forest.stage >= 2 ? 1 + content.rules.forest.sicknessPercent / 100 : 1;
     // Eating one kind of food for a long time makes sickness likelier (food.ts).
-    if (rng.next() < sickness.chancePerSecond * angry * dietSicknessFactor(s, content)) {
+    // ...and during a crowded Pista (social.ts).
+    if (rng.next() < sickness.chancePerSecond * angry * dietSicknessFactor(s, content) * feastSicknessFactor(s, content)) {
       const cases = Math.min(sickness.firstCases, s.villagers);
       s = {
         ...s,

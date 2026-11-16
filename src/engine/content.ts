@@ -211,6 +211,8 @@ export interface Rules {
   feud: import("./feud").FeudRules;
   /** Warriors and honor (W.4, honor.ts). */
   honor: import("./honor").HonorRules;
+  /** A lively barangay (W.6, social.ts). */
+  social: import("./social").SocialRules;
   /** Rats, locusts and wild boar (food.ts updatePests). */
   pests: PestRules;
   /** Shares of women, children and elders among new residents (residents.ts). */
@@ -1705,7 +1707,7 @@ const NO_ARRIVALS: ArrivalContent = {
 };
 
 const FAMILY_KEYS = ["born", "bornNoParents", "arrived", "arrivedNoPlace", "founder", "spouse", "child", "children", "and"];
-const EVENT_KEYS = ["born", "arrived", "arrivedFrom", "married", "parent", "grewUp", "elder", "raidWon", "raidLost", "defendedWon", "defendedLost", "sick", "healed", "learned", "learnedAlone", "died", "honored", "diedAttack", "diedDefense", "diedAge", "diedSickness", "diedHunger", "day"];
+const EVENT_KEYS = ["born", "arrived", "arrivedFrom", "married", "parent", "grewUp", "elder", "raidWon", "raidLost", "defendedWon", "defendedLost", "sick", "healed", "learned", "learnedAlone", "died", "honored", "socialSipa", "socialWrestling", "socialAgong", "socialAgongAlone", "socialSong", "socialFlute", "diedAttack", "diedDefense", "diedAge", "diedSickness", "diedHunger", "day"];
 const CAUSE_KEYS = ["age", "sickness", "raid", "hunger"];
 
 /** No life-story file (hand-made test content): one plain skill and detail, plain words. */

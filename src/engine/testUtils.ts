@@ -107,3 +107,6 @@ export const zero = (): Resources => Object.fromEntries(RESOURCES.map((r) => [r,
 
 /** A region whose barangays the player has known for a long time (alliances aren't held back by relationship age). */
 export const acquainted = (region: RegionState): RegionState => ({ ...region, neighbors: region.neighbors.map((n) => ({ ...n, metAt: -1e6 })) });
+
+/** Content without the evening-life happiness (social.ts), for tests about other parts of happiness. */
+export const unsocial = (base: Content = calm): Content => ({ ...base, rules: { ...base.rules, social: { ...base.rules.social, livelyHappiness: 0, tiredHappiness: 0 } } });

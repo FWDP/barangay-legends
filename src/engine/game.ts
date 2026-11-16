@@ -1,7 +1,9 @@
 // Game state and rules. Pure functions only: no React, no browser APIs, and no unseeded
 // randomness or wall-clock time. Time is passed in; randomness comes from the RNG in the state.
 import { healWounded, isHiding } from "./warfare";
+import { updateTired } from "./social";
 import type { Mediator, SealKind } from "./feud";
+import { noteSocialMoments } from "./talambuhay";
 import { brewWine, emptyStore, feed, holdPista, restKaingin, foodCaps, foodGroups, updateFoodLand, updatePests, yieldFactor, type FoodStore, type PestEvent, type PistaOccasion } from "./food";
 import { GENDERS, syncResidents, type Gender, type Resident } from "./residents";
 import { makeHousehold, setHonorific, setRulerGender, type Household } from "./household";
@@ -166,6 +168,8 @@ export interface GameState {
   sick: number[];
   /** A typhoon on its way (warning shown), or null. */
   typhoon: { strikeAt: number } | null;
+  /** Seconds everyone has been working with too little free time (social.ts). */
+  tiredFor?: number;
   /** Warriors resting from their wounds: seconds of healing left each (warfare.ts). Missing in older saves. */
   wounded?: number[];
   /** The villagers hiding in the forest from an overwhelming raid until then (warfare.ts). */
@@ -1179,8 +1183,10 @@ function step(state: GameState, content: Content, dt: number): GameState {
     next = updateForest(next, content, dt, true);
     // Deaths come only with warning, and only while playing.
     next = updateDeaths(state, next, content, dt);
-    // Elders teach the children by the evening fire (talambuhay.ts).
-    next = teach(state, next, content);
+    // Elders teach the children by the evening fire (talambuhay.ts); evenings bring social moments.
+    next = noteSocialMoments(state, teach(state, next, content), content);
+    // Working all the time with no free evenings tires people (social.ts).
+    next = updateTired(next, content, dt);
     // Rats, locusts and wild boar (food.ts), only while playing.
     next = updatePests(next, content, state.time, next.time);
   }

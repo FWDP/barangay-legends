@@ -68,6 +68,26 @@ export interface Appearance {
 export interface Goal {
   p: Point;
   inside: boolean;
+  /** What they're doing there (W.6): dancing at a Pista, playing music, sitting under the silong, playing. */
+  doing?: Doing;
+}
+
+/** Evening and feast life, drawn on the sprite (VillagerLayer). Visual only. */
+export type Doing = "dance" | "music" | "silong" | "play";
+
+/** The barangay's social scene now (W.6): a Pista going on (its occasion), mourning (quiet), the music of its tradition. */
+export interface SocialScene {
+  pista: { occasion: string; guests: number } | null;
+  /** Mourning: no music or dancing. */
+  quiet: boolean;
+  /** Kulintang only for Maranao (and other Mindanao) traditions; elsewhere the agong and flutes. */
+  music: "kulintang" | "agong";
+}
+
+export function socialScene(state: GameState, content: Content): SocialScene {
+  const quiet = state.mourning > 0;
+  const p = state.pista && state.time < state.pista.until && !quiet ? { occasion: state.pista.occasion, guests: state.pista.guests.length } : null;
+  return { pista: p, quiet, music: content.traditions.find((t) => t.id === state.tradition)?.dress === "malong" ? "kulintang" : "agong" };
 }
 
 /** Walking speed in tiles per second. Sick villagers shuffle. */
@@ -271,17 +291,29 @@ function doorSpot(door: Point, building: Point, o: Point): Point {
  * the Kuta; raids and the sick keep their own places. Buildings without a doorway (old saves,
  * plaza homes) fall back to the building's own tile.
  */
-export function goal(plan: VillagerPlan, t: number, night: boolean, plaza: Point, hungry: boolean, evening = false): Goal {
+export function goal(plan: VillagerPlan, t: number, night: boolean, plaza: Point, hungry: boolean, evening = false, scene: SocialScene | null = null): Goal {
   const o = jitter(plan.id);
   const at = (b: Point, d: Point | null | undefined, dy = 0.2): Point => (d ? doorSpot(d, b, o) : destinationAt(b, o, dy));
   const fireside = plan.id % 6 === 0;
+  // A Pista (W.6): half the free and working villagers dance in the clearing, a few play music.
+  if (scene?.pista && !hungry && (plan.role === "idle" || plan.role === "work") && plan.id % 2 === 0) {
+    return { p: gatherAt(plan, plaza, o), inside: false, doing: plan.id % 8 === 0 ? "music" : "dance" };
+  }
   if (night && plan.role !== "warrior" && plan.role !== "sick") {
     if (plan.watch) return { p: { x: plan.watch.x + 0.5 + o.x * 0.4, y: plan.watch.y + 0.5 + o.y * 0.3 }, inside: false };
-    if (fireside) return { p: gatherAt(plan, plaza, o), inside: false };
+    // By the fire some play the agong (or kulintang) and flutes, unless the barangay mourns.
+    if (fireside) return { p: gatherAt(plan, plaza, o), inside: false, ...(scene && !scene.quiet && plan.id % 12 === 0 ? { doing: "music" as const } : {}) };
     // In the evening the elders sit with the children by the fire at the datu's clearing, telling
-    // stories (no school: engine/talambuhay.ts teach); everyone else goes home.
+    // stories (no school: engine/talambuhay.ts teach); some neighbors sit together under a house's
+    // silong, chewing betel and talking; everyone else goes home.
     if (evening && plan.role === "idle" && (plan.look?.age === "elder" || plan.look?.age === "child")) return { p: gatherAt(plan, plaza, o), inside: false };
+    if (evening && plan.look?.age === "adult" && plan.id % 4 === 1) return { p: at(plan.home, plan.homeDoor, 0.45), inside: false, doing: "silong" };
     return { p: at(plan.home, plan.homeDoor, 0.3), inside: !!plan.homeDoor };
+  }
+  // By day children play near the houses and the clearing: tops, hide-and-seek, chasing.
+  if (plan.role === "idle" && plan.look?.age === "child" && plan.id % 2 === 1 && !hungry) {
+    const cycle = (t / 40 + ((plan.id * 0.618) % 1)) % 1;
+    return { p: cycle < 0.6 ? at(plan.home, plan.homeDoor, 0.5) : gatherAt(plan, plaza, o), inside: false, doing: "play" };
   }
   const cycle = (t / 80 + ((plan.id * 0.618) % 1)) % 1;
   switch (plan.role) {
