@@ -15,6 +15,7 @@ export type FoodGroup = (typeof FOOD_GROUPS)[number];
 
 export interface FoodRules {
   riceWastePercent: number;
+  aiRiceReserve: number;
   datuRicePerLevel: number;
   groundPerPlot: number;
   jarsPerHouse: number;
@@ -386,6 +387,12 @@ export interface TraditionDef extends Heritage {
   /** Food by tradition: percent of a building's yield (river-basin rice, upland roots and sago), and whether pigs are kept (food.ts). */
   foodYield?: Record<string, number>;
   pigs?: boolean;
+  /**
+   * A sourced honorific a woman ruler may be called instead of "Datu" in this tradition (e.g.
+   * Dayang for the Tagalog), with its sources, waiting for review (docs/cultural-review.md).
+   * Missing where no honorific is sourced: the title stays "Datu".
+   */
+  womanHonorific?: { term: string; sources: string[]; reviewed: boolean };
 }
 
 /** A ritual at the Dambana, paid for with Favor. */
@@ -1868,6 +1875,12 @@ export function validateTradition(raw: unknown, file = "tradition"): TraditionDe
     checkNumbers(raw.foodYield, Object.keys(raw.foodYield), `${file}: foodYield`);
   }
   if (raw.pigs !== undefined && typeof raw.pigs !== "boolean") throw new Error(`${file}: "pigs" must be true or false`);
+  if (raw.womanHonorific !== undefined) {
+    const h = raw.womanHonorific;
+    if (!isObject(h) || typeof h.term !== "string" || h.term.trim() === "" || !Array.isArray(h.sources) || h.sources.length === 0 || typeof h.reviewed !== "boolean") {
+      throw new Error(`${file}: "womanHonorific" needs a term, sources and "reviewed"`);
+    }
+  }
   if (raw.burialLook !== "jars" && raw.burialLook !== "longon") throw new Error(`${file}: "burialLook" must be "jars" or "longon"`);
   if (raw.houseStyle !== undefined && raw.houseStyle !== "lowland" && raw.houseStyle !== "torogan") throw new Error(`${file}: "houseStyle" must be "lowland" or "torogan"`);
   if (raw.dress !== undefined && raw.dress !== "malong") throw new Error(`${file}: "dress" must be "malong" when given`);

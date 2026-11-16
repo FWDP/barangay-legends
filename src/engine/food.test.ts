@@ -210,7 +210,7 @@ describe("the Pista", () => {
   });
 
   it("rice wine is brewed from Palay", () => {
-    const s = rich({ resources: { rice: 30, wine: 0 } });
+    const s = rich({ resources: { food: 500, rice: 30, wine: 0, wood: 0, gold: 0, salt: 0 } });
     const b = apply(s, calm, { type: "brew", amount: 5 });
     expect(b.resources.wine).toBe(5);
     expect(b.resources.rice).toBe(30 - 5 * f.brew.ricePerWine);

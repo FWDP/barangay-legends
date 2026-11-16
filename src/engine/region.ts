@@ -749,8 +749,10 @@ export function aiDecide(state: GameState, content: Content, trait: TraitDef): G
     return built === s ? null : built;
   };
   // AI barangays eat Pagkain too (a simple pool: food.ts feed), and keep some Palay.
-  const net = rates(s, ai).net.food;
-  const food = () => tryBuild("gabihan") ?? tryBuild("kaingin") ?? tryBuild("palayan");
+  // AI barangays eat Palay as food, 1:1 (food.ts feed), so both count here.
+  const r = rates(s, ai).net;
+  const net = r.food + r.rice;
+  const food = () => tryBuild("gabihan") ?? tryBuild("kaingin") ?? tryBuild("sagingan") ?? tryBuild("palayan");
   const wantWarriors = Math.floor((s.villagers * trait.warriorPercent) / 100);
   const walls = ai.buildings.filter((b) => b.defense).reduce((n, b) => n + owned(s, b.id), 0);
   const camps = owned(s, "woodcutter-camp");

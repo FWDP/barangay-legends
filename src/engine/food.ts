@@ -123,12 +123,16 @@ export function feed(state: GameState, content: Content, dt: number, foodByBuild
   const resources = { ...state.resources };
   const f = content.rules.food;
   if (content.ai) {
+    // AI barangays: one simple pool. They eat their Palay first, 1:1 (it's most of their
+    // harvest), then Pagkain, so some Pagkain is left for what it pays for (clearing, warriors).
     const made = foodByBuilding.reduce((a, b) => a + b, 0) * dt;
-    let food = resources.food + made - foodEaten * dt;
-    if (food < 0) {
-      resources.rice = Math.max(0, resources.rice + food);
-      food = 0;
-    }
+    let need = foodEaten * dt;
+    const fromRice = Math.min(Math.max(0, resources.rice - f.aiRiceReserve), need);
+    resources.rice -= fromRice;
+    need -= fromRice;
+    // Kept in their houses' jars (and any Kamalig): beyond that, nothing more is stored.
+    const cap = foodCaps(state, content).preserved;
+    const food = Math.max(0, Math.min(Math.max(cap, resources.food), resources.food + made - need));
     resources.food = food;
     return { ...state, resources, foodStore: { ...emptyStore(), preserved: food } };
   }

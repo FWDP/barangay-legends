@@ -7,8 +7,9 @@ import { RESOURCES, type Content, type Resource } from "./content";
 import { apply, buildingCost, canAfford, housing, newGame, owned, rates, tick, warriorCap, type Command, type GameState } from "./game";
 import { pistaBlocker, wornOut } from "./food";
 import { currentTask } from "./gawain";
+import { canReplant } from "./forest";
 import { findPath } from "./paths";
-import { isConnected } from "./map";
+import { isConnected, tileAt } from "./map";
 import { inClearing, isReserved } from "./plaza";
 import { autoPlaceTile, isUnlocked } from "./map";
 import { nearestClearable } from "./clearing";
@@ -116,6 +117,9 @@ export function botDecide(state: GameState, content: Content): GameState {
   }
   // Out of food: forage by hand (as a player would tap) until the food workplaces catch up.
   if (state.resources.food < 3) {
+    // A new food workplace first, if there are hands for it; else forage.
+    const built = r.net.food <= 0 ? tryFood() : null;
+    if (built) return built;
     let s = state;
     for (let i = 0; i < 10; i++) s = apply(s, content, { type: "gather", resource: "food" });
     return s;
@@ -193,6 +197,43 @@ export function botDecide(state: GameState, content: Content): GameState {
   for (const step of steps) {
     const next = step();
     if (next) return next;
+  }
+  // Tasks about the forest: ask the spirits' leave before clearing, replant cleared land.
+  const task = currentTask(state, content)?.condition.type;
+  if (task === "permittedClears") {
+    const asked = run({ type: "askPermission" });
+    if (asked !== state) return asked;
+    // Not enough Favor yet: an offering at the Dambana (a tradition chosen first).
+    if (!state.tradition && content.traditions[0]) return run({ type: "chooseTradition", tradition: content.traditions[0].id });
+    const need = content.rules.worship.permission.favorCost - state.favor;
+    const wood = Math.ceil(need / content.rules.worship.favorPerValue / (content.rules.worship.offeringValues.wood ?? 1));
+    if (need > 0 && state.resources.wood >= wood + 50) {
+      const offered = run({ type: "offer", gift: { wood } });
+      if (offered !== state) return offered;
+    }
+  }
+  if (task === "replanted" && state.replanting.length < 3) {
+    const { plaza } = state.map;
+    for (let r = 4; r < 14; r++)
+      for (let dy = -r; dy <= r; dy++)
+        for (const dx of [-r, r]) {
+          const x = plaza.x + dx;
+          const y = plaza.y + dy;
+          // Only at the forest's edge and away from buildings, so no path is cut off.
+          const near = (t: string) => [-1, 0, 1].some((ddy) => [-1, 0, 1].some((ddx) => tileAt(state.map, x + ddx, y + ddy) === t));
+          if (!canReplant(state, content, x, y) || !near("forest") || state.buildings.some((o) => Math.abs(o.x - x) <= 2 && Math.abs(o.y - y) <= 2)) continue;
+          const next = run({ type: "replant", x, y });
+          if (next !== state) return next;
+        }
+  }
+  // A kaingin to rest: plant one by the forest if there's none.
+  if (task === "rested" && owned(state, "kaingin") === 0) {
+    const def = content.buildings.find((d) => d.id === "kaingin")!;
+    const tile = isUnlocked(state, def) && canAfford(state, buildingCost(content, def, 0)) ? autoPlaceTile(state, content, def) : null;
+    if (tile) {
+      const next = run({ type: "build", building: "kaingin", x: tile.x, y: tile.y });
+      if (next !== state) return next;
+    }
   }
   // The task asks for buildings joined by a Daan: lay one from the clearing to the nearest
   // workplace not yet joined, as a player following the task would.
