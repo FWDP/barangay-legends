@@ -18,9 +18,18 @@ different form, and some (prestige and Dangal, export codes) isn't built yet.
 
 **Built so far**
 
-- **Barangay:** gathering, forest clearing, 13 buildings (including the Bantayan, Kuta, Tulay, Kamalig,
-  Fishing Dock, Babaylan's hut, Dambana, Libingan and Balangay Dock), Daan footpaths, villagers who work on
-  their own, happiness, named villagers with stories, and gentle deaths with mourning.
+- **Barangay:** foraging, forest clearing, 24 buildings (houses, ten food buildings, the Palayan,
+  Kamalig, Asinan, Baklad, Bantayan, Kuta, Suyak, Tulay, Babaylan's hut, Dambana, Libingan and
+  Balangay Dock, among others), Daan footpaths, villagers who work on their own, happiness, named
+  villagers with stories, and gentle deaths with mourning.
+- **The ruler (V.3, `engine/household.ts`):** a woman or a man, chosen on the new-game form and
+  changeable once in Settings; the spouse follows. The title is Datu for both; a woman ruler of a
+  Tagalog barangay may be called Dayang (`content/traditions` womanHonorific, flagged).
+- **Notices and the map (V.5-V.7):** the "+N" badge and every banner can be tapped and sit above
+  the map's labels; connection footprints show only with the Daan tool, while placing, or with
+  "Show connections" on; deaths are told as they happened (fell attacking a barangay, fell
+  defending ours, old age, sickness, hunger), the same in the history, life stories and the
+  Libingan.
 - **Seasons and events:** rainy and dry seasons, typhoons, fires, sickness, hunger and choice
   events. Offline progress and autosave.
 - **Faith:** a tradition per barangay (Tagalog, Visayan, Maranao), the Dambana with Favor and
@@ -125,7 +134,9 @@ deterministic with time passed in, every barangay has an id and a map position, 
 versioned with migrations. Multiplayer (Supabase), cloud saves and online rankings can be added
 without a rewrite.
 
-**Not built yet:** prestige and Dangal, save export codes, accounts, the historian review.
+**Not built yet:** prestige and Dangal, save export codes, accounts, the historian review,
+heirlooms as their own resource (the blood price uses gold, Palay and rice wine for now), and a
+batalan on higher-level houses.
 
 ## Guiding principles
 
@@ -154,6 +165,11 @@ The player starts as a new datu with 5 villagers, 1 bahay kubo and 10 rice, and 
 ## Resources and buildings
 
 V1 ships with 4 resources and 6 buildings. All numbers below are starting values for playtesting, not final balance.
+
+> **Today** (see "Where the game is now"): the resources are Pagkain (everyday food, eaten 0.1 a
+> second per villager, from foraging and ten food buildings), Palay (rice, a prestige grain from
+> the Palayan), wood, gold, Asin (salt) and rice wine; labour costs such as the woodcutter camp,
+> clearing and warriors are paid in Pagkain. The tables below are the original V1 plan.
 
 | Resource | How you get it | What it's for |
 | --- | --- | --- |

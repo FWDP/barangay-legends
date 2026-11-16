@@ -21,7 +21,7 @@ Every sound in the game is generated in the browser with the Web Audio API. Ther
 
 | Sound | When it plays | How it is made | Source |
 | --- | --- | --- | --- |
-| Gather (rice) | Tapping Gather Rice (at most once per 250 ms) | Short falling sine tone | Generated, `sfx.gather` |
+| Forage (food) | Tapping Forage (at most once per 250 ms) | Short falling sine tone | Generated, `sfx.gather` |
 | Gather (wood) | Tapping Gather Wood, starting to clear land | Short falling triangle tone | Generated, `sfx.gather` |
 | Pick up | Choosing a building to place or move | Two quick triangle "tocks" | Generated, `sfx.pick` |
 | Build | Placing, moving, repairing or demolishing a building | Low thunk and a two-note chime | Generated, `sfx.build` |
@@ -34,6 +34,7 @@ Every sound in the game is generated in the browser with the Web Audio API. Ther
 | Ambient: river | Always, while sound is on (music volume) | Looping soft noise through a low-pass filter, slowly swelling | Generated, `startAmbient` |
 | Ambient: birds | Every few seconds | Short bursts of high sine chirps | Generated, `startAmbient` |
 | Ambient: gongs | Every 15–30 seconds | One to three soft gong notes from a five-note scale | Generated, `startAmbient` |
+| Evening music | At night, not while the barangay mourns (music volume) | Soft gong phrases and breathy sine "flute" notes; a run of small gongs in Maranao barangays | Generated, `setEveningMusic` |
 
 The gongs are kulintang-*style*: a sine fundamental with a few slightly inharmonic partials and a long decay. They are not samples or tuned copies of a real kulintang set. A real recording would be welcome if it is CC0 and its source is listed here.
 

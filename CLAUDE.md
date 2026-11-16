@@ -57,7 +57,7 @@ docs/                design docs
 
 ## Future-proofing for war and multiplayer
 
-The long-term plan is war, raids and alliances against neighboring barangays: AI first, then real players via a database (Supabase). The AI side is built (raids, alliances, wars, sea travel, visits, the ranking). Real players are not: keep these rules so they can be added without a rewrite:
+The long-term plan is war, raids and alliances against neighboring barangays: AI first, then real players via a database (Supabase). The AI side is built (raids, alliances, wars, feuds and making peace, captives and ransom, sea travel, visits, the ranking). Real players are not: keep these rules so they can be added without a rewrite:
 
 - Every player action is a serializable command object (build, gather, place, later attack). Game state is derived by applying commands to the engine.
 - The engine is deterministic: seeded RNG stored in GameState, no Math.random() or Date.now() inside src/engine (time is passed in).

@@ -1,8 +1,9 @@
 # Barangay Legends
 
 A free, open-source idle builder set in a precolonial Philippine barangay.
-You are a new datu: gather rice and wood, build bahay kubo and palayan, look after your people,
-and earn a name among the barangays of the islands, by friendship or by force.
+You are a new datu (a woman or a man): forage for food and wood, plant gabi and kaingin, build
+houses on posts, look after your people, and earn a name among the barangays of the islands, by
+friendship or by force.
 
 **Play:** https://barangaylegends.fwdp.org (free, in the browser, on phones and desktops)
 
@@ -11,17 +12,28 @@ See [the design doc](docs/game-design.md) for the plan and where the game is tod
 
 ## What's in the game
 
-- **Build and grow:** gather, clear the forest, build houses, fields, camps, a granary, fishing
-  docks, Daan footpaths and Tulay bridges. Villagers work on their own, eat rice and have a mood.
+- **Build and grow:** forage, clear the forest, build houses on posts, food fields, camps, a
+  Kamalig, fishing landings, Daan footpaths and Tulay bridges. Villagers work on their own, have
+  a mood, and move a house together (bayanihan).
+- **How a barangay really ate:** everyday food (Pagkain) from gabi, yams and millet, bananas,
+  sago, coconuts, fish, shore gathering, hunting and pens; rice (Palay) as a prestige grain for
+  offerings, rice wine and feasts; salt, household jars, fish corrals, spoilage, a varied diet,
+  and the Pista at the Bahay ng Datu.
 - **Seasons and events:** rainy and dry seasons, typhoons, fires, sickness, and choice events.
 - **Faith and folklore:** choose a tradition (Tagalog, Visayan or Maranao), build a Dambana and
   receive anito blessings, keep the Forest Balance, and fill the Aklat ng Alamat with sourced lore.
 - **The Bahay ng Datu:** the datu's house at the plaza grows over five levels and unlocks envoys,
   the Balangay and alliances.
-- **Named villagers:** some villagers get names and stories; those who die are remembered at the
-  Libingan.
+- **Named villagers:** some villagers get names and life stories; those who die are remembered at
+  the Libingan.
 - **The archipelago (Rehiyon):** islands of AI barangays to trade with, marry into, make sandugo
   with, raid or defend against. Sail between islands by Balangay, and join or lead alliances.
+- **War as it was:** quick raids where few die (most are wounded, some held for ransom), blood
+  debts and feuds, and making peace through a go-between, a blood price and a sealed peace.
+  Warriors earn honor (batok in Visayan barangays); a Bantayan, a Kuta and suyak stakes defend
+  the shore, and the tambuli calls allies.
+- **A lively barangay:** evenings under the silong and by the fire, music, children's games, and
+  feasts with dancing and guests.
 - **Renown and levels:** Kabantugan (renown) raises your barangay through 20 levels with rewards.
 - **Bisitahin:** visit any barangay and see their village, then trade, send a gift, talk alliances
   or plan a raid.
