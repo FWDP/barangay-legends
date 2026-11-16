@@ -338,6 +338,8 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
   // v34 → v35: the ruler's gender is a choice (household.changed, household.honorific). Older
   // saves keep the household they had (a man unless the datu's name made her a woman).
   34: (raw) => ({ ...raw, version: 35 }),
+  // v35 → v36: battles leave wounded and captives (warfare.ts); older saves have none.
+  35: (raw) => ({ ...raw, version: 36 }),
 };
 
 // ---------- Food (v33 → v34) ----------
@@ -622,6 +624,9 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean, withRegi
     state.typhoon = { strikeAt: data.typhoon.strikeAt };
   }
   parseFood(data, content, state);
+  // The wounded and hiding in the forest (warfare.ts).
+  if (Array.isArray(data.wounded)) state.wounded = data.wounded.filter((w): w is number => finiteNonNeg(w) && w > 0).slice(0, state.warriors);
+  if (isObject(data.hiding) && finiteNonNeg(data.hiding.until) && data.hiding.until > state.time) state.hiding = { until: data.hiding.until };
   if (isObject(data.nextEventAt)) {
     state.nextEventAt = Object.fromEntries(
       Object.entries(data.nextEventAt).filter((e): e is [string, number] => finiteNonNeg(e[1])),
@@ -1144,6 +1149,8 @@ function parseRegion(raw: unknown, content: Content, player: GameState): RegionS
       .filter((r): r is Report => isObject(r) && finiteNonNeg(r.id) && typeof r.kind === "string" && ids.has(r.neighbor as string))
       .slice(-12),
     nextReportId: finiteNonNeg(raw.nextReportId) ? Math.floor(raw.nextReportId) : 1,
+    // Warriors held for ransom (warfare.ts): kept while their barangay is known.
+    ...captivesOf(raw, ids),
     nextTributeAt: finiteNonNeg(raw.nextTributeAt) ? raw.nextTributeAt : fresh.nextTributeAt,
     paths,
     victory:
@@ -1153,6 +1160,19 @@ function parseRegion(raw: unknown, content: Content, player: GameState): RegionS
     ...parseArchipelago(raw, content, player, fresh, neighbors),
   };
 }
+
+/** Warriors held for ransom (warfare.ts), kept while their barangay is known; none: left out. */
+function captivesOf(raw: RawSave, ids: Set<string>): Pick<RegionState, "captives" | "nextCaptiveId"> {
+  const captives = (Array.isArray(raw.captives) ? raw.captives : [])
+      .filter((c): c is RawSave => isObject(c) && Number.isInteger(c.id) && (c.side === "ours" || c.side === "theirs") && ids.has(c.neighbor as string) && Number.isInteger(c.count) && (c.count as number) > 0 && finiteNonNeg(c.at) && finiteNonNeg(c.until) && finiteNonNeg(c.ransom))
+      .slice(0, 50)
+      .map((c) => ({ id: c.id as number, side: c.side as "ours" | "theirs", neighbor: c.neighbor as string, count: c.count as number, at: c.at as number, until: c.until as number, ransom: c.ransom as number }));
+  return {
+    ...(captives.length ? { captives } : {}),
+    ...(Number.isInteger(raw.nextCaptiveId) ? { nextCaptiveId: Math.max(1, raw.nextCaptiveId as number) } : {}),
+  };
+}
+
 
 /** Islands, places, blocs and wars, the Balita and boats at sea. Missing (an older save): made from the seed. */
 function parseArchipelago(raw: RawSave, content: Content, player: GameState, fresh: RegionState, neighbors: NeighborState[]): Pick<RegionState, "islands" | "places" | "politics" | "news" | "nextNewsId" | "voyages" | "nextVoyageId"> {

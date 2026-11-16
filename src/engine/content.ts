@@ -754,6 +754,8 @@ export interface PlacementRules {
 }
 
 export interface MilitaryRules {
+  /** How battles end (W.1, warfare.ts): morale, wounded, the few who die, captives and ransom, fleeing. */
+  battle: import("./warfare").BattleRules;
   /** A Mandirigma: trained from a villager, who then guards and fights instead of working. */
   warrior: { cost: ResourceAmounts; attack: number; defense: number };
   /** Defense every barangay has before warriors and walls. */

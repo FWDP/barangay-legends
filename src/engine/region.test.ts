@@ -160,9 +160,9 @@ describe("Mangayaw (raids)", () => {
       expect(other.trust).toBe(Math.max(0, nb(s, other.id).trust - d.raid.trustLossAll));
     }
     expect(after.region!.paths).toContain("mangayaw");
-    // Only fallen warriors leave their village: no captives.
-    expect(nb(after, target).state.villagers).toBe(nb(s, target).state.villagers - report.theirLosses!);
-    expect(after.warriors).toBe(10 - report.ourLosses!);
+    // Their fallen and their warriors held for ransom leave their village for now; ours mostly wounded.
+    expect(nb(after, target).state.villagers).toBe(nb(s, target).state.villagers - report.fallen!.theirs - report.captured!.theirs);
+    expect(after.warriors).toBe(10 - report.fallen!.ours);
   });
 
   it("a loss costs warriors and brings nothing", () => {
@@ -170,9 +170,12 @@ describe("Mangayaw (raids)", () => {
     const after = apply(s, calm, { type: "raid", neighbor: target, warriors: 10 });
     const report = after.region!.reports.at(-1)!;
     expect(report.win).toBe(false);
-    expect(report.ourLosses).toBe(4); // 40% of 10
-    expect(after.warriors).toBe(6);
-    expect(after.villagers).toBe(16);
+    // 30% of 10 hurt: mostly wounded, a few may fall or be held; deaths are rare.
+    expect(report.ourLosses).toBe(3);
+    expect(report.fallen!.ours + report.wounded!.ours + report.captured!.ours).toBe(3);
+    expect(report.fallen!.ours).toBeLessThanOrEqual(1);
+    expect(after.warriors).toBe(10 - report.fallen!.ours);
+    expect(after.villagers).toBe(20 - report.fallen!.ours);
     expect(after.resources).toEqual(s.resources);
     expect(nb(after, target).influence).toBe(0);
     expect(after.region!.renown).toBe(0);

@@ -43,5 +43,8 @@ console.log(`First built (minutes): ${Object.entries(firsts).map(([k, t]) => `${
 console.log(
   `Raids on the barangay: ${raids.defenses}, beaten off ${raids.won} (${raids.defenses ? Math.round((raids.won * 100) / raids.defenses) : 0}%), lost ${raids.lostRice} rice, ${raids.lostFood} food and ${raids.lostWood} wood`,
 );
+console.log(
+  `Deaths per raid on us: ${raids.defenses ? ((raids.ourFallen) / raids.defenses).toFixed(2) : 0} ours, ${raids.defenses ? (raids.theirFallen / raids.defenses).toFixed(2) : 0} raiders'; our raids: ${raids.attacks}, won ${raids.attacks ? Math.round((raids.attacksWon * 100) / raids.attacks) : 0}%, our dead per raid ${raids.attacks ? (raids.attackFallen / raids.attacks).toFixed(2) : 0}`,
+);
 console.log(`Seconds eating Palay (no Pagkain): ${eatingRiceSeconds}; Pistas held: ${pistas}`);
 console.log(`(${days} days, seed ${seed}, ${((performance.now() - started) / 1000).toFixed(1)} s)`);

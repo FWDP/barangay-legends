@@ -22,6 +22,7 @@ import { drawBoat, drawPerson, drawSparks, useReducedMotion } from "./VillagerLa
 import { keepOnLand } from "./villagers";
 import { datuHouseBox, datuHouseImage, eraseImage, houseStyleFor, type HouseStyle } from "./datuHouseArt";
 import { householdOf } from "../engine/household";
+import { battleLines } from "./RegionOverlays";
 import { houseFront } from "../engine/plaza";
 import type { Appearance } from "./villagers";
 
@@ -60,7 +61,11 @@ export function reportLines(e: Expedition, state: GameState, content: Content, g
     const joined = b.defenders.posts.filter((p) => p.arrives).reduce((n, p) => n + p.warriors, 0);
     lines.push(fill(t.sides[lang], { attackers: e.party.count, defenders: joined }));
     lines.push(fill(t.chance[lang], { percent: Math.round(b.chance * 100) }));
-    lines.push(fill(t.losses[lang], { attackers: b.attackerLosses, defenders: b.defenderLosses }));
+    // How it ended (W.1): wounded, fallen and held, from the battle's report while it's kept.
+    const report = e.reportId !== undefined ? state.region?.reports.find((r) => r.id === e.reportId) : undefined;
+    const ended = report ? battleLines(report, content, game, lang) : [];
+    if (ended.length) lines.push(...ended);
+    else lines.push(fill(t.losses[lang], { attackers: b.attackerLosses, defenders: b.defenderLosses }));
     if (b.kutaBonus > 0) lines.push(fill(t.kuta[lang], { bonus: Math.round(b.kutaBonus), cover: b.watched ? t.covered[lang] : "" }));
     if (b.defenders.late > 0) lines.push(fill(t.late[lang], { n: b.defenders.late }));
     const allies = b.allies.filter((a) => a.arrives).map((a) => placeName(state, content, a.id, game, lang));

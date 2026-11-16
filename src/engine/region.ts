@@ -14,6 +14,7 @@ import { Rng } from "./rng";
 import { proposeTrade, type CounterOffer, type Proposal } from "./trading";
 import { chooseLanding, raidLanding, raidWindow, sheltered } from "./border";
 import { lootableFood } from "./food";
+import { addWounded, endBattle, heldAway, lossTotal, ransomFor, shouldFlee, woundedCount, type BattleEnd, type Captive } from "./warfare";
 import { isWatched, warningFor } from "./watch";
 import { dayPhaseAt, isNightAt } from "./daynight";
 import { seasonAt } from "./events";
@@ -155,6 +156,17 @@ export interface Report {
   renown?: number;
   /** The player's raids: the share of renown it brings (less for raiding the same barangay again that day). */
   renownFactor?: number;
+  /** Battles (W.1): each side's wounded, fallen and captured; whose morale broke and why; how the losers withdrew. */
+  wounded?: { ours: number; theirs: number };
+  fallen?: { ours: number; theirs: number };
+  captured?: { ours: number; theirs: number };
+  broke?: "attackers" | "defenders";
+  reason?: "losses" | "leader";
+  withdrew?: "boat" | "land";
+  /** A captive record (warfare.ts) for warriors held after this battle, ours or theirs. */
+  captive?: number;
+  /** The villagers fled into the forest (no Kuta, an overwhelming raid). */
+  fled?: boolean;
   /** Raids: where it was fought, warriors too far away to arrive in time, and whether a staffed Bantayan watched the landing (v33). */
   landing?: Point;
   late?: number;
@@ -198,6 +210,9 @@ export interface RegionState {
   nextVoyageId: number;
   /** An ally's call for help, waiting for the datu's answer (missing in older saves). */
   allyCall?: AllyCall | null;
+  /** Warriors held for ransom after battles, ours and theirs (warfare.ts); they always come home. */
+  captives?: Captive[];
+  nextCaptiveId?: number;
 }
 
 const EPSILON = 1e-9;
@@ -336,7 +351,8 @@ export function homeWarriors(state: GameState): number {
   const guarding = state.region?.neighbors.reduce((n, nb) => n + (nb.guard?.warriors ?? 0), 0) ?? 0;
   // Warriors at sea (on a raid by Balangay, or coming home) are away too.
   const atSea = state.region?.voyages?.reduce((n, v) => n + v.warriors, 0) ?? 0;
-  return Math.max(0, state.warriors - guarding - atSea);
+  // So are warriors held for ransom, and the wounded rest until they heal (warfare.ts).
+  return Math.max(0, state.warriors - guarding - atSea - heldAway(state) - woundedCount(state));
 }
 
 /** Defense against a raid: a base, warriors at home, and every standing defensive building (Kuta). */
@@ -597,11 +613,14 @@ export function raid(state: GameState, content: Content, id: string, warriors: n
   const rng = new Rng(state.rng);
   const fight = borderBattle(setup.village, content, setup.landing, warriors, setup.allies, rng.next());
   const { attack, defense, battle } = fight;
-  const ourLosses = casualties(warriors, battle.attackerLossPercent, !battle.attackerWins);
-  const theirLosses = casualties(fight.defenders, battle.defenderLossPercent, battle.attackerWins);
+  // The battle ends when one side's morale breaks: mostly wounded, few dead, some held (warfare.ts).
+  const end = endBattle(battle.attackerWins, warriors, fight.defenders, battleRolls(state, state.region!.nextReportId), content, battleOpts(state, content, id, "attack"));
+  const ourLosses = lossTotal(end.attacker);
+  const theirLosses = lossTotal(end.defender);
 
-  let player = loseWarriors({ ...state, rng: rng.seed }, ourLosses);
-  let them = loseWarriors(target.state, theirLosses);
+  let player = addWounded(loseWarriors({ ...state, rng: rng.seed }, end.attacker.fallen), content, end.attacker.wounded);
+  // Their captured warriors are held by us; ours by them. Everyone comes home in the end.
+  let them = loseWarriors(target.state, end.defender.fallen + end.defender.captured);
   let loot: Partial<Record<Resource, number>> = {};
   if (battle.attackerWins) {
     loot = takeShare(them, m.lootPercent);
@@ -642,6 +661,8 @@ export function raid(state: GameState, content: Content, id: string, warriors: n
     region = addPath(region, "mangayaw");
     [region, next] = addInfluence(region, next, d.raid.influence * datuInfluenceMultiplier(state, content), content, state.time);
   }
+  const captive = takeCaptives(region, state, content, id, end.attacker.captured, end.defender.captured);
+  region = captive.region;
   region = addReport(region, {
     time: state.time,
     kind: "raid",
@@ -652,6 +673,8 @@ export function raid(state: GameState, content: Content, id: string, warriors: n
     chance: battle.chance,
     ourLosses,
     theirLosses,
+    ...battleFields(end, "attack"),
+    ...(captive.id !== null ? { captive: captive.id } : {}),
     loot,
     renown: battle.attackerWins ? d.raid.renown : 0,
     renownFactor,
@@ -929,11 +952,16 @@ function aiRaidStrikes(state: GameState, content: Content, second: number, rng: 
   const fight = borderBattle(state, content, landing, attacker.state.warriors, coming, rng.next(), window);
   const { attack, defense, battle, defenders } = fight;
   const border = fight.muster ? { muster: fight.muster } : null;
-  const ourLosses = casualties(defenders, battle.defenderLossPercent, battle.attackerWins);
-  const theirLosses = casualties(attacker.state.warriors, battle.attackerLossPercent, !battle.attackerWins);
+  // The battle ends when one side's morale breaks (warfare.ts): mostly wounded, few dead, some held.
+  const end = endBattle(battle.attackerWins, attacker.state.warriors, defenders, battleRolls(state, region.nextReportId), content, battleOpts(state, content, attacker.id, "defense"));
+  const ourLosses = lossTotal(end.defender);
+  const theirLosses = lossTotal(end.attacker);
 
-  let player = loseWarriors(state, ourLosses);
-  let them = loseWarriors(attacker.state, theirLosses);
+  let player = addWounded(loseWarriors(state, end.defender.fallen), content, end.defender.wounded);
+  let them = loseWarriors(attacker.state, end.attacker.fallen + end.attacker.captured);
+  // No Kuta and an overwhelming raid: the villagers flee into the forest and come back after.
+  const fled = shouldFlee(state, content, attack, defense);
+  if (fled) player = { ...player, hiding: { until: second + content.rules.military.battle.hideSeconds } };
   let lost: Partial<Record<Resource, number>> = {};
   // Raiders take what they can and leave quickly: less from storehouses and fields in a Kuta's
   // shelter, and less still if allied defenders are on their way. No villager is ever taken.
@@ -945,6 +973,8 @@ function aiRaidStrikes(state: GameState, content: Content, second: number, rng: 
   const neighbors = [...base.neighbors];
   neighbors[i] = { ...attacker, state: them };
   let next: RegionState = { ...base, neighbors, renown: base.renown + (battle.attackerWins ? 0 : d.aiRaid.defendRenown) };
+  const captive = takeCaptives(next, state, content, attacker.id, end.defender.captured, end.attacker.captured, second);
+  next = captive.region;
   next = addReport(next, {
     time: second,
     kind: "defense",
@@ -955,6 +985,9 @@ function aiRaidStrikes(state: GameState, content: Content, second: number, rng: 
     chance: 1 - battle.chance,
     ourLosses,
     theirLosses,
+    ...battleFields(end, "defense"),
+    ...(captive.id !== null ? { captive: captive.id } : {}),
+    ...(fled ? { fled: true } : {}),
     lost,
     renown: battle.attackerWins ? 0 : d.aiRaid.defendRenown,
     ...(landing && border ? { landing, late: border.muster.late, watched: border.muster.watched } : {}),
@@ -1360,4 +1393,102 @@ function allyFightsAlone(state: GameState, content: Content, ally: string, enemy
     n.id === ally ? { ...n, state: loseWarriors(n.state, allyLosses) } : n.id === enemy ? { ...n, state: loseWarriors(n.state, enemyLosses) } : n,
   );
   return { ...state, region: addNews({ ...region, neighbors }, { time: state.time, key: battle.attackerWins ? "ally-lost" : "ally-defended", barangay: ally, other: enemy }) };
+}
+
+// ---------- Battles end quickly; few die (W.1, warfare.ts) ----------
+
+const SALT_BATTLE = 7701;
+
+/** Seeded rolls for how a battle ends, from the map's seed and the battle's report id. */
+function battleRolls(state: GameState, reportId: number): number[] {
+  return [0, 1, 2, 3, 4].map((k) => rollAt(state.map.seed, reportId * 8 + k, SALT_BATTLE));
+}
+
+/** Fiercer battles (feuds, see feud.ts) and steadier warriors (honor, see honor.ts); none yet. */
+function battleOpts(state: GameState, content: Content, neighbor: string, side: "attack" | "defense"): { fierce?: boolean; attackerSteady?: number; defenderSteady?: number } {
+  void state;
+  void content;
+  void neighbor;
+  void side;
+  return {};
+}
+
+/** The report's fields for a battle's end, from our side ("attack": we raided; "defense": we were raided). */
+function battleFields(end: BattleEnd, side: "attack" | "defense"): Partial<Report> {
+  const ours = side === "attack" ? end.attacker : end.defender;
+  const theirs = side === "attack" ? end.defender : end.attacker;
+  return {
+    wounded: { ours: ours.wounded, theirs: theirs.wounded },
+    fallen: { ours: ours.fallen, theirs: theirs.fallen },
+    captured: { ours: ours.captured, theirs: theirs.captured },
+    broke: end.broke,
+    reason: end.reason,
+    withdrew: end.withdrew,
+  };
+}
+
+/**
+ * Records warriors held after a battle: `ours` of ours held by `neighbor`, `theirs` of theirs held
+ * by us. One record per battle (both sides rarely lose warriors to capture at once: the beaten
+ * side's are taken). Returns the region and the record's id, or null.
+ */
+function takeCaptives(region: RegionState, state: GameState, content: Content, neighbor: string, ours: number, theirs: number, at = state.time): { region: RegionState; id: number | null } {
+  const b = content.rules.military.battle;
+  const side: Captive["side"] | null = ours > 0 ? "ours" : theirs > 0 ? "theirs" : null;
+  if (!side) return { region, id: null };
+  const count = side === "ours" ? ours : theirs;
+  const id = region.nextCaptiveId ?? 1;
+  const captive: Captive = { id, side, neighbor, count, at, until: at + b.captiveSeconds, ransom: ransomFor(content, count) };
+  return { region: { ...region, captives: [...(region.captives ?? []), captive], nextCaptiveId: id + 1 }, id };
+}
+
+/** Pay the ransom for our warriors held by another barangay: gold to them, and they come home. */
+export function payRansom(state: GameState, content: Content, id: number): GameState {
+  void content;
+  const region = state.region;
+  const c = region?.captives?.find((x) => x.id === id && x.side === "ours");
+  if (!region || !c || state.resources.gold < c.ransom) return state;
+  const neighbors = region.neighbors.map((n) => (n.id === c.neighbor ? { ...n, state: { ...n.state, resources: { ...n.state.resources, gold: n.state.resources.gold + c.ransom } } } : n));
+  const captives = region.captives!.filter((x) => x !== c);
+  return {
+    ...state,
+    resources: { ...state.resources, gold: state.resources.gold - c.ransom },
+    region: addNews({ ...region, neighbors, captives }, { time: state.time, key: "ransomPaid", barangay: c.neighbor }),
+  };
+}
+
+/**
+ * Captives come home: ours when their time is up (or after a ransom); theirs too, or sooner when
+ * their barangay pays us ransom (aiRansomAfterSeconds after the battle, if it has the gold).
+ */
+export function updateCaptives(state: GameState, content: Content, t: number): GameState {
+  const region = state.region;
+  if (!region?.captives?.length) return state;
+  const b = content.rules.military.battle;
+  let s = state;
+  let r: RegionState = region;
+  const keep: Captive[] = [];
+  for (const c of region.captives) {
+    const nb = r.neighbors.find((n) => n.id === c.neighbor);
+    const pays = c.side === "theirs" && nb && t >= c.at + b.aiRansomAfterSeconds && nb.state.resources.gold >= c.ransom;
+    if (t < c.until && !pays) {
+      keep.push(c);
+      continue;
+    }
+    if (c.side === "theirs" && nb) {
+      // Their warriors go home (and they pay us, if they ransomed them).
+      const gold = pays ? c.ransom : 0;
+      r = {
+        ...r,
+        neighbors: r.neighbors.map((n) =>
+          n.id === c.neighbor ? { ...n, state: { ...n.state, warriors: n.state.warriors + c.count, villagers: n.state.villagers + c.count, resources: { ...n.state.resources, gold: n.state.resources.gold - gold } } } : n,
+        ),
+      };
+      if (gold > 0) {
+        s = { ...s, resources: { ...s.resources, gold: s.resources.gold + gold } };
+        r = addNews(r, { time: t, key: "ransomReceived", barangay: c.neighbor });
+      } else r = addNews(r, { time: t, key: "captivesFreed", barangay: c.neighbor });
+    } else r = addNews(r, { time: t, key: "captivesHome", barangay: c.neighbor });
+  }
+  return { ...s, region: { ...r, captives: keep } };
 }

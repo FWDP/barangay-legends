@@ -1393,6 +1393,12 @@ export function App() {
         onSeen={setSeenReport}
         hold={clash !== null || away !== null}
         names={(r) => battleNames(r, state, ui.game, lang, content)}
+        game={ui.game}
+        lang={lang}
+        onRansom={(captive) => {
+          dispatch({ type: "payRansom", captive });
+          sfx.click();
+        }}
         reason={(r) => (r.kind === "defense" ? defenseReasonLine(r, state, ui.game, lang) : null)}
         showLabel={ui.game.defense.showMe[lang]}
         onShowShore={(r) =>

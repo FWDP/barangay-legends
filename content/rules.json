@@ -71,7 +71,23 @@
     "loserLossPercent": 40,
     "lootPercent": 25,
     "warriorTilesPerSecond": 1,
-    "warriorsPerKuta": 6
+    "warriorsPerKuta": 6,
+    "battle": {
+      "_comment": "How battles end (W.1, engine/warfare.ts), raids both ways. The winner is still decided by attack vs defense; then morale breaks: the beaten side loses loserCasualtyPercent of its warriors, the winner winnerCasualtyPercent (steadier, honored warriors less, up to honorSteadyPercent). Of those hurt, fallenPercent die (feudFallenPercent in a feud's vengeance raid), and of the beaten side's living hurt, captivePercent are held for ransom; the rest are wounded and heal in woundSeconds (faster with a healer's hut). The beaten side breaks when its leader or bravest falls with chance leaderBreakPercent (the report says so). Captives come home after captiveSeconds, or for ransomGoldPerWarrior gold each; AI barangays ransom theirs aiRansomAfterSeconds after the battle if they have the gold. With no Kuta, villagers flee into the forest for hideSeconds when the raiders' attack is fleeAttackRatio times the defense. Playtest guesses, tuned with npm run simulate.",
+      "loserCasualtyPercent": 30,
+      "winnerCasualtyPercent": 8,
+      "fallenPercent": 15,
+      "feudFallenPercent": 35,
+      "captivePercent": 30,
+      "leaderBreakPercent": 30,
+      "honorSteadyPercent": 20,
+      "woundSeconds": 150,
+      "captiveSeconds": 900,
+      "ransomGoldPerWarrior": 15,
+      "aiRansomAfterSeconds": 120,
+      "fleeAttackRatio": 2,
+      "hideSeconds": 60
+    }
   },
   "diplomacy": {
     "truceSeconds": 600,

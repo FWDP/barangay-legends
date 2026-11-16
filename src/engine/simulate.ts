@@ -6,6 +6,7 @@
 import { RESOURCES, type Content, type Resource } from "./content";
 import { apply, buildingCost, canAfford, housing, newGame, owned, rates, tick, warriorCap, type Command, type GameState } from "./game";
 import { pistaBlocker, wornOut } from "./food";
+import { homeWarriors } from "./region";
 import { currentTask } from "./gawain";
 import { canReplant } from "./forest";
 import { findPath } from "./paths";
@@ -62,7 +63,7 @@ export interface SimResult {
   /** Everything new in the order it came: buildings unlocked, barangay levels, Bahay ng Datu levels. */
   milestones: { t: number; what: string }[];
   /** Raids on the barangay: how many came, how many were beaten off, and the rice, food and wood they took. */
-  raids: { defenses: number; won: number; lostRice: number; lostWood: number; lostFood: number };
+  raids: { defenses: number; won: number; lostRice: number; lostWood: number; lostFood: number; ourFallen: number; theirFallen: number; attacks: number; attacksWon: number; attackFallen: number };
   /** Seconds spent eating Palay because there was no Pagkain. */
   eatingRiceSeconds: number;
   pistas: number;
@@ -143,7 +144,19 @@ export function botDecide(state: GameState, content: Content): GameState {
     }
   }
   const steps: (() => GameState | null)[] = [
-    () => (r.net.food < 0.3 && (spare > 0 || state.resources.food < 50) ? tryFood() : null),
+    () => {
+      // Short of food: food workplaces are staffed first when food is low (assignWorkers), so build one even with no spare hands.
+      if (!(r.net.food < 0.3)) return null;
+      const built = tryFood();
+      if (built) return built;
+      // No room for a food field: clear a little land (it costs Pagkain: forage for it first).
+      if (state.clearing.length > 0) return null;
+      const cleared = run({ type: "clearArea", tiles: nearestClearable(state, 2) });
+      if (cleared !== state) return cleared;
+      let s = state;
+      for (let i = 0; i < 10; i++) s = apply(s, content, { type: "gather", resource: "food" });
+      return s;
+    },
     // Camps and docks when wood or gold runs short for what comes next, as a player would.
     () => (camps === 0 || (camps * 2 < fields && state.resources.wood < woodNeed && spare > 0) ? tryBuild("woodcutter-camp") : null),
     () => (state.villagers >= housing(state, content) - 1 && (r.net.food > 0.5 || state.resources.food > 100) ? tryBuild("bahay-kubo") : null),
@@ -184,6 +197,14 @@ export function botDecide(state: GameState, content: Content): GameState {
     () => (owned(state, "babaylan-hut") === 0 && state.villagers >= 12 ? tryBuild("babaylan-hut") : null),
     () => (owned(state, "dambana") === 0 && owned(state, "babaylan-hut") > 0 ? tryBuild("dambana") : null),
     () => (owned(state, "libingan") === 0 && state.villagers >= 20 ? tryBuild("libingan") : null),
+    // Now and then, a raid on the weakest independent neighbor with half the warriors at home.
+    () => {
+      if (state.time < 1800 || Math.floor(state.time) % 900 >= THINK_SECONDS || state.warriors < 6 || state.region?.incomingRaid) return null;
+      const n = [...(state.region?.neighbors ?? [])].filter((x) => x.status === "independent" && state.time >= x.raidCooldownUntil).sort((a, b) => a.state.warriors - b.state.warriors)[0];
+      if (!n) return null;
+      const next = run({ type: "raid", neighbor: n.id, warriors: Math.max(1, Math.floor(homeWarriors(state) / 2)) });
+      return next === state ? null : next;
+    },
     // Trade surplus wood for rice now and then, with a friendly neighbor.
     () => {
       const n = state.region?.neighbors.find((x) => x.status !== "tributary" && x.grudge < 20);
@@ -221,7 +242,7 @@ export function botDecide(state: GameState, content: Content): GameState {
           const y = plaza.y + dy;
           // Only at the forest's edge and away from buildings, so no path is cut off.
           const near = (t: string) => [-1, 0, 1].some((ddy) => [-1, 0, 1].some((ddx) => tileAt(state.map, x + ddx, y + ddy) === t));
-          if (!canReplant(state, content, x, y) || !near("forest") || state.buildings.some((o) => Math.abs(o.x - x) <= 2 && Math.abs(o.y - y) <= 2)) continue;
+          if (!canReplant(state, content, x, y) || !near("forest") || state.buildings.some((o) => Math.abs(o.x - x) <= 1 && Math.abs(o.y - y) <= 1)) continue;
           const next = run({ type: "replant", x, y });
           if (next !== state) return next;
         }
@@ -284,7 +305,7 @@ export function simulate(content: Content, days: number, seed = 12345): SimResul
   let lastDatu = s.datuLevel;
   let hungry = 0;
   let full = 0;
-  const raids = { defenses: 0, won: 0, lostRice: 0, lostWood: 0, lostFood: 0 };
+  const raids = { defenses: 0, won: 0, lostRice: 0, lostWood: 0, lostFood: 0, ourFallen: 0, theirFallen: 0, attacks: 0, attacksWon: 0, attackFallen: 0 };
   let eatingRiceSeconds = 0;
   let seenReport = 0;
   const end = days * daySeconds;
@@ -299,7 +320,17 @@ export function simulate(content: Content, days: number, seed = 12345): SimResul
     for (const r of s.region?.reports ?? []) {
       if (r.id <= seenReport) continue;
       seenReport = r.id;
+      // Deaths per raid: the fallen (before W.1 every warrior lost was killed).
+      const fallen = r as { fallen?: { ours: number; theirs: number }; ourLosses?: number; theirLosses?: number };
+      if (r.kind === "raid") {
+        raids.attacks++;
+        if (r.win) raids.attacksWon++;
+        raids.attackFallen += fallen.fallen?.ours ?? fallen.ourLosses ?? 0;
+        continue;
+      }
       if (r.kind !== "defense") continue;
+      raids.ourFallen += fallen.fallen?.ours ?? fallen.ourLosses ?? 0;
+      raids.theirFallen += fallen.fallen?.theirs ?? fallen.theirLosses ?? 0;
       raids.defenses++;
       if (r.win) raids.won++;
       raids.lostRice += r.lost?.rice ?? 0;

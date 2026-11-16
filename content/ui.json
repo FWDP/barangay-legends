@@ -800,6 +800,22 @@
     "defenseRework": {
       "en": "The barangay now keeps watch: Kutas near the water became Bantayan watchtowers, and the rest became palisaded Kutas where the Mandirigma rally and families take refuge.",
       "fil": "Nagbabantay na ngayon ang barangay: naging Bantayan ang mga Kutang malapit sa tubig, at naging nababakurang Kuta ang iba, kung saan nagtitipon ang mga Mandirigma at kumakanlong ang mga pamilya."
+    },
+    "ransomPaid": {
+      "en": "You paid ransom to {barangay}: our warriors are coming home.",
+      "fil": "Nagbayad ka ng tubos sa {barangay}: pauwi na ang ating mga mandirigma."
+    },
+    "ransomReceived": {
+      "en": "{barangay} paid ransom for their warriors, who go home.",
+      "fil": "Nagbayad ng tubos ang {barangay} para sa kanilang mga mandirigma, na umuwi na."
+    },
+    "captivesFreed": {
+      "en": "The warriors of {barangay} we held have gone home.",
+      "fil": "Umuwi na ang mga mandirigma ng {barangay} na ating hawak."
+    },
+    "captivesHome": {
+      "en": "Our warriors held by {barangay} have come home.",
+      "fil": "Nakauwi na ang ating mga mandirigmang hawak ng {barangay}."
     }
   },
   "alliance": {
@@ -1984,6 +2000,60 @@
     "honorificTip": {
       "en": "A sourced honorific for a woman of rank in your tradition, waiting for a historian's review.",
       "fil": "Isang may-pinagmulang tawag sa babaeng may katayuan sa iyong tradisyon, naghihintay ng pagsusuri ng historyador."
+    }
+  },
+  "battle": {
+    "brokeLosses": {
+      "en": "{side} broke after their first losses and withdrew {how}.",
+      "fil": "Nawalan ng loob ang {side} matapos ang unang nasugatan at umatras {how}."
+    },
+    "brokeLeader": {
+      "en": "{side} broke when their bravest fell, and withdrew {how}.",
+      "fil": "Nawalan ng loob ang {side} nang mabuwal ang kanilang pinakamatapang, at umatras {how}."
+    },
+    "attackers": {
+      "en": "The raiders",
+      "fil": "Ang mga mananalakay"
+    },
+    "defenders": {
+      "en": "The defenders",
+      "fil": "Ang mga tagapagtanggol"
+    },
+    "byBoat": {
+      "en": "to their boats",
+      "fil": "pabalik sa kanilang mga bangka"
+    },
+    "byLand": {
+      "en": "into the forest",
+      "fil": "sa gubat"
+    },
+    "ours": {
+      "en": "Ours: {wounded} wounded, {fallen} fallen, {captured} held for ransom.",
+      "fil": "Atin: {wounded} sugatan, {fallen} nasawi, {captured} hawak para sa tubos."
+    },
+    "theirs": {
+      "en": "Theirs: {wounded} wounded, {fallen} fallen, {captured} held by us.",
+      "fil": "Kanila: {wounded} sugatan, {fallen} nasawi, {captured} hawak natin."
+    },
+    "woundedRest": {
+      "en": "Our wounded rest at the healer's hut until they heal.",
+      "fil": "Nagpapahinga sa kubo ng manggagamot ang ating mga sugatan hanggang gumaling."
+    },
+    "ransomOffer": {
+      "en": "{barangay} holds {count} of our warriors. They will come home in time, or now for a ransom.",
+      "fil": "Hawak ng {barangay} ang {count} sa ating mga mandirigma. Uuwi sila pagdating ng panahon, o ngayon kapalit ng tubos."
+    },
+    "ransomButton": {
+      "en": "Pay ransom · {cost}",
+      "fil": "Magbayad ng tubos · {cost}"
+    },
+    "theirCaptives": {
+      "en": "We hold {count} of their warriors. {barangay} may pay ransom for them; they go home either way.",
+      "fil": "Hawak natin ang {count} sa kanilang mga mandirigma. Maaaring magbayad ng tubos ang {barangay}; uuwi rin sila anuman ang mangyari."
+    },
+    "fled": {
+      "en": "With no Kuta to shelter in, the villagers fled into the forest. They are safe and will come back soon.",
+      "fil": "Dahil walang Kutang matataguan, tumakas sa gubat ang mga taga-barangay. Ligtas sila at babalik din."
     }
   }
 }

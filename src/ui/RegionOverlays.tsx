@@ -3,7 +3,9 @@ import { RESOURCES, type Content, type Resource } from "../engine/content";
 import type { Command, GameState } from "../engine/game";
 import { neighborDef, type Path, type Report } from "../engine/region";
 import { clock } from "./EventBanners";
-import { formatDuration, RESOURCE_ICON } from "./format";
+import { costText, formatDuration, RESOURCE_ICON } from "./format";
+import { fill, type GameText } from "./uiContent";
+import type { Lang } from "./settings";
 
 const goods = (g?: Partial<Record<Resource, number>>) =>
   RESOURCES.filter((r) => (g?.[r] ?? 0) > 0)
@@ -17,8 +19,37 @@ function border(report: Report): string[] {
   return lines;
 }
 
-/** The title and short lines of a report. Captives never appear: goods are abstract tribute. */
-export function describeReport(report: Report, content: Content): { icon: string; title: string; lines: string[] } {
+/**
+ * How a battle ended (W.1): whose morale broke and how they withdrew, each side's wounded, fallen
+ * and held for ransom, and a line if the villagers fled into the forest.
+ */
+export function battleLines(report: Report, content: Content, game: GameText, lang: Lang): string[] {
+  const t = game.battle;
+  if (!report.fallen || !report.wounded || !report.captured) return [];
+  const lines: string[] = [];
+  if (report.broke) {
+    const side = report.broke === "attackers" ? t.attackers[lang] : t.defenders[lang];
+    const how = report.withdrew === "boat" ? t.byBoat[lang] : t.byLand[lang];
+    lines.push(fill((report.reason === "leader" ? t.brokeLeader : t.brokeLosses)[lang], { side, how }));
+  }
+  lines.push(fill(t.ours[lang], { wounded: report.wounded.ours, fallen: report.fallen.ours, captured: report.captured.ours }));
+  lines.push(fill(t.theirs[lang], { wounded: report.wounded.theirs, fallen: report.fallen.theirs, captured: report.captured.theirs }));
+  if (report.wounded.ours > 0) lines.push(t.woundedRest[lang]);
+  if (report.fled) lines.push(t.fled[lang]);
+  const name = neighborDef(content, report.neighbor)?.name ?? report.neighbor;
+  if (report.captured.theirs > 0) lines.push(fill(t.theirCaptives[lang], { barangay: name, count: report.captured.theirs }));
+  if (report.captured.ours > 0) lines.push(fill(t.ransomOffer[lang], { barangay: name, count: report.captured.ours }));
+  return lines;
+}
+
+/** The title and short lines of a report. With battle details (W.1), "Warriors lost" becomes how the battle ended. */
+export function describeReport(report: Report, content: Content, game?: GameText, lang: Lang = "en"): { icon: string; title: string; lines: string[] } {
+  const d = describeOld(report, content);
+  if (!game || !report.fallen) return d;
+  return { ...d, lines: [...d.lines.filter((l) => !l.startsWith("Warriors lost")), ...battleLines(report, content, game, lang)] };
+}
+
+function describeOld(report: Report, content: Content): { icon: string; title: string; lines: string[] } {
   const who = neighborDef(content, report.neighbor);
   const name = who?.name ?? report.neighbor;
   const odds =
@@ -81,8 +112,12 @@ export function ReportDialog(props: {
   /** "Show me": the uncovered shoreline on the map, for a raid that landed where no Kuta reached. */
   onShowShore?: (r: Report) => (() => void) | null;
   showLabel?: string;
+  /** Battle lines in the player's language, and paying ransom for our warriors held (W.1). */
+  game?: GameText;
+  lang?: Lang;
+  onRansom?: (captive: number) => void;
 }) {
-  const { state, content, seen, onSeen: setSeen, hold = false, names, onWatch, watchLabel, reason, onShowShore, showLabel } = props;
+  const { state, content, seen, onSeen: setSeen, hold = false, names, onWatch, watchLabel, reason, onShowShore, showLabel, game, lang = "en", onRansom } = props;
   // Held back while the battle plays out on the map.
   const next = hold ? undefined : unseenReport(state, seen);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -93,7 +128,9 @@ export function ReportDialog(props: {
     if (!next && d.open) d.close();
   }, [next]);
   const close = () => next && setSeen(next.id);
-  const described = next ? describeReport(next, content) : null;
+  const described = next ? describeReport(next, content, game, lang) : null;
+  // Our warriors still held after this battle: their ransom can be paid from the report.
+  const held = next?.captive !== undefined ? state.region?.captives?.find((c) => c.id === next.captive && c.side === "ours") : undefined;
   // Named villagers in the battle: who fell, or who led the defense.
   const text = described && next ? { ...described, lines: [...described.lines, ...(names?.(next) ?? [])] } : null;
   return (
@@ -133,6 +170,16 @@ export function ReportDialog(props: {
                 </button>
               ) : null;
             })()}
+            {held && onRansom && game && (
+              <button
+                type="button"
+                disabled={state.resources.gold < held.ransom}
+                onClick={() => onRansom(held.id)}
+                className="game-btn border-2 border-amber-950/60 bg-amber-500 px-4 py-2 text-sm font-semibold text-amber-950 disabled:opacity-50"
+              >
+                {fill(game.battle.ransomButton[lang], { cost: costText({ gold: held.ransom }) })}
+              </button>
+            )}
             <button type="button" autoFocus onClick={close} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-4 py-2 text-sm font-semibold text-amber-950">
               OK
             </button>

@@ -1,5 +1,6 @@
 // Game state and rules. Pure functions only: no React, no browser APIs, and no unseeded
 // randomness or wall-clock time. Time is passed in; randomness comes from the RNG in the state.
+import { healWounded, isHiding } from "./warfare";
 import { brewWine, emptyStore, feed, holdPista, restKaingin, foodCaps, foodGroups, updateFoodLand, updatePests, yieldFactor, type FoodStore, type PestEvent, type PistaOccasion } from "./food";
 import { GENDERS, syncResidents, type Gender, type Resident } from "./residents";
 import { makeHousehold, setHonorific, setRulerGender, type Household } from "./household";
@@ -36,8 +37,7 @@ import {
   trade,
   train,
   updateRegion,
-  type RegionState,
-} from "./region";
+  type RegionState, payRansom, updateCaptives } from "./region";
 import { DEFAULT_SEED } from "./rng";
 import { callForHelp, homeWarriors } from "./region";
 import { choose, updateChoices, type PendingChoice } from "./choices";
@@ -81,7 +81,7 @@ import {
   type TikbalangTrick,
 } from "./worship";
 
-export const STATE_VERSION = 35;
+export const STATE_VERSION = 36;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -165,6 +165,10 @@ export interface GameState {
   sick: number[];
   /** A typhoon on its way (warning shown), or null. */
   typhoon: { strikeAt: number } | null;
+  /** Warriors resting from their wounds: seconds of healing left each (warfare.ts). Missing in older saves. */
+  wounded?: number[];
+  /** The villagers hiding in the forest from an overwhelming raid until then (warfare.ts). */
+  hiding?: { until: number } | null;
   /** Where the Pagkain is kept (food.ts); its total is resources.food. */
   foodStore: FoodStore;
   /** Seconds the barangay has eaten only one kind of food (food.ts), and the food groups it brings in now. */
@@ -444,7 +448,8 @@ export function healthyWorkers(state: GameState): number {
 
 /** Healthy workers before any are led astray by a tikbalang. */
 export function healthyWorkersBase(state: GameState): number {
-  if (isHungry(state)) return 0;
+  // Hungry, or hiding in the forest from an overwhelming raid (warfare.ts): nobody works.
+  if (isHungry(state) || isHiding(state)) return 0;
   return Math.max(0, state.villagers - state.sick.length - warriorsOffWork(state));
 }
 
@@ -889,6 +894,8 @@ export type Command =
   /** The ruler (household.ts): change her or his gender once, use the tradition's honorific. */
   | { type: "setRulerGender"; gender: Gender }
   | { type: "setHonorific"; on: boolean }
+  /** Pay the ransom for our warriors held after a battle (warfare.ts). */
+  | { type: "payRansom"; captive: number }
   /** Sound the tambuli during a raid warning: allies send volunteers too. */
   | { type: "callForHelp" }
   /** Food (food.ts): brew rice wine from Palay, hold a Pista, rest a worn-out kaingin. */
@@ -999,6 +1006,8 @@ function applyCommand(state: GameState, content: Content, command: Command): Gam
       return GENDERS.includes(command.gender) ? setRulerGender(state, content, command.gender) : state;
     case "setHonorific":
       return setHonorific(state, content, command.on === true);
+    case "payRansom":
+      return payRansom(state, content, command.captive);
     case "brew":
       return brewWine(state, content, command.amount);
     case "pista":
@@ -1144,6 +1153,9 @@ function step(state: GameState, content: Content, dt: number): GameState {
   if (!content.ai) next = advanceReplanting(afterClearing(beforeClearing, next, content), content, dt);
   next = updateEvents(next, content, dt);
   if (next.region) next = updateRegion(next, content, state.time, dt);
+  // The wounded heal (faster at a healer's hut); captives come home (warfare.ts, region.ts).
+  if (!content.ai) next = updateCaptives(healWounded(next, content, dt), content, next.time);
+  if (next.hiding && next.time >= next.hiding.until) next = { ...next, hiding: null };
   next = updateChoices(next, content, state.time, dt);
   // Balangay at sea arrive (an action on arrival runs as if on the same island).
   if (next.region?.voyages.length) {
