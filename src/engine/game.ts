@@ -641,7 +641,9 @@ export function gather(state: GameState, content: Content, resource: Resource): 
   const now = state.resources[resource];
   const after = capGrowth(now, now + content.rules.gatherPerClick, storageCap(state, content, resource));
   if (after === now) return state;
-  return { ...state, resources: { ...state.resources, [resource]: after } };
+  // Foraging for food is counted (the first task asks for it).
+  const stats = resource === "food" && !content.ai ? { ...state.stats, foraged: (state.stats.foraged ?? 0) + 1 } : state.stats;
+  return { ...state, resources: { ...state.resources, [resource]: after }, stats };
 }
 
 /**

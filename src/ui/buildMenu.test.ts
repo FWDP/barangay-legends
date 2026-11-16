@@ -57,9 +57,9 @@ describe("card states", () => {
 
 describe("recommended", () => {
   it("glows what the current task asks for", () => {
-    const s = withState({ gawainDone: [] });
+    const s = withState({ gawainDone: ["forage"] });
     expect(recommended(s, content, null)).toEqual(new Set(["gabihan"]));
-    const daanTask = withState({ gawainDone: ["first-gabihan", "first-camp", "ten-villagers", "first-palayan", "clear-five"] });
+    const daanTask = withState({ gawainDone: ["forage", "first-gabihan", "first-kubo", "first-camp", "ten-villagers", "first-palayan", "clear-five"] });
     expect(recommended(daanTask, content, null).has(DAAN)).toBe(true);
   });
 

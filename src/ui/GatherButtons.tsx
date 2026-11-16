@@ -1,5 +1,6 @@
 import type { MouseEvent } from "react";
-import type { Resource } from "../engine/content";
+import type { Content, Resource } from "../engine/content";
+import { buildingWorkers, type GameState } from "../engine/game";
 import { RESOURCE_ICON } from "./format";
 import { ResourceIcon } from "./resourceArt";
 import type { Lang } from "./settings";
@@ -50,4 +51,11 @@ export function GatherButtons(props: {
       ))}
     </div>
   );
+}
+
+/** A food workplace and a wood workplace both have people at work: the buttons shrink (W.8). */
+export function automationStarted(state: GameState, content: Content): boolean {
+  const workers = buildingWorkers(state, content);
+  const working = (r: Resource) => state.buildings.some((b, i) => workers[i] > 0 && (content.buildings.find((d) => d.id === b.type)?.produces?.[r] ?? 0) > 0);
+  return working("food") && working("wood");
 }

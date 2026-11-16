@@ -1,0 +1,21 @@
+{
+  "id": "first-gabihan",
+  "text": {
+    "en": "Plant a Gabihan by the river or a Kaingin by the forest",
+    "fil": "Magtanim ng Gabihan sa tabi ng ilog o Kaingin sa tabi ng gubat"
+  },
+  "condition": {
+    "type": "built",
+    "building": "gabihan",
+    "also": [
+      "kaingin"
+    ],
+    "count": 1
+  },
+  "reward": {
+    "resources": {
+      "wood": 10
+    }
+  },
+  "next": "first-kubo"
+}

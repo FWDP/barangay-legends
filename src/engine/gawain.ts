@@ -28,8 +28,12 @@ export function firstSeasonEnd(content: Content, id: string): number | null {
 export function taskProgress(state: GameState, content: Content, q: QuestDef): { have: number; need: number } {
   const c = q.condition;
   switch (c.type) {
-    case "built":
-      return { have: state.buildings.filter((b) => b.type === c.building).length, need: c.count };
+    case "built": {
+      const types = new Set([c.building, ...(c.also ?? [])]);
+      return { have: state.buildings.filter((b) => types.has(b.type)).length, need: c.count };
+    }
+    case "foraged":
+      return { have: state.stats.foraged ?? 0, need: c.count };
     case "villagers":
       return { have: state.villagers, need: c.count };
     case "tilesCleared":

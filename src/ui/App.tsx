@@ -17,7 +17,7 @@ import { landedUnwatched, raidWarning } from "../engine/defense";
 import { defenseReasonLine, raidBannerText } from "./defenseText";
 import { FloatLayer, spawnFloat } from "./floats";
 import { baleteWarning, bonusRuleText, costText, groveRuleText, RESOURCE_ICON } from "./format";
-import { GatherButtons } from "./GatherButtons";
+import { automationStarted, GatherButtons } from "./GatherButtons";
 import { Hud, MapSeasonBadge } from "./Hud";
 import { SettingsMenu } from "./SettingsMenu";
 import { AdvisorBubble, useAdvisor } from "./Advisor";
@@ -608,10 +608,9 @@ export function App() {
     return () => document.removeEventListener("keydown", onKey);
   }, [selected, moving, roadMode, cancelPlacing]);
 
-  // Once a food workplace and a wood workplace stand, gathering by hand is no longer the main
-  // income, so the buttons step back.
-  const producing = (r: Resource) => content.buildings.some((b) => (b.produces?.[r] ?? 0) > 0 && owned(state, b.id) > 0);
-  const hasAutomation = producing("food") && producing("wood");
+  // Once a food workplace and a wood workplace have people working in them, gathering by hand is
+  // no longer the main income, so the buttons step back (W.8).
+  const hasAutomation = automationStarted(state, content);
 
   // Keep the top of the map clear: placing shows one event banner, otherwise two.
   // Every notification that wants the banner, and how each looks (full banner, one line for the list).

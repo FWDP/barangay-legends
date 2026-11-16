@@ -524,7 +524,10 @@ export interface Text {
 
 /** What a task (gawain) asks for, checked from GameState. */
 export type QuestCondition =
-  | { type: "built"; building: string; count: number }
+  /** Built this many of `building` (or, together, of the buildings in `also`: e.g. a Gabihan or a Kaingin). */
+  | { type: "built"; building: string; count: number; also?: string[] }
+  /** Foraged for food by hand this many times (W.8). */
+  | { type: "foraged"; count: number }
   | { type: "villagers"; count: number }
   | { type: "tilesCleared"; count: number }
   | { type: "connected"; count: number }
@@ -549,7 +552,7 @@ export type QuestCondition =
   | { type: "rested"; count: number }
   | { type: "pistas"; count: number };
 
-export const QUEST_CONDITIONS = ["built", "villagers", "tilesCleared", "connected", "survivedSeason", "traded", "warriors", "raidsDefended", "tributaries", "aklat", "replanted", "permittedClears", "datuLevel", "voyages", "leadBloc", "blocMembers", "paramount", "shoreWatched", "kutaNearDatu", "rested", "pistas"] as const;
+export const QUEST_CONDITIONS = ["built", "villagers", "tilesCleared", "connected", "survivedSeason", "traded", "warriors", "raidsDefended", "tributaries", "aklat", "replanted", "permittedClears", "datuLevel", "voyages", "leadBloc", "blocMembers", "paramount", "shoreWatched", "kutaNearDatu", "rested", "pistas", "foraged"] as const;
 
 /** One of the Mga Gawain: a task in a chain, with a reward (resources and/or a title for the datu). */
 export interface QuestDef {
@@ -1666,6 +1669,7 @@ export function validateQuest(raw: unknown, file = "quest"): QuestDef {
     throw new Error(`${file}: "condition.count" must be a whole number >= 1`);
   }
   if (c.type === "built" && typeof c.building !== "string") throw new Error(`${file}: "condition.building" is missing`);
+  if (c.type === "built" && c.also !== undefined && (!Array.isArray(c.also) || !c.also.every((x) => typeof x === "string"))) throw new Error(`${file}: "condition.also" must list building ids`);
   if (c.type === "survivedSeason" && typeof c.season !== "string") throw new Error(`${file}: "condition.season" is missing`);
   const r = raw.reward;
   if (!isObject(r) || (r.resources === undefined && r.title === undefined)) throw new Error(`${file}: "reward" needs "resources" or "title"`);
@@ -1684,6 +1688,7 @@ export function questChain(quests: QuestDef[], buildingIds: Set<string>, seasonI
     if (byId.has(q.id)) throw new Error(`Two tasks share the id "${q.id}"`);
     byId.set(q.id, q);
     if (q.condition.type === "built" && !buildingIds.has(q.condition.building)) throw new Error(`quest ${q.id}: unknown building "${q.condition.building}"`);
+    for (const b of q.condition.type === "built" ? (q.condition.also ?? []) : []) if (!buildingIds.has(b)) throw new Error(`quest ${q.id}: unknown building "${b}"`);
     if (q.condition.type === "survivedSeason" && !seasonIds.includes(q.condition.season)) throw new Error(`quest ${q.id}: unknown season "${q.condition.season}"`);
   }
   const firsts = quests.filter((q) => q.first);

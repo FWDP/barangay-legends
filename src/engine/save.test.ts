@@ -274,7 +274,8 @@ describe("v16 → v17: gold, happiness, tasks and named villagers", () => {
     // newGame starts with a Bahay Kubo only: nothing met yet, so the chain starts at the beginning.
     expect(tick(s, calm, 1).gawainDone).toEqual([]);
     const withField = { ...s, buildings: [...s.buildings, at("gabihan", s.map.plaza.x + 1, s.map.plaza.y + 1)] };
-    expect(tick(withField, calm, 1).gawainDone).toEqual(["first-gabihan"]);
+    // The first task asks for foraging (none in an old save); with it done, the Gabihan counts.
+    expect(tick({ ...withField, gawainDone: ["forage"] }, calm, 1).gawainDone).toEqual(["forage", "first-gabihan"]);
   });
 
   it("round-trips the new fields", () => {

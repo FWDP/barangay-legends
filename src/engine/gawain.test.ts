@@ -12,13 +12,15 @@ const fresh = (patch: Partial<GameState> = {}, done: string[] = []) => withState
 const upTo = (id: string) => content.quests.slice(0, content.quests.findIndex((q) => q.id === id)).map((q) => q.id);
 
 describe("the task chain (content/quests)", () => {
-  it("has a few dozen tasks in teaching order, starting with the first Gabihan", () => {
+  it("has a few dozen tasks in teaching order, starting with foraging, a Gabihan or Kaingin and a kubo", () => {
     expect(content.quests.length).toBeGreaterThanOrEqual(12);
     expect(content.quests.length).toBeLessThanOrEqual(36);
     const ids = content.quests.map((q) => q.id);
-    expect(ids[0]).toBe("first-gabihan");
+    expect(ids.slice(0, 3)).toEqual(["forage", "first-gabihan", "first-kubo"]);
+    // Never a task to gather rice (rice is a prestige grain now).
+    for (const q of content.quests) expect(q.text.en.toLowerCase()).not.toMatch(/gather rice/);
     // The tasks the design asks for, in this order.
-    const wanted = ["first-gabihan", "ten-villagers", "first-palayan", "clear-five", "daan-three", "first-kamalig", "tag-araw", "first-dock", "first-trade", "three-warriors", "defend-raid", "first-tributary"];
+    const wanted = ["forage", "first-gabihan", "first-kubo", "ten-villagers", "first-palayan", "clear-five", "daan-three", "first-kamalig", "tag-araw", "first-dock", "first-trade", "three-warriors", "defend-raid", "first-tributary"];
     const positions = wanted.map((id) => ids.indexOf(id));
     expect(positions.every((p) => p >= 0)).toBe(true);
     expect([...positions].sort((a, b) => a - b)).toEqual(positions);
@@ -119,19 +121,20 @@ describe("task conditions", () => {
 
 describe("finishing tasks", () => {
   it("only the current task can finish; the next one follows", () => {
-    const s = fresh({ buildings: [at("woodcutter-camp", 2, 2)] });
+    const s = fresh({ buildings: [at("woodcutter-camp", 2, 2)] }, ["forage"]);
     expect(currentTask(s, content)?.id).toBe("first-gabihan");
     // The camp is built, but the Gabihan comes first.
     expect(checkTasks(s, content)).toBe(s);
-    const both = checkTasks({ ...s, buildings: [...s.buildings, at("gabihan", 1, 1)] }, content);
-    expect(both.gawainDone).toEqual(["first-gabihan", "first-camp"]);
+    // A Kaingin counts as well as a Gabihan; then the second house, then the camp already built.
+    const both = checkTasks({ ...s, buildings: [...s.buildings, at("kaingin", 8, 4), at("bahay-kubo", 5, 3), at("bahay-kubo", 4, 3)] }, content);
+    expect(both.gawainDone).toEqual(["forage", "first-gabihan", "first-kubo", "first-camp"]);
     expect(currentTask(both, content)?.id).toBe("ten-villagers");
   });
 
   it("pays resource rewards and notes each task in the history", () => {
-    const s = fresh({ resources: { rice: 0, wood: 0, gold: 0, food: 0, salt: 0, wine: 0 }, buildings: [at("gabihan", 1, 1)] });
+    const s = fresh({ resources: { rice: 0, wood: 0, gold: 0, food: 0, salt: 0, wine: 0 }, buildings: [at("gabihan", 1, 1)] }, ["forage"]);
     const done = checkTasks(s, content);
-    expect(done.gawainDone).toEqual(["first-gabihan"]);
+    expect(done.gawainDone).toEqual(["forage", "first-gabihan"]);
     expect(done.resources.wood).toBe(quest("first-gabihan").reward.resources!.wood);
     expect(done.history.at(-1)).toMatchObject({ kind: "task", task: "first-gabihan" });
   });
@@ -148,10 +151,10 @@ describe("finishing tasks", () => {
   });
 
   it("is checked every engine step", () => {
-    const s = fresh({ villagers: 5, resources: { rice: 100, wood: 100, gold: 0, food: 100, salt: 0, wine: 0 } });
+    const s = fresh({ villagers: 5, resources: { rice: 100, wood: 100, gold: 0, food: 100, salt: 0, wine: 0 } }, ["forage"]);
     const built = apply(s, calm, { type: "build", building: "gabihan", x: 1, y: 1 });
     // A command doesn't finish tasks by itself (refused commands stay the same object)...
-    expect(built.gawainDone).toEqual([]);
+    expect(built.gawainDone).toEqual(["forage"]);
     // ...the next step does.
     expect(tick(built, calm, 1).gawainDone).toContain("first-gabihan");
   });
@@ -165,7 +168,7 @@ describe("finishing tasks", () => {
   it("credits tasks finished while the game was closed", () => {
     // Fields and room to grow: newcomers arrive offline, so "Reach 10 villagers" is met.
     const houses = [at("bahay-kubo", 5, 3), at("bahay-kubo", 4, 3), at("bahay-kubo", 6, 3), at("bahay-kubo", 4, 5)];
-    const s = fresh({ villagers: 6, resources: { rice: 150, wood: 0, gold: 0, food: 150, salt: 0, wine: 0 }, buildings: [at("gabihan", 1, 1), at("gabihan", 1, 3), at("woodcutter-camp", 8, 1), ...houses] }, ["first-gabihan", "first-camp"]);
+    const s = fresh({ villagers: 6, resources: { rice: 150, wood: 0, gold: 0, food: 150, salt: 0, wine: 0 }, buildings: [at("gabihan", 1, 1), at("gabihan", 1, 3), at("woodcutter-camp", 8, 1), ...houses] }, ["forage", "first-gabihan", "first-kubo", "first-camp"]);
     const { state, report } = offlineProgress(s, calm, 600);
     expect(state.villagers).toBeGreaterThanOrEqual(10);
     expect(report.tasks).toContain("ten-villagers");

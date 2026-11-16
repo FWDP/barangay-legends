@@ -87,6 +87,8 @@ export interface Stats {
   /** Feasts held (food.ts holdPista) and kaingin rested (restKaingin), for tasks. */
   pistas?: number;
   kainginRested?: number;
+  /** Times the player foraged for food by hand (W.8: the first task). */
+  foraged?: number;
 }
 
 export const MAX_HISTORY = 60;

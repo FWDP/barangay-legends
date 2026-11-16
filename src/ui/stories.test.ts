@@ -13,7 +13,7 @@ import { namedSprites, planVillagers } from "./villagers";
 const ui = loadUiContent(content);
 const game = ui.game;
 const quest = (id: string) => content.quests.find((q) => q.id === id)!;
-const fresh = (patch: Partial<GameState> = {}) => withState({ gawainDone: [], ...patch } as Partial<GameState>);
+const fresh = (patch: Partial<GameState> = {}, done: string[] = []) => withState({ gawainDone: done, ...patch } as Partial<GameState>);
 const named = (id: number, patch: Partial<NamedVillager> = {}): NamedVillager => ({ id, name: `N${id}`, story: "singer", role: "villager", since: 0, ...patch });
 
 describe("ui.json", () => {
@@ -40,12 +40,12 @@ describe("task text", () => {
   });
 
   it("announces a task done, its reward and the next task", () => {
-    const done = checkTasks(fresh({ buildings: [at("gabihan", 1, 1)] }), content);
+    const done = checkTasks(fresh({ buildings: [at("gabihan", 1, 1)] }, ["forage"]), content);
     const text = taskNews("first-gabihan", done, content, game, "en");
-    expect(text).toContain("Task done: Plant a Gabihan by the river!");
+    expect(text).toContain("Task done: Plant a Gabihan by the river or a Kaingin by the forest!");
     expect(text).toContain("Reward: 🪵 10");
-    expect(text).toContain(`Next: ${quest("first-camp").text.en}.`);
-    expect(taskNews("first-gabihan", done, content, game, "fil")).toContain(quest("first-camp").text.fil);
+    expect(text).toContain(`Next: ${quest("first-kubo").text.en}.`);
+    expect(taskNews("first-gabihan", done, content, game, "fil")).toContain(quest("first-kubo").text.fil);
   });
 
   it("says when the chain is over", () => {
@@ -64,7 +64,7 @@ describe("task text", () => {
 
 describe("history lines", () => {
   it("tells each kind of entry", () => {
-    expect(historyLine({ at: 1, kind: "task", task: "first-gabihan" }, content, game, "en")).toBe("Task done: Plant a Gabihan by the river.");
+    expect(historyLine({ at: 1, kind: "task", task: "first-gabihan" }, content, game, "en")).toBe("Task done: Plant a Gabihan by the river or a Kaingin by the forest.");
     expect(historyLine({ at: 1, kind: "named", name: "Diwa", story: "first-child" }, content, game, "en")).toBe("Diwa, the first child born in your barangay joined the barangay.");
     expect(historyLine({ at: 1, kind: "left", name: "Diwa", cause: "hunger" }, content, game, "en")).toBe("Diwa left: there was not enough food.");
     expect(historyLine({ at: 1, kind: "left", name: "Diwa", cause: "crowded" }, content, game, "en")).toContain("no house");
@@ -90,7 +90,7 @@ describe("history lines", () => {
       ],
     };
     const lines = awayPeopleLines(before, after, content, game, "en");
-    expect(lines[0]).toBe("Task done: Plant a Gabihan by the river. Reward: 🪵 10");
+    expect(lines[0]).toBe("Task done: Plant a Gabihan by the river or a Kaingin by the forest. Reward: 🪵 10");
     expect(lines.slice(1)).toEqual(["Diwa, the first child born in your barangay joined the barangay.", "Ulan left: there was not enough food."]);
   });
 
@@ -119,14 +119,14 @@ describe("the adviser's news", () => {
   });
 
   it("announces a finished task right away, even inside the tip gap", () => {
-    const s = fresh({ time: 10, resources: { rice: 1000, wood: 0, gold: 0, food: 1000, salt: 0, wine: 0 }, villagers: 2 });
+    const s = fresh({ time: 10, resources: { rice: 1000, wood: 0, gold: 0, food: 1000, salt: 0, wine: 0 }, villagers: 2 }, ["forage"]);
     let m = advise(model(s), input(s));
     m = { ...m, session: { ...m.session, lastShownAt: s.time } };
     const done = tick({ ...s, buildings: [...s.buildings, at("gabihan", 1, 1)] }, calm, 1);
     expect(done.gawainDone).toContain("first-gabihan");
     m = advise(m, input(done));
     expect(m.message).toMatchObject({ kind: "news" });
-    expect(m.message?.text).toContain("Plant a Gabihan by the river");
+    expect(m.message?.text).toContain("Plant a Gabihan by the river or a Kaingin");
     expect(done.time - (m.session.lastShownAt ?? 0)).toBeLessThan(TIP_GAP_SECONDS);
     // It stays up for NEWS_SECONDS, then goes.
     m = advise(m, input({ ...done, time: done.time + NEWS_SECONDS - 1 }));

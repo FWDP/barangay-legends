@@ -111,6 +111,12 @@ export function botDecide(state: GameState, content: Content): GameState {
   const kuboDef = content.buildings.find((b) => b.id === "bahay-kubo")!;
   const woodNeed = 2 * buildingCost(content, kuboDef, owned(state, "bahay-kubo")).wood + 100;
   const goldNeed = 200;
+  // The first task: forage for food by hand, as a new player would.
+  if (currentTask(state, content)?.condition.type === "foraged") {
+    let s = state;
+    for (let i = 0; i < 5; i++) s = apply(s, content, { type: "gather", resource: "food" });
+    if (s !== state) return s;
+  }
   // Gather by hand only at the very start.
   if (foodPlaces === 0 && state.resources.wood < 15) {
     let s = state;

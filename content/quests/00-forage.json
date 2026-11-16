@@ -1,0 +1,18 @@
+{
+  "id": "forage",
+  "first": true,
+  "text": {
+    "en": "Forage for food in the forest and on the shore (5 times)",
+    "fil": "Mangalap ng pagkain sa gubat at dalampasigan (5 beses)"
+  },
+  "condition": {
+    "type": "foraged",
+    "count": 5
+  },
+  "reward": {
+    "resources": {
+      "food": 10
+    }
+  },
+  "next": "first-gabihan"
+}

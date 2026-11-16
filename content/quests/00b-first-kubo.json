@@ -1,0 +1,18 @@
+{
+  "id": "first-kubo",
+  "text": {
+    "en": "Build a Bahay Kubo for another family",
+    "fil": "Magtayo ng Bahay Kubo para sa isa pang pamilya"
+  },
+  "condition": {
+    "type": "built",
+    "building": "bahay-kubo",
+    "count": 2
+  },
+  "reward": {
+    "resources": {
+      "wood": 10
+    }
+  },
+  "next": "first-camp"
+}

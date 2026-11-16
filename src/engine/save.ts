@@ -966,6 +966,7 @@ function parsePeople(data: RawSave, content: Content, state: GameState, isPlayer
     bestTens: count(st.bestTens),
     ...(count(st.pistas) > 0 ? { pistas: count(st.pistas) } : {}),
     ...(count(st.kainginRested) > 0 ? { kainginRested: count(st.kainginRested) } : {}),
+    ...(count(st.foraged) > 0 ? { foraged: count(st.foraged) } : {}),
   };
   if (!isPlayer) return;
   const quests = new Set(content.quests.map((q) => q.id));
