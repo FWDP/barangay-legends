@@ -33,6 +33,12 @@ export function freeShare(state: GameState, content: Content): number {
 
 /** Happiness from the barangay's social life: lively, tired, or neither. Quiet while mourning. */
 export function socialHappiness(state: GameState, content: Content): number {
+  // A house carried together lately (bayanihan, W.7) lifts everyone's spirits for a while.
+  const carried = state.bayanihan && state.time < state.bayanihan.at + content.rules.bayanihan.happinessSeconds ? content.rules.bayanihan.happiness : 0;
+  return carried + socialMood(state, content);
+}
+
+function socialMood(state: GameState, content: Content): number {
   const r = content.rules.social;
   if ((state.tiredFor ?? 0) >= r.tiredAfterSeconds) return r.tiredHappiness;
   if (state.mourning > 0) return 0;
@@ -57,7 +63,7 @@ export const feastCrowd = (state: GameState) => !!state.pista && state.time < st
 export const feastSicknessFactor = (state: GameState, content: Content) => (feastCrowd(state) ? 1 + content.rules.social.feastSickPercent / 100 : 1);
 
 /** Social moments in a life story: a contest won at a Pista, music played at a wedding, a song taught. */
-export const SOCIAL_MOMENTS = ["sipa", "agong", "song", "wrestling", "flute"] as const;
+export const SOCIAL_MOMENTS = ["sipa", "agong", "song", "wrestling", "flute", "bayanihan"] as const;
 export type SocialMoment = (typeof SOCIAL_MOMENTS)[number];
 
 const SALT_MOMENT = 9301;

@@ -805,5 +805,12 @@
     "tiredHappiness": -6,
     "feastSickPercent": 30,
     "momentChancePerEvening": 0.35
+  },
+  "bayanihan": {
+    "_comment": "Moving a Bahay Kubo by bayanihan (W.7): instead of the move fee, `helpers` free villagers carry it on bamboo poles; they're busy for `seconds`. It lifts happiness by `happiness` for happinessSeconds. Other buildings keep the normal move rules. Playtest guesses.",
+    "helpers": 4,
+    "seconds": 20,
+    "happiness": 3,
+    "happinessSeconds": 240
   }
 }

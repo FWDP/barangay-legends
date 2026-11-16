@@ -1,0 +1,35 @@
+{
+  "id": "bayanihan",
+  "name": "Moving a house together",
+  "description": "Neighbors once carried a whole house on bamboo poles to a new place, a well-known image of cooperation (bayanihan). It is documented mostly from later records and art (19th–20th centuries); how far back the custom goes is flagged for review.",
+  "tradition": "Widespread lowland (later records; flagged)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "https://en.wikipedia.org/wiki/Bayanihan (later records and 20th-century genre painting; how far back the custom goes is flagged for review)"
+  ],
+  "aklat": {
+    "order": 63,
+    "icon": "🤝",
+    "name": {
+      "en": "Bayanihan: carrying a house",
+      "fil": "Bayanihan: pagbubuhat ng bahay"
+    },
+    "lore": {
+      "en": "A light house of wood, bamboo and thatch could be lifted whole. When a family moved, their neighbors slid long bamboo poles under the floor and carried the house together to its new place, then shared a meal. The custom is best known from later records and from paintings of the twentieth century; how far back it goes is not certain, but the spirit of helping one another runs through the older accounts of barangay life too.",
+      "fil": "Naiaangat nang buo ang magaang bahay na yari sa kahoy, kawayan at pawid. Kapag lilipat ang isang pamilya, isinisingit ng mga kapitbahay ang mahahabang kawayan sa ilalim ng sahig at sama-samang binubuhat ang bahay sa bago nitong lugar, saka sabay-sabay na kumakain. Pinakakilala ang kaugaliang ito sa mga tala at sa mga pinta noong ika-20 siglo; hindi tiyak kung gaano ito katanda, pero makikita rin ang diwa ng pagtutulungan sa mas lumang mga ulat tungkol sa buhay sa barangay."
+    },
+    "inGame": {
+      "en": "Moving a Bahay Kubo needs a few free villagers for a short time instead of a fee. It lifts everyone's spirits, and the helpers remember it.",
+      "fil": "Kailangan ng ilang taong walang ginagawa sa maikling panahon sa halip na bayad ang paglilipat ng Bahay Kubo. Nagpapasaya ito sa lahat, at naaalala ito ng mga tumulong."
+    },
+    "hint": {
+      "en": "Move a Bahay Kubo.",
+      "fil": "Ilipat ang isang Bahay Kubo."
+    },
+    "unlock": {
+      "type": "flag",
+      "flag": "bayanihan"
+    }
+  },
+  "reviewed": false
+}

@@ -100,7 +100,8 @@ export function botDecide(state: GameState, content: Content): GameState {
   const fields = foodPlaces + paddies;
   // Hands to spare: a player doesn't build workplaces nobody can staff.
   const slots = state.buildings.reduce((n, b) => n + (content.buildings.find((d) => d.id === b.type)?.workers ?? 0), 0);
-  const spare = state.villagers - slots;
+  // ...and keeps about a tenth free for evening life, so people don't tire (social.ts).
+  const spare = state.villagers - slots - Math.ceil(state.villagers * 0.1);
   const camps = owned(state, "woodcutter-camp");
   const docks = owned(state, "fishing-dock");
   const kamalig = owned(state, "kamalig");

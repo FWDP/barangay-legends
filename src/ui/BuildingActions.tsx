@@ -7,7 +7,7 @@ import { boatCap, boatCost } from "../engine/sea";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Content } from "../engine/content";
 import { workforce } from "../engine/clearing";
-import { buildingWorkers, canAfford, canStaff, demolishPreview, moveCost, roadBonuses, undoSecondsLeft, type GameState } from "../engine/game";
+import { bayanihanBlocker, buildingWorkers, canAfford, canStaff, demolishPreview, moveCost, roadBonuses, undoSecondsLeft, type GameState } from "../engine/game";
 import { buildingAt } from "../engine/map";
 import { costText, formatAmount } from "./format";
 import { levelOf, maxLevelOf, nextUpgrade, storageAt, upgradeBlocker, upgradeCost } from "../engine/upgrades";
@@ -88,8 +88,11 @@ export function BuildingMenu(props: {
 
   if (!target || !building || !def) return null;
   const burning = building.burningSince !== undefined;
-  const cost = moveCost(state, content, building.type);
-  const affordable = canAfford(state, cost);
+  // A Bahay Kubo is carried by bayanihan (W.7): no fee, but enough free hands.
+  const carried = (def.housing ?? 0) > 0;
+  const cost = carried ? {} : moveCost(state, content, building.type);
+  const carryBlock = carried ? bayanihanBlocker(state, content) : null;
+  const affordable = carried ? carryBlock === null : canAfford(state, moveCost(state, content, building.type));
   const refund = demolishPreview(state, content, target.x, target.y)?.refund ?? {};
   // Who works here: villagers fill worker buildings on their own.
   const slots = def.workers ?? 0;
@@ -255,11 +258,11 @@ export function BuildingMenu(props: {
           role="menuitem"
           disabled={burning || !affordable}
           onClick={() => onMove(target.x, target.y)}
-          title={burning ? "Put the fire out first" : affordable ? undefined : `Moving costs ${costText(cost)}`}
+          title={burning ? "Put the fire out first" : affordable ? undefined : carried && game ? (carryBlock === "busy" ? game.bayanihan.busy[lang] : fill(game.bayanihan.helpers[lang], { n: content.rules.bayanihan.helpers })) : `Moving costs ${costText(cost)}`}
           className="game-btn flex items-center justify-between border-2 border-amber-950/60 bg-amber-200 px-3 py-1.5 text-sm font-semibold text-amber-950 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          <span>↔️ Move</span>
-          <span className="text-xs font-normal">{costText(cost)}</span>
+          <span>↔️ {carried && game ? game.bayanihan.move[lang] : "Move"}</span>
+          <span className="text-xs font-normal">{carried && game ? fill(game.bayanihan.cost[lang], { n: content.rules.bayanihan.helpers }) : costText(cost)}</span>
         </button>
         {slots > 0 && (
           <button

@@ -879,6 +879,29 @@ export function VillagerLayer(props: {
           });
       } else if (allyRoutes.current.size) allyRoutes.current.clear();
 
+      // Bayanihan (W.7): neighbors carry a house on bamboo poles from its old tile to its new one.
+      const carry = s.bayanihan && s.time < s.bayanihan.until ? s.bayanihan : null;
+      if (carry) {
+        animating = true;
+        const f = Math.min(1, Math.max(0, (s.time - carry.at) / Math.max(1, carry.until - carry.at)));
+        const pos = { x: carry.fromX + 0.5 + (carry.x - carry.fromX) * f, y: carry.fromY + 0.7 + (carry.y - carry.fromY) * f };
+        const v = person(pos);
+        if (v) {
+          drawn.push({
+            x: v.x,
+            y: v.y,
+            f: () => {
+              const n = content.rules.bayanihan.helpers;
+              for (let i = 0; i < n; i++) {
+                const dx = (i % 2 ? 1 : -1) * T * 0.28;
+                const dy = (Math.floor(i / 2) - 0.5) * T * 0.22;
+                drawPerson(g, v.x + dx, v.y + dy, T, 9700 + i, "work", { p: pos, moving: true, stride: t * 8 + i }, t);
+              }
+              drawCarriedHouse(g, v.x, v.y - T * 0.55, T);
+            },
+          });
+        }
+      }
       // Evening and feast life (W.6): who dances at a Pista, who plays music, who sits under the silong.
       const social = socialScene(s, content);
       // Guests from the invited barangays at a Pista, standing about the clearing.
@@ -1281,4 +1304,26 @@ function drawDoing(g: CanvasRenderingContext2D, x: number, y: number, T: number,
     g.closePath();
     g.fill();
   }
+}
+
+/** A Bahay Kubo carried on bamboo poles (bayanihan, W.7): a small house on two poles above the helpers' heads. */
+function drawCarriedHouse(g: CanvasRenderingContext2D, x: number, y: number, T: number) {
+  const w = T * 0.7;
+  g.strokeStyle = "#a3b84a";
+  g.lineWidth = Math.max(1, T * 0.04);
+  g.beginPath();
+  g.moveTo(x - w * 0.7, y + T * 0.12);
+  g.lineTo(x + w * 0.7, y + T * 0.12);
+  g.moveTo(x - w * 0.7, y + T * 0.2);
+  g.lineTo(x + w * 0.7, y + T * 0.2);
+  g.stroke();
+  g.fillStyle = "#d9b77a";
+  g.fillRect(x - w / 2, y - T * 0.1, w, T * 0.22);
+  g.fillStyle = "#c8a24a";
+  g.beginPath();
+  g.moveTo(x - w * 0.6, y - T * 0.1);
+  g.lineTo(x, y - T * 0.42);
+  g.lineTo(x + w * 0.6, y - T * 0.1);
+  g.closePath();
+  g.fill();
 }

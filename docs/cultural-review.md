@@ -169,6 +169,11 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 35. **Suyak** (`content/lore/suyak.json`, `content/buildings/suyak.json`): is "suyak" the right
     term for sharpened bamboo stakes, and for which traditions? Is their use around settlements
     and approaches well sourced?
+36. **The house and bayanihan** (`content/lore/bahay-kubo.json`, `content/lore/bayanihan.json`,
+    `src/ui/foodArt.ts` kuboSvg): does the word "kubo" have a Spanish origin (and should the game
+    name the house differently)? How far back is carrying a house together documented (it is well
+    known from later records and art)? Are the house's parts (haligi, amakan, hagdan, silong,
+    batalan) fair for the Tagalog and Visayan barangays?
 
 ### Notes for the future
 
@@ -243,6 +248,7 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 | content/lore/women-rulers.json, content/traditions/tagalog.json (womanHonorific) and engine/household.ts | Aklat entry and rule: the ruler can be a woman or a man; bilateral inheritance; "Datu" for both, "Dayang" offered only for a Tagalog woman ruler; individual historical names flagged | Widespread lowland; Dayang (Tagalog) | Scott 1994; Plasencia 1589; Boxer Codex; Brewer 2004; Noceda and Sanlúcar 1754; see question 33 |
 | content/lore/ritual-specialists-gender.json | Aklat entry: ritual specialists were mostly women; some were men in women's dress and roles (asog, bayoguin), respected; standing from lineage, wealth and skill more than sex; no modern labels, no jokes | Visayan, Tagalog | Scott 1994; Brewer 2004; Alcina 1668; Boxer Codex; San Antonio 1738–1744; see question 34 |
 | content/lore/suyak.json, content/buildings/suyak.json and src/ui/buildingArt.ts (SUYAK) | Aklat entry, building and art: sharpened bamboo stakes at the shore that slow raiders; term flagged | Widespread (term flagged) | Scott 1994; Alcina 1668; see question 35 |
+| content/lore/bahay-kubo.json, content/lore/bayanihan.json and src/ui/foodArt.ts (kuboSvg) | Aklat entries and house art: a rectangular house on posts with a steep thatched roof, woven walls, slatted floor, ladder (pulled up at night and in a raid) and a silong; moving a house together (bayanihan) | Widespread lowland; bayanihan from later records | Scott 1994; Boxer Codex; Alcina 1668; CCP Encyclopedia 1994; see question 36 |
 
 ## Reviewed
 

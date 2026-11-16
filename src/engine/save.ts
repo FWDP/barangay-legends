@@ -343,6 +343,8 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
   35: (raw) => ({ ...raw, version: 36 }),
   // v36 → v37: blood debts, feuds and sealed peaces (feud.ts); older saves have none.
   36: (raw) => ({ ...raw, version: 37 }),
+  // v37 → v38: warriors' honor, social moments, tiredness and bayanihan (honor.ts, social.ts); none in older saves.
+  37: (raw) => ({ ...raw, version: 38 }),
 };
 
 // ---------- Food (v33 → v34) ----------
@@ -627,6 +629,11 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean, withRegi
     state.typhoon = { strikeAt: data.typhoon.strikeAt };
   }
   parseFood(data, content, state);
+  // A house being carried (bayanihan, W.7).
+  const bh = data.bayanihan;
+  if (isObject(bh) && [bh.fromX, bh.fromY, bh.x, bh.y].every((v) => Number.isInteger(v)) && finiteNonNeg(bh.at) && finiteNonNeg(bh.until)) {
+    state.bayanihan = { fromX: bh.fromX as number, fromY: bh.fromY as number, x: bh.x as number, y: bh.y as number, at: bh.at, until: bh.until };
+  }
   // Tiredness from working all the time (social.ts).
   if (finiteNonNeg(data.tiredFor) && data.tiredFor > 0) state.tiredFor = data.tiredFor;
   // The wounded and hiding in the forest (warfare.ts).

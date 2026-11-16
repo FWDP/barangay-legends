@@ -72,6 +72,7 @@ import { datuHouseBox, datuHouseUrl, houseStyleFor, type HouseStyle } from "./da
 import { clearingTiles, firePit, hasFirePit, houseFootprint, houseFront } from "../engine/plaza";
 import { healerStays } from "../engine/healing";
 import { buildingArtUrl, mapIcon } from "./buildingArt";
+import { isNightAt } from "../engine/daynight";
 
 const INCOME_EVERY_MS = 3000;
 const WAITING_TEXT = "⏸ Trade paused — raid in progress";
@@ -114,6 +115,10 @@ interface BuildingInfo {
   burialLook: "jars" | "longon";
   /** A Babuyan's pigs (false: chickens only), from the barangay's tradition. */
   pigs: boolean;
+  /** A Bahay Kubo's ladder is pulled up: at night, or while raiders are coming (W.7). */
+  ladderUp: boolean;
+  /** Neighbors are still carrying this house here (bayanihan): it shows faintly until it arrives. */
+  carried: boolean;
   /** A healer's hut: how many sick villagers rest inside (engine/healing.ts). */
   inside: number;
 }
@@ -178,6 +183,8 @@ export function BarangayMap(props: {
   showConnections?: boolean;
 }) {
   const { state, content, placing, moveFrom = null, onPlace, onTapTile, onVillager, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null, selection = [], onSelectArea, focus = null, tradeHeld = false, onSarimanok, ritual = null, visit = null, blockedLabel, plazaLabel, wholeMap = 0, overlay, defense = null, showConnections = false } = props;
+  // Ladders are pulled up at night and while raiders are coming (W.7): the kubo art shows it.
+  const laddersUp = isNightAt(content, state.time) || !!state.region?.incomingRaid;
   const footprints = connectionMarksShown({ setting: showConnections, roadTool: !!road, placing: !!placing });
   // The rectangle being dragged over the forest (desktop), from its first tile to the current one.
   const [dragArea, setDragArea] = useState<{ from: Point; to: Point } | null>(null);
@@ -269,6 +276,8 @@ export function BarangayMap(props: {
     const byTile = new Map<string, BuildingInfo>();
     const look = content.traditions.find((t) => t.id === state.tradition)?.burialLook ?? "jars";
     const pigs = content.traditions.find((t) => t.id === state.tradition)?.pigs !== false;
+    const ladderUp = laddersUp;
+    const carryingTo = state.bayanihan && state.time < state.bayanihan.until ? state.bayanihan : null;
     const insideAt = new Map(healerStays(state, content).map((h) => [h.index, h.count]));
     state.buildings.forEach((b, i) => {
       const def = defs.get(b.type);
@@ -288,11 +297,13 @@ export function BarangayMap(props: {
         repairText: repair || "free",
         burialLook: look,
         pigs,
+        ladderUp,
+        carried: !!carryingTo && carryingTo.x === b.x && carryingTo.y === b.y,
         inside: insideAt.get(i) ?? 0,
       });
     });
     return byTile;
-  }, [state.buildings, map, content, state.legacyReach, state.clearing, state.villagers, state.sick.length, state.named, state.resources.rice > 0, state.tradition]);
+  }, [state.buildings, map, content, state.legacyReach, state.clearing, state.villagers, state.sick.length, state.named, state.resources.rice > 0, state.tradition, laddersUp, state.bayanihan && state.time < state.bayanihan.until]);
 
   // The scenic drift moves the view up to SCENIC_DRIFT tiles, so draw that much more around it.
   // Bridge decks: which way each bridge tile runs and where its banks are, so the whole bridge
@@ -1548,7 +1559,7 @@ function Building(props: {
   onActivate: (x: number, y: number, el: Element) => void;
 }) {
   const { x, y, info, fresh, lifted, onActivate } = props;
-  const { def, bonus, damaged, burning, repairText, connected, noPath, paused, lent, burialLook, level, inside, pigs } = info;
+  const { def, bonus, damaged, burning, repairText, connected, noPath, paused, lent, burialLook, level, inside, pigs, ladderUp, carried } = info;
   const marks = useContext(ConnectionMarks);
   // Decided once, at mount: only buildings that were just built bounce in.
   const [bounce] = useState(fresh);
@@ -1583,13 +1594,13 @@ function Building(props: {
         data-building={info.key}
         className={`relative leading-none drop-shadow-[0_2px_1px_rgb(0_0_0_/_0.35)] select-none ${bounce ? "motion-safe:animate-bounce-in" : ""} ${
           damaged ? "opacity-60 grayscale" : paused ? "opacity-70 saturate-50" : ""
-        } ${lifted ? "opacity-40" : ""} cursor-pointer`}
+        } ${lifted || carried ? "opacity-40" : ""} cursor-pointer`}
       >
         {/* A bridge is drawn as its deck; the button over it is just the tap target. */}
         {def.bridge ? (
           <span className="inline-block size-[0.9em]" />
-        ) : buildingArtUrl(def.id, level, pigs) ? (
-          <img src={buildingArtUrl(def.id, level, pigs)!} alt="" draggable={false} className="inline-block size-[1.05em] align-bottom" />
+        ) : buildingArtUrl(def.id, level, pigs, ladderUp) ? (
+          <img src={buildingArtUrl(def.id, level, pigs, ladderUp)!} alt="" draggable={false} className="inline-block size-[1.05em] align-bottom" />
         ) : def.burial && burialLook === "longon" ? (
           "⚰️"
         ) : (

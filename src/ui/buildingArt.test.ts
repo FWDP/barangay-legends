@@ -18,7 +18,7 @@ describe("how buildings are drawn", () => {
       expect(url.startsWith("data:image/svg+xml")).toBe(true);
       expect(decodeURIComponent(url)).toContain("<svg");
     }
-    expect(buildingArtUrl("bahay-kubo")).toBeNull();
+    expect(buildingArtUrl("palayan")).toBeNull();
   });
 
   it("the art has sourced lore notes, waiting for review, listed in docs/cultural-review.md", () => {

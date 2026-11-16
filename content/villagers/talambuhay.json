@@ -58,6 +58,8 @@
     "socialAgongAlone": { "en": "Played the agong by the evening fire", "fil": "Tumugtog ng agong sa tabi ng apoy sa gabi" },
     "socialSong": { "en": "Taught the children a new song", "fil": "Nagturo ng bagong awit sa mga bata" },
     "socialFlute": { "en": "Played the bamboo flute by the fire until late", "fil": "Tumugtog ng plawtang kawayan sa tabi ng apoy hanggang gabi" },
+    "socialBayanihan": { "en": "Helped carry {other}'s house to its new place", "fil": "Tumulong buhatin ang bahay ni {other} sa bago nitong lugar" },
+    "socialBayanihanAlone": { "en": "Helped carry a neighbor's house to its new place", "fil": "Tumulong buhatin ang bahay ng kapitbahay sa bago nitong lugar" },
     "diedAttack": { "en": "Fell in the raid on {barangay}; remembered by the barangay", "fil": "Nasawi sa pag-atake sa {barangay}; inaalala ng barangay" },
     "diedDefense": { "en": "Fell defending the barangay; remembered by the barangay", "fil": "Nasawi sa pagtatanggol sa barangay; inaalala ng barangay" },
     "diedAge": { "en": "Died of old age, among family; remembered by the barangay", "fil": "Pumanaw sa katandaan, kapiling ang pamilya; inaalala ng barangay" },

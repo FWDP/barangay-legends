@@ -1,0 +1,37 @@
+{
+  "id": "bahay-kubo",
+  "name": "The house on posts",
+  "description": "Lowland houses were rectangular and raised on hardwood or bamboo posts, with steep thatched roofs, woven split-bamboo walls, slatted floors and a removable ladder; the space beneath (silong) kept tools, firewood and animals. Raising the house kept it above floods, cooler, and away from pests. Whether 'kubo' has a Spanish origin is flagged for review.",
+  "tradition": "Widespread lowland (Tagalog, Visayan)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Boxer Codex (c. 1590), Lilly Library, Indiana University",
+    "Francisco Ignacio Alcina, Historia de las islas e indios de Bisayas (1668), trans. Cantius Kobak and Lucio Gutiérrez (UST Publishing House, 2002–2005)",
+    "Jesus T. Peralta, et al., in CCP Encyclopedia of Philippine Art, vol. 3: Philippine Architecture (Cultural Center of the Philippines, 1994)"
+  ],
+  "aklat": {
+    "order": 62,
+    "icon": "🛖",
+    "name": {
+      "en": "The house on posts",
+      "fil": "Ang bahay na nakatayo sa haligi"
+    },
+    "lore": {
+      "en": "The everyday house stood on posts (haligi) of hardwood or bamboo. Its steep roof of nipa or cogon shed the heavy rains, its walls of woven split bamboo let the breeze through, and its slatted floor kept it cool and easy to clean. Raised off the ground, it stayed dry in floods and out of reach of pests. People climbed in by a ladder (hagdan) that could be pulled up at night. Beneath the floor, the silong held tools, firewood, a loom or the chickens. Some houses had a back platform (batalan) with water jars for washing.",
+      "fil": "Nakatayo sa mga haligi ng matigas na kahoy o kawayan ang karaniwang bahay. Pinadudulas ng matarik nitong bubong na nipa o kogon ang malakas na ulan, pinadadaan ng dinding na sinalang kawayan ang hangin, at pinananatiling malamig at madaling linisin ng sahig na baitang-baitang. Dahil nakaangat, tuyo ito sa baha at malayo sa peste. Umaakyat ang mga tao sa hagdang naiaangat sa gabi. Sa ilalim ng sahig, sa silong, nakalagay ang kasangkapan, panggatong, habihan o mga manok. May ilang bahay na may batalan sa likod na may mga banga ng tubig para sa paghuhugas."
+    },
+    "inGame": {
+      "en": "Every Bahay Kubo is drawn on posts, with a ladder that is pulled up at night and when raiders are coming. Moving one is bayanihan: neighbors carry it, with no fee.",
+      "fil": "Bawat Bahay Kubo ay iginuguhit na nakatayo sa haligi, may hagdang iniaangat sa gabi at kapag may paparating na mananalakay. Bayanihan ang paglilipat nito: binubuhat ng mga kapitbahay, walang bayad."
+    },
+    "hint": {
+      "en": "Build a Bahay Kubo.",
+      "fil": "Magtayo ng Bahay Kubo."
+    },
+    "unlock": {
+      "type": "built",
+      "building": "bahay-kubo"
+    }
+  },
+  "reviewed": false
+}

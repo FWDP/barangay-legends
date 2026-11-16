@@ -154,3 +154,32 @@ export const BAKLAD = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 6
   </g>
   <g fill="#94a3b8" stroke="#475569" stroke-width="0.4"><path d="M29 50 q3 -2.4 6 0 q-3 2.4 -6 0 z M35 50 l2 -1.4 v2.8 z"/><path d="M28 54 q2.6 -2 5.2 0 q-2.6 2 -5.2 0 z M33.2 54 l1.6 -1.2 v2.4 z"/><path d="M16 30 q2.6 -2 5.2 0 q-2.6 2 -5.2 0 z M21.2 30 l1.6 -1.2 v2.4 z"/></g>
 </svg>`;
+
+/**
+ * The Bahay Kubo (W.7): a rectangular house raised on hardwood or bamboo posts (haligi), a steep
+ * gable roof thatched with nipa or cogon, woven split-bamboo walls (amakan), a slatted floor, a
+ * removable ladder (hagdan) to the door, and the open space beneath (silong) with firewood, a
+ * tool and a chicken. At night or when raiders are coming the ladder is pulled up (`ladderUp`).
+ */
+export const kuboSvg = (ladderUp: boolean) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <ellipse cx="32" cy="60" rx="27" ry="3" fill="#000" opacity="0.15"/>
+  <g stroke="#4a2f17" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="36" x2="12" y2="60"/><line x1="25" y1="37" x2="25" y2="60"/><line x1="39" y1="37" x2="39" y2="60"/><line x1="52" y1="36" x2="52" y2="60"/></g>
+  <g fill="#8b5a2b"><rect x="15" y="53" width="8" height="3" rx="1"/><rect x="16" y="50" width="7" height="3" rx="1"/></g>
+  <path d="M43 57 l1 -3 l2 0 l1 3 z" fill="#78716c"/>
+  <g><ellipse cx="33" cy="56.5" rx="3" ry="2.2" fill="#b45309"/><circle cx="35.5" cy="54" r="1.4" fill="#b45309"/><path d="M36.3 53.4 l1.2 0.4 l-1.2 0.4 z" fill="#d97706"/><path d="M35 52.4 l0.6 -1 l0.6 1 z" fill="#dc2626"/></g>
+  <rect x="8" y="34" width="48" height="4" fill="#c9a26b" stroke="#6b4423" stroke-width="0.8"/>
+  <g stroke="#8a6a35" stroke-width="0.6">${[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((i) => `<line x1="${11 + i * 4.3}" y1="34" x2="${11 + i * 4.3}" y2="38"/>`).join("")}</g>
+  <rect x="10" y="20" width="44" height="14" fill="#d9b77a" stroke="#6b4423" stroke-width="1"/>
+  <g stroke="#b8925a" stroke-width="0.7">${[0, 1, 2].map((i) => `<line x1="10" y1="${23.5 + i * 4}" x2="54" y2="${23.5 + i * 4}"/>`).join("")}${[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => `<line x1="${13 + i * 4.4}" y1="20" x2="${13 + i * 4.4}" y2="34" stroke-dasharray="2 2"/>`).join("")}</g>
+  <rect x="38" y="23" width="8" height="11" fill="#3b2414"/>
+  <rect x="16" y="23" width="9" height="6" fill="#5b3a1e" stroke="#6b4423" stroke-width="0.6"/>
+  <path d="M4 22 L32 3 L60 22 L56 23 L32 7 L8 23 Z" fill="#a8842f"/>
+  <path d="M6 22 L32 5 L58 22 Z" fill="#c8a24a" stroke="#9a7428" stroke-width="1.1" stroke-linejoin="round"/>
+  <g stroke="#a8842f" stroke-width="0.7">${[0, 1, 2, 3, 4].map((i) => `<line x1="${12 + i * 10}" y1="${18 - Math.abs(2 - i) * 3}" x2="${10 + i * 10.5}" y2="22"/>`).join("")}</g>
+  <path d="M28 4.5 L36 4.5" stroke="#7a5a1a" stroke-width="1.8" stroke-linecap="round"/>
+  ${
+    ladderUp
+      ? `<g stroke="#7a4f2a" stroke-width="1.3" stroke-linecap="round"><line x1="47" y1="22" x2="58" y2="22"/><line x1="47" y1="25" x2="58" y2="25"/><line x1="50" y1="21" x2="50" y2="26"/><line x1="54" y1="21" x2="54" y2="26"/></g>`
+      : `<g stroke="#7a4f2a" stroke-width="1.4" stroke-linecap="round"><line x1="39" y1="38" x2="36" y2="60"/><line x1="45" y1="38" x2="44" y2="60"/><line x1="37" y1="43" x2="44.6" y2="43"/><line x1="36.8" y1="48" x2="44.4" y2="48"/><line x1="36.3" y1="53" x2="44.2" y2="53"/></g>`
+  }
+</svg>`;

@@ -66,6 +66,7 @@ export function lifeLine(e: LifeEvent, content: Content, lang: Lang, placeName: 
       return other ? fill(ev.learned[lang], { lesson, other }) : fill(ev.learnedAlone[lang], { lesson });
     }
     case "social": {
+      if (e.moment === "bayanihan") return fill(ev[other ? "socialBayanihan" : "socialBayanihanAlone"][lang], { other });
       const key = e.moment === "sipa" ? "socialSipa" : e.moment === "wrestling" ? "socialWrestling" : e.moment === "song" ? "socialSong" : e.moment === "flute" ? "socialFlute" : other ? "socialAgong" : "socialAgongAlone";
       return fill(ev[key][lang], { other });
     }

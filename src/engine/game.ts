@@ -3,7 +3,7 @@
 import { healWounded, isHiding } from "./warfare";
 import { updateTired } from "./social";
 import type { Mediator, SealKind } from "./feud";
-import { noteSocialMoments } from "./talambuhay";
+import { noteLife, noteSocialMoments } from "./talambuhay";
 import { brewWine, emptyStore, feed, holdPista, restKaingin, foodCaps, foodGroups, updateFoodLand, updatePests, yieldFactor, type FoodStore, type PestEvent, type PistaOccasion } from "./food";
 import { GENDERS, syncResidents, type Gender, type Resident } from "./residents";
 import { makeHousehold, setHonorific, setRulerGender, type Household } from "./household";
@@ -84,7 +84,7 @@ import {
   type TikbalangTrick,
 } from "./worship";
 
-export const STATE_VERSION = 37;
+export const STATE_VERSION = 38;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -168,6 +168,8 @@ export interface GameState {
   sick: number[];
   /** A typhoon on its way (warning shown), or null. */
   typhoon: { strikeAt: number } | null;
+  /** Neighbors carrying a Bahay Kubo to its new tile (bayanihan, W.7), until then. */
+  bayanihan?: { fromX: number; fromY: number; x: number; y: number; at: number; until: number } | null;
   /** Seconds everyone has been working with too little free time (social.ts). */
   tiredFor?: number;
   /** Warriors resting from their wounds: seconds of healing left each (warfare.ts). Missing in older saves. */
@@ -486,8 +488,22 @@ export function riceIsLow(state: GameState, content: Content): boolean {
  * the villagers left over (see clearing.ts), so a long clearing queue never empties the fields.
  */
 export function availableWorkers(state: GameState, content?: Content): number {
-  // Children don't work and elders work part of a share (population.ts).
-  return Math.max(0, healthyWorkers(state) - (content ? notWorking(state, content) : 0));
+  // Children don't work and elders work part of a share (population.ts); neighbors carrying a
+  // house (bayanihan) are busy with it for a short while.
+  const carrying = content && state.bayanihan && state.time < state.bayanihan.until ? content.rules.bayanihan.helpers : 0;
+  return Math.max(0, healthyWorkers(state) - (content ? notWorking(state, content) : 0) - carrying);
+}
+
+/** Can a Bahay Kubo be moved by bayanihan now: enough free villagers to carry it, and none being carried? */
+export function bayanihanBlocker(state: GameState, content: Content): "busy" | "helpers" | null {
+  if (state.bayanihan && state.time < state.bayanihan.until) return "busy";
+  return freeVillagersForMove(state, content) >= content.rules.bayanihan.helpers ? null : "helpers";
+}
+
+/** Villagers free to help carry a house: healthy, not at work, not clearing. */
+function freeVillagersForMove(state: GameState, content: Content): number {
+  const working = buildingWorkers(state, content).reduce((a, b) => a + b, 0);
+  return Math.max(0, availableWorkers(state, content) - working);
 }
 
 /** Spreads available workers across worker slots one at a time, round-robin in content order. */
@@ -721,7 +737,10 @@ export function move(state: GameState, content: Content, x: number, y: number, t
   if (!canMove(state, content, x, y, toX, toY)) return state;
   const target = buildingAt(state, x, y)!;
   const def = defById(content, target.type)!;
-  const cost = moveCost(state, content, target.type);
+  // A Bahay Kubo moves by bayanihan: neighbors carry it on bamboo poles, for no fee (W.7).
+  const carried = (def.housing ?? 0) > 0;
+  if (carried && bayanihanBlocker(state, content) !== null) return state;
+  const cost = carried ? asCost({}) : moveCost(state, content, target.type);
   if (!canAfford(state, cost)) return state;
   const lifted = withoutBuilding(state, content, target);
   const span = def.bridge ? (bridgeSpan(lifted.map, def, toX, toY) ?? []) : [];
@@ -732,13 +751,14 @@ export function move(state: GameState, content: Content, x: number, y: number, t
   delete moved.legacyDoor;
   if (span.length > 0) moved.span = span;
   const map = setTiles(lifted.map, span.map((t) => ({ ...t, tile: "bridge" as const })));
-  return dropUnreachableJobs({
+  const next = dropUnreachableJobs({
     ...state,
     resources: pay(state, cost),
     buildings: state.buildings.map((b) => (b === target ? moved : b)),
     map,
     lastBuild: null,
   });
+  return carried ? bayanihan(next, content, x, y, toX, toY) : next;
 }
 
 /** Demolishing returns a share (rules.placement.demolishRefundPercent) of what the last copy cost, rounded down. */
@@ -1213,4 +1233,19 @@ const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "obj
 /** Whole, non-negative amounts of known goods only (a command may come from anywhere later). */
 function cleanAmounts(raw: ResourceAmounts): ResourceAmounts {
   return Object.fromEntries(RESOURCES.filter((r) => Number.isFinite(raw[r]) && (raw[r] ?? 0) > 0).map((r) => [r, Math.floor(raw[r]!)])) as ResourceAmounts;
+}
+
+/**
+ * Bayanihan (W.7): neighbors gather and carry the house on bamboo poles to its new tile. They're
+ * busy for rules.bayanihan.seconds; it lifts everyone's spirits for a while, and named helpers'
+ * stories gain a line ("Helped carry Lawin's house").
+ */
+function bayanihan(state: GameState, content: Content, fromX: number, fromY: number, x: number, y: number): GameState {
+  const b = content.rules.bayanihan;
+  let s: GameState = { ...state, bayanihan: { fromX, fromY, x, y, at: state.time, until: state.time + b.seconds }, flags: state.flags.includes("bayanihan") ? state.flags : [...state.flags, "bayanihan"] };
+  // Whose house: a named villager, if any; the helpers are other named villagers (not warriors).
+  const owner = s.named.find((v) => v.resident !== undefined);
+  const helpers = s.named.filter((v) => v !== owner && v.role !== "warrior" && v.resident !== undefined).slice(0, b.helpers);
+  for (const h of helpers) s = noteLife(s, content, h.resident!, { kind: "social", moment: "bayanihan", ...(owner ? { other: owner.resident, otherName: owner.name } : {}) });
+  return s;
 }

@@ -2231,5 +2231,23 @@
       "en": "No feuds to settle.",
       "fil": "Walang alitang aayusin."
     }
+  },
+  "bayanihan": {
+    "move": {
+      "en": "Move by bayanihan",
+      "fil": "Ilipat sa bayanihan"
+    },
+    "cost": {
+      "en": "{n} neighbors carry it, no fee",
+      "fil": "{n} kapitbahay ang magbubuhat, walang bayad"
+    },
+    "helpers": {
+      "en": "Needs {n} free villagers to carry the house.",
+      "fil": "Kailangan ng {n} taong walang ginagawa para buhatin ang bahay."
+    },
+    "busy": {
+      "en": "Neighbors are already carrying a house.",
+      "fil": "May binubuhat nang bahay ang mga kapitbahay."
+    }
   }
 }

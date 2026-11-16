@@ -1,7 +1,7 @@
 import { Bolo } from "./Bolo";
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import type { Resource } from "../engine/content";
-import { buildingCost, canAfford, canMove, moveCost, owned, repairCost, roadCost, withoutBuilding } from "../engine/game";
+import { bayanihanBlocker, buildingCost, canAfford, canMove, moveCost, owned, repairCost, roadCost, withoutBuilding } from "../engine/game";
 import { buildingAt, canPlace, isUnlocked, tileAt } from "../engine/map";
 import { activeJobs, affordableTiles, borrowedWorkers, canSelect, clearingCrews, jobSeconds, orderSelection, riceIsSafe, selectionCost, workforce } from "../engine/clearing";
 import { BarangayMap } from "./BarangayMap";
@@ -563,8 +563,10 @@ export function App() {
   // Moving uses the same placing mode as building, with the building picked up first.
   const moved = moving ? buildingAt(state, moving.x, moving.y) : undefined;
   const movedDef = moved ? (content.buildings.find((b) => b.id === moved.type) ?? null) : null;
-  const moveCostNow = moved ? moveCost(state, content, moved.type) : null;
-  const moveAffordable = moveCostNow ? canAfford(state, moveCostNow) : false;
+  // A Bahay Kubo is carried by bayanihan (no fee, enough free hands); others pay the move fee.
+  const carried = !!movedDef && (movedDef.housing ?? 0) > 0;
+  const moveCostNow = moved && !carried ? moveCost(state, content, moved.type) : null;
+  const moveAffordable = carried ? bayanihanBlocker(state, content) === null : moveCostNow ? canAfford(state, moveCostNow) : false;
   const planState = useMemo(
     () => (moved ? withoutBuilding(state, content, moved) : undefined),
     [moved, state.buildings, state.map, state.clearing],
@@ -1164,6 +1166,7 @@ export function App() {
                   Tap a highlighted tile
                   {placing.placeNextTo && <> · next to the {placing.placeNextTo.join(" or ")}</>}
                   {moveCostNow && <> · costs {costText(moveCostNow)}</>}
+                  {carried && <> · {fill(ui.game.bayanihan.cost[lang], { n: content.rules.bayanihan.helpers })}</>}
                   {bonusRuleText(placing, content) && <> · ✨ {bonusRuleText(placing, content)}</>}
                   {groveRuleText(placing, content) && <> · {groveRuleText(placing, content)}</>}
                 </span>

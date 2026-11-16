@@ -184,6 +184,7 @@ export const GAME_TEXT = {
     marriage: ["cost"], unpaid: [], betrayal: [], none: [],
   },
   feud: { title: [], theyOwe: ["barangay", "dead", "time"], weOwe: ["barangay", "dead", "time"], between: ["barangay", "other", "time"], heat: [], cools: [], none: [], peace: ["barangay"] },
+  bayanihan: { move: [], cost: ["n"], helpers: ["n"], busy: [] },
   ruler: { label: [], woman: [], man: [], changeOnce: [], changed: [], honorific: ["term"], honorificTip: [] },
   gather: { food: [], foodLabel: ["amount"], wood: [], woodLabel: ["amount"] },
   pests: { rats: ["amount"], locustComing: ["time"], locust: ["time"], boar: [] },
