@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { loadContent } from "../engine/content";
-import { costText, formatDuration, baleteWarning, bonusPreviewText, bonusRuleText, formatBreakdown, formatRate, groveRuleText } from "./format";
+import { costText, formatDuration, formatShort, baleteWarning, bonusPreviewText, bonusRuleText, formatBreakdown, formatRate, groveRuleText } from "./format";
 
 const rates = {
   produced: { food: 5, rice: 0, wood: 0.8, gold: 0, salt: 0, wine: 0 },
@@ -62,5 +62,15 @@ describe("costText", () => {
     expect(costText({ rice: 0, wood: 9 })).toBe("🪵 9");
     expect(costText({ rice: 2, wood: 3 })).toBe("🌾 2 🪵 3");
     expect(costText({ rice: 0, wood: 0 })).toBe("free");
+  });
+});
+
+describe("formatShort", () => {
+  it("keeps small amounts whole and shortens big ones without rounding up", () => {
+    expect(formatShort(9999.9)).toBe("9,999");
+    expect(formatShort(13_361)).toBe("13.3K");
+    expect(formatShort(100_000)).toBe("100K");
+    expect(formatShort(999_999)).toBe("999.9K");
+    expect(formatShort(1_250_000)).toBe("1.2M");
   });
 });

@@ -1771,6 +1771,18 @@
       "en": "The tambuli has sounded: your allies are sending help.",
       "fil": "Hinipan na ang tambuli: nagpapadala ng tulong ang iyong mga kakampi."
     },
+    "callEveryone": {
+      "en": "Call everyone",
+      "fil": "Tawagin ang lahat"
+    },
+    "callEveryoneTip": {
+      "en": "{called} of {home} Mandirigma answer the call; the rest keep the food workplaces going. Call everyone and all of them go, and the food workplaces stand empty until the raid is over.",
+      "fil": "{called} sa {home} Mandirigma ang tumugon; ang iba ay nananatili sa mga pagkukunan ng pagkain. Tawagin ang lahat at aalis silang lahat, at walang tao sa mga pagkukunan ng pagkain hanggang matapos ang pagsalakay."
+    },
+    "calledEveryone": {
+      "en": "Every Mandirigma has been called to arms.",
+      "fil": "Tinawag na sa labanan ang lahat ng Mandirigma."
+    },
     "callOverused": {
       "en": "Calling for so small a raid, or so soon again, wears on your allies' patience: they'll trust you a little less.",
       "fil": "Ang pagtawag para sa ganito kaliit na pagsalakay, o nang ganito kadali muli, ay nakababawas sa pasensiya ng mga kakampi: bahagyang bababa ang kanilang tiwala."
@@ -2248,6 +2260,56 @@
     "busy": {
       "en": "Neighbors are already carrying a house.",
       "fil": "May binubuhat nang bahay ang mga kapitbahay."
+    }
+  },
+  "hud": {
+    "more": {
+      "en": "More",
+      "fil": "Iba pa"
+    },
+    "moreTitle": {
+      "en": "Life in the barangay",
+      "fil": "Buhay sa barangay"
+    },
+    "nameTip": {
+      "en": "{name}, led by {ruler}",
+      "fil": "{name}, pinamumunuan ni {ruler}"
+    },
+    "people": {
+      "en": "{n} villagers, room for {room}",
+      "fil": "{n} taga-barangay, may puwang para sa {room}"
+    },
+    "working": {
+      "en": "{working} working · {free} free",
+      "fil": "{working} nagtatrabaho · {free} malaya"
+    },
+    "sick": {
+      "en": "{n} sick",
+      "fil": "{n} maysakit"
+    },
+    "warriors": {
+      "en": "Mandirigma {n}/{cap}",
+      "fil": "Mandirigma {n}/{cap}"
+    },
+    "warriorsTip": {
+      "en": "{perKuta} per Kuta, never more than {percent}% of the villagers. They work between raids.",
+      "fil": "{perKuta} bawat Kuta, hindi hihigit sa {percent}% ng mga taga-barangay. Nagtatrabaho sila sa pagitan ng mga pagsalakay."
+    },
+    "toArms": {
+      "en": "To arms! {called} of {home} called; the rest keep the food coming.",
+      "fil": "Sa labanan! {called} sa {home} ang tinawag; ang iba ay nagpapatuloy sa pagkain."
+    },
+    "toArmsAll": {
+      "en": "To arms! All {called} called, food workers too.",
+      "fil": "Sa labanan! Tinawag ang lahat ng {called}, pati ang mga nasa pagkain."
+    },
+    "toArmsShort": {
+      "en": "to arms!",
+      "fil": "laban!"
+    },
+    "season": {
+      "en": "{name}, {time} left",
+      "fil": "{name}, {time} pa"
     }
   }
 }

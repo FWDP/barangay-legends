@@ -68,7 +68,7 @@ describe("naming newcomers", () => {
   });
 
   it("may name a new Mandirigma with a warrior's story", () => {
-    let s = withState({ villagers: 20, resources: { rice: 5000, wood: 5000, gold: 0 }, buildings: [at("kuta", 2, 2), at("kuta", 3, 2), at("kuta", 4, 2)] });
+    let s = withState({ villagers: 60, resources: { rice: 5000, wood: 5000, gold: 0 }, buildings: [at("kuta", 2, 2), at("kuta", 3, 2), at("kuta", 4, 2)] });
     for (let i = 0; i < 18; i++) s = apply(s, calm, { type: "train" });
     expect(s.warriors).toBe(18);
     const warriors = s.named.filter((v) => v.role === "warrior");

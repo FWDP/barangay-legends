@@ -38,10 +38,10 @@ describe("Gutom (hunger)", () => {
   const hungry = withState({ resources: { rice: 0, wood: 0, gold: 0, food: 0, salt: 0, wine: 0 }, villagers: 5, buildings: [...fields, at("bahay-kubo", 5, 3)] });
 
   it("stops all work with no Pagkain and no Palay", () => {
-    expect(availableWorkers(hungry)).toBe(0);
+    expect(availableWorkers(hungry, calm)).toBe(0);
     expect(rates(hungry, calm).produced).toEqual({ food: 0, rice: 0, wood: 0, gold: 0, salt: 0, wine: 0 });
     // With Palay still in store, nobody is hungry yet: they eat it (wastefully).
-    expect(availableWorkers({ ...hungry, resources: { ...hungry.resources, rice: 10 } })).toBeGreaterThan(0);
+    expect(availableWorkers({ ...hungry, resources: { ...hungry.resources, rice: 10 } }, calm)).toBeGreaterThan(0);
   });
 
   it("lets nobody leave for the first 30 seconds", () => {
@@ -64,7 +64,7 @@ describe("Gutom (hunger)", () => {
   it("is recoverable: gathering food puts villagers back to work and resets hunger", () => {
     let s = run(hungry, 41);
     s = apply(s, calm, { type: "gather", resource: "food" });
-    expect(availableWorkers(s)).toBe(4);
+    expect(availableWorkers(s, calm)).toBe(4);
     s = run(s, 0.5);
     expect(s.hunger).toBe(0);
     expect(rates(s, calm).produced.rice).toBeGreaterThan(0);
@@ -101,7 +101,7 @@ describe("Sakit (sickness)", () => {
 
   it("keeps sick villagers from working", () => {
     const s = withState({ resources: fed, villagers: 4, buildings: fields, sick: [60, 60] });
-    expect(availableWorkers(s)).toBe(2);
+    expect(availableWorkers(s, calm)).toBe(2);
     expect(rates(s, calm).produced.rice + rates(s, calm).produced.wood).toBeCloseTo(0.9); // 1 farmer + 1 woodcutter
   });
 

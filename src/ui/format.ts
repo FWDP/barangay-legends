@@ -15,6 +15,14 @@ export function formatAmount(n: number): string {
   return Math.floor(n).toLocaleString("en");
 }
 
+/** A short amount for narrow screens: whole numbers under 10,000, then 13.3K and 1.2M (rounded down). */
+export function formatShort(n: number): string {
+  const v = Math.floor(n);
+  if (Math.abs(v) < 10_000) return formatAmount(v);
+  if (Math.abs(v) < 1_000_000) return `${Math.floor(v / 100) / 10}K`;
+  return `${Math.floor(v / 100_000) / 10}M`;
+}
+
 const signed = (n: number) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toFixed(1)}`;
 
 export function formatRate(n: number): string {

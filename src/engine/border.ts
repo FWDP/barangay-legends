@@ -1,7 +1,7 @@
 // Raids at the border: where raiders land (preferring what no Bantayan watches), and who gets
 // there to meet them from the Kutas where they rally. Pure and deterministic: everything depends on GameState, the map and its seed.
 import type { Content } from "./content";
-import type { GameState } from "./game";
+import { calledToArms, type GameState } from "./game";
 import { barangayCenter, inBounds, isReachable, NEIGHBOURS, tileAt, type MapState, type Point } from "./map";
 import { findPath, STEP_COST } from "./paths";
 import { homeWarriors } from "./region";
@@ -154,7 +154,9 @@ export interface Muster {
 export function muster(state: GameState, content: Content, landing: Point, windowSeconds: number): Muster {
   const defs = new Map(content.buildings.map((d) => [d.id, d]));
   const forts = state.buildings.filter((b) => (defs.get(b.type)?.defense ?? 0) > 0 && !b.damaged);
-  const warriors = homeWarriors(state);
+  // During a raid warning only those called to arms go (calledToArms); a raid by the player on a
+  // neighbor's village meets every warrior at home.
+  const warriors = state.region?.incomingRaid ? calledToArms(state, content) : homeWarriors(state);
   const k = content.rules.kuta;
   const starts: Point[] = forts.length ? forts.map((b) => ({ x: b.x, y: b.y })) : [barangayCenter(state.map)];
   const counts = starts.map((_, i) => Math.floor(warriors / starts.length) + (i < warriors % starts.length ? 1 : 0));

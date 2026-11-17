@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { borrowedWorkers, clearingCrews } from "./clearing";
-import { apply, assignWorkers, buildingWorkers, healthyWorkers, newGame, rates, riceIsLow, STATE_VERSION, tick, warriorCap, warriorsOffWork, type GameState, type PlacedBuilding } from "./game";
+import { muster } from "./border";
+import { apply, assignWorkers, buildingWorkers, calledToArms, healthyWorkers, newGame, rates, riceIsLow, STATE_VERSION, tick, warriorCap, warriorsOffWork, type GameState, type PlacedBuilding } from "./game";
 import { tileAt } from "./map";
 import { parseSave } from "./save";
 import { at, calm, content, TEST_MAP, withState } from "./testUtils";
@@ -24,8 +25,8 @@ const village = (patch: Partial<GameState> = {}) =>
 describe("part-time warriors", () => {
   it("staff buildings between raids", () => {
     const s = village();
-    expect(warriorsOffWork(s)).toBe(0);
-    expect(healthyWorkers(s)).toBe(6);
+    expect(warriorsOffWork(s, calm)).toBe(0);
+    expect(healthyWorkers(s, calm)).toBe(6);
     expect(buildingWorkers(s, calm)).toEqual([0, 2, 2, 0]);
     expect(rates(s, calm).produced.rice).toBeGreaterThan(0);
   });
@@ -33,7 +34,7 @@ describe("part-time warriors", () => {
   it("the call to arms empties their workplaces, and they go back after the raid", () => {
     const s = village();
     const warned = raidOn(s);
-    expect(warriorsOffWork(warned)).toBe(4);
+    expect(warriorsOffWork(warned, calm)).toBe(4);
     // Only the 2 who aren't warriors keep working.
     expect(buildingWorkers(warned, calm).reduce((a, b) => a + b, 0)).toBe(2);
     expect(rates(warned, calm).produced.wood).toBeLessThan(rates(s, calm).produced.wood);
@@ -41,17 +42,17 @@ describe("part-time warriors", () => {
     const after = tick({ ...warned, region: { ...warned.region!, incomingRaid: { ...warned.region!.incomingRaid!, strikeAt: warned.time + 1 } } }, calm, 2);
     expect(after.region!.incomingRaid).toBeNull();
     const busy = buildingWorkers(after, calm).reduce((a, b) => a + b, 0);
-    expect(busy).toBe(Math.min(4, healthyWorkers(after)));
+    expect(busy).toBe(Math.min(4, healthyWorkers(after, calm)));
   });
 
   it("guards away at a tributary don't work until they return", () => {
     let s = village();
     s = { ...s, region: { ...s.region!, neighbors: s.region!.neighbors.map((n, i) => (i === 0 ? { ...n, status: "tributary" as const, loyalty: 80 } : n)) } };
     const guarded = apply(s, calm, { type: "guard", neighbor: s.region!.neighbors[0].id, warriors: 3 });
-    expect(warriorsOffWork(guarded)).toBe(3);
-    expect(healthyWorkers(guarded)).toBe(3);
+    expect(warriorsOffWork(guarded, calm)).toBe(3);
+    expect(healthyWorkers(guarded, calm)).toBe(3);
     const back = tick(guarded, calm, content.rules.diplomacy.loyalty.guardSeconds + 1);
-    expect(warriorsOffWork(back)).toBe(0);
+    expect(warriorsOffWork(back, calm)).toBe(0);
   });
 
   it("clearing can borrow a warrior", () => {
@@ -67,8 +68,8 @@ describe("part-time warriors", () => {
 
 describe("the Kuta cap", () => {
   it(`allows ${military.warriorsPerKuta} Mandirigma per Kuta`, () => {
-    expect(warriorCap(village(), calm)).toBe(military.warriorsPerKuta);
-    expect(warriorCap(village({ buildings: [at("kuta", 1, 1), { ...at("kuta", 2, 1), damaged: true }] }), calm)).toBe(2 * military.warriorsPerKuta);
+    expect(warriorCap(village({ villagers: 40 }), calm)).toBe(military.warriorsPerKuta);
+    expect(warriorCap(village({ villagers: 40, buildings: [at("kuta", 1, 1), { ...at("kuta", 2, 1), damaged: true }] }), calm)).toBe(2 * military.warriorsPerKuta);
     expect(warriorCap(village({ buildings: [] }), calm)).toBe(0);
   });
 
@@ -84,6 +85,69 @@ describe("the Kuta cap", () => {
   it("keeps warriors already over the cap", () => {
     const over = village({ villagers: 20, warriors: 15 });
     expect(tick(over, calm, 5).warriors).toBe(15);
+  });
+});
+
+describe("never too many Mandirigma", () => {
+  /** The reported barangay: 21 villagers, 18 of them Mandirigma, 3 Kutas, food workplaces and others. */
+  const reported = () =>
+    withState({
+      villagers: 21,
+      warriors: 18,
+      resources: { rice: 1000, wood: 300, gold: 0, food: 1000, salt: 0, wine: 0 },
+      buildings: [
+        ...[0, 1, 2, 3, 4, 5].map((i) => at("bahay-kubo", 1 + i, 0)),
+        at("gabihan", 1, 2), at("gabihan", 2, 2), at("gabihan", 3, 2),
+        at("woodcutter-camp", 7, 2), at("woodcutter-camp", 8, 2),
+        at("kuta", 2, 7), at("kuta", 4, 7), at("kuta", 6, 7),
+      ],
+      region: region(),
+    });
+  const working = (s: GameState) => buildingWorkers(s, calm).reduce((a, b) => a + b, 0);
+  const inFood = (s: GameState) => {
+    const w = buildingWorkers(s, calm);
+    return s.buildings.reduce((n, b, i) => n + (b.type === "gabihan" ? w[i] : 0), 0);
+  };
+
+  it(`caps them at ${military.maxWarriorPercent}% of the villagers, whatever the Kutas allow`, () => {
+    const s = reported();
+    // Three Kutas would allow 18; 21 villagers allow 6.
+    expect(warriorCap(s, calm)).toBe(Math.floor((21 * military.maxWarriorPercent) / 100));
+    expect(warriorCap(s, calm)).toBeLessThan(3 * military.warriorsPerKuta);
+    expect(apply(s, calm, { type: "train" })).toBe(s);
+    expect(apply({ ...s, warriors: 6 }, calm, { type: "train" }).warriors).toBe(6);
+    expect(apply({ ...s, warriors: 5 }, calm, { type: "train" }).warriors).toBe(6);
+  });
+
+  it("a raid on 21 villagers with 18 Mandirigma leaves the food workers at work", () => {
+    const s = reported();
+    expect(working(s)).toBeGreaterThan(0);
+    const warned = raidOn(s);
+    // Only those the food workplaces can spare answer the call: every Gabihan stays staffed.
+    expect(calledToArms(warned, calm)).toBeLessThan(18);
+    expect(inFood(warned)).toBe(6);
+    expect(working(warned)).toBeGreaterThan(0);
+    expect(rates(warned, calm).produced.food).toBeGreaterThan(0);
+  });
+
+  it('"Call everyone" takes them all, food workers too', () => {
+    const warned = apply(raidOn(reported()), calm, { type: "callEveryone" });
+    expect(warned.region!.incomingRaid!.everyone).toBe(true);
+    expect(calledToArms(warned, calm)).toBe(18);
+    expect(inFood(warned)).toBeLessThan(6);
+    // Only during a raid warning.
+    const calmDay = reported();
+    expect(apply(calmDay, calm, { type: "callEveryone" })).toBe(calmDay);
+    // Saved and loaded, the call holds.
+    expect(parseSave(JSON.stringify(warned), content)!.region!.incomingRaid!.everyone).toBe(true);
+  });
+
+  it("the called ones are who meet the raiders at the landing", () => {
+    const warned = raidOn(reported());
+    const few = muster(warned, calm, { x: 0, y: 4 }, 600);
+    expect(few.joined + few.late).toBe(calledToArms(warned, calm));
+    const all = muster(apply(warned, calm, { type: "callEveryone" }), calm, { x: 0, y: 4 }, 600);
+    expect(all.joined + all.late).toBe(18);
   });
 });
 

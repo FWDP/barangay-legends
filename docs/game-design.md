@@ -114,6 +114,11 @@ different form, and some (prestige and Dangal, export codes) isn't built yet.
   gives a short warning and shows its landing only as the boats come close. The Kuta (palisaded
   refuge, one tile) is the rally point: the Mandirigma gather there (`rules.kuta.rallySeconds`)
   and march to the landing; only those in time fight, those with time to spare fight ready.
+  Each Kuta allows `rules.military.warriorsPerKuta` Mandirigma, never more than
+  `maxWarriorPercent` (30%) of the villagers. The call to arms is proportional: enough villagers
+  stay at work to staff every food workplace (filled first while a raid is coming), and only the
+  rest of the Mandirigma go; "Call everyone" on the raid warning (the `callEveryone` command)
+  sends them all.
   Families within its shelter take refuge, and winning raiders take much less from storehouses
   and fields there. Raiders prefer unwatched landings, coves and river mouths, come more at night,
   dawn and season changes and less in typhoons, and leave sooner with less loot when allies are

@@ -114,6 +114,12 @@ export function NoticeStack(props: { state: GameState; queue: Notice[]; views: R
   );
 }
 
+/** What a status icon means (its tip). */
+export function statusText(id: string, detail: string, game: GameText, lang: Lang): string {
+  const t = game.notices;
+  return id === "mourning" ? fill(t.mourning[lang], { time: clock(Number(detail)) }) : id === "embargo" ? fill(t.embargo[lang], { names: detail }) : id === "blessings" ? fill(t.blessings[lang], { names: detail }) : id === "tired" ? t.tired[lang] : t.tradePaused[lang];
+}
+
 /** Small status icons for ongoing states, each with a short tip (tap on phones, hover on desktop). */
 export function StatusIcons(props: { state: GameState; content: Content; game: GameText; lang: Lang; className?: string; tradeHeld?: boolean }) {
   const { state, content, game, lang, className = "", tradeHeld = false } = props;
@@ -121,8 +127,7 @@ export function StatusIcons(props: { state: GameState; content: Content; game: G
   const [tip, setTip] = useState<string | null>(null);
   const list = statusIcons(state, content, lang, tradeHeld);
   if (list.length === 0) return null;
-  const text = (id: string, detail: string) =>
-    id === "mourning" ? fill(t.mourning[lang], { time: clock(Number(detail)) }) : id === "embargo" ? fill(t.embargo[lang], { names: detail }) : id === "blessings" ? fill(t.blessings[lang], { names: detail }) : id === "tired" ? t.tired[lang] : t.tradePaused[lang];
+  const text = (id: string, detail: string) => statusText(id, detail, game, lang);
   return (
     <div role="group" aria-label={t.status[lang]} className={`pointer-events-auto relative flex flex-col items-end gap-1 ${className}`}>
       <div className="flex gap-1">

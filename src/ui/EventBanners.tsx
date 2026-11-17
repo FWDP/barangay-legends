@@ -121,9 +121,12 @@ export interface BannerAction {
   note?: string;
 }
 
-export function EventBanner({ banner, extra, danger = false, action }: { banner: Banner; extra?: string; danger?: boolean; action?: BannerAction }) {
-  const button = action && (
+export function EventBanner({ banner, extra, danger = false, actions = [] }: { banner: Banner; extra?: string; danger?: boolean; actions?: BannerAction[] }) {
+  const button = actions.length > 0 && (
+    <span className="flex flex-wrap justify-end gap-1">
+      {actions.map((action) => (
     <button
+      key={action.label}
       type="button"
       title={action.tip}
       aria-label={`${action.label}: ${action.tip}`}
@@ -134,6 +137,8 @@ export function EventBanner({ banner, extra, danger = false, action }: { banner:
       {action.icon}
       {action.label}
     </button>
+      ))}
+    </span>
   );
   return (
     <div
@@ -146,14 +151,14 @@ export function EventBanner({ banner, extra, danger = false, action }: { banner:
       <span className="min-w-0 flex-1 text-xs leading-tight sm:text-sm">
         {/* An action sits beside the title, so it shows even when a phone cuts the banner short. */}
         {button ? (
-          <span className="mb-0.5 flex items-center justify-between gap-2">
-            <span className="font-display text-sm sm:text-base">{banner.title}</span>
+          <span className="mb-0.5 flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+            <span className="font-display text-sm whitespace-nowrap sm:text-base">{banner.title}</span>
             {button}
           </span>
         ) : (
           <span className="font-display text-sm sm:text-base">{banner.title}</span>
         )}{" "}
-        {action?.note && <span className="mb-0.5 block text-[11px] font-semibold opacity-90">{action.note}</span>}
+        {actions.map((action) => action.note && <span key={action.label} className="mb-0.5 block text-[11px] font-semibold opacity-90">{action.note}</span>)}
         {banner.text}
         {extra && <span className={`mt-0.5 block font-semibold ${danger ? "rounded bg-red-950/40 px-1 text-yellow-200" : ""}`}>{extra}</span>}
       </span>

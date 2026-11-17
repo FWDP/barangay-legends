@@ -3,7 +3,7 @@
 import { honoredLevels } from "../engine/honor";
 import type { Content } from "../engine/content";
 import { activeJobs } from "../engine/clearing";
-import { buildingWorkers, type GameState } from "../engine/game";
+import { buildingWorkers, calledToArms, type GameState } from "../engine/game";
 import { isHungry } from "../engine/events";
 import { tileAt, type MapState, type Point } from "../engine/map";
 import { cachedPath, isWalkable } from "../engine/paths";
@@ -139,7 +139,7 @@ export function planVillagers(state: GameState, content: Content, cap = MAX_SPRI
   const forts = state.buildings.filter((b) => (defs.get(b.type)?.defense ?? 0) > 0 && !b.damaged);
   // Part-time warriors: between raids they're among the workers above. Called to arms (a raid
   // is coming) they leave work and go to meet it.
-  const guards = state.region?.incomingRaid ? homeWarriors(state) : 0;
+  const guards = calledToArms(state, content);
   // During a raid warriors leave their Kuta to meet the raiders at the landing.
   for (let k = 0; k < guards; k++) roles.push({ role: "warrior", place: rally ?? (forts.length ? forts[k % forts.length] : null) });
 

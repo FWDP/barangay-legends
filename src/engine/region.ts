@@ -129,6 +129,8 @@ export interface IncomingRaid {
   watched?: boolean;
   /** The datu sounded the tambuli: allies send volunteers too (callForHelp). */
   called?: boolean;
+  /** The datu called every Mandirigma to arms, not only those the food workplaces can spare (callEveryone). */
+  everyone?: boolean;
   /** A vengeance raid for a blood debt (feud.ts): fiercer, more warriors, and a few houses may burn. */
   vengeance?: boolean;
   /** A mourning raid after their datu died (Visayan practice; flagged for review). */
@@ -1104,6 +1106,14 @@ export function callOverused(state: GameState, content: Content): boolean {
  * Calling for a small raid, or too soon after the last call, costs every answering ally trust.
  */
 const addFlag = (state: GameState, flag: string): GameState => (state.flags.includes(flag) ? state : { ...state, flags: [...state.flags, flag] });
+
+/** The datu calls every Mandirigma to arms for this raid, the food workers among them. */
+export function callEveryone(state: GameState): GameState {
+  const region = state.region;
+  const raid = region?.incomingRaid;
+  if (!region || !raid || raid.everyone) return state;
+  return { ...state, region: { ...region, incomingRaid: { ...raid, everyone: true } } };
+}
 
 export function callForHelp(state: GameState, content: Content): GameState {
   if (callBlocker(state)) return state;

@@ -1139,6 +1139,7 @@ function parseRegion(raw: unknown, content: Content, player: GameState): RegionS
             ...(finiteNonNeg(incoming.warnedAt) && incoming.warnedAt <= incoming.strikeAt ? { warnedAt: incoming.warnedAt } : {}),
             ...(incoming.watched === true ? { watched: true } : {}),
             ...(incoming.called === true ? { called: true } : {}),
+            ...(incoming.everyone === true ? { everyone: true } : {}),
             ...(incoming.vengeance === true ? { vengeance: true } : {}),
             ...(incoming.mourning === true ? { mourning: true } : {}),
           }

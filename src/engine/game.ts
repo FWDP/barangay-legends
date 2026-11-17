@@ -42,7 +42,7 @@ import {
   updateRegion,
   type RegionState, payRansom, updateCaptives, mediate, offerBloodPrice, sealPeace } from "./region";
 import { DEFAULT_SEED } from "./rng";
-import { callForHelp, homeWarriors } from "./region";
+import { callEveryone, callForHelp, homeWarriors } from "./region";
 import { choose, updateChoices, type PendingChoice } from "./choices";
 import { acceptCounter, declineCounter, handog, proposeTrade, type Goods } from "./trading";
 import { advanceClearing, cancelClearing, clearArea, dropUnreachableJobs, workforce, type ClearingJob } from "./clearing";
@@ -449,15 +449,15 @@ export function roadBonuses(state: GameState, content: Content): number[] {
 }
 
 /** Villagers able to work: none while hungry (gutom), never the sick (sakit). */
-export function healthyWorkers(state: GameState): number {
-  return Math.max(0, healthyWorkersBase(state) - lostToTikbalang(state));
+export function healthyWorkers(state: GameState, content: Content): number {
+  return Math.max(0, healthyWorkersBase(state, content) - lostToTikbalang(state));
 }
 
 /** Healthy workers before any are led astray by a tikbalang. */
-export function healthyWorkersBase(state: GameState): number {
+export function healthyWorkersBase(state: GameState, content: Content): number {
   // Hungry, or hiding in the forest from an overwhelming raid (warfare.ts): nobody works.
   if (isHungry(state) || isHiding(state)) return 0;
-  return Math.max(0, state.villagers - state.sick.length - warriorsOffWork(state));
+  return Math.max(0, state.villagers - state.sick.length - warriorsOffWork(state, content));
 }
 
 /**
@@ -465,16 +465,47 @@ export function healthyWorkersBase(state: GameState): number {
  * a raid is coming (called to arms, to meet it at the landing) and while away guarding a
  * tributary. Nothing is stored for this: when the raid is over they are simply back at work.
  */
-export function warriorsOffWork(state: GameState): number {
+export function warriorsOffWork(state: GameState, content: Content): number {
   const home = homeWarriors(state);
   const away = state.warriors - home;
-  return away + (state.region?.incomingRaid ? home : 0);
+  return away + calledToArms(state, content);
 }
 
-/** How many Mandirigma the barangay may train: warriorsPerKuta for each Kuta (standing or damaged). */
+/**
+ * How many Mandirigma at home answer a raid warning. The call is proportional: enough villagers
+ * stay behind to staff every food workplace (Pagkain), and the rest of the Mandirigma go. Only
+ * when the datu calls everyone (the "everyone" command) do all of them go.
+ */
+export function calledToArms(state: GameState, content: Content): number {
+  const raid = state.region?.incomingRaid;
+  if (!raid) return 0;
+  const home = homeWarriors(state);
+  if (raid.everyone) return home;
+  const away = state.warriors - home;
+  const able = Math.max(0, state.villagers - state.sick.length - away - notWorking(state, content));
+  const keep = Math.min(able, foodSlots(state, content));
+  return Math.min(home, Math.max(0, able - keep));
+}
+
+/** Worker places in the food workplaces that can be staffed now. */
+function foodSlots(state: GameState, content: Content): number {
+  const defs = new Map(content.buildings.map((d) => [d.id, d]));
+  return state.buildings.reduce((n, b) => {
+    const def = defs.get(b.type);
+    return n + ((def?.produces?.food ?? 0) > 0 && canStaff(state, content, b) ? (def?.workers ?? 0) : 0);
+  }, 0);
+}
+
+/**
+ * How many Mandirigma the barangay may train: warriorsPerKuta for each Kuta (standing or
+ * damaged), and never more than maxWarriorPercent of the villagers, so a raid can't empty the
+ * workplaces.
+ */
 export function warriorCap(state: GameState, content: Content): number {
+  const m = content.rules.military;
   const forts = new Set(content.buildings.filter((b) => b.defense).map((b) => b.id));
-  return state.buildings.filter((b) => forts.has(b.type)).length * content.rules.military.warriorsPerKuta;
+  const byKuta = state.buildings.filter((b) => forts.has(b.type)).length * m.warriorsPerKuta;
+  return Math.min(byKuta, Math.floor((state.villagers * m.maxWarriorPercent) / 100));
 }
 
 /** Food is short: Pagkain would last less than staffing.foodFirstBelowRiceSeconds at the current eating rate. */
@@ -487,11 +518,11 @@ export function riceIsLow(state: GameState, content: Content): boolean {
  * Villagers free for buildings: every healthy one. Buildings come first; clearing forest uses
  * the villagers left over (see clearing.ts), so a long clearing queue never empties the fields.
  */
-export function availableWorkers(state: GameState, content?: Content): number {
+export function availableWorkers(state: GameState, content: Content): number {
   // Children don't work and elders work part of a share (population.ts); neighbors carrying a
   // house (bayanihan) are busy with it for a short while.
-  const carrying = content && state.bayanihan && state.time < state.bayanihan.until ? content.rules.bayanihan.helpers : 0;
-  return Math.max(0, healthyWorkers(state) - (content ? notWorking(state, content) : 0) - carrying);
+  const carrying = state.bayanihan && state.time < state.bayanihan.until ? content.rules.bayanihan.helpers : 0;
+  return Math.max(0, healthyWorkers(state, content) - notWorking(state, content) - carrying);
 }
 
 /** Can a Bahay Kubo be moved by bayanihan now: enough free villagers to carry it, and none being carried? */
@@ -531,8 +562,8 @@ export function assignWorkers(state: GameState, content: Content): Record<string
       }
     }
   };
-  // Short of rice: food workplaces are filled first.
-  if (riceIsLow(state, content)) fill(producers.filter((b) => (b.produces?.food ?? 0) > 0));
+  // Short of rice, or Mandirigma called to arms: food workplaces are filled first.
+  if (riceIsLow(state, content) || calledToArms(state, content) > 0) fill(producers.filter((b) => (b.produces?.food ?? 0) > 0));
   fill(producers);
   return assigned;
 }
@@ -929,6 +960,8 @@ export type Command =
   | { type: "payRansom"; captive: number }
   /** Sound the tambuli during a raid warning: allies send volunteers too. */
   | { type: "callForHelp" }
+  /** During a raid warning: call every Mandirigma to arms, not only those the fields can spare. */
+  | { type: "callEveryone" }
   /** Food (food.ts): brew rice wine from Palay, hold a Pista, rest a worn-out kaingin. */
   | { type: "brew"; amount: number }
   | { type: "pista"; occasion: PistaOccasion }
@@ -1033,6 +1066,8 @@ function applyCommand(state: GameState, content: Content, command: Command): Gam
       return gong(state, content, command.at, command.held === true);
     case "callForHelp":
       return callForHelp(state, content);
+    case "callEveryone":
+      return callEveryone(state);
     case "setRulerGender":
       return GENDERS.includes(command.gender) ? setRulerGender(state, content, command.gender) : state;
     case "setHonorific":

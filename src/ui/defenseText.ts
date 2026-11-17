@@ -4,7 +4,7 @@ import { barangayCenter, type Point } from "../engine/map";
 import { directionFrom } from "../engine/border";
 import { landingKnown, raidReason, raidWarning } from "../engine/defense";
 import type { Content } from "../engine/content";
-import type { GameState } from "../engine/game";
+import { calledToArms, type GameState } from "../engine/game";
 import type { Report } from "../engine/region";
 import type { Lang } from "./settings";
 import { fill, type GameText } from "./uiContent";
@@ -35,6 +35,8 @@ export function raidBannerText(state: GameState, content: Content, game: GameTex
   const vars = { datu: who?.datu ?? "", barangay: who?.name ?? raid.from };
   const warn = raidWarning(state, content);
   const where = warn && landingKnown(state, content) ? fill(t.raidLands[lang], { ...vars, direction: bankWord(state, warn.landing, game, lang) }) : fill(t.raidUnknown[lang], vars);
-  const rally = state.warriors > 0 ? fill(t.raidRally[lang], { n: state.warriors }) : t.raidNoWarriors[lang];
+  // Only those called to arms march out (the call is proportional unless the datu calls everyone).
+  const called = calledToArms(state, content);
+  const rally = called > 0 ? fill(t.raidRally[lang], { n: called }) : t.raidNoWarriors[lang];
   return `${where} ${rally}`;
 }

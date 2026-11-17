@@ -1,7 +1,7 @@
 import { Bolo } from "./Bolo";
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import type { Resource } from "../engine/content";
-import { bayanihanBlocker, buildingCost, canAfford, canMove, moveCost, owned, repairCost, roadCost, withoutBuilding } from "../engine/game";
+import { bayanihanBlocker, calledToArms, buildingCost, canAfford, canMove, moveCost, owned, repairCost, roadCost, withoutBuilding } from "../engine/game";
 import { buildingAt, canPlace, isUnlocked, tileAt } from "../engine/map";
 import { activeJobs, affordableTiles, borrowedWorkers, canSelect, clearingCrews, jobSeconds, orderSelection, riceIsSafe, selectionCost, workforce } from "../engine/clearing";
 import { BarangayMap } from "./BarangayMap";
@@ -11,14 +11,14 @@ import { recommended } from "./buildMenu";
 import { latestReportId, OfferBar, ReportDialog, unseenReport, VictoryDialog } from "./RegionOverlays";
 import { RegionView } from "./RegionView";
 import { activeBanners, clock, EventBanner, TambuliIcon, type BannerAction } from "./EventBanners";
-import { NoticeStack, StatusIcons, type NoticeView } from "./NoticeStack";
+import { NoticeStack, type NoticeView } from "./NoticeStack";
 import { noticeQueue } from "./notices";
 import { landedUnwatched, raidWarning } from "../engine/defense";
 import { defenseReasonLine, raidBannerText } from "./defenseText";
 import { FloatLayer, spawnFloat } from "./floats";
 import { baleteWarning, bonusRuleText, costText, groveRuleText, RESOURCE_ICON } from "./format";
 import { automationStarted, GatherButtons } from "./GatherButtons";
-import { Hud, MapSeasonBadge } from "./Hud";
+import { Hud, MapCorner } from "./Hud";
 import { SettingsMenu } from "./SettingsMenu";
 import { AdvisorBubble, useAdvisor } from "./Advisor";
 import { HelpPanel } from "./HelpPanel";
@@ -34,13 +34,13 @@ import { awayStory, offlineStory } from "./away";
 import { AwayDialog, ChoiceBanner, ChoiceDialog, NoticeDialog } from "./StoryDialogs";
 import { useReducedMotion, type Clash } from "./VillagerLayer";
 import { BOAT_RETURN_MS, CLASH_MS, SAIL_SECONDS } from "./visitors";
-import { callBlocker, callOverused, tradingPaused } from "../engine/region";
+import { callBlocker, callOverused, homeWarriors, tradingPaused } from "../engine/region";
 import type { GameState } from "../engine/game";
 import { DatuDialog, GawainPanel, HistoryDialog, RememberedDialog, VillagerDialog } from "./Gawain";
 import type { Tapped } from "./villagers";
 import { shareBarangay } from "./share";
 import { awayPeopleLines, battleNames } from "./stories";
-import { AklatButton, AklatDialog, DambanaDialog, EclipseBar, ForestChip, PrankBar, ReplantBar, TikbalangBar } from "./Spirits";
+import { AklatButton, AklatDialog, DambanaDialog, EclipseBar, PrankBar, ReplantBar, TikbalangBar } from "./Spirits";
 import { shrines, standingShrine } from "../engine/worship";
 import { canReplant } from "../engine/forest";
 import { isPlaza } from "../engine/map";
@@ -635,6 +635,24 @@ export function App() {
             sfx.alarm();
           },
         };
+  // The call to arms is proportional; the datu may call every Mandirigma, food workers too.
+  const raidNow = state.region?.incomingRaid;
+  const homeNow = homeWarriors(state);
+  const everyoneAction: BannerAction | undefined =
+    raidNow && homeNow > 0
+      ? {
+          label: dt.callEveryone[lang],
+          icon: <span aria-hidden>⚔️</span>,
+          tip: fill(dt.callEveryoneTip[lang], { called: calledToArms(state, content), home: homeNow }),
+          disabled: !!raidNow.everyone || calledToArms(state, content) >= homeNow,
+          note: raidNow.everyone ? dt.calledEveryone[lang] : undefined,
+          onClick: () => {
+            dispatch({ type: "callEveryone" });
+            sfx.alarm();
+          },
+        }
+      : undefined;
+  const raidActions = [everyoneAction, tambuliAction].filter((a): a is BannerAction => !!a);
   const nt = ui.game.notices;
   const offerFrom = state.region?.offer ? (neighborDef(content, state.region.offer.from)?.name ?? state.region.offer.from) : "";
   const expeditionBar = (
@@ -698,7 +716,7 @@ export function App() {
               }
               extra={b.id === "raid" && raidCover ? (raidCover.watched ? ui.game.defense.warnWatched[lang] : ui.game.defense.warnUnwatched[lang]) : undefined}
               danger={!!raidCover && !raidCover.watched}
-              action={b.id === "raid" ? tambuliAction : undefined}
+              actions={b.id === "raid" ? raidActions : undefined}
             />
           ),
           label: `${b.icon} ${b.id === "pest" ? pestTitle(state, ui.game, lang) : b.title}`,
@@ -873,7 +891,7 @@ export function App() {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-green-800 pt-[env(safe-area-inset-top)] text-stone-800">
-      <Hud state={state} content={content} full={{ label: ui.game.kamalig.full[lang], tip: ui.game.kamalig.fullTip[lang] }}
+      <Hud state={state} content={content} game={ui.game} lang={lang} tradeHeld={tradeHeld} full={{ label: ui.game.kamalig.full[lang], tip: ui.game.kamalig.fullTip[lang] }}
         food={{
           variety: (n, total) => fill(ui.game.food.variety[lang], { n, total }),
           varietyTip: ui.game.food.varietyTip[lang],
@@ -901,12 +919,7 @@ export function App() {
             }}
           />
         }
-        day={<DayChip state={state} content={content} game={ui.game} lang={lang} className="hidden sm:flex" />} extraChips={
-          <>
-            <ForestChip state={state} content={content} game={ui.game} lang={lang} />
-            <StatusIcons state={state} content={content} game={ui.game} lang={lang} className="hidden sm:flex" tradeHeld={tradeHeld} />
-          </>
-        }>
+        day={<DayChip state={state} content={content} game={ui.game} lang={lang} className="flex h-8 shrink-0 sm:h-9" />}>
         <span className="hidden sm:block">
           <AklatButton state={state} content={content} game={ui.game} lang={lang} onOpen={() => setAklatOpen(true)} />
         </span>
@@ -1091,14 +1104,10 @@ export function App() {
         />
         )}
         <LoreToast loreId={loreNote} onClose={closeLore} />
-        {view === "barangay" && <MapSeasonBadge state={state} content={content}>
-          <DayChip state={state} content={content} game={ui.game} lang={lang} compact className="flex bg-stone-900/50" />
-          <span className="rounded-lg bg-stone-900/50">
-            <ForestChip state={state} content={content} game={ui.game} lang={lang} />
-          </span>
+        {/* On phones the Aklat sits on the map (the top bar has no room); the day, season, forest and status are in the top bar. */}
+        {view === "barangay" && <MapCorner>
           <AklatButton state={state} content={content} game={ui.game} lang={lang} onOpen={() => setAklatOpen(true)} compact />
-          <StatusIcons state={state} content={content} game={ui.game} lang={lang} tradeHeld={tradeHeld} />
-        </MapSeasonBadge>}
+        </MapCorner>}
         {/* On phones the banners keep clear of the season, leaf and book on the right, and the task joins them. */}
         <div
           data-map-overlay

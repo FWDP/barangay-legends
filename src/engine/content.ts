@@ -787,6 +787,8 @@ export interface MilitaryRules {
   warriorTilesPerSecond: number;
   /** Each Kuta (standing or damaged) allows this many trained Mandirigma. */
   warriorsPerKuta: number;
+  /** Never more Mandirigma than this percent of the villagers, whatever the Kutas allow. */
+  maxWarriorPercent: number;
 }
 
 /** Who works where when it matters. */
@@ -1245,7 +1247,7 @@ export function validateRules(raw: unknown): Rules {
   if (!isObject(kuta)) throw new Error('rules: missing "kuta"');
   checkNumbers(kuta, ["rallySeconds", "readySeconds", "readyBonus", "shelterRadius", "shelteredLootPercent"], "rules: kuta");
   checkNumbers(military, ["warriorTilesPerSecond"], "rules: military", true);
-  checkNumbers(military, ["warriorsPerKuta"], "rules: military");
+  checkNumbers(military, ["warriorsPerKuta", "maxWarriorPercent"], "rules: military");
   if (!isObject(raw.staffing)) throw new Error('rules: missing "staffing"');
   checkNumbers(raw.staffing, ["foodFirstBelowRiceSeconds", "foodWorkersWarnPercent"], "rules: staffing");
   const d = raw.diplomacy;

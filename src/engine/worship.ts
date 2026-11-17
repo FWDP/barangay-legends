@@ -333,7 +333,7 @@ export function updateVisitors(state: GameState, content: Content, t0: number, t
       const chance = k.chancePerSecond * (s.forest.stage >= 1 ? k.lowForestMultiplier : 1);
       if (rollAt(seed, second, SALT_TIKBALANG) < chance) {
         const riddle = k.riddles[Math.floor(rollAt(seed, second, SALT_RIDDLE) * k.riddles.length)];
-        const workers = Math.min(k.workersLost, healthyWorkersBase(s));
+        const workers = Math.min(k.workersLost, healthyWorkersBase(s, content));
         if (workers > 0) {
           s = addFlag(
             { ...s, tikbalang: { riddle: riddle.id, workers, until: second + k.lostSeconds }, nextEventAt: { ...s.nextEventAt, [k.id]: second + k.cooldownSeconds } },

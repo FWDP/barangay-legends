@@ -217,11 +217,11 @@ describe("visitors", () => {
     const s0 = shrine({ villagers: 20 });
     const s = { ...updateVisitors(s0, eager, 0, 1), time: 1 };
     expect(s.tikbalang).not.toBeNull();
-    expect(healthyWorkers(s)).toBe(healthyWorkers(s0) - eager.trickery.workersLost);
+    expect(healthyWorkers(s, eager)).toBe(healthyWorkers(s0, eager) - eager.trickery.workersLost);
     const riddle = eager.trickery.riddles.find((r) => r.id === s.tikbalang!.riddle)!;
     const right = apply(s, eager, { type: "answerRiddle", option: riddle.answer });
     expect(right.tikbalang).toBeNull();
-    expect(healthyWorkers(right)).toBe(healthyWorkers(s0));
+    expect(healthyWorkers(right, eager)).toBe(healthyWorkers(s0, eager));
     const wrong = apply(s, eager, { type: "answerRiddle", option: (riddle.answer + 1) % riddle.options.length });
     expect(wrong.tikbalang?.wrong).toBe(true);
     // No second try; they come back when the minute is up.
