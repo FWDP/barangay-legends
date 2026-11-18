@@ -38,19 +38,34 @@ const subscribe = (l: () => void) => {
 /** Crisp chips (index.css map-chip): a solid pill with dark text, no outline on the letters. */
 const TONE = { food: "map-chip-good", rice: "map-chip-good", wood: "map-chip-good", gold: "map-chip-good", salt: "map-chip-good", wine: "map-chip-good", info: "" } as const;
 
+/**
+ * Production numbers (+3.9 🌾) float over the map but under the banners and the notice list
+ * (z-30 and up), never on top of them; info messages (a tap's answer, "Saved") stay on top.
+ */
+export const FLOAT_LAYER = "z-[25]";
+export const INFO_FLOAT_LAYER = "z-[45]";
+
 export function FloatLayer() {
   const list = useSyncExternalStore(subscribe, () => floats);
-  return (
-    <div className="pointer-events-none fixed inset-0 z-40 overflow-hidden" aria-hidden>
-      {list.map((f) => (
-        <span
-          key={f.id}
-          className={`map-chip absolute text-[13px] motion-safe:animate-float-up motion-reduce:animate-fade-out ${TONE[f.tone]}`}
-          style={{ left: f.x, top: f.y }}
-        >
-          {f.text}
-        </span>
-      ))}
+  const layer = (info: boolean) => (
+    <div className={`pointer-events-none fixed inset-0 ${info ? INFO_FLOAT_LAYER : FLOAT_LAYER} overflow-hidden`} aria-hidden>
+      {list
+        .filter((f) => (f.tone === "info") === info)
+        .map((f) => (
+          <span
+            key={f.id}
+            className={`map-chip absolute text-[13px] motion-safe:animate-float-up motion-reduce:animate-fade-out ${TONE[f.tone]}`}
+            style={{ left: f.x, top: f.y }}
+          >
+            {f.text}
+          </span>
+        ))}
     </div>
+  );
+  return (
+    <>
+      {layer(false)}
+      {layer(true)}
+    </>
   );
 }

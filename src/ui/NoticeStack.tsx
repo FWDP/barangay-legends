@@ -4,12 +4,13 @@
 // a compact pill (icon, short title, countdown and its main buttons) that stays while its event
 // lasts; on phones raid and event banners minimize themselves after a few seconds. Ongoing
 // states are small status icons instead.
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import type React from "react";
 import type { Content } from "../engine/content";
 import type { GameState } from "../engine/game";
 import { clock, type BannerAction } from "./EventBanners";
-import { arrange, endingSoon, statusIcons, type Notice } from "./notices";
+import { arrange, endingSoon, pickFromList, statusIcons, type Notice } from "./notices";
 import type { Lang } from "./settings";
 import { fill, type GameText } from "./uiContent";
 
@@ -24,9 +25,14 @@ export interface NoticeView {
   pill?: { icon: ReactNode; title: string; seconds?: number; actions?: BannerAction[] };
 }
 
-/** The notices sit above the map's labels and chips (z-10 and z-20 there), and their list above them all. */
+/**
+ * The notices sit above the map's labels and chips (z-10 and z-20 there) and its production
+ * numbers (floats.tsx, z-25). Their open list is drawn on the page itself (a portal), above every
+ * banner, panel and overlay, so nothing can cover it.
+ */
 export const NOTICE_LAYER = "z-30";
-export const NOTICE_LIST_LAYER = "z-40";
+export const NOTICE_LIST_LAYER = "z-[80]";
+const LIST_W = 256;
 
 /** Raid and event banners that minimize themselves on phones (narrower than PHONE_MAX_PX). */
 export const AUTO_MINIMIZE = ["raid", "fire", "hunger", "typhoon", "eclipse", "tikbalang", "sickness", "overcrowded", "damaged", "pest"];
@@ -96,6 +102,23 @@ export function NoticeStack(props: {
   }, [autoId]);
   const minimizedRef = useRef(minimized);
   minimizedRef.current = minimized;
+
+  // The open list's place on the page: under the badge (over it at the bottom), kept on screen.
+  const badge = useRef<HTMLButtonElement>(null);
+  const [at, setAt] = useState<{ left: number; top: number; bottom: number } | null>(null);
+  useLayoutEffect(() => {
+    const place = () => {
+      const el = badge.current;
+      if (!open || !el) return setAt((a) => (a ? null : a));
+      const r = el.getBoundingClientRect();
+      const w = Math.min(LIST_W, window.innerWidth - 16);
+      const next = { left: Math.round(Math.min(window.innerWidth - w - 8, Math.max(8, r.left + r.width / 2 - w / 2))), top: Math.round(r.bottom + 4), bottom: Math.round(window.innerHeight - r.top + 4) };
+      setAt((a) => (a && a.left === next.left && a.top === next.top && a.bottom === next.bottom ? a : next));
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  });
 
   if (!shown && pills.length === 0) return null;
   const soon = endingSoon(waiting, state.time);
@@ -170,8 +193,9 @@ export function NoticeStack(props: {
         </div>
       )}
       {waiting.length > 0 && (
-        <div className={`pointer-events-auto relative flex flex-col items-center ${NOTICE_LIST_LAYER}`}>
+        <div className="pointer-events-auto relative flex flex-col items-center">
           <button
+            ref={badge}
             type="button"
             aria-expanded={open}
             aria-label={`${fill(t.moreLabel[lang], { n: waiting.length })}${soon ? ` · ${t.soon[lang]}` : ""}`}
@@ -183,37 +207,56 @@ export function NoticeStack(props: {
             {fill(t.more[lang], { n: waiting.length })}
             {soon && " ⏳"}
           </button>
-          {open && (
-            <ul
-              aria-label={t.list[lang]}
-              className={`mat-card absolute w-64 max-w-[calc(100vw-5rem)] space-y-0.5 rounded-xl border-2 border-amber-900/60 p-1.5 text-xs text-stone-800 shadow-lg ${side === "bottom" ? "bottom-full mb-1" : "top-full mt-1"}`}
-            >
-              {waiting.map((n) => (
-                <li key={n.id}>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      ui.set({ front: n.id, open: false });
-                      views[n.id]!.onOpen?.();
-                    }}
-                    className="flex w-full items-center justify-between gap-2 rounded-lg px-1.5 py-1 text-left hover:bg-amber-100"
-                  >
-                    <span className="min-w-0">{views[n.id]!.label}</span>
-                    {n.paused ? (
-                      <span className="shrink-0" aria-hidden>
-                        ⏸
-                      </span>
-                    ) : (
-                      n.expiresAt !== undefined && <span className={`shrink-0 tabular-nums ${n.expiresAt - state.time <= 15 ? "font-bold text-red-700" : "text-stone-500"}`}>{clock(n.expiresAt - state.time)}</span>
-                    )}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
+          {open &&
+            at &&
+            createPortal(
+              <div className={`fixed ${NOTICE_LIST_LAYER}`} style={{ left: at.left, ...(side === "bottom" ? { bottom: at.bottom } : { top: at.top }), width: LIST_W, maxWidth: "calc(100vw - 1rem)" }}>
+                <NoticeList
+                  waiting={waiting}
+                  views={views}
+                  state={state}
+                  label={t.list[lang]}
+                  onPick={(id) => {
+                    // It comes forward (an action-now banner steps aside to its pill) and opens.
+                    const picked = pickFromList(present, ui, id, (x) => !!views[x]?.pill);
+                    ui.set({ ...picked, open: false });
+                    views[id]!.onOpen?.();
+                  }}
+                />
+              </div>,
+              document.body,
+            )}
         </div>
       )}
     </div>
+  );
+}
+
+/** The waiting notices: each opens on a tap or a click (and leaves the list). */
+export function NoticeList(props: { waiting: Notice[]; views: Record<string, NoticeView | undefined>; state: GameState; label: string; onPick: (id: string) => void }) {
+  const { waiting, views, state, label, onPick } = props;
+  return (
+    <ul aria-label={label} data-notice-list className="mat-card pointer-events-auto space-y-0.5 rounded-xl border-2 border-amber-900/60 p-1.5 text-xs text-stone-800 shadow-lg">
+      {waiting.map((n) => (
+        <li key={n.id}>
+          <button
+            type="button"
+            data-notice-item={n.id}
+            onClick={() => onPick(n.id)}
+            className="flex min-h-9 w-full touch-manipulation items-center justify-between gap-2 rounded-lg px-1.5 py-1 text-left hover:bg-amber-100"
+          >
+            <span className="min-w-0">{views[n.id]!.label}</span>
+            {n.paused ? (
+              <span className="shrink-0" aria-hidden>
+                ⏸
+              </span>
+            ) : (
+              n.expiresAt !== undefined && <span className={`shrink-0 tabular-nums ${n.expiresAt - state.time <= 15 ? "font-bold text-red-700" : "text-stone-500"}`}>{clock(n.expiresAt - state.time)}</span>
+            )}
+          </button>
+        </li>
+      ))}
+    </ul>
   );
 }
 

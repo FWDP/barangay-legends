@@ -7,7 +7,8 @@ import { boatCap, boatCost } from "../engine/sea";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { Content } from "../engine/content";
 import { workforce } from "../engine/clearing";
-import { bayanihanBlocker, buildingWorkers, canAfford, canStaff, demolishPreview, moveCost, roadBonuses, undoSecondsLeft, type GameState } from "../engine/game";
+import { bayanihanBlocker, buildingWorkers, canAfford, demolishPreview, moveCost, roadBonuses, undoSecondsLeft, unreachableWorkplaces, type GameState } from "../engine/game";
+import { routeBreak } from "../engine/routeBreak";
 import { buildingAt } from "../engine/map";
 import { costText, formatAmount } from "./format";
 import { levelOf, maxLevelOf, nextUpgrade, storageAt, upgradeBlocker, upgradeCost } from "../engine/upgrades";
@@ -98,7 +99,9 @@ export function BuildingMenu(props: {
   const slots = def.workers ?? 0;
   const index = state.buildings.indexOf(building);
   const working = slots ? buildingWorkers(state, content)[index] : 0;
-  const noPath = slots > 0 && !building.damaged && !canStaff(state, content, building);
+  // Only a real break in the way (not a pause, nor tools hidden by the anito); where it breaks is marked on the map.
+  const noPath = slots > 0 && unreachableWorkplaces(state, content).includes(building);
+  const gap = noPath ? routeBreak(state, content, building) : null;
   const connected = roadBonuses(state, content)[index] > 0;
   const lent = workforce(state, content).borrowed[index] ?? 0;
 
@@ -141,7 +144,9 @@ export function BuildingMenu(props: {
               <Bolo /> {lent} lent to clearing forest; {lent === 1 ? "they come" : "they come"} back when the job is done.
             </span>
           ) : noPath ? (
-            <span className="mt-0.5 block rounded bg-red-100 px-1 text-[11px] font-semibold text-red-900">🚫 No path: workers can't walk here. Join it with a Tulay, or move it.</span>
+            <span className="mt-0.5 block rounded bg-red-100 px-1 text-[11px] font-semibold text-red-900">
+              {game ? game.routeBreak.noPath[lang] : "🚫 No path: workers can't walk here."} {gap && game ? game.routeBreak[gap.kind][lang] : "Join it with a Tulay, or move it."}
+            </span>
           ) : (
             working < slots && !building.damaged && <span className="block text-[11px] text-stone-500">Free villagers fill it on their own. More houses bring more.</span>
           )}

@@ -2481,5 +2481,31 @@
       "en": "At sea",
       "fil": "Nasa laot"
     }
+  },
+  "routeBreak": {
+    "noPath": {
+      "en": "🚫 No path: workers can't walk here.",
+      "fil": "🚫 Walang daan: hindi makalakad dito ang mga manggagawa."
+    },
+    "forest": {
+      "en": "Forest cuts the way at the marked spot: clear it.",
+      "fil": "Gubat ang humaharang sa daan sa may tanda: hawanin ito."
+    },
+    "balete": {
+      "en": "A balete stands in the way at the marked spot: clear it, or find another way.",
+      "fil": "May balete na nakaharang sa may tanda: hawanin ito, o humanap ng ibang daan."
+    },
+    "river": {
+      "en": "The river cuts the way at the marked spot: build a Tulay there.",
+      "fil": "Hinahati ng ilog ang daan sa may tanda: magtayo ng Tulay doon."
+    },
+    "building": {
+      "en": "A building blocks the way at the marked spot: move it, or lay a way around.",
+      "fil": "May gusaling humaharang sa may tanda: ilipat ito, o gumawa ng daan paikot."
+    },
+    "label": {
+      "en": "🚫 The way breaks here",
+      "fil": "🚫 Dito naputol ang daan"
+    }
   }
 }

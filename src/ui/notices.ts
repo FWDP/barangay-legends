@@ -84,6 +84,23 @@ export function arrange(
   return { shown, pills, waiting: live.filter((n) => n !== shown) };
 }
 
+/**
+ * Picking a waiting notice from the "+N" list: it comes forward as the banner and leaves the list.
+ * A banner that needs action now (a typhoon, a raid) can't be pushed aside, so it is minimized to
+ * its pill instead (`canMinimize`: it has one), where it stays, one tap away.
+ */
+export function pickFromList(
+  queue: Notice[],
+  ui: { front: string | null; minimized: ReadonlySet<string> },
+  id: string,
+  canMinimize: (id: string) => boolean,
+): { front: string; minimized: Set<string> } {
+  const minimized = new Set(ui.minimized);
+  for (const n of queue) if (n.id !== id && n.tier === 0 && canMinimize(n.id)) minimized.add(n.id);
+  minimized.delete(id);
+  return { front: id, minimized };
+}
+
 /** Does any waiting notice run out soon (the badge shows it)? */
 export const endingSoon = (waiting: Notice[], time: number) => waiting.some((n) => n.expiresAt !== undefined && n.expiresAt - time <= SOON_SECONDS);
 

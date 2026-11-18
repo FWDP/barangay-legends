@@ -161,6 +161,7 @@ export const GAME_TEXT = {
     minimize: [], expand: [], raid: [], fire: [], hunger: [], typhoon: [], eclipse: [], tikbalang: [], sickness: [], overcrowded: [], damaged: [], pest: [], offer: [], choice: [],
     expedition: [], prank: [], sailing: [],
   },
+  routeBreak: { noPath: [], forest: [], balete: [], river: [], building: [], label: [] },
   tradeGoods: { salt: [], food: [], rice: [], wood: [], gold: [], wine: [], "dried-fish": [], "fish-paste": [], "root-crops": [], hardwood: [] },
   save: {
     button: [], title: [], exportHint: [], copy: [], copied: [], download: [], importTitle: [], importHint: [], file: [], load: [], bad: [], confirmTitle: [],

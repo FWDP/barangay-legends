@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Content } from "../engine/content";
 import { isHungry } from "../engine/events";
-import { overcrowded, type GameState } from "../engine/game";
+import { overcrowded, unreachableWorkplaces, type GameState } from "../engine/game";
 import { layOutSpan, tileAt, type BridgeTile, type Point } from "../engine/map";
 import type { NamedVillager } from "../engine/people";
 import { isEveningAt, isNightAt } from "../engine/daynight";
@@ -56,7 +56,7 @@ import { hasDatuUnlock } from "../engine/datu";
 import { alliedDefenders } from "../engine/region";
 import { raidLanding, raidWindow } from "../engine/border";
 import { landingKnown } from "../engine/defense";
-import { solidTiles } from "../engine/doors";
+import { entranceOf, solidTiles } from "../engine/doors";
 import { gatheringSpots, houseFront } from "../engine/plaza";
 import { householdOf } from "../engine/household";
 import { namedGender } from "../engine/people";
@@ -1024,13 +1024,17 @@ export function VillagerLayer(props: {
 
       // ---- The datu: from the plaza to the fields, the Dambana and back; at the plaza by night ----
       {
-        const fields = s.buildings.filter((b) => (content.buildings.find((d) => d.id === b.type)?.produces?.rice ?? 0) > 0);
+        // Only places the datu can walk to (never a field cut off with "No path").
+        const stranded = new Set(unreachableWorkplaces(s, content));
+        const fields = s.buildings.filter((b) => !stranded.has(b) && (content.buildings.find((d) => d.id === b.type)?.produces?.rice ?? 0) > 0);
         const shrine = s.buildings.find((b) => content.buildings.find((d) => d.id === b.type)?.shrine);
         const stops: Point[] = [plaza, ...(fields.length ? [fields[0]] : []), ...(shrine ? [shrine] : []), plaza];
         const leg = Math.floor(t / 25) % stops.length;
         const stop = night ? plaza : stops[leg];
-        // At the house: in front of its doorway, never on it (plaza.ts).
-        const to = stop === plaza ? front : { x: stop.x + 0.5, y: stop.y + 0.7 };
+        // At the house: in front of its doorway, never on it (plaza.ts). At a field or the shrine:
+        // at its doorway too, so a tap on the building opens the building, not the datu.
+        const door = stop === plaza ? null : entranceOf(s, content, stop);
+        const to = stop === plaza ? front : door ? { x: door.x + 0.5, y: door.y + 0.6 } : { x: stop.x + 0.5, y: stop.y + 0.7 };
         const d0 = datu.current ?? { p: to, moving: false, stride: 0, walker: newWalker(to) };
         if (reducedMotion) {
           d0.p = to;

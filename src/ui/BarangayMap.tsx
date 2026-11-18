@@ -181,8 +181,10 @@ export function BarangayMap(props: {
   defense?: { on: boolean; text: GameText["defense"]; lang: Lang } | null;
   /** The player's "Show connections" setting: footprints on buildings joined by a Daan. */
   showConnections?: boolean;
+  /** A "No path" building's menu is open: where its way breaks (engine/routeBreak.ts), and the label. */
+  routeBreak?: { at: Point; from: Point; label: string } | null;
 }) {
-  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onVillager, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null, selection = [], onSelectArea, focus = null, tradeHeld = false, onSarimanok, ritual = null, visit = null, blockedLabel, plazaLabel, wholeMap = 0, overlay, defense = null, showConnections = false } = props;
+  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onVillager, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null, selection = [], onSelectArea, focus = null, tradeHeld = false, onSarimanok, ritual = null, visit = null, blockedLabel, plazaLabel, wholeMap = 0, overlay, defense = null, showConnections = false, routeBreak = null } = props;
   // Ladders are pulled up at night and while raiders are coming (W.7): the kubo art shows it.
   const laddersUp = isNightAt(content, state.time) || !!state.region?.incomingRaid;
   const footprints = connectionMarksShown({ setting: showConnections, roadTool: !!road, placing: !!placing });
@@ -934,6 +936,7 @@ export function BarangayMap(props: {
         {cam && view.w > 0 && overlay?.(cam, view)}
         {cam && landing && <LandingMarker cam={cam} view={view} landing={landing} avoid={avoid} />}
         {cam && raidZone && <RaidZone cam={cam} view={view} landing={raidZone.landing} sail={raidZone.sail} />}
+        {cam && routeBreak && !scenic && <BreakMarker cam={cam} view={view} mark={routeBreak} avoid={avoid} />}
         {cam && legendOn && defense && <DefenseLegend marks={marks} text={defense.text} lang={defense.lang} view={view} avoid={avoid} />}
         {waitingAt && (
           <span
@@ -1078,6 +1081,33 @@ function RaidZone({ cam, view, landing, sail }: { cam: Camera; view: View; landi
       {boxes.map((b, i) => (
         <span key={i} aria-hidden data-raid-zone className="pointer-events-none absolute" style={{ left: b.left, top: b.top, width: b.w, height: b.h }} />
       ))}
+    </>
+  );
+}
+
+/** Where a stranded building's way breaks: a red ring on the tile in the way, joined to where the way stops. */
+function BreakMarker({ cam, view, mark, avoid }: { cam: Camera; view: View; mark: { at: Point; from: Point; label: string }; avoid: Rect[] }) {
+  const p = tileCenter(cam, view, mark.at.x, mark.at.y);
+  const q = tileCenter(cam, view, mark.from.x, mark.from.y);
+  const size = labelSize(mark.label, 12);
+  const at = placeLabel(p.x, p.y - cam.tile * 0.6 - size.h, size, view, avoid);
+  return (
+    <>
+      <svg aria-hidden className="pointer-events-none absolute inset-0 z-10 size-full overflow-visible">
+        <line x1={q.x} y1={q.y} x2={p.x} y2={p.y} stroke="#dc2626" strokeWidth={3} strokeDasharray="5 4" strokeLinecap="round" />
+        <circle cx={q.x} cy={q.y} r={cam.tile * 0.15} fill="#fde68a" stroke="#7c2d12" strokeWidth={1.5} />
+      </svg>
+      <span
+        aria-hidden
+        data-route-break
+        className="pointer-events-none absolute z-10 rounded-md border-[3px] border-red-600 bg-red-500/30 motion-safe:animate-pulse"
+        style={{ left: p.x - cam.tile / 2, top: p.y - cam.tile / 2, width: cam.tile, height: cam.tile }}
+      />
+      {at && (
+        <span role="status" className="map-chip map-chip-warn pointer-events-none absolute z-10 -translate-x-1/2" style={{ left: at.x, top: at.y }}>
+          {mark.label}
+        </span>
+      )}
     </>
   );
 }

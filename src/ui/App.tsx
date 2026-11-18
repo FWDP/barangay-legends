@@ -1,7 +1,7 @@
 import { Bolo } from "./Bolo";
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import type { Resource } from "../engine/content";
-import { bayanihanBlocker, calledToArms, buildingCost, canAfford, canMove, moveCost, owned, repairCost, roadCost, withoutBuilding } from "../engine/game";
+import { bayanihanBlocker, calledToArms, buildingCost, canAfford, canMove, moveCost, owned, repairCost, roadCost, unreachableWorkplaces, withoutBuilding } from "../engine/game";
 import { buildingAt, canPlace, isUnlocked, tileAt } from "../engine/map";
 import { activeJobs, affordableTiles, borrowedWorkers, canSelect, clearingCrews, jobSeconds, orderSelection, riceIsSafe, selectionCost, workforce } from "../engine/clearing";
 import { BarangayMap } from "./BarangayMap";
@@ -12,6 +12,7 @@ import { latestReportId, OfferBar, ReportDialog, unseenReport, VictoryDialog } f
 import { RegionView } from "./RegionView";
 import { activeBanners, clock, EventBanner, TambuliIcon, type BannerAction } from "./EventBanners";
 import { NoticeStack, useNoticeUi, type NoticeView } from "./NoticeStack";
+import { routeBreak } from "../engine/routeBreak";
 import { useNoticeSide } from "./noticeSide";
 import { noticeQueue } from "./notices";
 import { landedUnwatched, raidWarning } from "../engine/defense";
@@ -678,10 +679,11 @@ export function App() {
     },
     tikbalang: { node: <TikbalangBar state={state} content={content} game={ui.game} lang={lang} onAnswer={(i) => dispatch({ type: "answerRiddle", option: i })} />, label: `🌫️ ${nt.tikbalang[lang]}` },
     offer: {
-      node: <OfferBar state={state} content={content} dispatch={dispatch} game={ui.game} lang={lang} folded={view === "barangay" && !offerOpen} sailing={sailing} held={tradeHeld} onOpen={() => !sailing && setOfferOpen(true)} />,
+      node: <OfferBar state={state} content={content} dispatch={dispatch} game={ui.game} lang={lang} folded={view === "barangay" && (!offerOpen || sailing)} sailing={sailing} held={tradeHeld} onOpen={() => setOfferOpen(true)} />,
       // Held by a raid: it waits, and the queue says so (its time stands still).
       label: `🛶 ${fill(nt.offer[lang], { barangay: offerFrom })}${tradeHeld ? ` · ${ui.game.offer.paused[lang]}` : ""}`,
-      onOpen: () => !sailing && setOfferOpen(true),
+      // Picked while the bangka is still sailing in: it opens as soon as it docks.
+      onOpen: () => setOfferOpen(true),
     },
     choice: {
       node: (
@@ -738,6 +740,10 @@ export function App() {
     v.pill = { icon: pillIcons[id] ?? eventBanners.get(id)?.icon ?? "•", title, ...(seconds !== undefined ? { seconds } : {}), ...(id === "raid" ? { actions: raidActions } : {}) };
   }
   const noticeUi = useNoticeUi();
+  // A "No path" building's menu is open: where its way to the Bahay ng Datu breaks is marked on the map.
+  const menuBuilding = menu && view === "barangay" ? state.buildings.find((b) => b.x === menu.x && b.y === menu.y) : undefined;
+  const menuGap = menuBuilding && unreachableWorkplaces(state, content).includes(menuBuilding) ? routeBreak(state, content, menuBuilding) : null;
+  const menuBreak = menuGap ? { at: menuGap.at, from: menuGap.from, label: ui.game.routeBreak.label[lang] } : null;
   // Banners and the queue keep clear of the raid's landing and the raiders' way in (noticeSide.ts).
   const noticeSide = useNoticeSide(view === "barangay" && !!state.region?.incomingRaid);
   const noticeStack = (
@@ -1090,6 +1096,7 @@ export function App() {
           selection={selection}
           onSelectArea={selectArea}
           focus={menu ? { x: menu.x, y: menu.y } : null}
+          routeBreak={menuBreak}
           road={
             roadMode
               ? {

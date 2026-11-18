@@ -3,7 +3,7 @@ import type { GameState } from "../engine/game";
 import { createRegion } from "../engine/region";
 import { acquainted, at, calm, withState } from "../engine/testUtils";
 import { activeBanners } from "./EventBanners";
-import { arrange, endingSoon, noticeQueue, statusIcons, type Notice } from "./notices";
+import { arrange, endingSoon, noticeQueue, pickFromList, statusIcons, type Notice } from "./notices";
 
 const ctx = { expeditionFresh: false, sailing: false };
 const world = (patch: Partial<GameState> = {}): GameState => {
@@ -103,20 +103,52 @@ describe("minimizing banners", () => {
   it("the queued paused offer shows it waits, with no countdown", async () => {
     const { createElement } = await import("react");
     const { renderToStaticMarkup } = await import("react-dom/server");
-    const { NoticeStack } = await import("./NoticeStack");
+    const { NoticeList } = await import("./NoticeStack");
     const { loadUiContent } = await import("./uiContent");
     const { withState: ws, content: c } = await import("../engine/testUtils");
     const game = loadUiContent(c).game;
     const s = ws({ time: 100 });
-    const queue = [{ id: "raid", tier: 0 as const, expiresAt: 118 }, { id: "offer", tier: 1 as const, paused: true }];
-    const views = {
-      raid: { node: createElement("span", null, "Raid"), label: "Raid" },
-      offer: { node: createElement("span", null, "A bangka waits"), label: `Offer · ${game.offer.paused.en}` },
-    };
-    const ui = { dismissed: new Set<string>(), front: null, open: true, minimized: new Set<string>(), kept: new Set<string>(), set: () => {} };
-    const html = renderToStaticMarkup(createElement(NoticeStack, { state: s, queue, views, game, lang: "en", ui }));
+    const views = { offer: { node: createElement("span", null, "A bangka waits"), label: `Offer · ${game.offer.paused.en}` } };
+    const html = renderToStaticMarkup(createElement(NoticeList, { waiting: [{ id: "offer", tier: 1 as const, paused: true }], views, state: s, label: "Also", onPick: () => {} }));
     expect(html).toContain("Trade paused until the raid ends");
     expect(html).toContain("⏸");
+    expect(html).not.toMatch(/\d:\d\d/);
+  });
+});
+
+describe("the +N list while a banner is up", () => {
+  it("a queued item can be opened while an action-now banner is active, and leaves the list", () => {
+    const queue: Notice[] = [{ id: "typhoon", tier: 0 }, { id: "offer", tier: 1, expiresAt: 150 }, { id: "choice", tier: 1 }];
+    const before = arrange(queue, new Set(), null);
+    expect(before.shown!.id).toBe("typhoon");
+    expect(before.waiting.map((n) => n.id)).toEqual(["offer", "choice"]);
+    // Picking the trade offer brings it forward; the typhoon steps aside to its pill, never gone.
+    const picked = pickFromList(queue, { front: null, minimized: new Set() }, "offer", () => true);
+    const after = arrange(queue, new Set(), picked.front, picked.minimized);
+    expect(after.shown!.id).toBe("offer");
+    expect(after.pills.map((n) => n.id)).toEqual(["typhoon"]);
+    expect(after.waiting.map((n) => n.id)).toEqual(["choice"]);
+    // Then the visitor: the offer goes back to the list, the choice is the banner.
+    const next = pickFromList(queue, picked, "choice", () => true);
+    const third = arrange(queue, new Set(), next.front, next.minimized);
+    expect(third.shown!.id).toBe("choice");
+    expect(third.waiting.map((n) => n.id)).toEqual(["offer"]);
+    // A banner with no pill to step aside to stays shown, and the pick waits behind it.
+    const stuck = pickFromList(queue, { front: null, minimized: new Set() }, "offer", () => false);
+    expect(arrange(queue, new Set(), stuck.front, stuck.minimized).shown!.id).toBe("typhoon");
+  });
+
+  it("each item in the list is a button that opens it", async () => {
+    const { createElement } = await import("react");
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    const { NoticeList } = await import("./NoticeStack");
+    const { withState: ws } = await import("../engine/testUtils");
+    const views = { offer: { node: null, label: "🛶 Trade offer" }, choice: { node: null, label: "📜 Someone waits" } };
+    const html = renderToStaticMarkup(
+      createElement(NoticeList, { waiting: [{ id: "offer", tier: 1 as const, expiresAt: 50 }, { id: "choice", tier: 1 as const }], views, state: ws({}), label: "Also", onPick: () => {} }),
+    );
+    expect(html.match(/<button[^>]*data-notice-item="(offer|choice)"/g)).toHaveLength(2);
+    expect(html).toContain("pointer-events-auto");
   });
 });
 
@@ -143,10 +175,14 @@ describe("tapping notifications (V.5)", () => {
     expect(html).toContain('tabindex="0"');
     // The "+1" badge is a real button.
     expect(html).toMatch(/<button[^>]*aria-expanded="false"[^>]*>\+?1|<button[^>]*aria-expanded="false"/);
-    // Layers above the map's chips (z-10) and labels (z-20).
-    const z = (c: string) => Number(c.replace("z-", ""));
+    // Layers above the map's chips (z-10), labels (z-20) and production numbers; the open list above everything.
+    const z = (c: string) => Number(c.replace(/^z-\[?(\d+)\]?$/, "$1"));
+    const { FLOAT_LAYER, INFO_FLOAT_LAYER } = await import("./floats");
     expect(z(NOTICE_LAYER)).toBeGreaterThan(20);
+    expect(z(FLOAT_LAYER)).toBeLessThan(z(NOTICE_LAYER));
     expect(z(NOTICE_LIST_LAYER)).toBeGreaterThan(z(NOTICE_LAYER));
-    expect(html).toContain(NOTICE_LIST_LAYER);
+    expect(z(NOTICE_LIST_LAYER)).toBeGreaterThan(z(INFO_FLOAT_LAYER));
+    // Hud backdrops and menus go up to z-[60]: the list is above them too.
+    expect(z(NOTICE_LIST_LAYER)).toBeGreaterThan(60);
   });
 });
