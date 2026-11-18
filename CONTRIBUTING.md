@@ -44,7 +44,7 @@ Other content you can edit the same way:
 - `content/events/politics/*.json`: alliance news in the Balita.
 - `content/levels.json`: the reward for each barangay level.
 - `content/ui.json`: the game's labels in English and Filipino. Placeholders like `{level}` must stay as they are.
-- `content/rules.json`: every balance number (costs, rates, renown amounts, level thresholds, food, battles, feuds and the blood price, honor, social life). Changes here need a maintainer's approval. Check them with `npm run simulate`.
+- `content/rules.json`: every balance number (costs, rates, renown amounts, level thresholds, food, battles, feuds and the blood price, honor, social life). Changes here need a maintainer's approval. Check them with `npm run simulate` (add `-- --sessions=3` to play real days with offline progress, for the level curve).
 
 Rules for content pull requests:
 

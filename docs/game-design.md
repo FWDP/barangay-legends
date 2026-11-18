@@ -106,10 +106,21 @@ different form, and some (prestige and Dangal, export codes) isn't built yet.
   Asin and fish; a barangay short of food (a poor season, or fields flooded by a typhoon on its
   island) asks for food. Offers come from real stocks, say why, and show their worth in gold;
   Palay is valued highly and never offered below its value.
-- **Renown:** Kabantugan raises the barangay through 20 levels with rewards and titles.
-  AI barangays keep their own renown too. The first Mga Gawain tasks and Aklat entries give
-  little renown, rising to the full amount (`rules.kabantugan.taskRamp`, `aklatRamp`), so level 2
-  comes at about 3–5 minutes and level 3 at about 10–15 (`npm run simulate` prints the times).
+- **Renown:** Kabantugan raises the barangay through 20 levels with rewards and titles, on
+  rising thresholds: each level needs a bigger step than the one before (`rules.kabantugan.levelAt`).
+  Sources: every 10 villagers, Mga Gawain tasks, Aklat entries, Bahay ng Datu levels, a new
+  tributary or ally (once per neighbor, ever), trades, Pista, raids won, raids beaten off,
+  warriors' honor and answering an ally's call. Rank changes give none. The first tasks and Aklat
+  entries give small amounts, rising to the full amount (`taskRamp`, `aklatRamp`). Repeatable
+  renown is capped per renown day (`rules.kabantugan.dailyCaps`: 10 hours of game time, time
+  away included; trades, Pista, and fighting each get so much per barangay level), so it can't
+  be farmed. Target pace for an active player (about 3 hours a day, offline progress for the
+  rest): level 2 at about 5 minutes, 3 at about 15, 5 at 1–2 hours, 10 after 2–3 days (6–10
+  hours of play), 15 after 1–2 weeks, 20 after a month or more. `npm run simulate` prints the
+  times for non-stop play, `npm run simulate 30 -- --sessions=3` for 30 real days of normal play
+  (slow: about two hours), with renown by source per hour. AI barangays keep their own renown
+  from size, strength and battles (`aiPerVillager`, `aiPerStrength`, `aiPerBattle`). Saves from
+  before the retuned curve (v39) keep the level they had; the next level takes the new thresholds.
 - **Bisitahin:** a read-only visit to any barangay's village from a save-format snapshot. AI
   villages are generated from their seed, so real players' snapshots can be shown later.
 - **Panoorin (expedition replays):** each trade and raid (the player's, and AI raids on the
