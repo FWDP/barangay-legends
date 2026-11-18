@@ -153,6 +153,11 @@ export const GAME_TEXT = {
     unknown: [], close: [], rank: ["rank"],
   },
   day: { araw: ["n"], on: ["n"], day: [], night: [], tip: ["phase", "n"] },
+  offer: {
+    coastal: ["barangay", "give", "want"], upriver: ["barangay", "give", "want"], hungry: ["barangay", "give"], flooded: ["barangay", "give"], plain: ["barangay", "give", "want"],
+    deal: ["give", "want"], worth: ["give", "want"], worthTip: [], accept: [], decline: [], paused: [], pausedMore: ["barangay"], sailing: ["barangay"], docked: ["barangay", "time"],
+  },
+  tradeGoods: { salt: [], food: [], rice: [], wood: [], gold: [], wine: [], "dried-fish": [], "fish-paste": [], "root-crops": [], hardwood: [] },
   save: {
     button: [], title: [], exportHint: [], copy: [], copied: [], download: [], importTitle: [], importHint: [], file: [], load: [], bad: [], confirmTitle: [],
     confirmText: ["current", "currentDay", "imported", "importedDay"], replace: [], cancel: [], loaded: [], close: [],

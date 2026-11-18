@@ -11,6 +11,7 @@ import {
   resolveBattle,
   tradingPaused,
   type NeighborState,
+  standardProposal,
 } from "./region";
 import { offlineProgress } from "./offline";
 import { nextRandom } from "./rng";
@@ -199,7 +200,10 @@ describe("influence: trade, marriage alliance, sandugo", () => {
   it("trade swaps a parcel of goods and builds trust and a little influence", () => {
     const s = world();
     const after = apply(s, calm, { type: "trade", neighbor: "malinaw", give: "rice" });
-    expect(after.resources.rice).toBe(2000 - d.trade.give);
+    const p = standardProposal(calm, "malinaw", "rice");
+    // A parcel worth trade.give: fewer sacks of Palay, valued highly, for more wood.
+    expect(p.give.amount * d.tradeDecision.values.rice!).toBe(d.trade.give);
+    expect(after.resources.rice).toBe(2000 - p.give.amount);
     expect(after.resources.wood).toBe(2000 + Math.floor((d.trade.give * d.trade.receivePercent) / 100));
     expect(nb(after, "malinaw").trust).toBeCloseTo(nb(s, "malinaw").trust + d.trade.trust * 1.5); // peaceful: +50% trust
     expect(nb(after, "malinaw").influence).toBeCloseTo(d.trade.influence);
@@ -366,7 +370,8 @@ describe("trade offers", () => {
     let s = tick(world(), offers, 1.5);
     const offer = s.region!.offer!;
     expect(offer).toBeTruthy();
-    expect(offer.give.amount).toBe(d.offers.give);
+    s = { ...s, resources: { ...s.resources, [offer.want.resource]: 2000 } };
+    expect(offer.give.amount).toBeGreaterThanOrEqual(d.tradeDecision.minAmount);
     const before = s.resources[offer.give.resource];
     const accepted = apply(s, offers, { type: "acceptOffer" });
     expect(accepted.resources[offer.give.resource]).toBe(before + offer.give.amount);
@@ -424,8 +429,9 @@ describe("no trading during a raid", () => {
   });
 
   it("trading works again after the raid", () => {
-    const s = tick(raiding(tick(world(), offers, 1.5), 5), offers, 6);
+    let s = tick(raiding(tick(world(), offers, 1.5), 5), offers, 6);
     expect(s.region!.incomingRaid).toBeNull();
+    s = { ...s, resources: { ...s.resources, [s.region!.offer!.want.resource]: 2000 } };
     expect(tradingPaused(s)).toBe(false);
     const accepted = apply(s, offers, { type: "acceptOffer" });
     expect(accepted.region!.offer).toBeNull();

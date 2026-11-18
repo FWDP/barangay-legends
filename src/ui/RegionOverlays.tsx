@@ -5,6 +5,7 @@ import { neighborDef, type Path, type Report } from "../engine/region";
 import { clock } from "./EventBanners";
 import { costText, formatDuration, RESOURCE_ICON } from "./format";
 import { fill, type GameText } from "./uiContent";
+import { offerText } from "./tradeText";
 import type { Lang } from "./settings";
 
 const goods = (g?: Partial<Record<Resource, number>>) =>
@@ -198,6 +199,8 @@ export function OfferBar(props: {
   state: GameState;
   content: Content;
   dispatch: (c: Command) => void;
+  game: GameText;
+  lang: Lang;
   /** Show only a short line about the boat until the player opens it. */
   folded?: boolean;
   /** The boat is still on its way. */
@@ -206,10 +209,11 @@ export function OfferBar(props: {
   held?: boolean;
   onOpen?: () => void;
 }) {
-  const { state, content, dispatch, folded = false, sailing = false, held = false, onOpen } = props;
+  const { state, content, dispatch, game, lang, folded = false, sailing = false, held = false, onOpen } = props;
   const offer = state.region?.offer;
   if (!offer) return null;
-  const who = neighborDef(content, offer.from);
+  const t = game.offer;
+  const name = neighborDef(content, offer.from)?.name ?? offer.from;
   const canPay = state.resources[offer.want.resource] >= offer.want.amount;
   if (held) {
     return (
@@ -218,8 +222,7 @@ export function OfferBar(props: {
           🛶
         </span>
         <span>
-          <b>⏸ Trade paused — raid in progress.</b> The bangka from <span className="font-display">{who?.name ?? offer.from}</span> waits offshore and
-          comes back after.
+          <b>⏸ {t.paused[lang]}.</b> {fill(t.pausedMore[lang], { barangay: name })}
         </span>
       </div>
     );
@@ -234,31 +237,33 @@ export function OfferBar(props: {
         <span className="text-xl leading-none" aria-hidden>
           🛶
         </span>
-        <span>
-          {sailing ? (
-            <>A bangka from <span className="font-display">{who?.name ?? offer.from}</span> is sailing in…</>
-          ) : (
-            <>A bangka from <span className="font-display">{who?.name ?? offer.from}</span> has docked. Tap the boat, or here, to trade · {clock(offer.expiresAt - state.time)}</>
-          )}
-        </span>
+        <span>{sailing ? fill(t.sailing[lang], { barangay: name }) : fill(t.docked[lang], { barangay: name, time: clock(offer.expiresAt - state.time) })}</span>
       </button>
     );
   }
+  const text = offerText(offer, content, game, lang, name);
   return (
     <div role="status" className="wood-panel pointer-events-auto flex max-w-full flex-wrap items-center gap-2 rounded-xl border-2 border-amber-950/70 px-3 py-1.5 text-amber-50 shadow-lg">
       <span className="text-xl leading-none" aria-hidden>
         🛶
       </span>
-      <span className="min-w-0 flex-1 text-xs leading-tight sm:text-sm">
-        <span className="font-display">{who?.name ?? offer.from}</span> offers {offer.give.amount} {RESOURCE_ICON[offer.give.resource]} for {offer.want.amount}{" "}
-        {RESOURCE_ICON[offer.want.resource]} · {clock(offer.expiresAt - state.time)}
+      <span className="min-w-[12rem] flex-1 text-xs leading-tight sm:text-sm">
+        <span className="block">{text.reason}</span>
+        <span className="block font-semibold">
+          {text.deal} · {clock(offer.expiresAt - state.time)}
+        </span>
+        <span className="block text-[11px] text-amber-100/80" title={t.worthTip[lang]}>
+          🪙 {text.worth}
+        </span>
       </span>
-      <button type="button" disabled={!canPay} onClick={() => dispatch({ type: "acceptOffer" })} className="game-btn border-2 border-green-950 bg-green-700 px-2 py-1 text-xs font-semibold text-white disabled:opacity-50">
-        Accept
-      </button>
-      <button type="button" onClick={() => dispatch({ type: "declineOffer" })} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-2 py-1 text-xs font-semibold text-amber-950">
-        No thanks
-      </button>
+      <span className="ml-auto flex gap-2">
+        <button type="button" disabled={!canPay} onClick={() => dispatch({ type: "acceptOffer" })} className="game-btn border-2 border-green-950 bg-green-700 px-2 py-1 text-xs font-semibold text-white disabled:opacity-50">
+          {t.accept[lang]}
+        </button>
+        <button type="button" onClick={() => dispatch({ type: "declineOffer" })} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-2 py-1 text-xs font-semibold text-amber-950">
+          {t.decline[lang]}
+        </button>
+      </span>
     </div>
   );
 }

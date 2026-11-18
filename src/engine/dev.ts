@@ -1,6 +1,7 @@
 // Dev tools (only offered by the ?dev=1 panel). They are ordinary serializable commands that go
 // through apply(), so a save stays valid and the engine stays deterministic; any save that used
 // one is marked devSave, to keep it apart from real play.
+import { makeOffer } from "./tradeOffers";
 import { RESOURCES, type Content, type ResourceAmounts } from "./content";
 import { dayPhaseAt, isNightAt } from "./daynight";
 import { startRaid } from "./region";
@@ -125,10 +126,9 @@ function trigger(state: GameState, content: Content, event: DevEvent): GameState
     }
     case "offer": {
       const r = state.region;
-      const d = content.rules.diplomacy.offers;
-      const from = r?.neighbors.find((n) => n.state.resources.rice >= d.give);
-      if (!r || !from || r.offer) return state;
-      return { ...state, region: { ...r, offer: { from: from.id, give: { resource: "rice", amount: d.give }, want: { resource: "wood", amount: Math.max(1, Math.floor((d.give * 100) / d.receivePercent)) }, expiresAt: t + d.expireSeconds } } };
+      if (!r || r.offer) return state;
+      const offer = r.neighbors.map((n) => makeOffer(content, r, n, Math.floor(t))).find((x) => x);
+      return offer ? { ...state, region: { ...r, offer: { ...offer, expiresAt: t + content.rules.diplomacy.offers.expireSeconds } } } : state;
     }
   }
   return state;

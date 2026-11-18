@@ -2311,5 +2311,105 @@
       "en": "{name}, {time} left",
       "fil": "{name}, {time} pa"
     }
+  },
+  "offer": {
+    "coastal": {
+      "en": "{barangay} has {give} from the sea to spare and needs {want} from upriver.",
+      "fil": "May sobrang {give} mula sa dagat ang {barangay} at kailangan nila ng {want} mula sa itaas ng ilog."
+    },
+    "upriver": {
+      "en": "{barangay} brings {give} down the river and wants {want} from the coast.",
+      "fil": "Nagdadala ang {barangay} ng {give} pababa ng ilog at nais nila ng {want} mula sa baybayin."
+    },
+    "hungry": {
+      "en": "{barangay} had a poor harvest; they offer {give} for food.",
+      "fil": "Mahina ang ani ng {barangay}; nag-aalok sila ng {give} kapalit ng pagkain."
+    },
+    "flooded": {
+      "en": "{barangay}'s fields flooded; they offer {give} for food.",
+      "fil": "Binaha ang mga bukid ng {barangay}; nag-aalok sila ng {give} kapalit ng pagkain."
+    },
+    "plain": {
+      "en": "{barangay} offers {give} for {want}.",
+      "fil": "Nag-aalok ang {barangay} ng {give} kapalit ng {want}."
+    },
+    "deal": {
+      "en": "{give} for {want}",
+      "fil": "{give} kapalit ng {want}"
+    },
+    "worth": {
+      "en": "worth ≈{give} gold, you give ≈{want} gold",
+      "fil": "halagang ≈{give} ginto, ibibigay mo ≈{want} ginto"
+    },
+    "worthTip": {
+      "en": "Gold is the measure of value: what each side is worth in gold.",
+      "fil": "Ginto ang sukatan ng halaga: kung magkano sa ginto ang bawat panig."
+    },
+    "accept": {
+      "en": "Accept",
+      "fil": "Tanggapin"
+    },
+    "decline": {
+      "en": "No thanks",
+      "fil": "Huwag na"
+    },
+    "paused": {
+      "en": "Trade paused until the raid ends",
+      "fil": "Hinto ang kalakalan hanggang matapos ang pagsalakay"
+    },
+    "pausedMore": {
+      "en": "The bangka from {barangay} waits offshore and comes back after.",
+      "fil": "Naghihintay sa laot ang bangka mula sa {barangay} at babalik pagkatapos."
+    },
+    "sailing": {
+      "en": "A bangka from {barangay} is sailing in…",
+      "fil": "Papalapit ang bangka mula sa {barangay}…"
+    },
+    "docked": {
+      "en": "A bangka from {barangay} has docked. Tap the boat, or here, to trade · {time}",
+      "fil": "Dumaong ang bangka mula sa {barangay}. Pindutin ang bangka, o dito, para makipagkalakalan · {time}"
+    }
+  },
+  "tradeGoods": {
+    "salt": {
+      "en": "Asin",
+      "fil": "asin"
+    },
+    "food": {
+      "en": "food",
+      "fil": "pagkain"
+    },
+    "rice": {
+      "en": "Palay",
+      "fil": "palay"
+    },
+    "wood": {
+      "en": "wood",
+      "fil": "kahoy"
+    },
+    "gold": {
+      "en": "gold",
+      "fil": "ginto"
+    },
+    "wine": {
+      "en": "rice wine",
+      "fil": "tapay"
+    },
+    "dried-fish": {
+      "en": "dried fish",
+      "fil": "tuyong isda"
+    },
+    "fish-paste": {
+      "en": "fish paste",
+      "fil": "bagoong"
+    },
+    "root-crops": {
+      "en": "root crops",
+      "fil": "lamang-ugat"
+    },
+    "hardwood": {
+      "en": "hardwood",
+      "fil": "matigas na kahoy"
+    }
   }
 }

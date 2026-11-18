@@ -198,6 +198,13 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
     only as recorded history (Pigafetta 1521), never as gameplay. Terms still to check before any
     use: magahat, larao, barote, sumpit, barong.
 
+41. **Trade between the coast and upriver** (`content/lore/precolonial-trade.json`,
+    `engine/tradeOffers.ts`): barter, gold by weight as the measure of value, salt and fish from
+    the coast for forest goods, root crops, hardwood and gold from upriver (Bronson's
+    upstream-downstream model, Junker 1999). Is gold as the general measure of value fair for all
+    the traditions, and are "tuyong isda", "bagoong", "lamang-ugat" and "matigas na kahoy" apt
+    names in the offers? Beeswax, resin and rattan are left for later.
+
 ### Notes for the future
 
 - **Earth spirits**: if spirits of the ground are added, use precolonial names (for example the
@@ -276,6 +283,7 @@ that review. When an entry is checked, set `"reviewed": true` in its file and mo
 | content/lore/blood-debts.json, content/lore/blood-price.json, content/lore/peace-rituals.json and engine/feud.ts | Aklat entries and rules: blood debts and feuds, mediation by a go-between, a blood price (historically heirloom goods; gold, Palay and rice wine in play for now), peace sealed by sandugo, a shared feast or marriage | Widespread (Tagalog, Visayan) | Scott 1994; Plasencia 1589; Junker 1999; Pigafetta 1521; see questions 37-38 |
 | content/lore/warrior-honor.json, content/traditions/*.json honorMark and src/ui/VillagerLayer.tsx (drawHonor) | Aklat entry and sprites: warriors' honor; batok drawn for Visayan warriors, gold ornaments elsewhere | Visayan; others flagged | Scott 1994; Alcina 1668; Boxer Codex; see question 39 |
 | content/lore/music.json, content/lore/dances.json, content/lore/games.json, content/lore/betel.json, content/lore/feasts-social.json, content/lore/cockfighting.json, src/ui/socialArt.ts and engine/social.ts | Aklat entries, art and evening life: gongs, kulintang (Maranao), flutes, dances, children's play and games (names by tradition, flagged), betel chewing, feasts; cockfighting and wagering as history only, no gambling in play | Widespread; names by tradition | Pigafetta 1521; Alcina 1668; Scott 1994; Junker 1999; see question 40 |
+| content/lore/precolonial-trade.json, content/rules.json (diplomacy.offers) and engine/tradeOffers.ts | Aklat entry and trade offers: barter between coast and upriver; coastal barangays offer Asin and fish for hardwood, Palay and gold; upriver ones gold, root crops and hardwood for Asin and fish; food asked after a poor harvest or flood; gold as the measure of value; Palay valued highly | Widespread (coastal and upriver) | Scott 1994; Junker 1999; Bronson 1977; see question 41 |
 
 ## Reviewed
 

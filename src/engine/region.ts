@@ -11,6 +11,7 @@ import { apply, canAfford, asCost, buildingCost, housing, newGame, owned, placeA
 import { autoPlaceTile } from "./map";
 import { nearestClearable } from "./clearing";
 import { Rng } from "./rng";
+import { makeOffer, tradeIncome, type OfferReason } from "./tradeOffers";
 import { proposeTrade, type CounterOffer, type Proposal } from "./trading";
 import { chooseLanding, raidLanding, raidWindow, sheltered } from "./border";
 import { lootableFood } from "./food";
@@ -75,6 +76,8 @@ export interface NeighborState {
   metAt: number | null;
   /** Trades, gifts and raids with them today (limits.ts). */
   today: Today | null;
+  /** When a typhoon last flooded their fields (tradeOffers.ts); missing if never. */
+  floodedAt?: number;
 }
 
 /** A line of political news (the Balita feed): a scripted event or something a barangay did. */
@@ -115,6 +118,10 @@ export interface TradeOffer {
   give: { resource: Resource; amount: number };
   want: { resource: Resource; amount: number };
   expiresAt: number;
+  /** Why they're trading (tradeOffers.ts); missing in older saves. */
+  reason?: OfferReason;
+  /** How each side shows (ui.json trade.goods ids: dried fish, root crops, hardwood…); missing in older saves. */
+  goods?: { give: string; want: string };
 }
 
 /** A raid on its way: who, when, and where they'll land (chosen when the raid starts). */
@@ -525,8 +532,12 @@ export function standardProposal(content: Content, id: string, give: Resource): 
   const t = content.rules.diplomacy.trade;
   // The standard parcel swaps Palay and wood (anything else is asked for wood's worth of Palay).
   const get: Resource = give === "rice" ? "wood" : "rice";
-  const receive = Math.floor((t.give * (t.receivePercent + traitOf(content, id).tradeBonusPercent)) / 100);
-  return { give: { resource: give, amount: t.give }, want: { resource: get, amount: receive } };
+  // A parcel worth `give` in the trade measure (tradeDecision.values, gold the measure), so
+  // Palay, valued highly, is never traded below its value: fewer sacks of it buy the same wood.
+  const values = content.rules.diplomacy.tradeDecision.values;
+  const amount = Math.max(1, Math.round(t.give / (values[give] ?? 1)));
+  const receive = Math.floor((((amount * (values[give] ?? 1)) / (values[get] ?? 1)) * (t.receivePercent + traitOf(content, id).tradeBonusPercent)) / 100);
+  return { give: { resource: give, amount }, want: { resource: get, amount: receive } };
 }
 
 /** Trade: offer the standard parcel. The neighbor decides like any proposal (see trading.ts). */
@@ -872,7 +883,8 @@ function onRegionSecond(state: GameState, content: Content, second: number, rng:
 
   // Neighbors live their own lives, one whole second at a time, so they grow the same however
   // finely the player's time is cut (a frame, a long tick, an offline step).
-  region.neighbors = region.neighbors.map((n) => ({ ...n, state: tick(n.state, ai, 1) }));
+  // Coastal barangays also make Asin, upriver ones pan gold (tradeOffers.ts).
+  region.neighbors = region.neighbors.map((n) => tradeIncome(content, region, { ...n, state: tick(n.state, ai, 1) }));
 
   // Tribute: each tributary sends a share of a minute's production.
   if (second >= region.nextTributeAt) {
@@ -941,19 +953,10 @@ function onRegionSecond(state: GameState, content: Content, second: number, rng:
       if (rng.next() >= d.offers.chancePerSecond * traitOf(content, n.id).offerChanceMultiplier * willing) continue;
       // None in a new barangay's first day (the roll is still made above, to keep the sequence).
       if (second < d.offers.startsAfterSeconds) continue;
-      // They offer what they have more of, for the other resource.
-      const give = n.state.resources.rice >= n.state.resources.wood ? "rice" : "wood";
-      const want: Resource = give === "rice" ? "wood" : "rice";
-      if (n.state.resources[give] < d.offers.give) continue;
-      region = {
-        ...region,
-        offer: {
-          from: n.id,
-          give: { resource: give, amount: d.offers.give },
-          want: { resource: want, amount: Math.max(1, Math.floor((d.offers.give * 100) / d.offers.receivePercent)) },
-          expiresAt: second + d.offers.expireSeconds,
-        },
-      };
+      // What they have to spare, for what they lack (coast and upriver, food after a bad season).
+      const offer = makeOffer(content, region, n, second);
+      if (!offer) continue;
+      region = { ...region, offer };
       break;
     }
   }

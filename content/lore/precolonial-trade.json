@@ -1,0 +1,36 @@
+{
+  "id": "precolonial-trade",
+  "name": "Trade between the coast and upriver",
+  "description": "Barter between coastal and upriver or inland communities: salt and fish from the coast for forest goods, root crops and gold from the interior, with gold, by weight, as the common measure of value.",
+  "tradition": "Widespread (coastal and upriver)",
+  "sources": [
+    "William Henry Scott, Barangay: Sixteenth-Century Philippine Culture and Society (Ateneo de Manila University Press, 1994)",
+    "Laura Lee Junker, Raiding, Trading, and Feasting: The Political Economy of Philippine Chiefdoms (University of Hawai'i Press, 1999)",
+    "Bennet Bronson, \"Exchange at the Upstream and Downstream Ends: Notes toward a Functional Model of the Coastal State in Southeast Asia\", in Karl L. Hutterer (ed.), Economic Exchange and Social Interaction in Southeast Asia (University of Michigan, 1977)"
+  ],
+  "aklat": {
+    "order": 82,
+    "icon": "🛶",
+    "name": {
+      "en": "Kalakalan: trade up and down the river",
+      "fil": "Kalakalan sa ilog at baybayin"
+    },
+    "lore": {
+      "en": "Before coins, the barangays traded mostly by barter. Coastal people had salt, dried and salted fish and fish paste; upriver and inland people had forest goods such as beeswax, resin and rattan, root crops, hardwood and gold. Goods moved down and up the rivers between them, and the coastal settlements passed some on to traders from overseas. Gold, weighed out, served as the common measure of value, so a load of one thing could be reckoned against a load of another. Rice was a prestige grain, not given away cheaply. Historians of the region describe this as exchange between the upstream and downstream ends of a river.",
+      "fil": "Bago magkaroon ng barya, kadalasang palitan ng kalakal ang kalakalan ng mga barangay. Nasa baybayin ang asin, tuyo at inasnang isda at bagoong; nasa itaas ng ilog at looban ang mga produkto ng gubat gaya ng pagkit, dagta at yantok, mga lamang-ugat, matigas na kahoy at ginto. Dumadaloy ang mga kalakal pababa at paakyat ng ilog sa pagitan nila, at ipinapasa ng mga pamayanan sa baybayin ang ilan sa mga mangangalakal mula sa ibayong-dagat. Ang ginto, na tinitimbang, ang karaniwang sukatan ng halaga, kaya natutumbas ang isang karga ng isang bagay sa karga ng iba. Butil na may dangal ang palay at hindi basta ipinamimigay. Inilalarawan ito ng mga mananalaysay ng rehiyon bilang palitan sa pagitan ng itaas at ibabang dulo ng ilog."
+    },
+    "inGame": {
+      "en": "Trade offers follow this: coastal barangays offer Asin and fish (dried fish, fish paste) for hardwood, Palay and gold; upriver and inland barangays offer gold, root crops and hardwood for Asin and fish; a barangay after a poor harvest or a flood asks for food. Each offer shows its worth in gold. Beeswax, resin and rattan aren't in the game yet: they will be added later as their own goods.",
+      "fil": "Ganito ang mga alok na kalakal: nag-aalok ang mga barangay sa baybayin ng Asin at isda (tuyo, bagoong) kapalit ng matigas na kahoy, Palay at ginto; nag-aalok ang mga barangay sa itaas ng ilog at looban ng ginto, lamang-ugat at matigas na kahoy kapalit ng Asin at isda; humihingi ng pagkain ang barangay na mahina ang ani o binaha. Ipinapakita ng bawat alok ang halaga nito sa ginto. Wala pa sa laro ang pagkit, dagta at yantok: idaragdag sila balang araw bilang sariling kalakal."
+    },
+    "hint": {
+      "en": "Trade with a neighbor.",
+      "fil": "Makipagkalakalan sa kapitbahay."
+    },
+    "unlock": {
+      "type": "path",
+      "path": "trade"
+    }
+  },
+  "reviewed": false
+}

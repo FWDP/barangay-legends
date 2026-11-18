@@ -217,7 +217,9 @@ describe("anti-spam", () => {
     return { ...s, region: acquainted(createRegion(calm, 0, 7, s.barangay.id)) };
   };
   const nb = (s: GameState, id = "malinaw") => s.region!.neighbors.find((n) => n.id === id)!;
-  const trade = (s: GameState, amount = 20) => apply(s, calm, { type: "proposeTrade", neighbor: "malinaw", give: { resource: "rice", amount }, want: { resource: "wood", amount: 5 } });
+  // Palay worth `amount` (tradeDecision.values), for a little wood.
+  const trade = (s: GameState, amount = 20) =>
+    apply(s, calm, { type: "proposeTrade", neighbor: "malinaw", give: { resource: "rice", amount: amount / calm.rules.diplomacy.tradeDecision.values.rice! }, want: { resource: "wood", amount: 5 } });
 
   it("a trade's trust follows its value, and repeats the same day give sharply less", () => {
     const s = world();

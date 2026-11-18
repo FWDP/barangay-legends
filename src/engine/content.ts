@@ -855,7 +855,7 @@ export interface DiplomacyRules {
     lootTargets: string[];
   };
   /** Neighbors' trade offers; none before startsAfterSeconds of game time (a new datu has enough to learn). */
-  offers: { chancePerSecond: number; expireSeconds: number; give: number; receivePercent: number; startsAfterSeconds: number };
+  offers: OfferRules;
   aiDecisionSeconds: number;
   traits: Record<string, TraitDef>;
   /** Resentment of the player's raids (0..100). */
@@ -898,6 +898,44 @@ export interface NeighborDef {
   trust: number;
   fictional?: boolean;
   note?: string;
+}
+
+/** Where a barangay trades from: the coast, or upriver and inland. */
+export type TradeKind = "coastal" | "upriver";
+export const TRADE_KINDS: TradeKind[] = ["coastal", "upriver"];
+
+/** AI barangays' trade offers (engine/tradeOffers.ts); see the rules.json comment. */
+export interface OfferRules {
+  chancePerSecond: number;
+  expireSeconds: number;
+  receivePercent: number;
+  startsAfterSeconds: number;
+  /** What an offer is worth, in gold. */
+  worthGold: number;
+  /** Home-island barangays this far down the river (0 upstream, 1 the mouth) or further are coastal. */
+  coastFrom: number;
+  /** On other islands, barangays within this share of the island's radius from its middle are inland. */
+  inlandWithin: number;
+  /** Traditions whose barangays are always inland (upland). */
+  uplandTraditions: string[];
+  /** Stock a barangay keeps per villager; only what's above it is offered. */
+  keepPerVillager: Record<Resource, number>;
+  /** Below this much Pagkain and Palay per villager, a barangay asks for food. */
+  needFoodPerVillager: number;
+  /** They offer Palay only above this much per villager. */
+  palaySurplusPerVillager: number;
+  /** They ask this percent of Palay's value when they give it. */
+  palayPremiumPercent: number;
+  /** A typhoon on the player costs AI barangays on the same island this share of their Pagkain. */
+  typhoonFoodLossPercent: number;
+  /** How long after that storm their fields count as flooded. */
+  floodedForSeconds: number;
+  /** What coastal and upriver barangays make on their own (Asin, panned gold), per villager per minute. */
+  incomePerVillagerPerMinute: Record<TradeKind, ResourceAmounts>;
+  /** What each kind offers (from its surplus) and asks for, in order of preference. */
+  kinds: Record<TradeKind, { give: Resource[]; want: Resource[] }>;
+  /** How a resource shows in an offer from each kind (ui.json trade.goods ids): Pagkain as dried fish or root crops, wood as hardwood. */
+  goods: Record<TradeKind, Partial<Record<Resource, string[]>>>;
 }
 
 /** A lore note: short text with at least one source. */
@@ -1269,12 +1307,13 @@ export function validateRules(raw: unknown): Rules {
     tribute: ["percent", "everySeconds"],
     loyalty: ["start", "decayPerMinute", "rebelBelow", "rebelInfluence", "guardSeconds", "guardPerMinute"],
     aiRaid: ["chancePerSecond", "cooldownSeconds", "lootPercent", "defendRenown", "landingChoices", "unwatchedWeight", "coveWeight", "alliesComingLootPercent"],
-    offers: ["chancePerSecond", "expireSeconds", "give", "receivePercent", "startsAfterSeconds"],
+    offers: ["chancePerSecond", "expireSeconds", "receivePercent", "startsAfterSeconds", "worthGold", "coastFrom", "inlandWithin", "needFoodPerVillager", "palaySurplusPerVillager", "palayPremiumPercent", "typhoonFoodLossPercent", "floodedForSeconds"],
   };
   for (const [section, keys] of Object.entries(sections)) {
     if (!isObject(d[section])) throw new Error(`rules: missing "diplomacy.${section}"`);
     checkNumbers(d[section] as Record<string, unknown>, keys, `rules: diplomacy.${section}`);
   }
+  validateOffers(d.offers as Record<string, unknown>);
   const timing = (d.aiRaid as Record<string, unknown>).timing;
   if (!isObject(timing)) throw new Error('rules: missing "diplomacy.aiRaid.timing"');
   checkNumbers(timing, ["nightDawnFactor", "dayFactor", "dawnShare", "seasonChangeSeconds", "seasonChangeFactor", "typhoonFactor"], "rules: diplomacy.aiRaid.timing");
@@ -1476,6 +1515,31 @@ function validateFoodRules(food: unknown, pests: unknown) {
   if (!Array.isArray(food.roughSeas) || !food.roughSeas.every((x) => typeof x === "string")) throw new Error('rules: "food.roughSeas" must list season ids');
   if (!isObject(pests)) throw new Error('rules: missing "pests"');
   checkNumbers(pests, ["startsAfterSeconds", "ratsChancePerSecond", "ratsPercent", "locustChancePerSecond", "locustWarningSeconds", "locustSeconds", "locustPercent", "boarChancePerSecond", "boarSeconds", "boarPercent", "boarStock", "boarGuardRadius", "cooldownSeconds"], "rules: pests");
+}
+
+function validateOffers(o: Record<string, unknown>) {
+  const where = "rules: diplomacy.offers";
+  const isRes = (r: unknown) => (RESOURCES as readonly unknown[]).includes(r);
+  if (!Array.isArray(o.uplandTraditions) || !o.uplandTraditions.every((t) => typeof t === "string")) throw new Error(`${where}.uplandTraditions must list tradition ids`);
+  if (!isObject(o.keepPerVillager)) throw new Error(`${where}: missing "keepPerVillager"`);
+  checkNumbers(o.keepPerVillager, [...RESOURCES], `${where}.keepPerVillager`);
+  for (const key of ["incomePerVillagerPerMinute", "kinds", "goods"]) {
+    const v = o[key];
+    if (!isObject(v) || !TRADE_KINDS.every((k) => isObject(v[k]))) throw new Error(`${where}.${key} needs "coastal" and "upriver"`);
+  }
+  for (const k of TRADE_KINDS) {
+    const income = (o.incomePerVillagerPerMinute as Record<string, Record<string, unknown>>)[k];
+    for (const [r, n] of Object.entries(income)) if (!isRes(r) || !isNonNegNumber(n)) throw new Error(`${where}.incomePerVillagerPerMinute.${k}.${r} must be a resource and a number`);
+    const kind = (o.kinds as Record<string, Record<string, unknown>>)[k];
+    for (const side of ["give", "want"]) {
+      const list = kind[side];
+      if (!Array.isArray(list) || list.length === 0 || !list.every(isRes)) throw new Error(`${where}.kinds.${k}.${side} must list resources`);
+    }
+    const goods = (o.goods as Record<string, Record<string, unknown>>)[k];
+    for (const [r, ids] of Object.entries(goods)) {
+      if (!isRes(r) || !Array.isArray(ids) || ids.length === 0 || !ids.every((x) => typeof x === "string")) throw new Error(`${where}.goods.${k}.${r} must list goods ids`);
+    }
+  }
 }
 
 function checkNumbers(raw: Record<string, unknown>, keys: string[], file: string, positive = false) {

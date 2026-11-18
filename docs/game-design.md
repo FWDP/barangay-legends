@@ -100,7 +100,12 @@ different form, and some (prestige and Dangal, export codes) isn't built yet.
   symbols (menus and buttons) can stay modern.
 - **The archipelago:** 4–5 islands of AI barangays with trade (accept, counter or refuse),
   grudges and Handog, marriage alliances, sandugo, raids and defense, tributaries, sea travel by
-  Balangay, alliance blocs and wars, and the Balita news feed.
+  Balangay, alliance blocs and wars, and the Balita news feed. Trade offers follow precolonial
+  exchange (`engine/tradeOffers.ts`, `rules.diplomacy.offers`): coastal barangays offer Asin and
+  fish for hardwood, Palay and gold; upriver and inland ones gold, root crops and hardwood for
+  Asin and fish; a barangay short of food (a poor season, or fields flooded by a typhoon on its
+  island) asks for food. Offers come from real stocks, say why, and show their worth in gold;
+  Palay is valued highly and never offered below its value.
 - **Renown:** Kabantugan raises the barangay through 20 levels with rewards and titles.
   AI barangays keep their own renown too. The first Mga Gawain tasks and Aklat entries give
   little renown, rising to the full amount (`rules.kabantugan.taskRamp`, `aklatRamp`), so level 2

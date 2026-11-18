@@ -677,7 +677,7 @@ export function App() {
     },
     tikbalang: { node: <TikbalangBar state={state} content={content} game={ui.game} lang={lang} onAnswer={(i) => dispatch({ type: "answerRiddle", option: i })} />, label: `🌫️ ${nt.tikbalang[lang]}` },
     offer: {
-      node: <OfferBar state={state} content={content} dispatch={dispatch} folded={view === "barangay" && !offerOpen} sailing={sailing} held={tradeHeld} onOpen={() => !sailing && setOfferOpen(true)} />,
+      node: <OfferBar state={state} content={content} dispatch={dispatch} game={ui.game} lang={lang} folded={view === "barangay" && !offerOpen} sailing={sailing} held={tradeHeld} onOpen={() => !sailing && setOfferOpen(true)} />,
       label: `🛶 ${fill(nt.offer[lang], { barangay: offerFrom })}`,
       onOpen: () => !sailing && setOfferOpen(true),
     },

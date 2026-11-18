@@ -1,6 +1,7 @@
 // Pressure and events: seasons, hunger, sickness, fire and typhoons.
 // Deterministic: all randomness comes from the seeded RNG stored in GameState, and random
 // rolls happen only on whole game seconds, so the outcome does not depend on frame rate.
+import { stormHitsNeighbors } from "./tradeOffers";
 import { dietSicknessFactor } from "./food";
 import { feastSicknessFactor } from "./social";
 import type { Content, Resource, Season } from "./content";
@@ -168,7 +169,11 @@ function onSecond(state: GameState, content: Content, second: number, rng: Rng):
   const ready = (id: string, startsAfter: number) => second >= startsAfter && second >= (s.nextEventAt[id] ?? 0);
 
   // Bagyo strikes when its warning runs out.
-  if (typhoon && s.typhoon && second >= s.typhoon.strikeAt) s = typhoonStrikes(s, content, second, rng);
+  if (typhoon && s.typhoon && second >= s.typhoon.strikeAt) {
+    s = typhoonStrikes(s, content, second, rng);
+    // It floods the fields of AI barangays on the same island too (only their Pagkain).
+    if (!content.ai) s = stormHitsNeighbors(s, content, second);
+  }
 
   // Sakit spreads.
   const spread = spreadChance(s, content);
