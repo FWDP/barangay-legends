@@ -259,7 +259,8 @@ describe("anti-spam", () => {
   });
 
   it("renown from raiding the same barangay again that day falls off", () => {
-    let s = world();
+    // At the top level, so the day's cap on fighting renown (renown.ts) doesn't bind.
+    let s = { ...world(), kabantugan: calm.rules.kabantugan.levelAt.at(-1)! };
     s = { ...s, warriors: 20, buildings: [...s.buildings, at("kuta", 3, 3), at("kuta", 3, 5), at("kuta", 7, 5), at("kuta", 7, 3)] };
     s = { ...s, region: { ...s.region!, neighbors: s.region!.neighbors.map((n) => (n.id === "malinaw" ? { ...n, state: { ...n.state, warriors: 0 }, today: { day: 1, trades: 0, gifts: 0, raids: 1 } } : n)) } };
     const raided = apply(s, calm, { type: "raid", neighbor: "malinaw", warriors: 10 });

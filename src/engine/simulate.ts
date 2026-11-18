@@ -16,7 +16,9 @@ import { autoPlaceTile, isUnlocked } from "./map";
 import { nearestClearable } from "./clearing";
 import { riceCap } from "./storage";
 import { nextDatuLevel, datuLevelNeeded } from "./datu";
-import { barangayLevel, levelForRenown, renownSources } from "./kabantugan";
+import { barangayLevel, levelForRenown } from "./kabantugan";
+import { RENOWN_SOURCES, type RenownSource } from "./renown";
+import { offlineProgress } from "./offline";
 import { dayAt } from "./daynight";
 import { nextUpgrade, upgradeCost } from "./upgrades";
 import { softCap } from "./stockpile";
@@ -69,8 +71,21 @@ export interface SimResult {
   pistas: number;
   /** Game second each barangay level was first reached (index 0 = level 1, at 0). */
   levelTimes: number[];
-  /** Renown gains in the first hour, with their source ("other": feasts, honor, ally calls). */
+  /** When each barangay level was reached: game seconds, seconds of active play, real seconds (with sessions). */
+  levelAt: { game: number; active: number; real: number }[];
+  /** Renown gains in the first hour, with their source. */
   renownLog: { t: number; source: string; amount: number }[];
+  /** Renown earned by source at the end of each hour of active play (cumulative). */
+  renownByHour: Partial<Record<RenownSource, number>>[];
+}
+
+/**
+ * Normal play instead of non-stop play: each real day the bot plays `activeSeconds`, then the
+ * game is closed for the rest of the day and offline progress is credited on return (up to
+ * rules.offline.maxSeconds, as for a real player). `days` then counts real days.
+ */
+export interface SimSessions {
+  activeSeconds: number;
 }
 
 /** Seconds between the bot's decisions. */
@@ -302,8 +317,8 @@ export function botDecide(state: GameState, content: Content): GameState {
   return state;
 }
 
-/** Plays `days` game days from a new game with the given seed. */
-export function simulate(content: Content, days: number, seed = 12345): SimResult {
+/** Plays `days` game days (or, with sessions, real days) from a new game with the given seed. */
+export function simulate(content: Content, days: number, seed = 12345, sessions?: SimSessions): SimResult {
   const daySeconds = content.rules.dayNight.daySeconds;
   let s = newGame(content, seed);
   const rows: DayRow[] = [];
@@ -320,27 +335,78 @@ export function simulate(content: Content, days: number, seed = 12345): SimResul
   let eatingRiceSeconds = 0;
   let seenReport = 0;
   const levelTimes = [0];
+  const levelAt: SimResult["levelAt"] = [{ game: 0, active: 0, real: 0 }];
   const renownLog: SimResult["renownLog"] = [];
-  const end = days * daySeconds;
-  // Level times and where the first hour's renown came from.
+  const renownByHour: SimResult["renownByHour"] = [];
+  // Seconds of active play, and real seconds (active plus time away), so far.
+  let active = 0;
+  let real = 0;
+  const DAY = 86400;
+  const done = () => (sessions ? real >= days * DAY : s.time >= days * daySeconds);
+  // Level times and where the first hour's renown came from (the renown tally, by source).
   const note = (before: GameState, after: GameState) => {
-    while (barangayLevel(after, content) > levelTimes.length) levelTimes.push(after.time);
-    if (after.time > 3600 || after.kabantugan <= before.kabantugan) return;
-    let known = 0;
-    for (const [source, amount] of Object.entries(renownSources(before, { ...after, stats: { ...after.stats, bestTens: before.stats.bestTens } }, content))) {
-      renownLog.push({ t: after.time, source, amount: amount! });
-      known += amount!;
+    while (barangayLevel(after, content) > levelTimes.length) {
+      levelTimes.push(after.time);
+      levelAt.push({ game: after.time, active, real });
     }
-    const other = after.kabantugan - before.kabantugan - known;
-    if (other > 0) renownLog.push({ t: after.time, source: "other", amount: other });
+    if (active > 3600 || after.kabantugan <= before.kabantugan) return;
+    for (const source of RENOWN_SOURCES) {
+      const amount = (after.renownTally.total[source] ?? 0) - (before.renownTally.total[source] ?? 0);
+      if (amount > 0) renownLog.push({ t: after.time, source, amount });
+    }
   };
-  while (s.time < end) {
+  // One row of the table: the barangay and its strongest AI rival now.
+  const dayRow = (s: GameState, day: number): DayRow => {
+    const ai = s.region?.neighbors ?? [];
+    // The strongest rival by renown, as the Ranggo ranks them.
+    const strongest = ai.reduce<(typeof ai)[number] | null>((a, n) => (!a || n.fame.renown > a.fame.renown ? n : a), null);
+    const kubo = content.buildings.find((b) => b.id === "bahay-kubo")!;
+    return {
+      day,
+      food: Math.round(s.resources.food),
+      diet: s.dietGroups ?? 0,
+      rice: Math.round(s.resources.rice),
+      riceCap: riceCap(s, content),
+      wood: Math.round(s.resources.wood),
+      gold: Math.round(s.resources.gold),
+      woodCap: softCap(s, content, "wood"),
+      goldCap: softCap(s, content, "gold"),
+      villagers: s.villagers,
+      buildings: s.buildings.length,
+      level: barangayLevel(s, content),
+      renown: s.kabantugan,
+      kuboCost: buildingCost(content, kubo, owned(s, "bahay-kubo")).wood,
+      hungrySeconds: hungry,
+      fullSeconds: full,
+      aiBuildings: strongest?.state.buildings.length ?? 0,
+      aiVillagers: strongest?.state.villagers ?? 0,
+      aiLevel: strongest ? levelForRenown(content, strongest.fame.renown) : 0,
+      aiRenown: Math.round(strongest?.fame.renown ?? 0),
+      aiAvgBuildings: ai.length ? Math.round(ai.reduce((n, x) => n + x.state.buildings.length, 0) / ai.length) : 0,
+    };
+  };
+  while (!done()) {
+    // With sessions: at the end of the day's play, the game is closed until the next day.
+    if (sessions && active >= (Math.floor(real / DAY) + 1) * sessions.activeSeconds) {
+      const away = (Math.floor(real / DAY) + 1) * DAY - real;
+      const before = s;
+      s = offlineProgress(s, content, away).state;
+      real += away;
+      note(before, s);
+      rows.push(dayRow(s, Math.round(real / DAY)));
+      hungry = 0;
+      full = 0;
+      continue;
+    }
     let before = s;
     s = botDecide(s, content);
     note(before, s);
     for (let i = 0; i < THINK_SECONDS; i++) {
       before = s;
       s = tick(s, content, 1);
+      active++;
+      real++;
+      if (active % 3600 === 0) renownByHour.push({ ...s.renownTally.total });
       note(before, s);
       if (s.resources.food <= 0 && s.resources.rice <= 0) hungry++;
       else if (s.resources.food <= 0) eatingRiceSeconds++;
@@ -377,37 +443,11 @@ export function simulate(content: Content, days: number, seed = 12345): SimResul
     }
     if (barangayLevel(s, content) > lastLevel) milestones.push({ t: s.time, what: `level ${(lastLevel = barangayLevel(s, content))}` });
     if (s.datuLevel > lastDatu) milestones.push({ t: s.time, what: `datu ${(lastDatu = s.datuLevel)}` });
-    if (s.time >= (rows.length + 1) * daySeconds) {
-      const ai = s.region?.neighbors ?? [];
-      // The strongest rival by renown, as the Ranggo ranks them.
-      const strongest = ai.reduce<(typeof ai)[number] | null>((a, n) => (!a || n.fame.renown > a.fame.renown ? n : a), null);
-      const kubo = content.buildings.find((b) => b.id === "bahay-kubo")!;
-      rows.push({
-        day: dayAt(content, s.foundedAt, s.time) - 1,
-        food: Math.round(s.resources.food),
-        diet: s.dietGroups ?? 0,
-        rice: Math.round(s.resources.rice),
-        riceCap: riceCap(s, content),
-        wood: Math.round(s.resources.wood),
-        gold: Math.round(s.resources.gold),
-        woodCap: softCap(s, content, "wood"),
-        goldCap: softCap(s, content, "gold"),
-        villagers: s.villagers,
-        buildings: s.buildings.length,
-        level: barangayLevel(s, content),
-        renown: s.kabantugan,
-        kuboCost: buildingCost(content, kubo, owned(s, "bahay-kubo")).wood,
-        hungrySeconds: hungry,
-        fullSeconds: full,
-        aiBuildings: strongest?.state.buildings.length ?? 0,
-        aiVillagers: strongest?.state.villagers ?? 0,
-        aiLevel: strongest ? levelForRenown(content, strongest.fame.renown) : 0,
-        aiRenown: Math.round(strongest?.fame.renown ?? 0),
-        aiAvgBuildings: ai.length ? Math.round(ai.reduce((n, x) => n + x.state.buildings.length, 0) / ai.length) : 0,
-      });
+    if (!sessions && s.time >= (rows.length + 1) * daySeconds) {
+      rows.push(dayRow(s, dayAt(content, s.foundedAt, s.time) - 1));
       hungry = 0;
       full = 0;
     }
   }
-  return { rows, firsts, firstIncomeAt, unlockTimes, milestones, raids, eatingRiceSeconds, pistas: s.stats.pistas ?? 0, levelTimes, renownLog };
+  return { rows, firsts, firstIncomeAt, unlockTimes, milestones, raids, eatingRiceSeconds, pistas: s.stats.pistas ?? 0, levelTimes, levelAt, renownLog, renownByHour };
 }

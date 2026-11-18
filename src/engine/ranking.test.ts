@@ -72,7 +72,8 @@ describe("AI fame", () => {
     expect(n.fame.renown).toBe(aiScore(content, n.state));
     const grown = setNb({ ...s, time: 50 }, "malinaw", (x) => ({ state: { ...x.state, villagers: x.state.villagers + 5 } }));
     const after = trackRanking(s, grown, content);
-    expect(nb(after, "malinaw").fame.renown).toBe(n.fame.renown + 5 * k.aiPerVillager);
+    expect(nb(after, "malinaw").fame.renown).toBe(n.fame.renown + aiScore(content, nb(grown, "malinaw").state) - aiScore(content, n.state));
+    expect(nb(after, "malinaw").fame.renown).toBeGreaterThan(n.fame.renown);
     expect(nb(after, "malinaw").fame.renownAt).toBe(50);
     const shrunk = setNb({ ...after, time: 60 }, "malinaw", (x) => ({ state: { ...x.state, villagers: 1 } }));
     expect(nb(trackRanking(after, shrunk, content), "malinaw").fame.renown).toBe(nb(after, "malinaw").fame.renown);
@@ -81,9 +82,9 @@ describe("AI fame", () => {
   it("counts raids they beat off and battles they win", () => {
     const s = { ...world(), time: 40 };
     const beaten = trackRanking(s, report(s, { kind: "raid", neighbor: "malinaw", win: false } as Omit<Report, "id" | "time">), content);
-    expect(nb(beaten, "malinaw").fame).toMatchObject({ defended: 1, defendedAt: 40, renown: nb(s, "malinaw").fame.renown + k.perDefenseWon });
+    expect(nb(beaten, "malinaw").fame).toMatchObject({ defended: 1, defendedAt: 40, renown: nb(s, "malinaw").fame.renown + k.aiPerBattle });
     const won = trackRanking(s, report(s, { kind: "defense", neighbor: "pulang-lupa", win: false } as Omit<Report, "id" | "time">), content);
-    expect(nb(won, "pulang-lupa").fame.renown).toBe(nb(s, "pulang-lupa").fame.renown + k.perRaidWon);
+    expect(nb(won, "pulang-lupa").fame.renown).toBe(nb(s, "pulang-lupa").fame.renown + k.aiPerBattle);
     const ally = trackRanking(s, { ...s, region: addNews(s.region!, { time: 40, key: "ally-defended", barangay: "malinaw", other: "batong-buhay" }) }, content);
     expect(nb(ally, "malinaw").fame.defended).toBe(1);
   });

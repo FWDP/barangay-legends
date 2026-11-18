@@ -58,6 +58,7 @@ import { upgradeBuilding } from "./upgrades";
 import { curveFactor } from "./curve";
 import { softCapFactor } from "./stockpile";
 import { applyRenown } from "./kabantugan";
+import { newRenownTally, type RenownTally } from "./renown";
 import { nightFactor } from "./daynight";
 import { hasEntrance, updateDoors } from "./doors";
 import { devCommand, type DevAction } from "./dev";
@@ -84,7 +85,7 @@ import {
   type TikbalangTrick,
 } from "./worship";
 
-export const STATE_VERSION = 38;
+export const STATE_VERSION = 39;
 
 export interface PlacedBuilding {
   /** Building id from content/buildings. */
@@ -267,6 +268,8 @@ export interface GameState {
   kabantugan: number;
   /** The highest barangay level whose reward has been given. */
   levelRewarded: number;
+  /** Renown by source, and today's repeatable renown against the daily caps (renown.ts). */
+  renownTally: RenownTally;
   /** Game time the barangay was founded: day 1 (Araw 1) starts here. */
   foundedAt: number;
   /** A dev command (?dev=1) was used on this save: kept apart from real play (e.g. for rankings). */
@@ -353,6 +356,7 @@ export function newGame(
     balangays: 0,
     kabantugan: 0,
     levelRewarded: 1,
+    renownTally: newRenownTally(),
     foundedAt: 0,
     devSave: false,
     achievedAt: { renown: 0, defended: 0, aklat: 0 },

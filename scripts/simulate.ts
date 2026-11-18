@@ -1,15 +1,20 @@
 // Balance simulation: `npm run simulate [days] [seed]` plays the engine for N game days with a
 // simple strategy (src/engine/simulate.ts) and prints the barangay's and its AI rivals' curves.
+// `npm run simulate [days] [seed] -- --sessions=3` plays N real days instead, 3 hours a day,
+// with offline progress for the rest of each day (as a regular player would).
 import { loadContent } from "../src/engine/content";
 import { simulate } from "../src/engine/simulate";
+import { RENOWN_SOURCES } from "../src/engine/renown";
 
 const args = process.argv.slice(2).filter((a) => /^\d+$/.test(a));
+const hours = Number(process.argv.find((a) => a.startsWith("--sessions="))?.split("=")[1] ?? 0);
+const sessions = hours > 0 ? { activeSeconds: hours * 3600 } : undefined;
 const days = Number(args[0] ?? 200);
 const seed = Number(args[1] ?? 12345);
 const every = Math.max(1, Math.round(days / 40));
 const content = loadContent();
 const started = performance.now();
-const { rows, firstIncomeAt, unlockTimes, firsts, milestones, raids, eatingRiceSeconds, pistas, levelTimes, renownLog } = simulate(content, days, seed);
+const { rows, firstIncomeAt, unlockTimes, firsts, milestones, raids, eatingRiceSeconds, pistas, levelTimes, levelAt, renownLog, renownByHour } = simulate(content, days, seed, sessions);
 
 const cols: [string, (r: (typeof rows)[number]) => string | number][] = [
   ["Araw", (r) => r.day],
@@ -48,5 +53,13 @@ console.log(
 );
 console.log(`Seconds eating Palay (no Pagkain): ${eatingRiceSeconds}; Pistas held: ${pistas}`);
 console.log(`Barangay levels (minutes): ${levelTimes.map((t, i) => `${i + 1}: ${(t / 60).toFixed(1)}`).join(", ")}`);
+if (sessions) console.log(`Barangay levels (hours of active play / real days): ${levelAt.map((l, i) => `${i + 1}: ${(l.active / 3600).toFixed(1)}h/${(l.real / 86400).toFixed(1)}d`).join(", ")}`);
+// Renown by source in each hour of active play (time away counted with the hour it ends).
+const hourly = renownByHour.map((h, i) => Object.fromEntries(RENOWN_SOURCES.map((src) => [src, (h[src] ?? 0) - (renownByHour[i - 1]?.[src] ?? 0)])));
+const show = [0, 1, 2, 3, 5, 9, 19, 49, 99].filter((i) => i < hourly.length);
+console.log(`Renown per hour of active play, by source (hour: ${RENOWN_SOURCES.join("/")}):`);
+for (const i of show) console.log(`  ${String(i + 1).padStart(3)}: ${RENOWN_SOURCES.map((src) => hourly[i][src]).join("/")}`);
+const total = renownByHour.at(-1) ?? {};
+console.log(`Renown in total by source: ${RENOWN_SOURCES.map((src) => `${src} ${total[src] ?? 0}`).join(", ")}`);
 console.log(`Renown in the first hour (minute source +amount): ${renownLog.map((r) => `${(r.t / 60).toFixed(1)} ${r.source} +${r.amount}`).join(", ")}`);
 console.log(`(${days} days, seed ${seed}, ${((performance.now() - started) / 1000).toFixed(1)} s)`);

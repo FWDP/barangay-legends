@@ -42,7 +42,8 @@ import { generateArchipelago, type Island, type Place } from "./archipelago";
 import { generateBlocs, type Politics } from "./politics";
 import { MAX_HISTORY, namedGender, type HistoryEntry, type HistoryKind, type NamedVillager } from "./people";
 import { forestStage } from "./forest";
-import { levelForRenown, renownFromAchievements } from "./kabantugan";
+import { levelForRenown, renownForLevel, renownFromAchievements } from "./kabantugan";
+import { newRenownTally, RENOWN_CAPS, RENOWN_SOURCES, type RenownTally } from "./renown";
 import { newFame, type Fame } from "./ranking";
 import { MAX_REMEMBERED, type Remembered } from "./death";
 import { updateDoors } from "./doors";
@@ -345,6 +346,15 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
   36: (raw) => ({ ...raw, version: 37 }),
   // v37 → v38: warriors' honor, social moments, tiredness and bayanihan (honor.ts, social.ts); none in older saves.
   37: (raw) => ({ ...raw, version: 38 }),
+  // v38 → v39: the renown curve was retuned (rising level thresholds, daily caps on repeatable
+  // renown: renown.ts). The player keeps the level reached (keepLevel: parseRenown raises renown
+  // to what that level needs now) and has no renown tally yet; AI barangays' fame is worked out
+  // again from their size and strength on the new scale (parseFame), keeping raids defended.
+  38: (raw) => {
+    const region = isObject(raw.region) ? raw.region : null;
+    const neighbors = region && Array.isArray(region.neighbors) ? region.neighbors.map((n) => (isObject(n) && isObject(n.fame) ? { ...n, fame: { ...n.fame, renown: null, peak: null } } : n)) : null;
+    return { ...raw, version: 39, renownTally: null, keepLevel: raw.levelRewarded, ...(region && neighbors ? { region: { ...region, neighbors } } : {}) };
+  },
 };
 
 // ---------- Food (v33 → v34) ----------
@@ -759,6 +769,12 @@ function parseState(data: RawSave, content: Content, isPlayer: boolean, withRegi
  */
 function parseRenown(data: RawSave, content: Content, state: GameState) {
   const tens = Math.floor(state.villagers / 10);
+  state.renownTally = parseRenownTally(data.renownTally);
+  // A save from before the tally: today's tributaries and allies already gave their renown.
+  if (!isObject(data.renownTally)) {
+    const ids = (status: string) => state.region?.neighbors.filter((n) => n.status === status).map((n) => n.id) ?? [];
+    state.renownTally = { ...state.renownTally, tributaries: ids("tributary"), allies: ids("ally") };
+  }
   if (data.kabantugan === null || data.kabantugan === undefined) {
     const region = isObject(data.region) ? data.region : {};
     const battle = finiteNonNeg(region.renown) ? region.renown : 0;
@@ -770,7 +786,28 @@ function parseRenown(data: RawSave, content: Content, state: GameState) {
   if (finiteNonNeg(data.kabantugan)) state.kabantugan = data.kabantugan;
   const level = levelForRenown(content, state.kabantugan);
   state.levelRewarded = Number.isInteger(data.levelRewarded) ? Math.min(content.rules.kabantugan.levelAt.length + 1, Math.max(1, data.levelRewarded as number)) : level;
+  // A level reached before the thresholds were retuned (the v39 migration) is kept: renown is
+  // raised to what that level needs now, and the next level takes the new thresholds.
+  if (Number.isInteger(data.keepLevel)) state.kabantugan = Math.max(state.kabantugan, renownForLevel(content, Math.min(state.levelRewarded, data.keepLevel as number)) ?? 0);
   if (!isObject(data.stats) || !finiteNonNeg((data.stats as RawSave).bestTens)) state.stats.bestTens = tens;
+}
+
+/** The renown tally (renown.ts); missing or broken (a save from before v39): a fresh one. */
+function parseRenownTally(raw: unknown): RenownTally {
+  const tally = newRenownTally();
+  if (!isObject(raw)) return tally;
+  if (Number.isInteger(raw.day) && (raw.day as number) >= 0) tally.day = raw.day as number;
+  const pick = <K extends string>(v: unknown, keys: readonly K[]): Partial<Record<K, number>> => {
+    const out: Partial<Record<K, number>> = {};
+    if (isObject(v)) for (const key of keys) if (finiteNonNeg(v[key])) out[key] = v[key] as number;
+    return out;
+  };
+  tally.today = pick(raw.today, RENOWN_CAPS);
+  tally.total = pick(raw.total, RENOWN_SOURCES);
+  const ids = (v: unknown) => (Array.isArray(v) ? [...new Set(v.filter((x): x is string => typeof x === "string"))] : []);
+  tally.tributaries = ids(raw.tributaries);
+  tally.allies = ids(raw.allies);
+  return tally;
 }
 
 /** An AI barangay's ranked stats; missing (a v21 save) or broken: from its size and strength now. */

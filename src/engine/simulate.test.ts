@@ -19,10 +19,11 @@ describe("balance simulation", () => {
   });
 
   it("something new comes every few minutes in the first 30 minutes", () => {
-    // Buildings unlocked, barangay levels and Bahay ng Datu levels.
+    // Buildings unlocked, barangay levels and Bahay ng Datu levels. (Nine minutes since level 3
+    // moved to about 15 minutes: rules.kabantugan.)
     const times = [0, ...run.milestones.filter((m) => m.t <= 30 * 60).map((m) => m.t), 30 * 60];
     expect(times.length).toBeGreaterThanOrEqual(12);
-    for (let i = 1; i < times.length; i++) expect(times[i] - times[i - 1]).toBeLessThanOrEqual(8 * 60);
+    for (let i = 1; i < times.length; i++) expect(times[i] - times[i - 1]).toBeLessThanOrEqual(9 * 60);
   });
 
   it("wood and gold don't run away: at most a little over the stockpile's soft cap", () => {
@@ -52,10 +53,10 @@ describe("balance simulation", () => {
     expect(last.aiBuildings).toBeGreaterThan(first.aiBuildings);
   });
 
-  it("a new game can't reach barangay level 3 in under 8 minutes", () => {
+  it("a new game can't reach barangay level 3 in under 10 minutes", () => {
     // levelTimes[2] is when level 3 came (undefined if it didn't in the run).
-    expect(run.levelTimes[2] ?? Infinity).toBeGreaterThanOrEqual(8 * 60);
-    for (const seed of [1, 2, 3]) expect(simulate(content, 2, seed).levelTimes[2] ?? Infinity).toBeGreaterThanOrEqual(8 * 60);
+    expect(run.levelTimes[2] ?? Infinity).toBeGreaterThanOrEqual(10 * 60);
+    for (const seed of [1, 2, 3]) expect(simulate(content, 3, seed).levelTimes[2] ?? Infinity).toBeGreaterThanOrEqual(10 * 60);
   });
 
   it("is deterministic", () => {

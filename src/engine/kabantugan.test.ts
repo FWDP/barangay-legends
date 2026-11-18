@@ -11,6 +11,10 @@ import { generateVillage, raidPreview, villageKey, villageLevel, villagePlan, vi
 import { tileAt, NEIGHBOURS } from "./map";
 import { unreachableWorkplaces, warriorCap } from "./game";
 import { sameIsland } from "./archipelago";
+import { dailyCap, earnRenown, renownLeftToday } from "./renown";
+import { holdPista } from "./food";
+import { validateRules } from "./content";
+import rulesJson from "../../content/rules.json";
 
 const k = content.rules.kabantugan;
 /** A barangay whose level rewards are live (the test helper turns them off). */
@@ -29,6 +33,8 @@ describe("barangay level from Kabantugan", () => {
   it("rises through 20 levels on rising thresholds", () => {
     expect(maxLevel(content)).toBe(20);
     for (let i = 1; i < k.levelAt.length; i++) expect(k.levelAt[i]).toBeGreaterThan(k.levelAt[i - 1]);
+    // Each level clearly harder than the last: every step larger than the one before.
+    for (let i = 1; i < k.levelAt.length; i++) expect(k.levelAt[i] - k.levelAt[i - 1]).toBeGreaterThan(i === 1 ? k.levelAt[0] : k.levelAt[i - 1] - k.levelAt[i - 2]);
     expect(levelForRenown(content, 0)).toBe(1);
     expect(levelForRenown(content, k.levelAt[0] - 1)).toBe(1);
     expect(levelForRenown(content, k.levelAt[0])).toBe(2);
@@ -60,10 +66,14 @@ describe("renown sources", () => {
   it("the first tasks and Aklat entries give little, later ones the full amount", () => {
     expect(rampedRenown(k.taskRamp, k.perTask, 0)).toBeLessThan(k.perTask / 3);
     expect(rampedRenown(k.aklatRamp, k.perAklat, 0)).toBeLessThan(k.perAklat);
-    expect(rampedRenown(k.taskRamp, k.perTask, 100)).toBe(k.perTask);
-    expect(rampedRenown(k.aklatRamp, k.perAklat, 100)).toBe(k.perAklat);
-    // Each one gives at least as much as the one before.
-    for (let n = 1; n < 30; n++) expect(rampedRenown(k.taskRamp, k.perTask, n)).toBeGreaterThanOrEqual(rampedRenown(k.taskRamp, k.perTask, n - 1));
+    expect(rampedRenown(k.taskRamp, k.perTask, 1000)).toBe(k.perTask);
+    expect(rampedRenown(k.aklatRamp, k.perAklat, 1000)).toBe(k.perAklat);
+    // Small amounts: fractions add up, so ten early Aklat entries give a little, not nothing.
+    expect(rampedTotal(k.aklatRamp, k.perAklat, 0, 10)).toBeGreaterThan(0);
+    expect(rampedTotal(k.aklatRamp, k.perAklat, 0, 10)).toBeLessThan(10);
+    // Each ten give at least as much as the ten before, and the totals add up exactly.
+    for (let n = 10; n < 60; n += 10) expect(rampedTotal(k.taskRamp, k.perTask, n, n + 10)).toBeGreaterThanOrEqual(rampedTotal(k.taskRamp, k.perTask, n - 10, n));
+    expect(rampedTotal(k.taskRamp, k.perTask, 0, 7) + rampedTotal(k.taskRamp, k.perTask, 7, 30)).toBe(rampedTotal(k.taskRamp, k.perTask, 0, 30));
     // The fifth task counts as the fifth, whatever came before it in the same step.
     const four = live({ gawainDone: ["a", "b", "c", "d"] });
     expect(renownBetween(four, { ...four, gawainDone: [...four.gawainDone, "e"] }, content)).toBe(rampedRenown(k.taskRamp, k.perTask, 4));
@@ -81,7 +91,8 @@ describe("renown sources", () => {
   });
 
   it("a real trade earns it, and renown is never lost", () => {
-    let s = world();
+    // High enough that one trade is within the day's cap.
+    let s = world({ kabantugan: k.levelAt[8] });
     s = setNb(s, "pulang-lupa", { trust: 90, grudge: 0 });
     const traded = apply(s, calm, { type: "trade", neighbor: "pulang-lupa", give: "rice" });
     expect(traded.stats.trades).toBe(1);
@@ -110,6 +121,114 @@ describe("renown sources", () => {
     const { state } = offlineProgress(s, calm, 600);
     expect(state.villagers).toBeGreaterThanOrEqual(10);
     expect(state.kabantugan).toBeGreaterThanOrEqual(k.perTenVillagers);
+  });
+});
+
+describe("daily caps on repeatable renown", () => {
+  const caps = k.dailyCaps;
+  // At the top level, so the renown earned here doesn't change the level (and so the caps).
+  const TOP = maxLevel(content);
+  const top = () => live({ kabantugan: k.levelAt.at(-1)! });
+  const cap = (c: keyof typeof caps.perLevel) => caps.perLevel[c] * TOP;
+
+  it("trades, feasts and fighting give at most their cap per renown day, then again the next day", () => {
+    const start = top();
+    let s = start;
+    for (let i = 0; i < 1000; i++) s = earnRenown(s, content, "trades", k.perTrade);
+    expect(s.kabantugan - start.kabantugan).toBe(cap("trades"));
+    expect(renownLeftToday(s, content, "trades")).toBe(0);
+    // Raids, defenses, honor and ally calls share the war cap.
+    for (const src of ["raids", "defenses", "honor", "allyCalls"] as const) for (let i = 0; i < 100; i++) s = earnRenown(s, content, src, 10);
+    expect(s.kabantugan - start.kabantugan).toBe(cap("trades") + cap("war"));
+    for (let i = 0; i < 100; i++) s = earnRenown(s, content, "pista", 10);
+    expect(s.kabantugan - start.kabantugan).toBe(cap("trades") + cap("war") + cap("pista"));
+    // Nothing more today...
+    expect(earnRenown(s, content, "raids", 10)).toBe(s);
+    // ...and the full cap again the next renown day.
+    const tomorrow = { ...s, time: s.foundedAt + caps.windowSeconds };
+    expect(earnRenown(tomorrow, content, "trades", 1e6).kabantugan).toBe(s.kabantugan + cap("trades"));
+    expect(s.renownTally.total).toMatchObject({ trades: cap("trades"), pista: cap("pista") });
+  });
+
+  it("the caps grow with the barangay level", () => {
+    expect(dailyCap(live(), content, "war")).toBe(caps.perLevel.war);
+    expect(dailyCap(live({ kabantugan: k.levelAt[8] }), content, "war")).toBe(10 * caps.perLevel.war);
+  });
+
+  it("a tributary or ally gives renown once: won back after a rebellion, none again", () => {
+    const s = world();
+    const won = applyRenown(s, setNb(s, "malinaw", { status: "tributary" }), content);
+    expect(won.kabantugan).toBe(s.kabantugan + k.perTributary);
+    const rebelled = applyRenown(won, setNb(won, "malinaw", { status: "independent" }), content);
+    const again = applyRenown(rebelled, setNb(rebelled, "malinaw", { status: "tributary" }), content);
+    expect(again.kabantugan).toBe(won.kabantugan);
+    // Becoming an ally is a separate achievement, also once.
+    const ally = applyRenown(again, setNb(again, "malinaw", { status: "ally" }), content);
+    expect(ally.kabantugan).toBe(won.kabantugan + k.perAlly);
+  });
+
+  it("once-only achievements are never capped", () => {
+    let s = live();
+    for (let i = 0; i < 50; i++) s = earnRenown(s, content, "tributaries", k.perTributary);
+    expect(s.kabantugan).toBe(50 * k.perTributary);
+    expect(renownLeftToday(s, content, "aklat")).toBe(Infinity);
+  });
+
+  it("applies to trades counted between steps and to feasts", () => {
+    const s = top();
+    const traded = applyRenown(s, { ...s, stats: { ...s.stats, trades: 1000 } }, content);
+    expect(traded.kabantugan - s.kabantugan).toBe(cap("trades"));
+    let f = live({ kabantugan: k.levelAt.at(-1)!, resources: { rice: 9000, wood: 0, gold: 0, food: 9000, salt: 0, wine: 900 }, datuLevel: 2 });
+    let renown = 0;
+    for (let i = 0; i < 10; i++) {
+      const next = holdPista({ ...f, lastPistaAt: null }, content, "harvest");
+      if (next === f) break;
+      renown = next.kabantugan;
+      f = next;
+    }
+    expect(f.stats.pistas).toBeGreaterThan(1);
+    expect(renown - k.levelAt.at(-1)!).toBeLessThanOrEqual(cap("pista"));
+  });
+
+  it("level thresholds must rise by more each level (the rules are checked)", () => {
+    const rules = JSON.parse(JSON.stringify(rulesJson));
+    expect(() => validateRules(rules)).not.toThrow();
+    rules.kabantugan.levelAt = [10, 20, 30];
+    expect(() => validateRules(rules)).toThrow(/each step larger/);
+  });
+});
+
+describe("save migration v38 → v39 (the renown curve retuned)", () => {
+  it("an existing save keeps its level; the next one takes the new thresholds", () => {
+    const s = world({ kabantugan: 300, levelRewarded: 10 });
+    const raw = { ...s, version: 38 } as Record<string, unknown>;
+    delete raw.renownTally;
+    const back = parseSave(JSON.stringify(raw), content)!;
+    expect(back.version).toBe(STATE_VERSION);
+    expect(barangayLevel(back, content)).toBe(10);
+    expect(back.levelRewarded).toBe(10);
+    expect(back.kabantugan).toBe(Math.max(300, renownForLevel(content, 10)!));
+    expect(renownForLevel(content, 11)).toBe(k.levelAt[9]);
+    expect(back.renownTally).toEqual({ day: 0, today: {}, total: {}, tributaries: [], allies: [] });
+    // Tributaries and allies the save already had gave their renown: none again.
+    const vassal = setNb(s, "malinaw", { status: "tributary" });
+    const v = parseSave(JSON.stringify({ ...vassal, version: 38, renownTally: undefined }), content)!;
+    expect(v.renownTally.tributaries).toEqual(["malinaw"]);
+    // A save already past its level's new threshold keeps its renown.
+    const rich = parseSave(JSON.stringify({ ...raw, kabantugan: 1e6, levelRewarded: 3 }), content)!;
+    expect(rich.kabantugan).toBe(1e6);
+    // A level is never lost: barangay level 1 saves stay at 0 renown.
+    expect(parseSave(JSON.stringify({ ...raw, kabantugan: 0, levelRewarded: 1 }), content)!.kabantugan).toBe(0);
+  });
+
+  it("AI barangays' renown is worked out again on the new scale, keeping raids defended", () => {
+    const s = world();
+    const n = s.region!.neighbors[0];
+    const old = setNb(s, n.id, { fame: { ...n.fame, renown: 7, peak: 7, defended: 3 } });
+    const back = parseSave(JSON.stringify({ ...old, version: 38 }), content)!;
+    const f = back.region!.neighbors.find((x) => x.id === n.id)!.fame;
+    expect(f.defended).toBe(3);
+    expect(f.renown).toBe(n.fame.renown);
   });
 });
 

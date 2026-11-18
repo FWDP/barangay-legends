@@ -24,7 +24,8 @@ describe("warriors gain honor by fighting well", () => {
   });
 
   it("a won defense raises the named warriors' honor, writes it in their story and adds renown", () => {
-    const prev = { ...town(), region: { ...acquainted(createRegion(content, 0, 7)), reports: [] } };
+    // At the top level, so the day's cap on fighting renown (renown.ts) doesn't bind.
+    const prev = { ...town(), kabantugan: content.rules.kabantugan.levelAt.at(-1)!, region: { ...acquainted(createRegion(content, 0, 7)), reports: [] } };
     const next = { ...prev, kabantugan: prev.kabantugan, region: { ...prev.region, reports: [{ id: 1, time: 1, kind: "defense" as const, neighbor: prev.region.neighbors[0].id, win: true }] } } as GameState;
     const after = noteLifeEvents(prev, next, content);
     expect(after.named[0].honor).toBe(h.defenseWon);

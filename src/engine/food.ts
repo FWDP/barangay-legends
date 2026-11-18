@@ -10,6 +10,7 @@ import type { GameState, PlacedBuilding } from "./game";
 import { seasonAt } from "./events";
 import { levelOf, storageAt } from "./upgrades";
 import { rollAt } from "./rng";
+import { earnRenown } from "./renown";
 import { setTiles, tileAt, type Point } from "./map";
 
 /** Where the barangay's Pagkain is: its total is always resources.food. */
@@ -426,13 +427,13 @@ export function holdPista(state: GameState, content: Content, occasion: PistaOcc
       }),
     };
   }
+  const fed = earnRenown(state, content, "pista", p.renown);
   return {
-    ...state,
+    ...fed,
     resources,
     region,
     pista: { occasion, at: state.time, until: state.time + p.happinessSeconds, guests },
     lastPistaAt: state.time,
-    kabantugan: state.kabantugan + p.renown,
     stats: { ...state.stats, pistas: (state.stats.pistas ?? 0) + 1 },
     // The Aklat entry on feasts and rice wine (content/lore/pista-tapay.json).
     flags: state.flags.includes("pista") ? state.flags : [...state.flags, "pista"],

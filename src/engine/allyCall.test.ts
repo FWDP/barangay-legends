@@ -48,7 +48,8 @@ describe("an ally's call for help", () => {
   });
 
   it("answering sends warriors to fight beside the ally, for renown and trust", () => {
-    const s = called();
+    // At the top level, so the day's cap on fighting renown (renown.ts) doesn't bind.
+    const s = { ...called(), kabantugan: eager.rules.kabantugan.levelAt.at(-1)! };
     const answered = apply(s, eager, { type: "choose", option: "send" });
     expect(answered.choice).toBeNull();
     expect(answered.region!.allyCall).toBeNull();

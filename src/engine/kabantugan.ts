@@ -3,20 +3,17 @@
 // gained, raising the Bahay ng Datu, and Aklat ng Alamat entries (amounts in rules.json; tasks and
 // Aklat entries start small and ramp up, and rank changes in the Ranggo give none). It is
 // worked out by comparing the state before and after each engine step or command, so every way
-// of achieving something counts once, whether done directly, by sea or while away. The level
-// (1–20) comes from total renown; each new level brings its reward (content/levels.json).
+// of achieving something counts once, whether done directly, by sea or while away. Feasts,
+// warriors' honor and answering an ally's call add theirs where they happen. Repeatable sources
+// count against daily caps (renown.ts). The level (1–20) comes from total renown on rising
+// thresholds; each new level brings its reward (content/levels.json).
 import { RESOURCES, type Content, type Text } from "./content";
 import type { GameState } from "./game";
 import { addHistory } from "./people";
 import { addNews } from "./region";
+import { earnRenown, levelForRenown, RENOWN_SOURCES, type RenownSource } from "./renown";
 
-/** Barangay level from renown: 1, then one more for each threshold reached. */
-export function levelForRenown(content: Content, renown: number): number {
-  const at = content.rules.kabantugan.levelAt;
-  let level = 1;
-  for (const need of at) if (renown >= need) level++;
-  return level;
-}
+export { levelForRenown, type RenownSource } from "./renown";
 
 export const maxLevel = (content: Content) => content.rules.kabantugan.levelAt.length + 1;
 
@@ -30,24 +27,28 @@ export function renownForLevel(content: Content, level: number): number | null {
 
 
 /**
- * Renown for the (n+1)-th task or Aklat entry: small at first, rising by `step` each time up to
- * `max` (rules.kabantugan.taskRamp / aklatRamp), so the first steps don't race the levels.
+ * Renown the first `n` tasks or Aklat entries are worth together: the (i+1)-th is worth
+ * first + step·i, never more than `max` (rules.kabantugan.taskRamp / aklatRamp), so the first
+ * ones give small amounts (fractions add up) and the first steps don't race the levels.
  */
-export function rampedRenown(ramp: { first: number; step: number }, max: number, n: number): number {
-  return Math.min(max, Math.round(ramp.first + ramp.step * n));
+function rampedSum(ramp: { first: number; step: number }, max: number, n: number): number {
+  let total = 0;
+  for (let i = 0; i < n; i++) total += Math.min(max, ramp.first + ramp.step * i);
+  return total;
 }
 
 /** Total renown for tasks or Aklat entries number `from`+1 to `to` (counts done before and after). */
 export function rampedTotal(ramp: { first: number; step: number }, max: number, from: number, to: number): number {
-  let total = 0;
-  for (let n = from; n < to; n++) total += rampedRenown(ramp, max, n);
-  return total;
+  return to <= from ? 0 : Math.round(rampedSum(ramp, max, to)) - Math.round(rampedSum(ramp, max, from));
 }
 
-/** Where renown came from between two states, by source (for renownBetween and the balance simulation). */
-export type RenownSource = "villagers" | "tasks" | "trades" | "datu" | "aklat" | "raids" | "defenses" | "tributaries" | "allies";
+/** Renown for the (n+1)-th task or Aklat entry (whole renown: the fractions carry over). */
+export const rampedRenown = (ramp: { first: number; step: number }, max: number, n: number): number => rampedTotal(ramp, max, n, n + 1);
 
-/** Renown earned between two states of the same barangay, by source (only sources that gave some). */
+/**
+ * Renown earned between two states of the same barangay, by source (only sources that gave
+ * some), before the daily caps. Feasts, honor and ally calls are added where they happen.
+ */
 export function renownSources(prev: GameState, next: GameState, content: Content): Partial<Record<RenownSource, number>> {
   const k = content.rules.kabantugan;
   const out: Partial<Record<RenownSource, number>> = {};
@@ -70,34 +71,55 @@ export function renownSources(prev: GameState, next: GameState, content: Content
       if (r.kind === "raid") add("raids", Math.round(k.perRaidWon * (r.renownFactor ?? 1)));
       if (r.kind === "defense") add("defenses", k.perDefenseWon);
     }
-    for (const n of nr.neighbors) {
-      const before = pr.neighbors.find((x) => x.id === n.id)?.status ?? "independent";
-      if (before === n.status) continue;
-      if (n.status === "tributary") add("tributaries", k.perTributary);
-      if (n.status === "ally" && before !== "ally") add("allies", k.perAlly);
-    }
+    const won = neighborsWon(prev, next);
+    add("tributaries", won.tributaries.length * k.perTributary);
+    add("allies", won.allies.length * k.perAlly);
   }
   return out;
 }
 
-/** Renown earned between two states of the same barangay. */
+/**
+ * Neighbors that became a tributary or an ally between two states and never gave renown for it
+ * before (renownTally): a tributary that rebels and is won back again gives none.
+ */
+export function neighborsWon(prev: GameState, next: GameState): { tributaries: string[]; allies: string[] } {
+  const out = { tributaries: [] as string[], allies: [] as string[] };
+  const pr = prev.region;
+  const nr = next.region;
+  if (!pr || !nr) return out;
+  const t = next.renownTally;
+  for (const n of nr.neighbors) {
+    const before = pr.neighbors.find((x) => x.id === n.id)?.status ?? "independent";
+    if (before === n.status) continue;
+    if (n.status === "tributary" && !t.tributaries.includes(n.id)) out.tributaries.push(n.id);
+    if (n.status === "ally" && !t.allies.includes(n.id)) out.allies.push(n.id);
+  }
+  return out;
+}
+
+/** Renown earned between two states of the same barangay (before the daily caps). */
 export function renownBetween(prev: GameState, next: GameState, content: Content): number {
   return Object.values(renownSources(prev, next, content)).reduce((a, b) => a + (b ?? 0), 0);
 }
 
 /**
- * Adds the renown earned from `prev` to `next`, then pays the reward of every level reached
- * that wasn't rewarded yet (noted in the history, for the celebration and the adviser).
+ * Adds the renown earned from `prev` to `next` (within the daily caps), then pays the reward of
+ * every level reached that wasn't rewarded yet (noted in the history, for the celebration and
+ * the adviser).
  * Returns `next` itself when nothing changed.
  */
 export function applyRenown(prev: GameState, next: GameState, content: Content): GameState {
   if (content.ai) return next;
-  const gained = renownBetween(prev, next, content);
+  const sources = renownSources(prev, next, content);
   const tens = Math.floor(next.villagers / 10);
   let s = next;
-  if (gained > 0 || tens > next.stats.bestTens) {
-    s = { ...s, kabantugan: s.kabantugan + gained, stats: { ...s.stats, bestTens: Math.max(s.stats.bestTens, tens) } };
+  for (const src of RENOWN_SOURCES) s = earnRenown(s, content, src, sources[src] ?? 0);
+  const won = neighborsWon(prev, next);
+  if (won.tributaries.length || won.allies.length) {
+    const t = s.renownTally;
+    s = { ...s, renownTally: { ...t, tributaries: [...t.tributaries, ...won.tributaries], allies: [...t.allies, ...won.allies] } };
   }
+  if (tens > s.stats.bestTens) s = { ...s, stats: { ...s.stats, bestTens: tens } };
   const level = barangayLevel(s, content);
   if (level <= s.levelRewarded) return s;
   for (let l = s.levelRewarded + 1; l <= level; l++) {

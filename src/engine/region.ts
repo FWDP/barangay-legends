@@ -42,6 +42,7 @@ import {
 } from "./politics";
 import { hasDatuUnlock } from "./datu";
 import { rollAt } from "./rng";
+import { earnRenown } from "./renown";
 
 export type NeighborStatus = "independent" | "tributary" | "ally";
 /** The four ways to bring a neighbor in. */
@@ -1437,7 +1438,7 @@ export function answerAllyCall(state: GameState, content: Content, send: boolean
     const fought = alliedBattle(closed, content, call.ally, call.from, c.sendPercent);
     // No warriors at home to send: the call can't be answered that way.
     if (fought === closed) return state;
-    return { ...fought, kabantugan: fought.kabantugan + c.renown };
+    return earnRenown(fought, content, "allyCalls", c.renown);
   }
   const lowered = adjustRelations(closed, content, call.ally, { trust: -c.ignoreTrust });
   return allyFightsAlone(lowered, content, call.ally, call.from);

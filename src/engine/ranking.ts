@@ -152,7 +152,8 @@ function nextFame(content: Content, before: NeighborState | undefined, n: Neighb
     if (score > f.peak) f = { ...f, renown: f.renown + (score - f.peak), peak: score, renownAt: time };
   }
   if (battles) {
-    const gained = battles.won * k.perRaidWon + battles.defended * k.perDefenseWon;
+    // Battles are worth less to AI barangays: they fight far more often, and with no daily cap.
+    const gained = (battles.won + battles.defended) * k.aiPerBattle;
     if (gained > 0) f = { ...f, renown: f.renown + gained, renownAt: time };
     if (battles.defended > 0) f = { ...f, defended: f.defended + battles.defended, defendedAt: time };
   }

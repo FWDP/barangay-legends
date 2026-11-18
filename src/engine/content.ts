@@ -277,7 +277,15 @@ export interface KabantuganRules {
   rankNewsAfterSeconds: number;
   aiPerVillager: number;
   aiPerStrength: number;
-  /** Renown for levels 2, 3, … (rising). */
+  /** Renown an AI barangay gets for each battle won, raiding or defending (uncapped). */
+  aiPerBattle: number;
+  /**
+   * The most renown the repeatable sources give per renown day (windowSeconds of game time, time
+   * away included), per barangay level: trades, feasts (pista), and fighting (war: raids,
+   * defenses, honor, ally calls).
+   */
+  dailyCaps: { windowSeconds: number; perLevel: { trades: number; pista: number; war: number } };
+  /** Renown for levels 2, 3, … (each step larger than the one before). */
   levelAt: number[];
 }
 
@@ -1451,13 +1459,20 @@ export function validateRules(raw: unknown): Rules {
   }
   const k = raw.kabantugan;
   if (!isObject(k)) throw new Error('rules: missing "kabantugan"');
-  checkNumbers(k, ["perTenVillagers", "perTask", "perRaidWon", "perDefenseWon", "perTrade", "perTributary", "perAlly", "perDatuLevel", "perAklat", "rankNewsAfterSeconds", "aiPerVillager", "aiPerStrength"], "rules: kabantugan");
+  checkNumbers(k, ["perTenVillagers", "perTask", "perRaidWon", "perDefenseWon", "perTrade", "perTributary", "perAlly", "perDatuLevel", "perAklat", "rankNewsAfterSeconds", "aiPerVillager", "aiPerStrength", "aiPerBattle"], "rules: kabantugan");
   for (const ramp of ["taskRamp", "aklatRamp"]) {
     if (!isObject(k[ramp])) throw new Error(`rules: missing "kabantugan.${ramp}"`);
     checkNumbers(k[ramp], ["first", "step"], `rules: kabantugan.${ramp}`);
   }
-  if (!Array.isArray(k.levelAt) || k.levelAt.length === 0 || !k.levelAt.every((v, i, arr) => isNonNegNumber(v) && (i === 0 || v > (arr[i - 1] as number)))) {
-    throw new Error('rules: "kabantugan.levelAt" must list rising renown thresholds');
+  if (!isObject(k.dailyCaps)) throw new Error('rules: missing "kabantugan.dailyCaps"');
+  checkNumbers(k.dailyCaps, ["windowSeconds"], "rules: kabantugan.dailyCaps");
+  if (!isObject(k.dailyCaps.perLevel)) throw new Error('rules: missing "kabantugan.dailyCaps.perLevel"');
+  checkNumbers(k.dailyCaps.perLevel, ["trades", "pista", "war"], "rules: kabantugan.dailyCaps.perLevel");
+  if (!((k.dailyCaps.windowSeconds as number) > 0)) throw new Error('rules: "kabantugan.dailyCaps.windowSeconds" must be positive');
+  // Each level clearly harder than the last: every step between thresholds larger than the one before.
+  const step = (arr: unknown[], i: number) => (arr[i] as number) - (i === 0 ? 0 : (arr[i - 1] as number));
+  if (!Array.isArray(k.levelAt) || k.levelAt.length === 0 || !k.levelAt.every((v, i, arr) => isNonNegNumber(v) && (i === 0 ? v > 0 : step(arr, i) > step(arr, i - 1)))) {
+    throw new Error('rules: "kabantugan.levelAt" must list rising renown thresholds, each step larger than the last');
   }
   const vb = isObject(raw.villages) ? raw.villages.bands : undefined;
   if (!Array.isArray(vb) || vb.length === 0) throw new Error('rules: "villages.bands" must list village bands');

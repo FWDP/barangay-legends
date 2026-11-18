@@ -182,7 +182,8 @@ describe("the Pista", () => {
     withState({ villagers: 10, resources: { food: 500, rice: 500, wine: 50 }, region: acquainted(createRegion(calm, 0, 7)), ...patch });
 
   it("spends Palay, rice wine and Pagkain; raises happiness and renown; invited allies trust you more", () => {
-    let s = rich();
+    // At the top level, so the day's cap on feast renown (renown.ts) doesn't bind.
+    let s = { ...rich(), kabantugan: content.rules.kabantugan.levelAt.at(-1)! };
     const ally = s.region!.neighbors[0];
     s = { ...s, region: { ...s.region!, neighbors: s.region!.neighbors.map((n, i) => (i === 0 ? { ...n, status: "ally" as const, trust: 50 } : n)) } };
     const after = apply(s, calm, { type: "pista", occasion: "harvest" });

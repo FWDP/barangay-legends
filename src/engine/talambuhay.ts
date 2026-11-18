@@ -10,6 +10,7 @@ import type { Gender, Resident } from "./residents";
 import type { NamedVillager } from "./people";
 import { lifeSpans, residentName } from "./population";
 import { rollAt } from "./rng";
+import { earnRenown } from "./renown";
 
 export type LifeKind = "born" | "arrived" | "married" | "parent" | "grewUp" | "elder" | "raid" | "sick" | "healed" | "learned" | "died" | "honored" | "social";
 
@@ -294,7 +295,7 @@ export function noteLifeEvents(prev: GameState, next: GameState, content: Conten
       s = { ...s, named: s.named.map((x) => (x.id === v.id ? gained.v : x)) };
       if (gained.levels > 0) {
         s = noteLife(s, content, v.resident, { kind: "honored", level: honorLevel(content, gained.v.honor), from: r.neighbor });
-        s = { ...s, kabantugan: s.kabantugan + gained.levels * content.rules.honor.renownPerLevel };
+        s = earnRenown(s, content, "honor", gained.levels * content.rules.honor.renownPerLevel);
         s = addFlag(s, "honored");
       }
     }
