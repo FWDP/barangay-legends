@@ -2411,5 +2411,75 @@
       "en": "hardwood",
       "fil": "matigas na kahoy"
     }
+  },
+  "pills": {
+    "minimize": {
+      "en": "Minimize",
+      "fil": "Paliitin"
+    },
+    "expand": {
+      "en": "Show in full",
+      "fil": "Ipakita nang buo"
+    },
+    "raid": {
+      "en": "Raid",
+      "fil": "Salakay"
+    },
+    "fire": {
+      "en": "Fire",
+      "fil": "Sunog"
+    },
+    "hunger": {
+      "en": "Hunger",
+      "fil": "Gutom"
+    },
+    "typhoon": {
+      "en": "Typhoon",
+      "fil": "Bagyo"
+    },
+    "eclipse": {
+      "en": "Eclipse",
+      "fil": "Eklipse"
+    },
+    "tikbalang": {
+      "en": "Riddle",
+      "fil": "Bugtong"
+    },
+    "sickness": {
+      "en": "Sickness",
+      "fil": "Sakit"
+    },
+    "overcrowded": {
+      "en": "No home",
+      "fil": "Walang tahanan"
+    },
+    "damaged": {
+      "en": "Damaged",
+      "fil": "Sira"
+    },
+    "pest": {
+      "en": "Pests",
+      "fil": "Peste"
+    },
+    "offer": {
+      "en": "Trade",
+      "fil": "Kalakal"
+    },
+    "choice": {
+      "en": "Visitor",
+      "fil": "Bisita"
+    },
+    "expedition": {
+      "en": "Expedition",
+      "fil": "Lakbay"
+    },
+    "prank": {
+      "en": "Tools hidden",
+      "fil": "Itinagong gamit"
+    },
+    "sailing": {
+      "en": "At sea",
+      "fil": "Nasa laot"
+    }
   }
 }

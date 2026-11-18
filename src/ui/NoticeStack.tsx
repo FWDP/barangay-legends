@@ -1,11 +1,14 @@
 // One banner at a time over the map (see notices.ts): the most important notification, with a
-// small "+N" badge for the rest that opens into a list. Picking one from the list brings it
-// forward; information can be dismissed. Ongoing states are small status icons instead.
-import { useState, type ReactNode } from "react";
+// small "+N" badge for the rest that opens into a list (on a tap or a click). Picking one from the
+// list brings it forward; information can be dismissed. A big banner can be minimized (—) into
+// a compact pill (icon, short title, countdown and its main buttons) that stays while its event
+// lasts; on phones raid and event banners minimize themselves after a few seconds. Ongoing
+// states are small status icons instead.
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type React from "react";
 import type { Content } from "../engine/content";
 import type { GameState } from "../engine/game";
-import { clock } from "./EventBanners";
+import { clock, type BannerAction } from "./EventBanners";
 import { arrange, endingSoon, statusIcons, type Notice } from "./notices";
 import type { Lang } from "./settings";
 import { fill, type GameText } from "./uiContent";
@@ -17,92 +20,192 @@ export interface NoticeView {
   label: string;
   /** What tapping it does (opens the trade offer, the choice, the expedition), if anything. */
   onOpen?: () => void;
+  /** Minimized: a compact pill with its icon, a short title, a countdown and its main buttons. */
+  pill?: { icon: ReactNode; title: string; seconds?: number; actions?: BannerAction[] };
 }
 
 /** The notices sit above the map's labels and chips (z-10 and z-20 there), and their list above them all. */
 export const NOTICE_LAYER = "z-30";
 export const NOTICE_LIST_LAYER = "z-40";
 
-export function NoticeStack(props: { state: GameState; queue: Notice[]; views: Record<string, NoticeView | undefined>; game: GameText; lang: Lang }) {
-  const { state, queue, views, game, lang } = props;
+/** Raid and event banners that minimize themselves on phones (narrower than PHONE_MAX_PX). */
+export const AUTO_MINIMIZE = ["raid", "fire", "hunger", "typhoon", "eclipse", "tikbalang", "sickness", "overcrowded", "damaged", "pest"];
+export const AUTO_MINIMIZE_MS = 3000;
+export const PHONE_MAX_PX = 767;
+
+/** What the player has done with the notices (kept by the App, so it survives the stack moving). */
+export interface NoticeUi {
+  dismissed: Set<string>;
+  front: string | null;
+  open: boolean;
+  /** Minimized notices (shown as pills). */
+  minimized: Set<string>;
+  /** Notices the player opened again from their pill: not minimized again automatically. */
+  kept: Set<string>;
+  set: (patch: Partial<Omit<NoticeUi, "set">>) => void;
+}
+
+export function useNoticeUi(): NoticeUi {
+  const [ui, setUi] = useState<Omit<NoticeUi, "set">>(() => ({ dismissed: new Set(), front: null, open: false, minimized: new Set(), kept: new Set() }));
+  return { ...ui, set: (patch) => setUi((u) => ({ ...u, ...patch })) };
+}
+
+const isPhone = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(`(max-width: ${PHONE_MAX_PX}px)`).matches;
+
+export function NoticeStack(props: {
+  state: GameState;
+  queue: Notice[];
+  views: Record<string, NoticeView | undefined>;
+  game: GameText;
+  lang: Lang;
+  /** The App's notice state; a stack on its own keeps its own. */
+  ui?: NoticeUi;
+  /** At the bottom of the map (clear of the raid), the list opens upward. */
+  side?: "top" | "bottom";
+}) {
+  const { state, queue, views, game, lang, side = "top" } = props;
   const t = game.notices;
-  const [dismissed, setDismissed] = useState<Set<string>>(() => new Set());
-  const [front, setFront] = useState<string | null>(null);
-  const [open, setOpen] = useState(false);
+  const p = game.pills;
+  const own = useNoticeUi();
+  const ui = props.ui ?? own;
+  const { dismissed, front, open, minimized, kept } = ui;
   // Only notices with something to show take part.
-  const { shown, waiting } = arrange(
-    queue.filter((n) => views[n.id]),
-    dismissed,
-    front,
-  );
-  if (!shown) return null;
+  const present = queue.filter((n) => views[n.id]);
+  const { shown, pills, waiting } = arrange(present, dismissed, front, minimized);
+
+  // A notice that has gone (its event over) forgets it was minimized: the next raid starts in full.
+  const ids = present.map((n) => n.id).join(",");
+  const set = useRef(ui.set);
+  set.current = ui.set;
+  useEffect(() => {
+    const now = new Set(ids.split(","));
+    const keep = (s: Set<string>) => [...s].every((id) => now.has(id));
+    if (!keep(minimized) || !keep(kept)) {
+      set.current({ minimized: new Set([...minimized].filter((id) => now.has(id))), kept: new Set([...kept].filter((id) => now.has(id))) });
+    }
+  }, [ids, minimized, kept]);
+
+  // On phones a raid or event banner shows in full for its first few seconds, then minimizes.
+  const autoId = shown && AUTO_MINIMIZE.includes(shown.id) && views[shown.id]?.pill && !kept.has(shown.id) ? shown.id : null;
+  useEffect(() => {
+    if (!autoId || !isPhone()) return;
+    const timer = setTimeout(() => {
+      if (isPhone()) set.current({ minimized: new Set([...minimizedRef.current, autoId]) });
+    }, AUTO_MINIMIZE_MS);
+    return () => clearTimeout(timer);
+  }, [autoId]);
+  const minimizedRef = useRef(minimized);
+  minimizedRef.current = minimized;
+
+  if (!shown && pills.length === 0) return null;
   const soon = endingSoon(waiting, state.time);
+  const minimize = (id: string) => ui.set({ minimized: new Set(minimized).add(id), front: front === id ? null : front });
+  const expand = (id: string) => {
+    const m = new Set(minimized);
+    m.delete(id);
+    ui.set({ minimized: m, kept: new Set(kept).add(id), front: id });
+  };
+  const view = shown ? views[shown.id]! : null;
   return (
-    <div className="pointer-events-none flex w-full max-w-full flex-col items-center gap-1 sm:w-auto">
-      {/* The banner, kept to the top strip of the map on phones. */}
-      <div
-        className={`pointer-events-auto relative max-h-[22vh] max-w-full overflow-y-auto overscroll-contain sm:max-h-none ${views[shown.id]!.onOpen ? "cursor-pointer" : ""}`}
-        data-notice={shown.id}
-        {...(views[shown.id]!.onOpen
-          ? {
-              role: "button",
-              tabIndex: 0,
-              "aria-label": views[shown.id]!.label,
-              // A tap on the banner opens it; its own buttons (an action, ✕) keep their job.
-              onClick: (e: React.MouseEvent) => {
-                if (!(e.target as HTMLElement).closest("button,a,input,select")) views[shown.id]!.onOpen!();
-              },
-              onKeyDown: (e: React.KeyboardEvent) => {
-                if ((e.key === "Enter" || e.key === " ") && e.target === e.currentTarget) {
-                  e.preventDefault();
-                  views[shown.id]!.onOpen!();
+    <div className={`pointer-events-none flex w-full max-w-full flex-col items-center gap-1 sm:w-auto ${side === "bottom" ? "flex-col-reverse" : ""}`} data-notice-side={side}>
+      {pills.length > 0 && (
+        <div className="pointer-events-none flex max-w-full flex-wrap justify-center gap-1">
+          {pills.map((n) => (
+            <Pill key={n.id} notice={n} view={views[n.id]!} state={state} expandLabel={p.expand[lang]} onExpand={() => expand(n.id)} />
+          ))}
+        </div>
+      )}
+      {shown && view && (
+        /* The banner, kept to the top strip of the map on phones; minimize and dismiss beside it, never over its buttons. */
+        <div className="flex max-w-full items-start gap-1">
+          <div
+            className={`pointer-events-auto relative max-h-[22vh] min-w-0 max-w-full overflow-y-auto overscroll-contain sm:max-h-none ${view.onOpen ? "cursor-pointer" : ""}`}
+            data-notice={shown.id}
+            {...(view.onOpen
+              ? {
+                  role: "button",
+                  tabIndex: 0,
+                  "aria-label": view.label,
+                  // A tap on the banner opens it; its own buttons keep their job.
+                  onClick: (e: React.MouseEvent) => {
+                    if (!(e.target as HTMLElement).closest("button,a,input,select")) view.onOpen!();
+                  },
+                  onKeyDown: (e: React.KeyboardEvent) => {
+                    if ((e.key === "Enter" || e.key === " ") && e.target === e.currentTarget) {
+                      e.preventDefault();
+                      view.onOpen!();
+                    }
+                  },
                 }
-              },
-            }
-          : {})}
-      >
-        {views[shown.id]!.node}
-        {shown.dismissKey && (
-          <button
-            type="button"
-            aria-label={t.dismiss[lang]}
-            onClick={() => {
-              setDismissed((d) => new Set(d).add(shown.dismissKey!));
-              setFront(null);
-            }}
-            className="absolute top-0.5 right-0.5 flex size-6 items-center justify-center rounded-full bg-stone-900/60 text-xs text-amber-50"
+              : {})}
           >
-            ✕
-          </button>
-        )}
-      </div>
+            {view.node}
+          </div>
+          {(shown.dismissKey || view.pill) && (
+            <span className="pointer-events-auto flex shrink-0 flex-col gap-1">
+              {view.pill && (
+                <button
+                  type="button"
+                  aria-label={p.minimize[lang]}
+                  title={p.minimize[lang]}
+                  data-minimize={shown.id}
+                  onClick={() => minimize(shown.id)}
+                  className="flex size-7 items-center justify-center rounded-full border border-amber-950/40 bg-stone-900/75 text-sm leading-none font-bold text-amber-50 shadow"
+                >
+                  —
+                </button>
+              )}
+              {shown.dismissKey && (
+                <button
+                  type="button"
+                  aria-label={t.dismiss[lang]}
+                  onClick={() => ui.set({ dismissed: new Set(dismissed).add(shown.dismissKey!), front: null })}
+                  className="flex size-7 items-center justify-center rounded-full border border-amber-950/40 bg-stone-900/75 text-xs text-amber-50 shadow"
+                >
+                  ✕
+                </button>
+              )}
+            </span>
+          )}
+        </div>
+      )}
       {waiting.length > 0 && (
         <div className={`pointer-events-auto relative flex flex-col items-center ${NOTICE_LIST_LAYER}`}>
           <button
             type="button"
             aria-expanded={open}
             aria-label={`${fill(t.moreLabel[lang], { n: waiting.length })}${soon ? ` · ${t.soon[lang]}` : ""}`}
-            onClick={() => setOpen((o) => !o)}
-            className={`rounded-full border-2 px-2 py-0.5 font-display text-xs shadow ${soon ? "border-red-950 bg-red-600 text-white motion-safe:animate-pulse" : "border-amber-950/60 bg-amber-200 text-amber-950"}`}
+            data-notice-more
+            // A tap and a click open it alike (phones have no hover).
+            onClick={() => ui.set({ open: !open })}
+            className={`min-h-7 min-w-9 touch-manipulation rounded-full border-2 px-2 py-0.5 font-display text-xs shadow ${soon ? "border-red-950 bg-red-600 text-white motion-safe:animate-pulse" : "border-amber-950/60 bg-amber-200 text-amber-950"}`}
           >
             {fill(t.more[lang], { n: waiting.length })}
             {soon && " ⏳"}
           </button>
           {open && (
-            <ul aria-label={t.list[lang]} className="mat-card relative mt-1 w-64 max-w-[calc(100vw-5rem)] space-y-0.5 rounded-xl border-2 border-amber-900/60 p-1.5 text-xs text-stone-800 shadow-lg">
+            <ul
+              aria-label={t.list[lang]}
+              className={`mat-card absolute w-64 max-w-[calc(100vw-5rem)] space-y-0.5 rounded-xl border-2 border-amber-900/60 p-1.5 text-xs text-stone-800 shadow-lg ${side === "bottom" ? "bottom-full mb-1" : "top-full mt-1"}`}
+            >
               {waiting.map((n) => (
                 <li key={n.id}>
                   <button
                     type="button"
                     onClick={() => {
-                      setFront(n.id);
-                      setOpen(false);
+                      ui.set({ front: n.id, open: false });
                       views[n.id]!.onOpen?.();
                     }}
                     className="flex w-full items-center justify-between gap-2 rounded-lg px-1.5 py-1 text-left hover:bg-amber-100"
                   >
                     <span className="min-w-0">{views[n.id]!.label}</span>
-                    {n.expiresAt !== undefined && <span className={`shrink-0 tabular-nums ${n.expiresAt - state.time <= 15 ? "font-bold text-red-700" : "text-stone-500"}`}>{clock(n.expiresAt - state.time)}</span>}
+                    {n.paused ? (
+                      <span className="shrink-0" aria-hidden>
+                        ⏸
+                      </span>
+                    ) : (
+                      n.expiresAt !== undefined && <span className={`shrink-0 tabular-nums ${n.expiresAt - state.time <= 15 ? "font-bold text-red-700" : "text-stone-500"}`}>{clock(n.expiresAt - state.time)}</span>
+                    )}
                   </button>
                 </li>
               ))}
@@ -110,6 +213,41 @@ export function NoticeStack(props: { state: GameState; queue: Notice[]; views: R
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+/** A minimized banner: icon, short title and countdown (tap to show it in full), and its main buttons. */
+function Pill({ notice, view, state, expandLabel, onExpand }: { notice: Notice; view: NoticeView; state: GameState; expandLabel: string; onExpand: () => void }) {
+  const pill = view.pill!;
+  const seconds = pill.seconds ?? (notice.expiresAt !== undefined ? notice.expiresAt - state.time : undefined);
+  const danger = notice.tier === 0;
+  return (
+    <div
+      data-pill={notice.id}
+      className={`pointer-events-auto flex max-w-full items-center gap-1 rounded-full border-2 py-0.5 pr-0.5 pl-1 shadow-lg ${danger ? "border-red-950 bg-red-700 text-white" : "wood-panel border-amber-950/70 text-amber-50"}`}
+    >
+      <button type="button" onClick={onExpand} aria-label={`${pill.title}${seconds !== undefined ? ` ${clock(seconds)}` : ""}: ${expandLabel}`} title={expandLabel} className="flex items-center gap-1 rounded-full px-1.5 py-0.5 text-xs font-semibold whitespace-nowrap">
+        <span aria-hidden className="text-sm leading-none">
+          {pill.icon}
+        </span>
+        <span className="font-display">{pill.title}</span>
+        {seconds !== undefined && <span className="tabular-nums">{clock(seconds)}</span>}
+      </button>
+      {pill.actions?.map((a) => (
+        <button
+          key={a.label}
+          type="button"
+          title={a.tip}
+          aria-label={`${a.label}: ${a.tip}`}
+          disabled={a.disabled}
+          onClick={a.onClick}
+          className="game-btn flex shrink-0 items-center gap-1 border-2 border-amber-950 bg-amber-300 px-1.5 py-0.5 text-[11px] font-semibold text-amber-950 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {a.icon}
+          <span className="max-[400px]:sr-only">{a.label}</span>
+        </button>
+      ))}
     </div>
   );
 }

@@ -11,7 +11,8 @@ import { recommended } from "./buildMenu";
 import { latestReportId, OfferBar, ReportDialog, unseenReport, VictoryDialog } from "./RegionOverlays";
 import { RegionView } from "./RegionView";
 import { activeBanners, clock, EventBanner, TambuliIcon, type BannerAction } from "./EventBanners";
-import { NoticeStack, type NoticeView } from "./NoticeStack";
+import { NoticeStack, useNoticeUi, type NoticeView } from "./NoticeStack";
+import { useNoticeSide } from "./noticeSide";
 import { noticeQueue } from "./notices";
 import { landedUnwatched, raidWarning } from "../engine/defense";
 import { defenseReasonLine, raidBannerText } from "./defenseText";
@@ -678,7 +679,8 @@ export function App() {
     tikbalang: { node: <TikbalangBar state={state} content={content} game={ui.game} lang={lang} onAnswer={(i) => dispatch({ type: "answerRiddle", option: i })} />, label: `🌫️ ${nt.tikbalang[lang]}` },
     offer: {
       node: <OfferBar state={state} content={content} dispatch={dispatch} game={ui.game} lang={lang} folded={view === "barangay" && !offerOpen} sailing={sailing} held={tradeHeld} onOpen={() => !sailing && setOfferOpen(true)} />,
-      label: `🛶 ${fill(nt.offer[lang], { barangay: offerFrom })}`,
+      // Held by a raid: it waits, and the queue says so (its time stands still).
+      label: `🛶 ${fill(nt.offer[lang], { barangay: offerFrom })}${tradeHeld ? ` · ${ui.game.offer.paused[lang]}` : ""}`,
       onOpen: () => !sailing && setOfferOpen(true),
     },
     choice: {
@@ -725,6 +727,22 @@ export function App() {
       ]),
     ),
   };
+
+  // Each banner's compact pill when minimized: icon, short title, countdown, its main buttons.
+  const pillIcons: Record<string, string> = { eclipse: "🌑", tikbalang: "🌫️", offer: "🛶", choice: "📜", expedition: "🎬", sailing: "⛵", prank: "🪵", raid: "⚔️" };
+  for (const [id, v] of Object.entries(noticeViews)) {
+    if (!v) continue;
+    const title = (ui.game.pills as Record<string, Record<typeof lang, string> | undefined>)[id]?.[lang];
+    if (!title) continue;
+    const seconds = id === "typhoon" && state.typhoon ? state.typhoon.strikeAt - state.time : undefined;
+    v.pill = { icon: pillIcons[id] ?? eventBanners.get(id)?.icon ?? "•", title, ...(seconds !== undefined ? { seconds } : {}), ...(id === "raid" ? { actions: raidActions } : {}) };
+  }
+  const noticeUi = useNoticeUi();
+  // Banners and the queue keep clear of the raid's landing and the raiders' way in (noticeSide.ts).
+  const noticeSide = useNoticeSide(view === "barangay" && !!state.region?.incomingRaid);
+  const noticeStack = (
+    <NoticeStack state={state} queue={noticeQueueNow} views={noticeViews} game={ui.game} lang={lang} ui={noticeUi} side={view === "barangay" ? noticeSide : "top"} />
+  );
 
   const gather = useCallback(
     (r: Resource, e: MouseEvent<HTMLButtonElement>) => {
@@ -1224,8 +1242,17 @@ export function App() {
             />
           )}
           {/* Notifications: ONE banner at a time by priority, the rest behind a "+N" badge (notices.ts). */}
-          <NoticeStack state={state} queue={noticeQueueNow} views={noticeViews} game={ui.game} lang={lang} />
+          {(view !== "barangay" || noticeSide === "top") && noticeStack}
         </div>
+        {/* Moved to the bottom while it would cover the raid's landing or the raiders' way in. */}
+        {view === "barangay" && noticeSide === "bottom" && (
+          <div
+            data-map-overlay
+            className="pointer-events-none absolute right-14 bottom-[4.5rem] left-2 z-30 flex flex-col items-center gap-1.5 sm:right-auto sm:left-1/2 sm:w-max sm:max-w-[calc(100%-1rem)] sm:-translate-x-1/2"
+          >
+            {noticeStack}
+          </div>
+        )}
         {view === "barangay" && !placing && !roadMode && (
           <div className="hidden sm:block">
           <GawainPanel

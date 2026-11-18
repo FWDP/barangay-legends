@@ -21,6 +21,8 @@ export interface Notice {
   expiresAt?: number;
   /** Information can be dismissed; the key changes when the news does, so new news shows again. */
   dismissKey?: string;
+  /** A trade offer held by a raid: it waits, its time standing still (no countdown). */
+  paused?: boolean;
 }
 
 /** A timed notice this close to running out shows on the badge. */
@@ -49,9 +51,9 @@ export function noticeQueue(state: GameState, content: Content, ctx: NoticeConte
     else if (b.id === "pest" && state.pest) out.push({ id: "pest", tier: 2, dismissKey: `pest:${state.pest.kind}:${state.pest.at}:${state.pest.strikeAt !== undefined && state.time >= state.pest.strikeAt ? 1 : 0}` });
   }
   if (state.tikbalang && state.time < state.tikbalang.until) out.push({ id: "tikbalang", tier: 0, expiresAt: state.tikbalang.until });
-  // While trade is paused the offer waits (a status icon says so), not a banner.
+  // While trade is paused the offer waits in the queue, saying so; its time stands still, so no countdown.
   const offer = state.region?.offer;
-  if (offer && !tradingPaused(state) && !ctx.tradeHeld) out.push({ id: "offer", tier: 1, expiresAt: offer.expiresAt });
+  if (offer) out.push(tradingPaused(state) || ctx.tradeHeld ? { id: "offer", tier: 1, paused: true } : { id: "offer", tier: 1, expiresAt: offer.expiresAt });
   // A raid holds back the choice events.
   // An ally's call for help runs out when the raid on it strikes (the badge counts it down).
   const call = state.region?.allyCall;
@@ -62,14 +64,24 @@ export function noticeQueue(state: GameState, content: Content, ctx: NoticeConte
   return out.sort((a, b) => a.tier - b.tier || ORDER.indexOf(a.id) - ORDER.indexOf(b.id));
 }
 
-/** The banner on show and the ones waiting, after the player's dismissals and their pick from the list. */
-export function arrange(queue: Notice[], dismissed: ReadonlySet<string>, front: string | null): { shown: Notice | null; waiting: Notice[] } {
-  const live = queue.filter((n) => !n.dismissKey || !dismissed.has(n.dismissKey));
-  if (live.length === 0) return { shown: null, waiting: [] };
+/**
+ * The banner on show, the minimized ones (small pills that stay while their event lasts) and the
+ * ones waiting, after the player's dismissals, minimizing and their pick from the list.
+ */
+export function arrange(
+  queue: Notice[],
+  dismissed: ReadonlySet<string>,
+  front: string | null,
+  minimized: ReadonlySet<string> = new Set(),
+): { shown: Notice | null; pills: Notice[]; waiting: Notice[] } {
+  const all = queue.filter((n) => !n.dismissKey || !dismissed.has(n.dismissKey));
+  const pills = all.filter((n) => minimized.has(n.id));
+  const live = all.filter((n) => !minimized.has(n.id));
+  if (live.length === 0) return { shown: null, pills, waiting: [] };
   // A pick from the list comes forward, but never over something that needs action now.
   const picked = front ? live.find((n) => n.id === front) : undefined;
   const shown = picked && (picked.tier === 0 || live[0].tier !== 0) ? picked : live[0];
-  return { shown, waiting: live.filter((n) => n !== shown) };
+  return { shown, pills, waiting: live.filter((n) => n !== shown) };
 }
 
 /** Does any waiting notice run out soon (the badge shows it)? */

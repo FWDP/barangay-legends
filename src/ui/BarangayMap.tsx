@@ -64,7 +64,7 @@ import { fill, type GameText } from "./uiContent";
 import type { Lang } from "./settings";
 import { useReducedMotion, VillagerLayer, type Clash, type NamedHit } from "./VillagerLayer";
 import type { Tapped } from "./villagers";
-import { dockPoint, riverPath, SAIL_SECONDS, waitIndex } from "./visitors";
+import { dockPoint, fromTop, riverPath, SAIL_SECONDS, sailToLanding, waitIndex } from "./visitors";
 import { isClear, labelSize, placeLabel, type Rect } from "./labels";
 import { isPranked } from "../engine/forest";
 import { sarimanokAt } from "../engine/worship";
@@ -886,6 +886,9 @@ export function BarangayMap(props: {
   // The docked boat's tap target only where it can actually be tapped (not under a control).
   const dockBox = cam && dock ? { left: o.x + dock.p.x * cam.tile - cam.tile * 0.65, top: o.y + dock.p.y * cam.tile - cam.tile * 0.65 - 18, right: o.x + dock.p.x * cam.tile + cam.tile * 0.65, bottom: o.y + dock.p.y * cam.tile + cam.tile * 0.65 } : null;
   const dockClear = !!dockBox && isClear(dockBox, view, avoid);
+  // A live raid's landing and the raiders' way in by boat: the notices keep clear of them (noticeSide.ts).
+  const incoming = !scenic && !visit ? (state.region?.incomingRaid ?? null) : null;
+  const raidZone = incoming && landing && path.length > 2 ? { landing, sail: sailToLanding(path, landing, fromTop(content, incoming.from)) } : null;
 
   return (
     <ConnectionMarks.Provider value={footprints}>
@@ -930,6 +933,7 @@ export function BarangayMap(props: {
         {cam && view.w > 0 && <VillagerLayer state={state} content={content} cam={cam} view={view} reducedMotion={reducedMotion} clash={clash} hitRef={scenic ? undefined : namedHit} torches={scenic ? undefined : torches} />}
         {cam && view.w > 0 && overlay?.(cam, view)}
         {cam && landing && <LandingMarker cam={cam} view={view} landing={landing} avoid={avoid} />}
+        {cam && raidZone && <RaidZone cam={cam} view={view} landing={raidZone.landing} sail={raidZone.sail} />}
         {cam && legendOn && defense && <DefenseLegend marks={marks} text={defense.text} lang={defense.lang} view={view} avoid={avoid} />}
         {waitingAt && (
           <span
@@ -1048,6 +1052,33 @@ function DefenseLegend({ marks, text, lang, view, avoid }: { marks: Marks; text:
       </ul>
       <p className="mt-0.5 text-[10px] text-stone-500 italic">{text.legendTap[lang]}</p>
     </div>
+  );
+}
+
+/**
+ * Invisible boxes over the raid's landing and the raiders' way in (a few river points at a time),
+ * so the notice stack can keep clear of them. Only what is on screen.
+ */
+function RaidZone({ cam, view, landing, sail }: { cam: Camera; view: View; landing: Point; sail: Point[] }) {
+  const boxes: { left: number; top: number; w: number; h: number }[] = [];
+  const add = (pts: Point[], pad: number) => {
+    const ps = pts.map((q) => tileCenter(cam, view, q.x, q.y));
+    const left = Math.min(...ps.map((q) => q.x)) - pad;
+    const right = Math.max(...ps.map((q) => q.x)) + pad;
+    const top = Math.min(...ps.map((q) => q.y)) - pad;
+    const bottom = Math.max(...ps.map((q) => q.y)) + pad;
+    if (right < 0 || bottom < 0 || left > view.w || top > view.h) return;
+    boxes.push({ left, top, w: right - left, h: bottom - top });
+  };
+  // The landing with a tile around it (the raiders gather there), then the boat's way in.
+  add([landing], cam.tile * 1.5);
+  for (let i = 0; i < sail.length; i += 3) add(sail.slice(i, i + 4), cam.tile * 0.6);
+  return (
+    <>
+      {boxes.map((b, i) => (
+        <span key={i} aria-hidden data-raid-zone className="pointer-events-none absolute" style={{ left: b.left, top: b.top, width: b.w, height: b.h }} />
+      ))}
+    </>
   );
 }
 

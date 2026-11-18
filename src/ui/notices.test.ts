@@ -40,6 +40,17 @@ describe("notifications", () => {
     expect(arrange(q.slice(2), new Set(["d:1"]), null).shown).toBeNull();
   });
 
+  it("a minimized banner becomes a pill and lets the next one show; it never goes while its event lasts", () => {
+    const q: Notice[] = [{ id: "raid", tier: 0, expiresAt: 30 }, { id: "offer", tier: 1, paused: true }, { id: "damaged", tier: 2, dismissKey: "d:1" }];
+    const a = arrange(q, new Set(), null, new Set(["raid"]));
+    expect(a.pills.map((n) => n.id)).toEqual(["raid"]);
+    expect(a.shown!.id).toBe("offer");
+    expect(a.waiting.map((n) => n.id)).toEqual(["damaged"]);
+    // Everything minimized: only pills.
+    const all = arrange(q.slice(0, 1), new Set(), null, new Set(["raid"]));
+    expect(all).toEqual({ shown: null, pills: [q[0]], waiting: [] });
+  });
+
   it("the badge tells when a waiting offer is about to run out", () => {
     const q: Notice[] = [{ id: "offer", tier: 1, expiresAt: 110 }];
     expect(endingSoon(q, 100)).toBe(true);
@@ -53,9 +64,59 @@ describe("notifications", () => {
     const ids = statusIcons(s, calm).map((x) => x.id);
     expect(ids).toEqual(expect.arrayContaining(["mourning", "embargo", "tradePaused", "blessings"]));
     expect(activeBanners(s, calm).some((b) => b.id === "mourning" || b.id === "season")).toBe(false);
-    // While trade is paused the offer waits as a status, not a banner.
+    // While trade is paused a waiting offer stays in the queue, marked paused, with no countdown.
     const offered = { ...s, region: { ...s.region!, offer: { from: "malinaw", give: { resource: "rice" as const, amount: 20 }, want: { resource: "wood" as const, amount: 20 }, expiresAt: s.time + 60 } } };
-    expect(noticeQueue(offered, calm, ctx).some((n) => n.id === "offer")).toBe(false);
+    const held = noticeQueue(offered, calm, ctx).find((n) => n.id === "offer");
+    expect(held).toMatchObject({ paused: true });
+    expect(held!.expiresAt).toBeUndefined();
+    expect(noticeQueue(offered, calm, ctx)[0].id).toBe("raid");
+  });
+});
+
+describe("minimizing banners", () => {
+  it("a big banner has a minimize button; minimized, it is a pill with icon, short title, countdown and its buttons", async () => {
+    const { createElement } = await import("react");
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    const { NoticeStack } = await import("./NoticeStack");
+    const { loadUiContent } = await import("./uiContent");
+    const { withState: ws, content: c } = await import("../engine/testUtils");
+    const game = loadUiContent(c).game;
+    const s = ws({ time: 100 });
+    const queue = [{ id: "raid", tier: 0 as const, expiresAt: 118 }, { id: "offer", tier: 1 as const, paused: true }];
+    const views = {
+      raid: { node: createElement("span", null, "Raid in 0:18"), label: "Raid", pill: { icon: "⚔️", title: "Raid", actions: [{ label: "Call everyone", tip: "All warriors", onClick: () => {} }] } },
+      offer: { node: createElement("span", null, "A bangka waits"), label: "Offer · Trade paused until the raid ends" },
+    };
+    const full = renderToStaticMarkup(createElement(NoticeStack, { state: s, queue, views, game, lang: "en" }));
+    expect(full).toContain('data-minimize="raid"');
+    expect(full).toContain("Raid in 0:18");
+    const ui = { dismissed: new Set<string>(), front: null, open: true, minimized: new Set(["raid"]), kept: new Set<string>(), set: () => {} };
+    const small = renderToStaticMarkup(createElement(NoticeStack, { state: s, queue, views, game, lang: "en", ui }));
+    expect(small).toContain('data-pill="raid"');
+    expect(small).toContain("0:18");
+    expect(small).toContain("Call everyone");
+    expect(small).not.toContain("Raid in 0:18");
+    // The paused offer now has the banner slot, and says trade is paused.
+    expect(small).toContain("A bangka waits");
+  });
+
+  it("the queued paused offer shows it waits, with no countdown", async () => {
+    const { createElement } = await import("react");
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    const { NoticeStack } = await import("./NoticeStack");
+    const { loadUiContent } = await import("./uiContent");
+    const { withState: ws, content: c } = await import("../engine/testUtils");
+    const game = loadUiContent(c).game;
+    const s = ws({ time: 100 });
+    const queue = [{ id: "raid", tier: 0 as const, expiresAt: 118 }, { id: "offer", tier: 1 as const, paused: true }];
+    const views = {
+      raid: { node: createElement("span", null, "Raid"), label: "Raid" },
+      offer: { node: createElement("span", null, "A bangka waits"), label: `Offer · ${game.offer.paused.en}` },
+    };
+    const ui = { dismissed: new Set<string>(), front: null, open: true, minimized: new Set<string>(), kept: new Set<string>(), set: () => {} };
+    const html = renderToStaticMarkup(createElement(NoticeStack, { state: s, queue, views, game, lang: "en", ui }));
+    expect(html).toContain("Trade paused until the raid ends");
+    expect(html).toContain("⏸");
   });
 });
 
