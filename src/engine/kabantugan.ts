@@ -1,6 +1,7 @@
 // Kabantugan (renown) and the barangay level. Renown is earned and never lost: villager
 // milestones, Mga Gawain tasks, raids won (attacking or defending), trades, a tributary or ally
-// gained, raising the Bahay ng Datu, and Aklat ng Alamat entries (amounts in rules.json). It is
+// gained, raising the Bahay ng Datu, and Aklat ng Alamat entries (amounts in rules.json; tasks and
+// Aklat entries start small and ramp up, and rank changes in the Ranggo give none). It is
 // worked out by comparing the state before and after each engine step or command, so every way
 // of achieving something counts once, whether done directly, by sea or while away. The level
 // (1–20) comes from total renown; each new level brings its reward (content/levels.json).
@@ -28,34 +29,60 @@ export function renownForLevel(content: Content, level: number): number | null {
 }
 
 
-/** Renown earned between two states of the same barangay. */
-export function renownBetween(prev: GameState, next: GameState, content: Content): number {
+/**
+ * Renown for the (n+1)-th task or Aklat entry: small at first, rising by `step` each time up to
+ * `max` (rules.kabantugan.taskRamp / aklatRamp), so the first steps don't race the levels.
+ */
+export function rampedRenown(ramp: { first: number; step: number }, max: number, n: number): number {
+  return Math.min(max, Math.round(ramp.first + ramp.step * n));
+}
+
+/** Total renown for tasks or Aklat entries number `from`+1 to `to` (counts done before and after). */
+export function rampedTotal(ramp: { first: number; step: number }, max: number, from: number, to: number): number {
+  let total = 0;
+  for (let n = from; n < to; n++) total += rampedRenown(ramp, max, n);
+  return total;
+}
+
+/** Where renown came from between two states, by source (for renownBetween and the balance simulation). */
+export type RenownSource = "villagers" | "tasks" | "trades" | "datu" | "aklat" | "raids" | "defenses" | "tributaries" | "allies";
+
+/** Renown earned between two states of the same barangay, by source (only sources that gave some). */
+export function renownSources(prev: GameState, next: GameState, content: Content): Partial<Record<RenownSource, number>> {
   const k = content.rules.kabantugan;
-  let gained = 0;
+  const out: Partial<Record<RenownSource, number>> = {};
+  const add = (src: RenownSource, n: number) => {
+    if (n > 0) out[src] = (out[src] ?? 0) + n;
+  };
   // Every 10 villagers reached for the first time.
   const tens = Math.floor(next.villagers / 10);
-  if (tens > next.stats.bestTens) gained += (tens - next.stats.bestTens) * k.perTenVillagers;
-  gained += Math.max(0, next.gawainDone.length - prev.gawainDone.length) * k.perTask;
-  gained += Math.max(0, next.stats.trades - prev.stats.trades) * k.perTrade;
-  gained += Math.max(0, next.datuLevel - prev.datuLevel) * k.perDatuLevel;
-  gained += Math.max(0, next.aklat.length - prev.aklat.length) * k.perAklat;
+  if (tens > next.stats.bestTens) add("villagers", (tens - next.stats.bestTens) * k.perTenVillagers);
+  add("tasks", rampedTotal(k.taskRamp, k.perTask, prev.gawainDone.length, next.gawainDone.length));
+  add("trades", Math.max(0, next.stats.trades - prev.stats.trades) * k.perTrade);
+  add("datu", Math.max(0, next.datuLevel - prev.datuLevel) * k.perDatuLevel);
+  add("aklat", rampedTotal(k.aklatRamp, k.perAklat, prev.aklat.length, next.aklat.length));
   const pr = prev.region;
   const nr = next.region;
   if (pr && nr) {
     const seen = Math.max(0, ...pr.reports.map((r) => r.id));
     for (const r of nr.reports) {
       if (r.id <= seen || !r.win) continue;
-      if (r.kind === "raid") gained += Math.round(k.perRaidWon * (r.renownFactor ?? 1));
-      if (r.kind === "defense") gained += k.perDefenseWon;
+      if (r.kind === "raid") add("raids", Math.round(k.perRaidWon * (r.renownFactor ?? 1)));
+      if (r.kind === "defense") add("defenses", k.perDefenseWon);
     }
     for (const n of nr.neighbors) {
       const before = pr.neighbors.find((x) => x.id === n.id)?.status ?? "independent";
       if (before === n.status) continue;
-      if (n.status === "tributary") gained += k.perTributary;
-      if (n.status === "ally" && before !== "ally") gained += k.perAlly;
+      if (n.status === "tributary") add("tributaries", k.perTributary);
+      if (n.status === "ally" && before !== "ally") add("allies", k.perAlly);
     }
   }
-  return gained;
+  return out;
+}
+
+/** Renown earned between two states of the same barangay. */
+export function renownBetween(prev: GameState, next: GameState, content: Content): number {
+  return Object.values(renownSources(prev, next, content)).reduce((a, b) => a + (b ?? 0), 0);
 }
 
 /**
@@ -101,12 +128,12 @@ export function renownFromAchievements(state: GameState, content: Content, battl
   const r = state.region;
   return (
     Math.floor(state.villagers / 10) * k.perTenVillagers +
-    state.gawainDone.length * k.perTask +
+    rampedTotal(k.taskRamp, k.perTask, 0, state.gawainDone.length) +
     battleRenown +
     (r?.paths.includes("trade") ? k.perTrade : 0) +
     (r?.neighbors.filter((n) => n.status === "tributary").length ?? 0) * k.perTributary +
     (r?.neighbors.filter((n) => n.status === "ally").length ?? 0) * k.perAlly +
     Math.max(0, state.datuLevel - 1) * k.perDatuLevel +
-    state.aklat.length * k.perAklat
+    rampedTotal(k.aklatRamp, k.perAklat, 0, state.aklat.length)
   );
 }

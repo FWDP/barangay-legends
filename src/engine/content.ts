@@ -260,14 +260,21 @@ export interface DatuHouseDef {
 /** Kabantugan (renown): what each achievement gives, and the renown each barangay level needs. */
 export interface KabantuganRules {
   perTenVillagers: number;
+  /** The most a task gives; the first ones give less (taskRamp). */
   perTask: number;
+  /** Renown for the first task, and how much more each later one gives (up to perTask). */
+  taskRamp: { first: number; step: number };
   perRaidWon: number;
   perDefenseWon: number;
   perTrade: number;
   perTributary: number;
   perAlly: number;
   perDatuLevel: number;
+  /** The most an Aklat entry gives; the first ones give less (aklatRamp). */
   perAklat: number;
+  aklatRamp: { first: number; step: number };
+  /** No rank-up or overtaken news before this many seconds of play (the Ranggo still updates). */
+  rankNewsAfterSeconds: number;
   aiPerVillager: number;
   aiPerStrength: number;
   /** Renown for levels 2, 3, … (rising). */
@@ -1405,7 +1412,11 @@ export function validateRules(raw: unknown): Rules {
   }
   const k = raw.kabantugan;
   if (!isObject(k)) throw new Error('rules: missing "kabantugan"');
-  checkNumbers(k, ["perTenVillagers", "perTask", "perRaidWon", "perDefenseWon", "perTrade", "perTributary", "perAlly", "perDatuLevel", "perAklat", "aiPerVillager", "aiPerStrength"], "rules: kabantugan");
+  checkNumbers(k, ["perTenVillagers", "perTask", "perRaidWon", "perDefenseWon", "perTrade", "perTributary", "perAlly", "perDatuLevel", "perAklat", "rankNewsAfterSeconds", "aiPerVillager", "aiPerStrength"], "rules: kabantugan");
+  for (const ramp of ["taskRamp", "aklatRamp"]) {
+    if (!isObject(k[ramp])) throw new Error(`rules: missing "kabantugan.${ramp}"`);
+    checkNumbers(k[ramp], ["first", "step"], `rules: kabantugan.${ramp}`);
+  }
   if (!Array.isArray(k.levelAt) || k.levelAt.length === 0 || !k.levelAt.every((v, i, arr) => isNonNegNumber(v) && (i === 0 || v > (arr[i - 1] as number)))) {
     throw new Error('rules: "kabantugan.levelAt" must list rising renown thresholds');
   }

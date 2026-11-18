@@ -102,7 +102,9 @@ different form, and some (prestige and Dangal, export codes) isn't built yet.
   grudges and Handog, marriage alliances, sandugo, raids and defense, tributaries, sea travel by
   Balangay, alliance blocs and wars, and the Balita news feed.
 - **Renown:** Kabantugan raises the barangay through 20 levels with rewards and titles.
-  AI barangays keep their own renown too.
+  AI barangays keep their own renown too. The first Mga Gawain tasks and Aklat entries give
+  little renown, rising to the full amount (`rules.kabantugan.taskRamp`, `aklatRamp`), so level 2
+  comes at about 3–5 minutes and level 3 at about 10–15 (`npm run simulate` prints the times).
 - **Bisitahin:** a read-only visit to any barangay's village from a save-format snapshot. AI
   villages are generated from their seed, so real players' snapshots can be shown later.
 - **Panoorin (expedition replays):** each trade and raid (the player's, and AI raids on the
@@ -130,7 +132,8 @@ different form, and some (prestige and Dangal, export codes) isn't built yet.
 - **Balance:** a gentle building cost curve (`rules.costCurve`), Kamalig levels 2 and 3, a soft
   cap on wood and gold (`rules.stockpile`), and an AI renown pace retuned with `npm run simulate`.
 - **Ranggo ng Kapuluan:** an archipelago ranking by renown, raids defended and Aklat entries,
-  built to take online rankings later.
+  built to take online rankings later. Moving up gives no renown, and rank changes aren't
+  announced before `rules.kabantugan.rankNewsAfterSeconds` of play.
 - **Guidance and sharing:** Mga Gawain tasks, Dalisay the adviser, help in English and Filipino,
   and a share card.
 

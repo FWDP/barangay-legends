@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { datuLevelNeeded } from "./datu";
 import { apply, STATE_VERSION, tick, type GameState } from "./game";
-import { applyRenown, barangayLevel, levelForRenown, levelTitle, maxLevel, renownBetween, renownForLevel } from "./kabantugan";
+import { applyRenown, barangayLevel, levelForRenown, levelTitle, maxLevel, rampedRenown, rampedTotal, renownBetween, renownForLevel } from "./kabantugan";
 import { closestLandings } from "./border";
 import { offlineProgress } from "./offline";
 import { createRegion, type NeighborState } from "./region";
@@ -28,7 +28,7 @@ const setNb = (s: GameState, id: string, patch: Partial<NeighborState>): GameSta
 describe("barangay level from Kabantugan", () => {
   it("rises through 20 levels on rising thresholds", () => {
     expect(maxLevel(content)).toBe(20);
-    for (let i = 1; i < k.levelAt.length; i++) expect(k.levelAt[i] - k.levelAt[i - 1]).toBeGreaterThanOrEqual(k.levelAt[i - 1] - (k.levelAt[i - 2] ?? 0));
+    for (let i = 1; i < k.levelAt.length; i++) expect(k.levelAt[i]).toBeGreaterThan(k.levelAt[i - 1]);
     expect(levelForRenown(content, 0)).toBe(1);
     expect(levelForRenown(content, k.levelAt[0] - 1)).toBe(1);
     expect(levelForRenown(content, k.levelAt[0])).toBe(2);
@@ -51,10 +51,24 @@ describe("renown sources", () => {
 
   it("tasks, trades, the Bahay ng Datu and the Aklat", () => {
     const s = live({ gawainDone: [] });
-    expect(renownBetween(s, { ...s, gawainDone: ["first-palayan"] }, content)).toBe(k.perTask);
+    expect(renownBetween(s, { ...s, gawainDone: ["first-palayan"] }, content)).toBe(rampedRenown(k.taskRamp, k.perTask, 0));
     expect(renownBetween(s, { ...s, stats: { ...s.stats, trades: 2 } }, content)).toBe(2 * k.perTrade);
     expect(renownBetween(s, { ...s, datuLevel: 2 }, content)).toBe(k.perDatuLevel);
-    expect(renownBetween(s, { ...s, aklat: ["anito-ng-balete", "balete"] }, content)).toBe(2 * k.perAklat);
+    expect(renownBetween(s, { ...s, aklat: ["anito-ng-balete", "balete"] }, content)).toBe(rampedTotal(k.aklatRamp, k.perAklat, 0, 2));
+  });
+
+  it("the first tasks and Aklat entries give little, later ones the full amount", () => {
+    expect(rampedRenown(k.taskRamp, k.perTask, 0)).toBeLessThan(k.perTask / 3);
+    expect(rampedRenown(k.aklatRamp, k.perAklat, 0)).toBeLessThan(k.perAklat);
+    expect(rampedRenown(k.taskRamp, k.perTask, 100)).toBe(k.perTask);
+    expect(rampedRenown(k.aklatRamp, k.perAklat, 100)).toBe(k.perAklat);
+    // Each one gives at least as much as the one before.
+    for (let n = 1; n < 30; n++) expect(rampedRenown(k.taskRamp, k.perTask, n)).toBeGreaterThanOrEqual(rampedRenown(k.taskRamp, k.perTask, n - 1));
+    // The fifth task counts as the fifth, whatever came before it in the same step.
+    const four = live({ gawainDone: ["a", "b", "c", "d"] });
+    expect(renownBetween(four, { ...four, gawainDone: [...four.gawainDone, "e"] }, content)).toBe(rampedRenown(k.taskRamp, k.perTask, 4));
+    // The first five tasks and five Aklat entries can't reach level 3 by themselves.
+    expect(rampedTotal(k.taskRamp, k.perTask, 0, 5) + rampedTotal(k.aklatRamp, k.perAklat, 0, 5)).toBeLessThan(k.levelAt[1]);
   });
 
   it("raids won attacking or defending, and a tributary or ally gained", () => {
@@ -145,7 +159,8 @@ describe("save migration v20 → v21", () => {
     delete (raw.stats as Record<string, unknown>).bestTens;
     const back = parseSave(JSON.stringify(raw), content)!;
     expect(back.version).toBe(STATE_VERSION);
-    const expected = 2 * k.perTenVillagers + 2 * k.perTask + 30 + k.perTrade + k.perTributary + 2 * k.perDatuLevel + 2 * k.perAklat;
+    const expected =
+      2 * k.perTenVillagers + rampedTotal(k.taskRamp, k.perTask, 0, 2) + 30 + k.perTrade + k.perTributary + 2 * k.perDatuLevel + rampedTotal(k.aklatRamp, k.perAklat, 0, 2);
     expect(back.kabantugan).toBe(expected);
     expect(back.levelRewarded).toBe(levelForRenown(content, expected));
     expect(back.stats.bestTens).toBe(2);

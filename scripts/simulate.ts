@@ -9,7 +9,7 @@ const seed = Number(args[1] ?? 12345);
 const every = Math.max(1, Math.round(days / 40));
 const content = loadContent();
 const started = performance.now();
-const { rows, firstIncomeAt, unlockTimes, firsts, milestones, raids, eatingRiceSeconds, pistas } = simulate(content, days, seed);
+const { rows, firstIncomeAt, unlockTimes, firsts, milestones, raids, eatingRiceSeconds, pistas, levelTimes, renownLog } = simulate(content, days, seed);
 
 const cols: [string, (r: (typeof rows)[number]) => string | number][] = [
   ["Araw", (r) => r.day],
@@ -47,4 +47,6 @@ console.log(
   `Deaths per raid on us: ${raids.defenses ? ((raids.ourFallen) / raids.defenses).toFixed(2) : 0} ours, ${raids.defenses ? (raids.theirFallen / raids.defenses).toFixed(2) : 0} raiders'; our raids: ${raids.attacks}, won ${raids.attacks ? Math.round((raids.attacksWon * 100) / raids.attacks) : 0}%, our dead per raid ${raids.attacks ? (raids.attackFallen / raids.attacks).toFixed(2) : 0}`,
 );
 console.log(`Seconds eating Palay (no Pagkain): ${eatingRiceSeconds}; Pistas held: ${pistas}`);
+console.log(`Barangay levels (minutes): ${levelTimes.map((t, i) => `${i + 1}: ${(t / 60).toFixed(1)}`).join(", ")}`);
+console.log(`Renown in the first hour (minute source +amount): ${renownLog.map((r) => `${(r.t / 60).toFixed(1)} ${r.source} +${r.amount}`).join(", ")}`);
 console.log(`(${days} days, seed ${seed}, ${((performance.now() - started) / 1000).toFixed(1)} s)`);

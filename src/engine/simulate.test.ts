@@ -52,6 +52,12 @@ describe("balance simulation", () => {
     expect(last.aiBuildings).toBeGreaterThan(first.aiBuildings);
   });
 
+  it("a new game can't reach barangay level 3 in under 8 minutes", () => {
+    // levelTimes[2] is when level 3 came (undefined if it didn't in the run).
+    expect(run.levelTimes[2] ?? Infinity).toBeGreaterThanOrEqual(8 * 60);
+    for (const seed of [1, 2, 3]) expect(simulate(content, 2, seed).levelTimes[2] ?? Infinity).toBeGreaterThanOrEqual(8 * 60);
+  });
+
   it("is deterministic", () => {
     expect(simulate(content, 1, 12345).rows[0]).toEqual(run.rows[0]);
   });

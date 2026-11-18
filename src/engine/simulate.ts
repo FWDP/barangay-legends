@@ -16,7 +16,7 @@ import { autoPlaceTile, isUnlocked } from "./map";
 import { nearestClearable } from "./clearing";
 import { riceCap } from "./storage";
 import { nextDatuLevel, datuLevelNeeded } from "./datu";
-import { barangayLevel, levelForRenown } from "./kabantugan";
+import { barangayLevel, levelForRenown, renownSources } from "./kabantugan";
 import { dayAt } from "./daynight";
 import { nextUpgrade, upgradeCost } from "./upgrades";
 import { softCap } from "./stockpile";
@@ -67,6 +67,10 @@ export interface SimResult {
   /** Seconds spent eating Palay because there was no Pagkain. */
   eatingRiceSeconds: number;
   pistas: number;
+  /** Game second each barangay level was first reached (index 0 = level 1, at 0). */
+  levelTimes: number[];
+  /** Renown gains in the first hour, with their source ("other": feasts, honor, ally calls). */
+  renownLog: { t: number; source: string; amount: number }[];
 }
 
 /** Seconds between the bot's decisions. */
@@ -315,11 +319,29 @@ export function simulate(content: Content, days: number, seed = 12345): SimResul
   const raids = { defenses: 0, won: 0, lostRice: 0, lostWood: 0, lostFood: 0, ourFallen: 0, theirFallen: 0, attacks: 0, attacksWon: 0, attackFallen: 0 };
   let eatingRiceSeconds = 0;
   let seenReport = 0;
+  const levelTimes = [0];
+  const renownLog: SimResult["renownLog"] = [];
   const end = days * daySeconds;
+  // Level times and where the first hour's renown came from.
+  const note = (before: GameState, after: GameState) => {
+    while (barangayLevel(after, content) > levelTimes.length) levelTimes.push(after.time);
+    if (after.time > 3600 || after.kabantugan <= before.kabantugan) return;
+    let known = 0;
+    for (const [source, amount] of Object.entries(renownSources(before, { ...after, stats: { ...after.stats, bestTens: before.stats.bestTens } }, content))) {
+      renownLog.push({ t: after.time, source, amount: amount! });
+      known += amount!;
+    }
+    const other = after.kabantugan - before.kabantugan - known;
+    if (other > 0) renownLog.push({ t: after.time, source: "other", amount: other });
+  };
   while (s.time < end) {
+    let before = s;
     s = botDecide(s, content);
+    note(before, s);
     for (let i = 0; i < THINK_SECONDS; i++) {
+      before = s;
       s = tick(s, content, 1);
+      note(before, s);
       if (s.resources.food <= 0 && s.resources.rice <= 0) hungry++;
       else if (s.resources.food <= 0) eatingRiceSeconds++;
       if (s.resources.rice >= riceCap(s, content) - 0.01) full++;
@@ -387,5 +409,5 @@ export function simulate(content: Content, days: number, seed = 12345): SimResul
       full = 0;
     }
   }
-  return { rows, firsts, firstIncomeAt, unlockTimes, milestones, raids, eatingRiceSeconds, pistas: s.stats.pistas ?? 0 };
+  return { rows, firsts, firstIncomeAt, unlockTimes, milestones, raids, eatingRiceSeconds, pistas: s.stats.pistas ?? 0, levelTimes, renownLog };
 }

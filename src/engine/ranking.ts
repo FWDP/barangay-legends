@@ -189,11 +189,11 @@ export function trackRanking(prev: GameState, next: GameState, content: Content)
     });
     if (changed) s = { ...s, region: { ...region, neighbors } };
   }
-  return updateRank(prev, s);
+  return updateRank(prev, s, content);
 }
 
 /** The player's renown rank: moving up is celebrated; an AI barangay passing the player is news. */
-function updateRank(prev: GameState, s: GameState): GameState {
+function updateRank(prev: GameState, s: GameState, content: Content): GameState {
   if (!s.region) return s;
   if (s.kabantugan === prev.kabantugan && s.region === prev.region && s.renownRank > 0) return s;
   const standings = renownStandings(s);
@@ -201,8 +201,10 @@ function updateRank(prev: GameState, s: GameState): GameState {
   if (rank === s.renownRank) return s;
   const was = s.renownRank;
   let next: GameState = { ...s, renownRank: rank };
-  // The first time (a new or migrated save) it's only noted.
-  if (was === 0) return next;
+  // The first time (a new or migrated save) it's only noted, and so is every change in the first
+  // stretch of play: a new barangay climbs past small neighbors quickly, which isn't news yet.
+  // (A rank change never gives renown: only achievements do, kabantugan.ts.)
+  if (was === 0 || next.time - next.foundedAt < content.rules.kabantugan.rankNewsAfterSeconds) return next;
   const me = next.barangay.id;
   if (rank < was) {
     next = addHistory(next, { at: next.time, kind: "rank", level: rank });

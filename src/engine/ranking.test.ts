@@ -107,21 +107,41 @@ describe("rank changes", () => {
   });
 
   it("moving up is celebrated in the history and the Balita", () => {
+    const t = content.rules.kabantugan.rankNewsAfterSeconds;
     let s = allAt(world({ kabantugan: 0 }), 100);
-    s = trackRanking(s, { ...s, time: 1 }, content);
+    s = trackRanking(s, { ...s, time: t + 1 }, content);
     const n = s.region!.neighbors.length;
     expect(s.renownRank).toBe(n + 1);
-    const up = trackRanking(s, { ...s, time: 2, kabantugan: 150 }, content);
+    const up = trackRanking(s, { ...s, time: t + 2, kabantugan: 150 }, content);
     expect(up.renownRank).toBe(1);
-    expect(up.history.at(-1)).toMatchObject({ kind: "rank", level: 1, at: 2 });
+    expect(up.history.at(-1)).toMatchObject({ kind: "rank", level: 1, at: t + 2 });
     expect(up.region!.news.at(-1)).toMatchObject({ key: "rank-up", barangay: s.barangay.id });
+    // Ranking up gives no renown of its own.
+    expect(up.kabantugan).toBe(150);
+  });
+
+  it("isn't announced in the first stretch of play (not on Araw 1), but is still tracked", () => {
+    const t = content.rules.kabantugan.rankNewsAfterSeconds;
+    expect(t).toBeGreaterThanOrEqual(content.rules.dayNight.daySeconds * 2);
+    let s = allAt(world({ kabantugan: 0, foundedAt: 0 }), 100);
+    s = trackRanking(s, { ...s, time: 1 }, content);
+    const up = trackRanking(s, { ...s, time: 60, kabantugan: 150 }, content);
+    expect(up.renownRank).toBe(1);
+    expect(up.history).toEqual(s.history);
+    expect(up.region!.news).toEqual(s.region!.news);
+    // Being passed early isn't news either.
+    const passed = setNb({ ...up, time: 90 }, "malinaw", (x) => ({ fame: { ...x.fame, renown: 250, renownAt: 90 } }));
+    const after = trackRanking(up, passed, content);
+    expect(after.renownRank).toBe(2);
+    expect(after.region!.news).toEqual(s.region!.news);
   });
 
   it("an AI barangay passing the player is in the Balita", () => {
+    const t = content.rules.kabantugan.rankNewsAfterSeconds;
     let s = allAt(world({ kabantugan: 200, achievedAt: { renown: 0, defended: 0, aklat: 0 } }), 100);
-    s = trackRanking(s, { ...s, time: 1 }, content);
+    s = trackRanking(s, { ...s, time: t + 1 }, content);
     expect(s.renownRank).toBe(1);
-    const passed = setNb({ ...s, time: 5 }, "malinaw", (x) => ({ fame: { ...x.fame, renown: 250, renownAt: 5 } }));
+    const passed = setNb({ ...s, time: t + 5 }, "malinaw", (x) => ({ fame: { ...x.fame, renown: 250, renownAt: t + 5 } }));
     const after = trackRanking(s, passed, content);
     expect(after.renownRank).toBe(2);
     expect(after.region!.news.at(-1)).toMatchObject({ key: "overtook", barangay: "malinaw", other: s.barangay.id });
