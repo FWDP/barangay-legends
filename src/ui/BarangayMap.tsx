@@ -71,7 +71,7 @@ import { sarimanokAt } from "../engine/worship";
 import { datuHouseBox, datuHouseUrl, houseStyleFor, type HouseStyle } from "./datuHouseArt";
 import { clearingTiles, firePit, hasFirePit, houseFootprint, houseFront } from "../engine/plaza";
 import { healerStays } from "../engine/healing";
-import { buildingArtUrl, mapIcon } from "./buildingArt";
+import { buildingArtUrl, buildingIcon, burialLook as burialLookOf, mapIcon } from "./buildingArt";
 import { isNightAt } from "../engine/daynight";
 
 const INCOME_EVERY_MS = 3000;
@@ -274,7 +274,7 @@ export function BarangayMap(props: {
     const lentOut = workforce(state, content).borrowed;
     const defs = new Map(content.buildings.map((d) => [d.id, d]));
     const byTile = new Map<string, BuildingInfo>();
-    const look = content.traditions.find((t) => t.id === state.tradition)?.burialLook ?? "jars";
+    const look = burialLookOf(state, content);
     const pigs = content.traditions.find((t) => t.id === state.tradition)?.pigs !== false;
     const ladderUp = laddersUp;
     const carryingTo = state.bayanihan && state.time < state.bayanihan.until ? state.bayanihan : null;
@@ -825,7 +825,7 @@ export function BarangayMap(props: {
             pathPreview={painted && canPlaceRoad(state, content, x, y)}
             ghost={
               placing && hovered && placement?.has(key)
-                ? { def: placing, ...placement.get(key)!, groveName: grove?.name ?? "" }
+                ? { def: placing, ...placement.get(key)!, groveName: grove?.name ?? "", look: burialLookOf(state, content) }
                 : null
             }
             glow={glow.has(key)}
@@ -1470,24 +1470,26 @@ interface GhostInfo {
   /** For a Kuta: landing points within its defense radius, and the line saying so. */
   bank: number;
   shore: string;
+  /** The barangay's burial style (how a Libingan looks). */
+  look: "jars" | "longon";
 }
 
 const totalBonus = (b: { adjacency: number; grove: number; road: number }) => b.adjacency + b.grove + b.road;
 
 /** A building as it stands on the map: its custom art, its icon, or nothing (a Tulay). */
-function ArtOrIcon({ def }: { def: BuildingDef }) {
+function ArtOrIcon({ def, look }: { def: BuildingDef; look: "jars" | "longon" }) {
   const art = def.bridge ? null : buildingArtUrl(def.id);
   if (art) return <img src={art} alt="" draggable={false} className="inline-block size-[1.05em] align-bottom" />;
-  return <>{mapIcon(def)}</>;
+  return <>{mapIcon(def, look)}</>;
 }
 
 function Ghost({ info }: { info: GhostInfo }) {
-  const { def, adjacency, grove, groveName, road, noPath, bank, shore } = info;
+  const { def, adjacency, grove, groveName, road, noPath, bank, shore, look } = info;
   if (def.defense || def.watch) {
     return (
       <>
         <span aria-hidden className="pointer-events-none leading-none opacity-60 select-none">
-          <ArtOrIcon def={def} />
+          <ArtOrIcon def={def} look={look} />
         </span>
         <Label text={shore} good={bank > 0} />
       </>
@@ -1497,7 +1499,7 @@ function Ghost({ info }: { info: GhostInfo }) {
     return (
       <>
         <span aria-hidden className="pointer-events-none leading-none opacity-60 select-none">
-          <ArtOrIcon def={def} />
+          <ArtOrIcon def={def} look={look} />
         </span>
         <Label text="🚫 No path: workers can't walk here" warn />
       </>
@@ -1509,7 +1511,7 @@ function Ghost({ info }: { info: GhostInfo }) {
     <>
       {mapIcon(def) && (
         <span aria-hidden className="pointer-events-none leading-none opacity-60 select-none">
-          <ArtOrIcon def={def} />
+          <ArtOrIcon def={def} look={look} />
         </span>
       )}
       <Label text={text} good={adjacency + grove + road > 0 || !!def.bridge} />
@@ -1601,10 +1603,8 @@ function Building(props: {
           <span className="inline-block size-[0.9em]" />
         ) : buildingArtUrl(def.id, level, pigs, ladderUp) ? (
           <img src={buildingArtUrl(def.id, level, pigs, ladderUp)!} alt="" draggable={false} className="inline-block size-[1.05em] align-bottom" />
-        ) : def.burial && burialLook === "longon" ? (
-          "⚰️"
         ) : (
-          def.icon
+          buildingIcon(def, burialLook)
         )}
       </span>
       {burning && (

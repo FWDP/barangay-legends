@@ -2,7 +2,8 @@
 // build toolbar, the share card. Most buildings are their emoji icon; a Tulay is drawn as its
 // deck and has no icon on the map; a few have custom flat SVG art instead (generic for now, the
 // same for every tradition: see docs/cultural-review.md). Display only.
-import type { BuildingDef } from "../engine/content";
+import type { BuildingDef, Content } from "../engine/content";
+import type { GameState } from "../engine/game";
 import { ASINAN, BAKLAD, babuyanSvg, GABIHAN, KAINGIN, kuboSvg, LUMBIA, NIYUGAN, PANGANGALAP, PANGANGASO, SAGINGAN } from "./foodArt";
 
 /**
@@ -284,8 +285,25 @@ export const ART_IMAGES: { key: string; url: string }[] = [
  */
 export const DAMBANA_ART = ART.dambana;
 
+/** How the barangay keeps its dead: its tradition's burial style, burial jars when none is chosen. */
+export function burialLook(state: Pick<GameState, "tradition">, content: Pick<Content, "traditions">): "jars" | "longon" {
+  return content.traditions.find((t) => t.id === state.tradition)?.burialLook ?? "jars";
+}
+
+/** The icon for a burial style: a jar or a longon coffin. */
+export const burialIcon = (look: "jars" | "longon"): string => (look === "longon" ? "⚰️" : "⚱️");
+
+/**
+ * A building's icon as this barangay shows it everywhere (map, build card, popover, share card):
+ * the Libingan follows the tradition's burial style; every other building is its own icon.
+ */
+export function buildingIcon(def: Pick<BuildingDef, "icon" | "burial">, look: "jars" | "longon"): string {
+  return def.burial ? burialIcon(look) : def.icon;
+}
+
 /** What stands on a building's own tile as its icon: nothing for a bridge (drawn as its deck). */
-export const mapIcon = (def: Pick<BuildingDef, "icon" | "bridge">): string | null => (def.bridge ? null : def.icon);
+export const mapIcon = (def: Pick<BuildingDef, "icon" | "bridge" | "burial">, look: "jars" | "longon" = "jars"): string | null =>
+  def.bridge ? null : buildingIcon(def, look);
 
 /** The lore note (content/lore) about how a building with custom art is drawn. */
 export const ART_LORE: Record<string, string> = { dambana: "dambana-art", kuta: "kuta", bantayan: "bantayan", "babaylan-hut": "babaylan", kamalig: "kamalig", gabihan: "gabi", kaingin: "kaingin-food", sagingan: "saging", lumbia: "lumbia", niyugan: "niyog", pangangalap: "pangangalap", pangangaso: "pangangaso", babuyan: "babuyan", asinan: "asin", baklad: "baklad", "fishing-dock": "pangingisda", suyak: "suyak", "bahay-kubo": "bahay-kubo" };

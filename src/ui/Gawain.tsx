@@ -20,6 +20,7 @@ import { useModal } from "./StoryDialogs";
 import { deathLine, historyLine, rewardText, tappedCard } from "./stories";
 import type { Tapped } from "./villagers";
 import { fill, type GameText } from "./uiContent";
+import { burialIcon, burialLook } from "./buildingArt";
 import { LifeStoryView, tappedFor } from "./LifeStory";
 import { lifeStory } from "../engine/talambuhay";
 
@@ -308,7 +309,7 @@ export function RememberedDialog(props: { open: boolean; state: GameState; conte
   const { open, state, content, game, lang, onClose } = props;
   const dialog = useModal(open);
   const t = game.death;
-  const look = content.traditions.find((x) => x.id === state.tradition)?.burialLook ?? "jars";
+  const look = burialLook(state, content);
   const others = Math.max(0, state.stats.deaths - state.remembered.length);
   // A remembered villager's story, opened from the list (Back returns to it).
   const [reading, setReading] = useState<number | null>(null);
@@ -358,7 +359,7 @@ export function RememberedDialog(props: { open: boolean; state: GameState; conte
       {open && !story && (
         <div className="mat-card flex max-h-[80dvh] flex-col gap-2 p-4 text-sm">
           <h2 id="remembered-title" className="font-display text-xl text-amber-900">
-            <span aria-hidden>{look === "longon" ? "⚰️" : "⚱️"}</span> {t.remembered[lang]}
+            <span aria-hidden>{burialIcon(look)}</span> {t.remembered[lang]}
           </h2>
           <p className="text-xs text-stone-500">{t[look][lang]}</p>
           <ul className="min-h-0 flex-1 space-y-1 overflow-y-auto">
@@ -366,7 +367,7 @@ export function RememberedDialog(props: { open: boolean; state: GameState; conte
             {state.remembered.some((r) => r.story) && <li className="text-xs text-stone-500">{game.talambuhay.remembered[lang]}</li>}
             {[...state.remembered].reverse().map((r, i) => (
               <li key={`${r.name}-${r.at}-${i}`} className="border-b border-amber-900/10 pb-1">
-                ⚱️{" "}
+                {burialIcon(look)}{" "}
                 {r.story ? (
                   <button type="button" onClick={() => setReading(state.remembered.length - 1 - i)} className="font-bold text-amber-900 underline underline-offset-2">
                     {r.name}

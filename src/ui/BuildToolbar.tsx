@@ -13,7 +13,7 @@ import { DAAN, DATU, itemsIn, missingFor, tabOfItem, tabsWithNew, unlockedIds, v
 import { bonusRuleText, costText, groveRuleText, RESOURCE_ICON } from "./format";
 import type { Lang } from "./settings";
 import { fill, type GameText } from "./uiContent";
-import { buildingArtUrl, DAMBANA_ART } from "./buildingArt";
+import { buildingArtUrl, buildingIcon, burialLook, DAMBANA_ART } from "./buildingArt";
 
 const TAB_KEY = "barangay-legends/build-tab";
 const SEEN_KEY = "barangay-legends/build-seen";
@@ -213,7 +213,7 @@ export function BuildToolbar(props: {
     const grove = groveRuleText(b, content);
     return {
       id,
-      icon: b.icon,
+      icon: buildingIcon(b, burialLook(state, content)),
       // The same custom art as on the map (Dambana, Kuta).
       iconUrl: buildingArtUrl(b.id) ?? undefined,
       name: b.name,

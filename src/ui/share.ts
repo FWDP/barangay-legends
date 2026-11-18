@@ -7,7 +7,7 @@ import { tileAt, type Point } from "../engine/map";
 import type { Lang } from "./settings";
 import { datuWithTitle } from "./stories";
 import { datuHouseUrl, houseStyleFor } from "./datuHouseArt";
-import { ART_IMAGES, artKey, mapIcon } from "./buildingArt";
+import { ART_IMAGES, artKey, burialLook, mapIcon } from "./buildingArt";
 import { drawPaddy } from "./paddy";
 import { barangayLevel } from "../engine/kabantugan";
 import { arawText } from "./Days";
@@ -116,7 +116,8 @@ export function drawShareCard(state: GameState, content: Content, game: GameText
   g.textBaseline = "middle";
   if (!house) g.fillText("🔥", px, py);
   // Buildings as on the map: custom art where there is some, else the icon; a Tulay is only its deck.
-  const icons = new Map(content.buildings.map((d) => [d.id, mapIcon(d)]));
+  const look = burialLook(state, content);
+  const icons = new Map(content.buildings.map((d) => [d.id, mapIcon(d, look)]));
   g.font = `${tile * 0.82}px serif`;
   for (const bl of state.buildings) {
     const x = ox + (bl.x - b.x0 + 0.5) * tile;

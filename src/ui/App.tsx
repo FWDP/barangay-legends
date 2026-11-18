@@ -55,6 +55,7 @@ import { localRanking, RankingDialog } from "./Ranking";
 import { Celebration } from "./Celebration";
 import { ReportDialog as ProblemReportDialog, SaveDialog } from "./SaveTools";
 import { fill, type GameText } from "./uiContent";
+import { buildingIcon, burialLook } from "./buildingArt";
 import { honorificFor, householdOf, rulerTitle } from "../engine/household";
 import type { Gender } from "../engine/residents";
 import { VERSION_TEXT } from "./version";
@@ -1164,7 +1165,7 @@ export function App() {
               className="wood-panel pointer-events-auto flex items-center gap-2 rounded-xl border-2 border-amber-950/70 py-1.5 pr-1.5 pl-3 text-amber-50 shadow-lg"
             >
               <span className="text-2xl leading-none" aria-hidden>
-                {placing.icon}
+                {buildingIcon(placing, burialLook(state, content))}
               </span>
               <span className="text-sm leading-tight">
                 <span className="text-outline block font-display text-base">

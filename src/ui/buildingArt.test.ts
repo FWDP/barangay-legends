@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import review from "../../docs/cultural-review.md?raw";
 import { content } from "../engine/testUtils";
-import { ART_IMAGES, ART_LORE, artKey, buildingArtUrl, kamaligSvg, mapIcon } from "./buildingArt";
+import { ART_IMAGES, ART_LORE, artKey, buildingArtUrl, buildingIcon, burialLook, kamaligSvg, mapIcon } from "./buildingArt";
 
 const def = (id: string) => content.buildings.find((d) => d.id === id)!;
 
@@ -10,6 +10,20 @@ describe("how buildings are drawn", () => {
     expect(mapIcon(def("tulay"))).toBeNull();
     expect(def("tulay").icon).toBeTruthy();
     for (const d of content.buildings.filter((x) => !x.bridge)) expect(mapIcon(d)).toBe(d.icon);
+  });
+
+  it("the Libingan shows the barangay's burial style everywhere; jars only with no tradition", () => {
+    const libingan = content.buildings.find((d) => d.burial)!;
+    const longon = content.traditions.find((t) => t.burialLook === "longon")!;
+    const jars = content.traditions.find((t) => t.burialLook === "jars")!;
+    expect(burialLook({ tradition: longon.id }, content)).toBe("longon");
+    expect(burialLook({ tradition: jars.id }, content)).toBe("jars");
+    expect(burialLook({ tradition: null }, content)).toBe("jars");
+    expect(buildingIcon(libingan, "longon")).toBe("⚰️");
+    expect(mapIcon(libingan, "longon")).toBe("⚰️");
+    expect(buildingIcon(libingan, "jars")).toBe("⚱️");
+    // Other buildings keep their own icon whatever the tradition.
+    for (const d of content.buildings.filter((x) => !x.burial)) expect(buildingIcon(d, "longon")).toBe(d.icon);
   });
 
   it("the Dambana and Kuta have custom SVG art", () => {

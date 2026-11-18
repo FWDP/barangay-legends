@@ -11,6 +11,7 @@ import { barangayName } from "./politicsText";
 import type { Lang } from "./settings";
 import { lifeDay, lifeLine, storySentences } from "./talambuhay";
 import type { GameText } from "./uiContent";
+import { burialIcon, burialLook } from "./buildingArt";
 import type { Appearance, Tapped } from "./villagers";
 import { drawPerson, type Look } from "./VillagerLayer";
 
@@ -93,7 +94,7 @@ export function LifeStoryView(props: {
         <Portrait id={story.id} look={look} role={role} faded={gone} />
         <div className="min-w-0">
           <h2 id="villager-name" className="font-display text-xl leading-tight text-amber-900">
-            {gone ? <span aria-hidden>⚱️</span> : <span aria-hidden>⭐</span>} {story.name}
+            {gone ? <span aria-hidden>{burialIcon(burialLook(state, content))}</span> : <span aria-hidden>⭐</span>} {story.name}
           </h2>
           <p className="text-xs font-semibold tracking-wide text-stone-500 uppercase">{line}</p>
           {gone && <p className="text-xs text-stone-500 italic">{t.gone[lang]}</p>}

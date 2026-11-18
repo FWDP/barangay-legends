@@ -4,6 +4,7 @@
 // (see statusIcons). Pure: worked out from GameState every render, so nothing can drift.
 import type { Content } from "../engine/content";
 import type { GameState } from "../engine/game";
+import { burialIcon, burialLook } from "./buildingArt";
 import { isActive, ritualDef } from "../engine/worship";
 import { isEmbargo } from "../engine/trading";
 import { isTired } from "../engine/social";
@@ -86,7 +87,7 @@ export interface Status {
 /** The ongoing states, as small HUD status icons. (The season has its own chip.) */
 export function statusIcons(state: GameState, content: Content, lang: "en" | "fil" = "en", tradeHeld = false): Status[] {
   const out: Status[] = [];
-  if (state.mourning > 0) out.push({ id: "mourning", icon: "⚱️", detail: String(Math.ceil(state.mourning)) });
+  if (state.mourning > 0) out.push({ id: "mourning", icon: burialIcon(burialLook(state, content)), detail: String(Math.ceil(state.mourning)) });
   const embargo = (state.region?.neighbors ?? []).filter((n) => isEmbargo(n, content)).map((n) => neighborDef(content, n.id)?.name ?? n.id);
   if (embargo.length) out.push({ id: "embargo", icon: "⛔", detail: embargo.join(", ") });
   if (tradingPaused(state) || tradeHeld) out.push({ id: "tradePaused", icon: "⏸️", detail: "" });

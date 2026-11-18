@@ -1,7 +1,7 @@
 // Changing your mind about a building: the menu on a placed building (Move, Demolish), the
 // demolish confirmation with its warnings, and the short-lived Undo button after building.
 import { Bolo } from "./Bolo";
-import { ART_LORE, buildingArtUrl, DAMBANA_ART } from "./buildingArt";
+import { ART_LORE, buildingArtUrl, buildingIcon, burialIcon, burialLook, DAMBANA_ART } from "./buildingArt";
 import { healerStays, sickPlaces } from "../engine/healing";
 import { boatCap, boatCost } from "../engine/sea";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -112,7 +112,7 @@ export function BuildingMenu(props: {
     >
       <p className="flex items-center gap-1.5 px-1 pb-1.5 font-display text-base text-amber-900">
         <span aria-hidden className="text-xl leading-none">
-          {buildingArtUrl(def.id, building ? levelOf(building) : 1) ? <img src={buildingArtUrl(def.id, building ? levelOf(building) : 1)!} alt="" draggable={false} className="size-[1.2em]" /> : def.icon}
+          {buildingArtUrl(def.id, building ? levelOf(building) : 1) ? <img src={buildingArtUrl(def.id, building ? levelOf(building) : 1)!} alt="" draggable={false} className="size-[1.2em]" /> : buildingIcon(def, burialLook(state, content))}
         </span>
         {def.name}
       </p>
@@ -229,7 +229,7 @@ export function BuildingMenu(props: {
             onClick={onRemembered}
             className="game-btn flex items-center justify-between border-2 border-amber-950/60 bg-amber-100 px-3 py-1.5 text-sm font-semibold text-amber-950"
           >
-            <span>⚱️ The remembered</span>
+            <span>{burialIcon(burialLook(state, content))} The remembered</span>
             <span className="text-xs font-normal">{state.remembered.length}</span>
           </button>
         )}
@@ -322,7 +322,7 @@ export function DemolishDialog(props: {
       {def && preview && (
         <div className="mat-card space-y-3 p-5">
           <h2 id="demolish-title" className="font-display text-2xl text-amber-900">
-            {def.icon} Demolish {def.name}?
+            {buildingIcon(def, burialLook(state, content))} Demolish {def.name}?
           </h2>
           <p className="text-sm">
             You get back <span className="font-semibold">{costText(preview.refund)}</span>, half of what the last one cost.
@@ -378,7 +378,7 @@ export function UndoBar(props: { state: GameState; content: Content; onUndo: () 
       className="wood-panel pointer-events-auto flex items-center gap-2 rounded-xl border-2 border-amber-950/70 py-1.5 pr-1.5 pl-3 text-amber-50 shadow-lg"
     >
       <span className="text-sm">
-        Built {def.icon} <span className="font-display">{def.name}</span>
+        Built {buildingIcon(def, burialLook(state, content))} <span className="font-display">{def.name}</span>
       </span>
       <button
         type="button"
