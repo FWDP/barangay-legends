@@ -33,6 +33,8 @@ export const TRIGGERS = [
   "event-sickness",
   "bantayan-shore",
   "defense-rework",
+  "first-offer",
+  "salt-offer",
   "trade-offer",
   "refused-raids",
   "forest-restless",
@@ -123,6 +125,7 @@ export const GAME_TEXT = {
   forest: { label: ["balance"], tip: [], stage1: [], stage2: ["percent"], replant: ["cost"], replanting: ["time"], prank: ["building", "time"] },
   build: { showConnections: [], showConnectionsTip: [],
     tirahan: [], pagkain: [], depensa: [], pananampalataya: [], daan: [], iba: [], build: [], cancel: [], locked: ["villagers"], lockedDatu: ["level"], need: ["missing"],
+    lockedCoast: [], lockedShore: [], coastHint: ["building"], shoreHint: ["building"], showCoast: [], valued: [], valuedTip: [],
     recommended: [], more: [], new: [], details: [], kutaEffect: ["radius", "n"], watchEffect: ["radius"], staffed: ["staffed"], noPath: ["n"], perTile: [], daanName: [], daanText: ["percent"], layDaan: [], aboutLook: [],
   },
   death: {
@@ -155,7 +158,7 @@ export const GAME_TEXT = {
   day: { araw: ["n"], on: ["n"], day: [], night: [], tip: ["phase", "n"] },
   offer: {
     coastal: ["barangay", "give", "want"], upriver: ["barangay", "give", "want"], hungry: ["barangay", "give"], flooded: ["barangay", "give"], plain: ["barangay", "give", "want"],
-    deal: ["give", "want"], worth: ["give", "want"], worthTip: [], accept: [], decline: [], paused: [], pausedMore: ["barangay"], sailing: ["barangay"], docked: ["barangay", "time"],
+    deal: ["give", "want"], worth: ["give", "want"], worthTip: [], accept: [], decline: [], youGive: ["amount", "name", "have"], need: ["amount", "name"], paused: [], pausedMore: ["barangay"], sailing: ["barangay"], docked: ["barangay", "time"],
   },
   pills: {
     minimize: [], expand: [], raid: [], fire: [], hunger: [], typhoon: [], eclipse: [], tikbalang: [], sickness: [], overcrowded: [], damaged: [], pest: [], offer: [], choice: [],
@@ -201,6 +204,7 @@ export const GAME_TEXT = {
   },
   ruler: { label: [], woman: [], man: [], changeOnce: [], changed: [], honorific: ["term"], honorificTip: [] },
   gather: { food: [], foodLabel: ["amount"], wood: [], woodLabel: ["amount"] },
+  howToGet: { food: [], rice: [], wood: [], gold: [], salt: [], wine: [], empty: [] },
   pests: { rats: ["amount"], locustComing: ["time"], locust: ["time"], boar: [] },
   stockpile: { label: [], tip: ["cap"], over: ["cap", "percent"], stop: ["stop"], stopLabel: [] },
   healing: { inside: ["n"], others: ["n"], none: [], home: ["n"], badge: ["n"] },
@@ -300,6 +304,8 @@ const LINE_VARS: Record<TriggerId, string[]> = {
   "food-workers": ["farmers", "villagers"],
   "event-typhoon": ["seconds"],
   "event-sickness": [],
+  "first-offer": ["neighbor", "datu", "give", "want", "gold"],
+  "salt-offer": ["neighbor", "datu"],
   "trade-offer": ["neighbor", "datu"],
   "refused-raids": ["neighbor", "datu"],
   unlocked: ["building"],

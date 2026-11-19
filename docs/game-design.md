@@ -105,7 +105,21 @@ different form, and some (prestige and Dangal, export codes) isn't built yet.
   fish for hardwood, Palay and gold; upriver and inland ones gold, root crops and hardwood for
   Asin and fish; a barangay short of food (a poor season, or fields flooded by a typhoon on its
   island) asks for food. Offers come from real stocks, say why, and show their worth in gold;
-  Palay is valued highly and never offered below its value.
+  Palay is valued highly and never offered below its value. Learning to trade
+  (`rules.diplomacy.offers.learning`): a new game's first offers ask only for what the player has
+  plenty of (usually Pagkain or wood) and wait longer; the adviser explains the first one; early
+  offers never ask for a good the player can't produce yet. Coastal barangays bring Asin to a
+  barangay with no Asinan (soon after it starts fishing or its food spoils), less once it makes
+  its own, when inland barangays start asking for its salt (`offers.salt`). Asin is never needed
+  for anything essential: houses smoke and dry fish without it, more slowly. An offer shows what
+  the player gives and has; if they can't pay, Accept says what's missing. Tasks: accept a boat's
+  offer early on, then propose a trade yourself.
+- **Early clarity:** buildings that need the sea (the Asinan) show "🔒 Reach the coast" until a
+  cleared coast tile can be walked to from the Bahay ng Datu; tapping the card says what to do and
+  shows the coast (the Pangangalap may also stand on a river bank). The HUD shows every resource,
+  even at 0 (dimmed), and says how to get each. The Pagkain at Yaman tab lists everyday food
+  first, then work and storage, then the valued goods (Palay, Asin) after a "Mahahalagang
+  kalakal" divider (`order` and `menuGroup` in the building files).
 - **Renown:** Kabantugan raises the barangay through 20 levels with rewards and titles, on
   rising thresholds: each level needs a bigger step than the one before (`rules.kabantugan.levelAt`).
   Sources: every 10 villagers, Mga Gawain tasks, Aklat entries, Bahay ng Datu levels, a new

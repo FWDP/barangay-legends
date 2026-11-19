@@ -8,7 +8,9 @@ import { workforce } from "../engine/clearing";
 import { buildingWorkers, owned, rates, unreachableWorkplaces, type GameState } from "../engine/game";
 import { directionFrom, raidLanding } from "../engine/border";
 import { barangayCenter, isUnlocked, TILE_CODE } from "../engine/map";
-import { neighborDef } from "../engine/region";
+import { neighborDef, type TradeOffer } from "../engine/region";
+import { worthInGold } from "../engine/tradeOffers";
+import { RESOURCE_ICON } from "./format";
 import { riceFull } from "../engine/storage";
 import { landedUnwatched, landingKnown, shoreWatched } from "../engine/defense";
 import { storyText, type HistoryEntry } from "../engine/people";
@@ -203,7 +205,13 @@ export function observe(session: AdvisorSession, state: GameState, content: Cont
   const offer = state.region?.offer;
   if (offer) {
     const who = neighborDef(content, offer.from);
-    active.set("trade-offer", { neighbor: who?.name ?? offer.from, datu: who?.datu ?? "" });
+    const base = { neighbor: who?.name ?? offer.from, datu: who?.datu ?? "" };
+    // The first easy offers are explained; Asin for a barangay with no salt of its own, why it matters.
+    if (offer.lesson === "first" && (state.stats.offersAccepted ?? 0) === 0) {
+      const amount = (g: TradeOffer["give"]) => `${g.amount} ${RESOURCE_ICON[g.resource]}`;
+      active.set("first-offer", { ...base, give: amount(offer.give), want: amount(offer.want), gold: String(Math.max(1, Math.round(worthInGold(content, offer.give)))) });
+    } else if (offer.lesson === "salt") active.set("salt-offer", base);
+    else active.set("trade-offer", base);
   }
   // A neighbor just turned a trade down because of the player's raids.
   const sore = state.region?.neighbors.find((n) => n.lastRefusal && (n.lastRefusal.reason === "raids" || n.lastRefusal.reason === "embargo") && t - n.lastRefusal.at <= REFUSAL_FRESH_SECONDS);

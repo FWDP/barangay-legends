@@ -3,7 +3,7 @@
   "name": "Sagingan",
   "description": "A stand of starchy saging (bananas). Fresh fruit spoils unless it's eaten or preserved, and a typhoon can flatten the stand.",
   "icon": "🍌",
-  "order": 1.8,
+  "order": 2.03,
   "category": "pagkain",
   "cost": {
     "wood": 10

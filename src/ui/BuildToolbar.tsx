@@ -3,10 +3,10 @@
 // (phone), with a Build button. The row fades at its edges and shows arrows when it
 // overflows. Tabs badge newly unlocked buildings; the adviser's or task's pick glows.
 import { shoreWatched } from "../engine/defense";
-import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { RESOURCES, type BuildingDef, type Content } from "../engine/content";
 import { asCost, buildingCost, canAfford, owned, roadCost, staffedBuildings, unreachableWorkplaces, type GameState } from "../engine/game";
-import { isUnlocked } from "../engine/map";
+import { isUnlocked, siteLock, type SiteLock } from "../engine/map";
 import { datuLevelNeeded, maxDatuLevel, nextDatuLevel } from "../engine/datu";
 import { datuHouseUrl, houseStyleFor } from "./datuHouseArt";
 import { DAAN, DATU, itemsIn, missingFor, tabOfItem, tabsWithNew, unlockedIds, visibleTabs, type BuildTab } from "./buildMenu";
@@ -68,6 +68,10 @@ interface Item {
   count: number | null;
   unlocked: boolean;
   lockText: string;
+  /** Unlocked by villagers, but there's nowhere by the sea to put it yet (map.siteLock): tapping explains and shows the coast. */
+  siteLock?: SiteLock;
+  /** The labelled group it starts, if it is the first card of one (content menuGroup). */
+  groupStart?: string;
   affordable: boolean;
   costLine: ReactNode;
   missing: string;
@@ -118,8 +122,10 @@ export function BuildToolbar(props: {
   /** "Show connections" (the footprints on buildings joined by a Daan), in the Daan at Tulay tab. */
   showConnections?: boolean;
   onShowConnections?: (on: boolean) => void;
+  /** Pan the map to the coast (a locked building that needs the sea was tapped). */
+  onShowCoast?: () => void;
 }) {
-  const { state, content, game, lang, selected, onSelect, roadActive, onRoad, recommend, onUpgradeDatu, defenseMap = false, onDefenseMap, showConnections = false, onShowConnections } = props;
+  const { state, content, game, lang, selected, onSelect, roadActive, onRoad, recommend, onUpgradeDatu, defenseMap = false, onDefenseMap, showConnections = false, onShowConnections, onShowCoast } = props;
   const t = game.build;
   const tabs = visibleTabs(content);
   const [tab, setTabState] = useState<BuildTab>(() => {
@@ -207,8 +213,12 @@ export function BuildToolbar(props: {
     const b = content.buildings.find((d) => d.id === id)!;
     const count = owned(state, b.id);
     const cost = buildingCost(content, b, count);
-    const open = isUnlocked(state, b);
+    // By the sea: locked (once the villagers are there) until a coast tile can be walked to.
+    const site = isUnlocked(state, b) ? siteLock(state, content, b) : null;
+    const open = isUnlocked(state, b) && !site;
     const missing = missingFor(state, content, b, count);
+    const groupAt = inTab.indexOf(id);
+    const prev = groupAt > 0 ? content.buildings.find((d) => d.id === inTab[groupAt - 1]) : undefined;
     const bonus = bonusRuleText(b, content);
     const grove = groveRuleText(b, content);
     return {
@@ -219,11 +229,23 @@ export function BuildToolbar(props: {
       name: b.name,
       count,
       unlocked: open,
-      lockText: b.unlock.datuLevel !== undefined ? fill(t.lockedDatu[lang], { level: b.unlock.datuLevel }) : fill(t.locked[lang], { villagers: b.unlock.villagers ?? 0 }),
+      lockText: site
+        ? (site === "coast" ? t.lockedCoast : t.lockedShore)[lang]
+        : b.unlock.datuLevel !== undefined
+          ? fill(t.lockedDatu[lang], { level: b.unlock.datuLevel })
+          : fill(t.locked[lang], { villagers: b.unlock.villagers ?? 0 }),
+      ...(site ? { siteLock: site } : {}),
+      ...(b.menuGroup && b.menuGroup !== prev?.menuGroup ? { groupStart: b.menuGroup } : {}),
       affordable: open && canAfford(state, cost),
       costLine: <CostLine cost={cost} have={state.resources} />,
       missing: Object.keys(missing).length ? costText(missing) : "",
-      details: [b.description, effectText(b, content, game, lang), bonus && `✨ ${bonus}`, grove].filter((x): x is string => !!x),
+      details: [
+        site ? fill((site === "coast" ? t.coastHint : t.shoreHint)[lang], { building: b.name }) : "",
+        b.description,
+        effectText(b, content, game, lang),
+        bonus && `✨ ${bonus}`,
+        grove,
+      ].filter((x): x is string => !!x),
       status: [b.id in staffed ? `× ${count} · ${fill(t.staffed[lang], { staffed: staffed[b.id] })}` : "", noPath[b.id] ? fill(t.noPath[lang], { n: noPath[b.id] }) : ""].filter(Boolean),
       recommended: open && recommend.has(id),
       selected: selected === id,
@@ -291,6 +313,11 @@ export function BuildToolbar(props: {
   const scrollBy = (dir: number) => row.current?.scrollBy({ left: dir * Math.max(120, row.current.clientWidth * 0.7), behavior: "smooth" });
 
   const items = inTab.map(itemFor);
+  // A labelled group's words (ui.json build: "valued" → valued, valuedTip).
+  const groupText = (group: string, part: "label" | "tip") => {
+    const key = part === "label" ? group : `${group}Tip`;
+    return (t as Record<string, Record<Lang, string> | undefined>)[key]?.[lang] ?? group;
+  };
   const shown = details ? itemFor(details.id) : null;
 
   return (
@@ -327,83 +354,91 @@ export function BuildToolbar(props: {
           className="flex snap-x snap-proximity scroll-px-2 gap-1.5 overflow-x-auto scroll-smooth px-2 pt-2 pb-1 [scrollbar-width:none] sm:gap-2"
         >
           {items.map((it, i) => (
-            <li key={it.id} className={`shrink-0 snap-start ${i === 0 ? "ml-auto" : ""} ${i === items.length - 1 && !(tab === "depensa" && onDefenseMap) && !(tab === "daan" && onShowConnections) ? "mr-auto" : ""}`}>
-              <button
-                type="button"
-                data-build-card
-                disabled={!it.affordable && !it.selected && it.id !== DATU}
-                draggable={it.affordable && it.id !== DAAN}
-                aria-pressed={it.selected}
-                aria-label={
-                  !it.unlocked
-                    ? `${it.name}: ${it.lockText}`
-                    : `${it.selected ? "Placing" : "Build"} ${it.name}${it.count !== null ? `, you have ${it.count}` : ""}${it.missing ? `. ${fill(t.need[lang], { missing: it.missing })}` : ""}`
-                }
-                onClick={(e) => {
-                  if (pressed.current) {
+            <Fragment key={it.id}>
+              {it.groupStart && <GroupDivider label={groupText(it.groupStart, "label")} tip={groupText(it.groupStart, "tip")} />}
+              <li className={`shrink-0 snap-start ${i === 0 ? "ml-auto" : ""} ${i === items.length - 1 && !(tab === "depensa" && onDefenseMap) && !(tab === "daan" && onShowConnections) ? "mr-auto" : ""}`}>
+                <button
+                  type="button"
+                  data-build-card
+                  disabled={!it.affordable && !it.selected && it.id !== DATU && !it.siteLock}
+                  draggable={it.affordable && it.id !== DAAN}
+                  aria-pressed={it.selected}
+                  aria-label={
+                    !it.unlocked
+                      ? `${it.name}: ${it.lockText}`
+                      : `${it.selected ? "Placing" : "Build"} ${it.name}${it.count !== null ? `, you have ${it.count}` : ""}${it.missing ? `. ${fill(t.need[lang], { missing: it.missing })}` : ""}`
+                  }
+                  onClick={(e) => {
+                    if (pressed.current) {
+                      pressed.current = false;
+                      return;
+                    }
+                    // The house is raised from its details, never by a stray tap. A building waiting
+                    // for the coast explains what to do and shows where the sea is.
+                    if (it.id === DATU) openDetails(it.id, e.currentTarget);
+                    else if (it.siteLock) {
+                      openDetails(it.id, e.currentTarget);
+                      onShowCoast?.();
+                    }
+                    else {
+                      setDetails(null);
+                      pick(it);
+                    }
+                  }}
+                  onPointerDown={(e) => {
+                    if (e.pointerType !== "touch") return;
+                    const el = e.currentTarget;
                     pressed.current = false;
-                    return;
-                  }
-                  // The house is raised from its details, never by a stray tap.
-                  if (it.id === DATU) openDetails(it.id, e.currentTarget);
-                  else {
+                    clearTimers();
+                    pressTimer.current = setTimeout(() => {
+                      pressed.current = true;
+                      openDetails(it.id, el);
+                    }, LONG_PRESS_MS);
+                  }}
+                  onPointerUp={() => pressTimer.current && clearTimeout(pressTimer.current)}
+                  onPointerCancel={() => pressTimer.current && clearTimeout(pressTimer.current)}
+                  onContextMenu={(e) => e.preventDefault()}
+                  onMouseEnter={(e) => {
+                    const el = e.currentTarget;
+                    clearTimers();
+                    hoverTimer.current = setTimeout(() => openDetails(it.id, el), HOVER_MS);
+                  }}
+                  onMouseLeave={() => {
+                    clearTimers();
+                    hoverTimer.current = setTimeout(() => setDetails((d) => (d?.id === it.id ? null : d)), 250);
+                  }}
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData("text/plain", it.id);
+                    e.dataTransfer.effectAllowed = "copy";
                     setDetails(null);
-                    pick(it);
-                  }
-                }}
-                onPointerDown={(e) => {
-                  if (e.pointerType !== "touch") return;
-                  const el = e.currentTarget;
-                  pressed.current = false;
-                  clearTimers();
-                  pressTimer.current = setTimeout(() => {
-                    pressed.current = true;
-                    openDetails(it.id, el);
-                  }, LONG_PRESS_MS);
-                }}
-                onPointerUp={() => pressTimer.current && clearTimeout(pressTimer.current)}
-                onPointerCancel={() => pressTimer.current && clearTimeout(pressTimer.current)}
-                onContextMenu={(e) => e.preventDefault()}
-                onMouseEnter={(e) => {
-                  const el = e.currentTarget;
-                  clearTimers();
-                  hoverTimer.current = setTimeout(() => openDetails(it.id, el), HOVER_MS);
-                }}
-                onMouseLeave={() => {
-                  clearTimers();
-                  hoverTimer.current = setTimeout(() => setDetails((d) => (d?.id === it.id ? null : d)), 250);
-                }}
-                onDragStart={(e) => {
-                  e.dataTransfer.setData("text/plain", it.id);
-                  e.dataTransfer.effectAllowed = "copy";
-                  setDetails(null);
-                  onSelect(it.id);
-                }}
-                onDragEnd={() => onSelect(null)}
-                className={`game-btn mat-card relative flex h-full w-[5rem] flex-col items-center gap-0.5 border-2 px-1 pt-1.5 pb-1 text-stone-800 shadow-md select-none [-webkit-touch-callout:none] disabled:cursor-not-allowed sm:w-[6.6rem] ${
-                  it.selected ? "-translate-y-1 border-amber-500 ring-4 ring-amber-300" : it.recommended ? "border-yellow-400 shadow-[0_0_12px_3px_rgba(250,204,21,0.75)]" : "border-amber-900/70"
-                } ${it.affordable ? "cursor-grab active:cursor-grabbing" : ""} ${it.unlocked && !it.affordable && !it.selected ? "opacity-75" : ""}`}
-              >
-                {it.recommended && !it.selected && (
-                  <span aria-hidden title={t.recommended[lang]} className="absolute -top-1.5 -right-1.5 text-sm">
-                    ✨
-                  </span>
-                )}
-                <span className={`text-3xl leading-none sm:text-4xl ${it.affordable || it.selected ? "" : "opacity-50 grayscale"}`} aria-hidden>
-                  {it.iconUrl ? <img src={it.iconUrl} alt="" draggable={false} className="size-[1.25em]" /> : it.icon}
-                </span>
-                <span className="text-center font-display text-[12px] leading-tight text-amber-950 sm:text-sm">{it.name}</span>
-                {it.count !== null && <span className="text-[10px] leading-tight text-stone-600 sm:text-xs">× {it.count}</span>}
-                {it.datuLevel !== undefined && <span className="text-[10px] leading-tight text-stone-600 sm:text-xs">Lv {it.datuLevel}</span>}
-                <span
-                  className={`mt-auto w-full rounded-md px-1 py-0.5 text-center text-[11px] leading-tight font-semibold sm:text-xs ${
-                    !it.unlocked ? "bg-stone-700 text-stone-100" : it.affordable ? "bg-green-700 text-white [&_.text-red-700]:text-white" : "bg-stone-200 text-stone-600"
-                  }`}
+                    onSelect(it.id);
+                  }}
+                  onDragEnd={() => onSelect(null)}
+                  className={`game-btn mat-card relative flex h-full w-[5rem] flex-col items-center gap-0.5 border-2 px-1 pt-1.5 pb-1 text-stone-800 shadow-md select-none [-webkit-touch-callout:none] disabled:cursor-not-allowed sm:w-[6.6rem] ${
+                    it.selected ? "-translate-y-1 border-amber-500 ring-4 ring-amber-300" : it.recommended ? "border-yellow-400 shadow-[0_0_12px_3px_rgba(250,204,21,0.75)]" : "border-amber-900/70"
+                  } ${it.affordable ? "cursor-grab active:cursor-grabbing" : ""} ${it.unlocked && !it.affordable && !it.selected ? "opacity-75" : ""}`}
                 >
-                  {it.unlocked ? it.costLine : it.lockText}
-                </span>
-              </button>
-            </li>
+                  {it.recommended && !it.selected && (
+                    <span aria-hidden title={t.recommended[lang]} className="absolute -top-1.5 -right-1.5 text-sm">
+                      ✨
+                    </span>
+                  )}
+                  <span className={`text-3xl leading-none sm:text-4xl ${it.affordable || it.selected ? "" : "opacity-50 grayscale"}`} aria-hidden>
+                    {it.iconUrl ? <img src={it.iconUrl} alt="" draggable={false} className="size-[1.25em]" /> : it.icon}
+                  </span>
+                  <span className="text-center font-display text-[12px] leading-tight text-amber-950 sm:text-sm">{it.name}</span>
+                  {it.count !== null && <span className="text-[10px] leading-tight text-stone-600 sm:text-xs">× {it.count}</span>}
+                  {it.datuLevel !== undefined && <span className="text-[10px] leading-tight text-stone-600 sm:text-xs">Lv {it.datuLevel}</span>}
+                  <span
+                    className={`mt-auto w-full rounded-md px-1 py-0.5 text-center text-[11px] leading-tight font-semibold sm:text-xs ${
+                      !it.unlocked ? "bg-stone-700 text-stone-100" : it.affordable ? "bg-green-700 text-white [&_.text-red-700]:text-white" : "bg-stone-200 text-stone-600"
+                    }`}
+                  >
+                    {it.unlocked ? it.costLine : it.lockText}
+                  </span>
+                </button>
+              </li>
+            </Fragment>
           ))}
           {/* The Depensa tab's Defense map: every landing point and the Kutas' cover. */}
           {tab === "daan" && onShowConnections && (
@@ -493,6 +528,11 @@ export function BuildToolbar(props: {
             ))}
           </ul>
           {shown.recommended && <p className="mt-1 text-xs font-semibold text-yellow-700">✨ {t.recommended[lang]}</p>}
+          {shown.siteLock && onShowCoast && (
+            <button type="button" onClick={onShowCoast} className="game-btn mt-2 border-2 border-sky-950 bg-sky-700 px-3 py-1 text-xs font-semibold text-white">
+              🌊 {t.showCoast[lang]}
+            </button>
+          )}
           <div className="mt-2 flex items-center justify-between gap-2">
             <span className="text-xs font-semibold">{shown.unlocked ? shown.costLine : shown.lockText}</span>
             <button
@@ -511,5 +551,37 @@ export function BuildToolbar(props: {
         </div>
       )}
     </nav>
+  );
+}
+
+/**
+ * A small divider before a labelled group of cards ("Mahahalagang kalakal", the valued goods),
+ * with its reason on hover or tap.
+ */
+function GroupDivider({ label, tip }: { label: string; tip: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <li className="relative flex shrink-0 items-stretch" data-build-group>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-label={`${label}: ${tip}`}
+        title={tip}
+        onClick={() => setOpen((o) => !o)}
+        onBlur={() => setOpen(false)}
+        className="flex w-6 cursor-help flex-col items-center justify-center gap-1 rounded-md border-l-2 border-dashed border-amber-900/60 bg-amber-900/15 px-0.5 sm:w-7"
+      >
+        <span className="text-[11px] leading-none text-amber-950" aria-hidden>
+          ⓘ
+        </span>
+        <span className="font-display text-[10px] leading-tight whitespace-nowrap text-amber-950 [writing-mode:vertical-rl] rotate-180 sm:text-[11px]">{label}</span>
+      </button>
+      {open && (
+        <span role="tooltip" className="mat-card fixed inset-x-2 bottom-36 z-50 rounded-xl border-2 border-amber-900/70 p-3 text-xs leading-snug text-stone-800 shadow-2xl sm:inset-x-auto sm:w-80">
+          <b className="block font-display text-sm text-amber-900">{label}</b>
+          {tip}
+        </span>
+      )}
+    </li>
   );
 }

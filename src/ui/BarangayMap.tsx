@@ -1,3 +1,4 @@
+import { offerSetOut } from "../engine/tradeOffers";
 import { PADDY_STYLE } from "./paddy";
 import { Bolo } from "./Bolo";
 import { closesPlaza, entrancesBlockedBy, wouldHaveEntrance } from "../engine/doors";
@@ -158,6 +159,8 @@ export function BarangayMap(props: {
   onSelectArea?: (tiles: Point[]) => void;
   /** A building whose menu is open: a Kuta shows its defense radius. */
   focus?: Point | null;
+  /** Pan to this tile (e.g. the coast, from a locked Asinan card); a new `n` pans again. */
+  lookAt?: { at: Point; n: number } | null;
   /** Trade is paused for a raid: the bangka waits offshore and can't be tapped. */
   tradeHeld?: boolean;
   /** The player tapped the Sarimanok crossing the sky. */
@@ -184,7 +187,7 @@ export function BarangayMap(props: {
   /** A "No path" building's menu is open: where its way breaks (engine/routeBreak.ts), and the label. */
   routeBreak?: { at: Point; from: Point; label: string } | null;
 }) {
-  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onVillager, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null, selection = [], onSelectArea, focus = null, tradeHeld = false, onSarimanok, ritual = null, visit = null, blockedLabel, plazaLabel, wholeMap = 0, overlay, defense = null, showConnections = false, routeBreak = null } = props;
+  const { state, content, placing, moveFrom = null, onPlace, onTapTile, onVillager, onBuildingMenu, onSpirit, scenic = false, clash = null, onBoat, road = null, selection = [], onSelectArea, focus = null, tradeHeld = false, onSarimanok, ritual = null, visit = null, blockedLabel, plazaLabel, wholeMap = 0, overlay, defense = null, showConnections = false, routeBreak = null, lookAt = null } = props;
   // Ladders are pulled up at night and while raiders are coming (W.7): the kubo art shows it.
   const laddersUp = isNightAt(content, state.time) || !!state.region?.incomingRaid;
   const footprints = connectionMarksShown({ setting: showConnections, roadTool: !!road, placing: !!placing });
@@ -256,6 +259,12 @@ export function BarangayMap(props: {
       setCamRaw((c) => (saved && !c ? clampCamera(saved, map) : cameraOn(map.plaza, view, c?.tile)));
     }
   }, [plazaKey, view.w > 0, scenic && view.w >= 1024]);
+
+  // Asked to look somewhere (the coast): centre it, keeping the zoom.
+  useEffect(() => {
+    if (!lookAt || view.w <= 0) return;
+    setCamRaw((c) => clampCamera(cameraOn(lookAt.at, view, c?.tile), map));
+  }, [lookAt?.n]);
 
   // The whole map at once (smaller tiles than zooming allows; the next pan or zoom returns to normal).
   useEffect(() => {
@@ -876,7 +885,7 @@ export function BarangayMap(props: {
   const path = useMemo(() => riverPath(map), [map]);
   const offer = state.region?.offer ?? null;
   // Only while its offer is still open: an answered or expired offer leaves no label.
-  const docked = offer && offer.expiresAt > state.time && !tradeHeld && !scenic && onBoat && path.length > 2 && (reducedMotion || state.time - (offer.expiresAt - content.rules.diplomacy.offers.expireSeconds) >= SAIL_SECONDS);
+  const docked = offer && offer.expiresAt > state.time && !tradeHeld && !scenic && onBoat && path.length > 2 && (reducedMotion || state.time - offerSetOut(content, offer) >= SAIL_SECONDS);
   const dock = docked ? { p: dockPoint(path, map.plaza), name: content.neighbors.find((n) => n.id === offer.from)?.name ?? offer.from } : null;
   // While trade is paused, a label where the bangka waits offshore. If it can't sit clear of the
   // controls it's left out: the offer bar at the top says the same thing.

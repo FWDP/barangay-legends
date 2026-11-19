@@ -1,6 +1,6 @@
 // A balance simulation: plays the engine for a number of game days with a simple, reasonable
 // strategy (houses and food workplaces to keep Pagkain positive, a few Palayan for Palay, Kamalig, clearing land, warriors within the
-// cap, a trade now and then) and records the barangay and its AI rivals once per day. Used by
+// cap, a trade now and then, offers it can pay for) and records the barangay and its AI rivals once per day. Used by
 // `npm run simulate` (scripts/simulate.ts) to tune content/rules.json, and by a test that checks
 // the balance targets. Pure and deterministic: the same seed gives the same run.
 import { RESOURCES, type Content, type Resource } from "./content";
@@ -22,6 +22,7 @@ import { offlineProgress } from "./offline";
 import { dayAt } from "./daynight";
 import { nextUpgrade, upgradeCost } from "./upgrades";
 import { softCap } from "./stockpile";
+import { offerShortfall } from "./tradeOffers";
 
 export interface DayRow {
   day: number;
@@ -168,6 +169,12 @@ export function botDecide(state: GameState, content: Content): GameState {
       const next = run({ type: "choose", option: o.id });
       if (next !== state) return next;
     }
+  }
+  // A neighbor's offer it can pay for, as a player following the tasks would take it.
+  const offer = state.region?.offer;
+  if (offer && !offerShortfall(state, offer)) {
+    const took = run({ type: "acceptOffer" });
+    if (took !== state) return took;
   }
   const steps: (() => GameState | null)[] = [
     () => {

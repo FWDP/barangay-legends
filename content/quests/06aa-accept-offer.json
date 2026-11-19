@@ -1,0 +1,17 @@
+{
+  "id": "accept-offer",
+  "text": {
+    "en": "Accept your first trade: when a neighbor's boat docks with an offer, open it and tap Accept",
+    "fil": "Tanggapin ang iyong unang palitan: kapag dumaong ang bangka ng kapitbahay na may alok, buksan ito at pindutin ang Tanggapin"
+  },
+  "condition": {
+    "type": "offersAccepted",
+    "count": 1
+  },
+  "reward": {
+    "resources": {
+      "wood": 20
+    }
+  },
+  "next": "first-dambana"
+}

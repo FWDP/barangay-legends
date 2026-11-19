@@ -2,7 +2,7 @@
   "id": "balangay-dock",
   "name": "Balangay Dock",
   "category": "pagkain",
-  "order": 7.5,
+  "order": 2.4,
   "description": "A landing for balangay, the plank boats that carry the barangay's people across the sea to other islands.",
   "icon": "⛵",
   "cost": {

@@ -562,6 +562,34 @@
     "showConnectionsTip": {
       "en": "Footprints on buildings joined to the Bahay ng Datu by a Daan. Always shown while laying Daan or placing a building.",
       "fil": "Mga bakas ng paa sa mga gusaling nakaugnay sa Bahay ng Datu sa pamamagitan ng Daan. Laging nakikita habang naglalagay ng Daan o gusali."
+    },
+    "lockedCoast": {
+      "en": "🔒 Reach the coast",
+      "fil": "🔒 Abutin ang baybayin"
+    },
+    "lockedShore": {
+      "en": "🔒 Reach the coast or a river bank",
+      "fil": "🔒 Abutin ang baybayin o pampang ng ilog"
+    },
+    "coastHint": {
+      "en": "{building} must stand beside the sea. Clear the forest toward the coast and lay a Daan, so villagers can walk there from the Bahay ng Datu.",
+      "fil": "Dapat nakatayo ang {building} sa tabi ng dagat. Hawanin ang gubat patungo sa baybayin at maglatag ng Daan, upang malakad ito ng mga taganayon mula sa Bahay ng Datu."
+    },
+    "shoreHint": {
+      "en": "{building} must stand beside the sea or a river. Clear land along the river or toward the coast and lay a Daan, so villagers can walk there from the Bahay ng Datu.",
+      "fil": "Dapat nakatayo ang {building} sa tabi ng dagat o ng ilog. Hawanin ang lupa sa tabi ng ilog o patungo sa baybayin at maglatag ng Daan, upang malakad ito ng mga taganayon mula sa Bahay ng Datu."
+    },
+    "showCoast": {
+      "en": "Show me the coast",
+      "fil": "Ipakita ang baybayin"
+    },
+    "valued": {
+      "en": "Mahahalagang kalakal · valued goods",
+      "fil": "Mahahalagang kalakal"
+    },
+    "valuedTip": {
+      "en": "Palay and Asin were valued goods. Rice was eaten mostly by the datu's household and at feasts; salt was made only on the coast and traded inland. Everyday food came from root crops, bananas, coconuts, fish and the hunt.",
+      "fil": "Mahahalagang kalakal ang Palay at Asin. Kinakain ang bigas lalo na ng sambahayan ng datu at sa mga pista; sa baybayin lamang gumagawa ng asin at ipinagpapalit ito sa looban. Ang pang-araw-araw na pagkain ay mula sa lamang-ugat, saging, niyog, isda at pangangaso."
     }
   },
   "death": {
@@ -2012,6 +2040,36 @@
       "fil": "Mangahoy (+{amount})"
     }
   },
+  "howToGet": {
+    "food": {
+      "en": "Pagkain: forage by hand, or build food workplaces such as a Gabihan, Kaingin or Pangisdaan.",
+      "fil": "Pagkain: mangalap gamit ang kamay, o magtayo ng pagkukunan ng pagkain gaya ng Gabihan, Kaingin o Pangisdaan."
+    },
+    "rice": {
+      "en": "Palay: plant a Palayan. Rice was valued: eaten mostly by the datu's household and at feasts.",
+      "fil": "Palay: magtanim ng Palayan. Mahalaga ang bigas: kinakain lalo na ng sambahayan ng datu at sa mga pista."
+    },
+    "wood": {
+      "en": "Wood: gather it by hand, or build a Woodcutter Camp by the forest.",
+      "fil": "Kahoy: mangalap gamit ang kamay, o magtayo ng Woodcutter Camp sa tabi ng gubat."
+    },
+    "gold": {
+      "en": "Gold: a Pangisdaan's fishers bring in a little, and neighbors trade it.",
+      "fil": "Ginto: may kaunting dala ang mga mangingisda ng Pangisdaan, at ipinagpapalit ito ng mga kapitbahay."
+    },
+    "salt": {
+      "en": "Asin: build an Asinan on the coast, or trade with barangays by the sea. Salt helps preserve fish; houses also smoke and dry it without salt, more slowly.",
+      "fil": "Asin: magtayo ng Asinan sa baybayin, o makipagpalitan sa mga barangay sa tabi ng dagat. Nakatutulong ang asin sa pagpreserba ng isda; nagpapausok at nagpapatuyo rin ang mga bahay nang walang asin, mas mabagal nga lamang."
+    },
+    "wine": {
+      "en": "Tapay (rice wine): brew it from Palay in the Pista panel at the Bahay ng Datu.",
+      "fil": "Tapay (alak na bigas): gumawa mula sa Palay sa panel ng Pista sa Bahay ng Datu."
+    },
+    "empty": {
+      "en": "You have none yet.",
+      "fil": "Wala ka pa nito."
+    }
+  },
   "ruler": {
     "label": {
       "en": "Your ruler",
@@ -2368,6 +2426,14 @@
     "docked": {
       "en": "A bangka from {barangay} has docked. Tap the boat, or here, to trade · {time}",
       "fil": "Dumaong ang bangka mula sa {barangay}. Pindutin ang bangka, o dito, para makipagkalakalan · {time}"
+    },
+    "youGive": {
+      "en": "You give {amount} {name} · you have {have}",
+      "fil": "Ibibigay mo: {amount} {name} · mayroon ka: {have}"
+    },
+    "need": {
+      "en": "Need {amount} more {name}",
+      "fil": "Kulang pa ng {amount} {name}"
     }
   },
   "tradeGoods": {

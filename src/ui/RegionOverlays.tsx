@@ -5,7 +5,7 @@ import { neighborDef, type Path, type Report } from "../engine/region";
 import { clock } from "./EventBanners";
 import { costText, formatDuration, RESOURCE_ICON } from "./format";
 import { fill, type GameText } from "./uiContent";
-import { offerText } from "./tradeText";
+import { offerPayment, offerText } from "./tradeText";
 import type { Lang } from "./settings";
 
 const goods = (g?: Partial<Record<Resource, number>>) =>
@@ -214,7 +214,6 @@ export function OfferBar(props: {
   if (!offer) return null;
   const t = game.offer;
   const name = neighborDef(content, offer.from)?.name ?? offer.from;
-  const canPay = state.resources[offer.want.resource] >= offer.want.amount;
   if (held) {
     return (
       <div role="status" className="wood-panel pointer-events-auto flex max-w-full items-center gap-2 rounded-xl border-2 border-red-900 px-3 py-1.5 text-xs leading-tight text-amber-50 shadow-lg sm:text-sm">
@@ -242,6 +241,7 @@ export function OfferBar(props: {
     );
   }
   const text = offerText(offer, content, game, lang, name);
+  const pay = offerPayment(offer, state, game, lang);
   return (
     <div role="status" className="wood-panel pointer-events-auto flex max-w-full flex-wrap items-center gap-2 rounded-xl border-2 border-amber-950/70 px-3 py-1.5 text-amber-50 shadow-lg">
       <span className="text-xl leading-none" aria-hidden>
@@ -252,13 +252,19 @@ export function OfferBar(props: {
         <span className="block font-semibold">
           {text.deal} · {clock(offer.expiresAt - state.time)}
         </span>
+        <span className={`block text-xs font-semibold ${pay.short ? "text-red-300" : "text-amber-100"}`}>{pay.youGive}</span>
         <span className="block text-[11px] text-amber-100/80" title={t.worthTip[lang]}>
           🪙 {text.worth}
         </span>
       </span>
       <span className="ml-auto flex gap-2">
-        <button type="button" disabled={!canPay} onClick={() => dispatch({ type: "acceptOffer" })} className="game-btn border-2 border-green-950 bg-green-700 px-2 py-1 text-xs font-semibold text-white disabled:opacity-50">
-          {t.accept[lang]}
+        <button
+          type="button"
+          aria-disabled={pay.short}
+          onClick={() => !pay.short && dispatch({ type: "acceptOffer" })}
+          className={`game-btn border-2 px-2 py-1 text-xs font-semibold ${pay.short ? "cursor-not-allowed border-red-950 bg-stone-600 text-red-100" : "border-green-950 bg-green-700 text-white"}`}
+        >
+          {pay.accept}
         </button>
         <button type="button" onClick={() => dispatch({ type: "declineOffer" })} className="game-btn border-2 border-amber-950/60 bg-amber-200 px-2 py-1 text-xs font-semibold text-amber-950">
           {t.decline[lang]}

@@ -3,7 +3,8 @@
   "name": "Palayan",
   "description": "A rice field worked by two villagers. Palay is a prestige grain: for offerings, gifts, rice wine, feasts and the datu's household. Villagers eat it only when there's no other food.",
   "icon": "🌾",
-  "order": 2,
+  "order": 2.8,
+  "menuGroup": "valued",
   "category": "pagkain",
   "cost": {
     "wood": 15

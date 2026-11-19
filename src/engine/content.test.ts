@@ -17,11 +17,13 @@ const good = {
 describe("content", () => {
   it("loads every building file in content/ and passes the schema check", () => {
     const content = loadContent();
-    // In menu order ("order" in each file), not file-name order.
+    // In menu order ("order" in each file), not file-name order: in Pagkain at Yaman, everyday
+    // food first, then work and storage, then the valued goods (Palay, Asin).
     expect(content.buildings.map((b) => b.id)).toEqual([
-      "bahay-kubo", "gabihan", "kaingin", "sagingan", "niyugan", "palayan", "lumbia", "woodcutter-camp", "babaylan-hut", "dambana", "libingan", "kamalig",
-      "tulay", "bantayan", "suyak", "kuta", "fishing-dock", "pangangalap", "pangangaso", "babuyan", "balangay-dock", "asinan", "baklad",
+      "bahay-kubo", "gabihan", "kaingin", "sagingan", "niyugan", "lumbia", "pangangalap", "fishing-dock", "baklad", "pangangaso", "babuyan",
+      "woodcutter-camp", "kamalig", "balangay-dock", "palayan", "asinan", "babaylan-hut", "dambana", "libingan", "tulay", "bantayan", "suyak", "kuta",
     ]);
+    expect(content.buildings.filter((b) => b.menuGroup === "valued").map((b) => b.id)).toEqual(["palayan", "asinan"]);
   });
 
   it("matches the Week 1 numbers in docs/game-design.md", () => {

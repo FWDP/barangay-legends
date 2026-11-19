@@ -3,7 +3,7 @@
   "name": "Woodcutter Camp",
   "description": "A forest clearing where two villagers cut timber and bamboo.",
   "icon": "🪵",
-  "order": 3,
+  "order": 2.2,
   "category": "pagkain",
   "cost": {
     "food": 10

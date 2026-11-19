@@ -11,11 +11,11 @@ import type { RegionState } from "./region";
 
 export const content = loadContent();
 
-const ASCII: Record<string, string> = { ".": TILE_CODE.cleared, P: TILE_CODE.cleared, "~": TILE_CODE.river, T: TILE_CODE.forest, "=": TILE_CODE.bridge, B: TILE_CODE.balete, "#": TILE_CODE.daan };
+const ASCII: Record<string, string> = { ".": TILE_CODE.cleared, P: TILE_CODE.cleared, "~": TILE_CODE.river, T: TILE_CODE.forest, "=": TILE_CODE.bridge, B: TILE_CODE.balete, "#": TILE_CODE.daan, s: TILE_CODE.sea };
 
 /**
  * A map drawn as text, one string per row:
- *   . cleared   P plaza (cleared)   ~ river   T forest   = bridge   B balete   # daan
+ *   . cleared   P plaza (cleared)   ~ river   T forest   = bridge   B balete   # daan   s sea
  */
 export function mapFrom(rows: string[], seed = 1): MapState {
   let plaza: Point | null = null;

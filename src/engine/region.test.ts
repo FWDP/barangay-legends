@@ -377,8 +377,10 @@ describe("trade offers", () => {
     expect(accepted.resources[offer.give.resource]).toBe(before + offer.give.amount);
     expect(accepted.region!.offer).toBeNull();
     expect(accepted.region!.paths).toContain("trade");
-    // Left alone, it expires (and a new one may follow).
-    s = tick(s, offers, d.offers.expireSeconds + 1);
+    // Left alone, it expires (and a new one may follow). The first offers of a game wait longer
+    // (learning.expireSeconds), so a new player has time to read them.
+    expect(offer.expiresAt - Math.floor(s.time)).toBeLessThanOrEqual(Math.max(d.offers.expireSeconds, d.offers.learning.expireSeconds));
+    s = tick(s, offers, offer.expiresAt - s.time + 1);
     expect(s.region!.offer?.expiresAt ?? 0).not.toBe(offer.expiresAt);
   });
 

@@ -3,7 +3,7 @@
   "name": "Pangisdaan",
   "description": "A fishing landing on the riverbank. Three villagers fish with traps (bubo) and nets from a bangka: fresh fish for the barangay, and some to trade for gold. Fishing the same waters too hard lowers the catch for a while.",
   "icon": "🐟",
-  "order": 7,
+  "order": 2.07,
   "category": "pagkain",
   "cost": {
     "wood": 40,

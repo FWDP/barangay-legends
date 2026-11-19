@@ -93,8 +93,12 @@ describe("task conditions", () => {
 
   it("traded, raids defended and tributaries come from the region", () => {
     const s = fresh({ region: createRegion(calm, 0, 7) });
+    // Proposing a trade (a neighbor took it) and accepting a boat's offer are separate tasks.
     expect(taskMet(s, content, quest("first-trade"))).toBe(false);
-    expect(taskMet({ ...s, region: { ...s.region!, paths: ["trade"] } }, content, quest("first-trade"))).toBe(true);
+    expect(taskMet({ ...s, stats: { ...s.stats, offersAccepted: 1 } }, content, quest("first-trade"))).toBe(false);
+    expect(taskMet({ ...s, stats: { ...s.stats, trades: 1 } }, content, quest("first-trade"))).toBe(true);
+    expect(taskMet(s, content, quest("accept-offer"))).toBe(false);
+    expect(taskMet({ ...s, stats: { ...s.stats, offersAccepted: 1 } }, content, quest("accept-offer"))).toBe(true);
     expect(taskMet({ ...s, stats: { ...s.stats, raidsDefended: 1 } }, content, quest("defend-raid"))).toBe(true);
     const tributary = { ...s, region: { ...s.region!, neighbors: s.region!.neighbors.map((n, i) => (i === 0 ? { ...n, status: "tributary" as const } : n)) } };
     expect(taskMet(tributary, content, quest("first-tributary"))).toBe(true);

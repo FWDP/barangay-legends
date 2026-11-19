@@ -3,7 +3,8 @@
   "name": "Asinan",
   "description": "Salt-making beds on the coast: seawater is evaporated to make asin, which preserves fish and meat and is good to trade.",
   "icon": "🌊",
-  "order": 7.6,
+  "order": 2.9,
+  "menuGroup": "valued",
   "category": "pagkain",
   "cost": {
     "wood": 20

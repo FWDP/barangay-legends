@@ -1,6 +1,7 @@
 // Villagers drawn as small sprites on a canvas over the map, animated with
 // requestAnimationFrame. Targets are derived from GameState every frame (see villagers.ts);
 // sprite positions are display-only and never written back to the game.
+import { offerSetOut } from "../engine/tradeOffers";
 import { useEffect, useRef, useState } from "react";
 import type { Content } from "../engine/content";
 import { isHungry } from "../engine/events";
@@ -705,7 +706,6 @@ export function VillagerLayer(props: {
       const front = houseFront(s, content);
       if (path.length > 2) {
         const offer = s.region?.offer ?? null;
-        const offers = content.rules.diplomacy.offers;
         // Trading pauses during a raid: the bangka waits offshore, out of the raiders' way, until
         // the raid and its clash are over, then comes back.
         if (s.region?.incomingRaid) raidEnded.current = null;
@@ -722,7 +722,7 @@ export function VillagerLayer(props: {
           animating = true;
         } else if (offer) {
           const top = fromTop(content, offer.from);
-          const since = s.time - (offer.expiresAt - offers.expireSeconds);
+          const since = s.time - offerSetOut(content, offer);
           const where = boatArriving(path, plaza, top, reducedMotion ? Infinity : since);
           const b0 = boat.current?.from === offer.from && !boat.current.leftAt ? boat.current : null;
           if (b0?.hold && !reducedMotion) {

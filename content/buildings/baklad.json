@@ -3,7 +3,7 @@
   "name": "Baklad",
   "description": "A bamboo fish corral in the river or the tidal shallows: caught fish are kept alive in it until they're eaten, so they don't spoil.",
   "icon": "🐟",
-  "order": 7.8,
+  "order": 2.08,
   "category": "pagkain",
   "cost": {
     "wood": 30

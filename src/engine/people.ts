@@ -89,6 +89,9 @@ export interface Stats {
   kainginRested?: number;
   /** Times the player foraged for food by hand (W.8: the first task). */
   foraged?: number;
+  /** Trade offers neighbors' boats brought, and how many the player accepted (tradeOffers.ts). */
+  offersSeen?: number;
+  offersAccepted?: number;
 }
 
 export const MAX_HISTORY = 60;

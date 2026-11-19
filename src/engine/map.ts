@@ -503,6 +503,59 @@ export function validTiles(
   return tiles;
 }
 
+// ---------- Buildings by the sea ----------
+
+/** Why a building that stands by the sea isn't available yet: "coast" (sea only) or "shore" (the sea or a river bank). */
+export type SiteLock = "coast" | "shore";
+
+/**
+ * Is there a tile where this building could go now that villagers can walk to from the Bahay
+ * ng Datu over cleared land, Daan and bridges? (Free, cleared, beside one of its terrains.)
+ */
+export function hasReachableSite(state: GameState, content: Content, def: BuildingDef): boolean {
+  const { width, height, tiles } = state.map;
+  const foot = footReach(state.map);
+  const taken = occupancy(state);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const i = y * width + x;
+      if (tiles[i] !== TILE_CODE.cleared || foot[i] !== 1 || taken.has(tileKey(x, y))) continue;
+      if (def.placeNextTo && !isNextTo(state.map, x, y, def.placeNextTo)) continue;
+      if (canPlace(state, content, def, x, y)) return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * A building that needs the sea (placeNextTo lists "sea", like the Asinan) is locked until a
+ * cleared tile beside the sea, or beside one of its other terrains (a Pangangalap may stand on
+ * a river bank), can be walked to from the Bahay ng Datu. Null when it can be placed, or when
+ * the building doesn't need the sea.
+ */
+export function siteLock(state: GameState, content: Content, def: BuildingDef): SiteLock | null {
+  if (!def.placeNextTo?.includes("sea") || hasReachableSite(state, content, def)) return null;
+  return def.placeNextTo.every((t) => t === "sea") ? "coast" : "shore";
+}
+
+/** The land tile beside the sea nearest the Bahay ng Datu (where to look for the coast), or null. */
+export function nearestCoast(map: MapState): Point | null {
+  let best: Point | null = null;
+  let bestD = Infinity;
+  for (let y = 0; y < map.height; y++) {
+    for (let x = 0; x < map.width; x++) {
+      const t = tileAt(map, x, y);
+      if (t === "sea" || t === "river" || t === "bridge" || !isNextTo(map, x, y, ["sea"])) continue;
+      const d = (x - map.plaza.x) ** 2 + (y - map.plaza.y) ** 2;
+      if (d < bestD) {
+        bestD = d;
+        best = { x, y };
+      }
+    }
+  }
+  return best;
+}
+
 // ---------- Adjacency bonuses ----------
 
 /**

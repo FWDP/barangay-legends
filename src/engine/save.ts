@@ -67,11 +67,12 @@ const isObject = (v: unknown): v is RawSave => typeof v === "object" && v !== nu
 const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = {
   // v1 → v2: buildings were counts ({ palayan: 2 }); now each one has a tile on the v2 map
   // (see LEGACY_V2). Buildings are auto-placed (best bonus, then nearest the plaza), houses
-  // first, in content order.
+  // first, in the content order of the time (LEGACY_V2_ORDER: the menu order changes since).
   1: (raw, content) => {
     let buildings: PlacedBuilding[] = [];
     const counts = isObject(raw.buildings) ? raw.buildings : {};
-    for (const def of content.buildings) {
+    const rank = (id: string) => (LEGACY_V2_ORDER.includes(id) ? LEGACY_V2_ORDER.indexOf(id) : LEGACY_V2_ORDER.length);
+    for (const def of [...content.buildings].sort((a, b) => rank(a.id) - rank(b.id))) {
       const n = counts[def.id];
       if (!finiteNonNeg(n)) continue;
       for (let i = 0; i < Math.floor(n); i++) buildings = [...buildings, legacyV2AutoPlace(buildings, def)];
@@ -355,6 +356,10 @@ const MIGRATIONS: Record<number, (raw: RawSave, content: Content) => RawSave> = 
     const neighbors = region && Array.isArray(region.neighbors) ? region.neighbors.map((n) => (isObject(n) && isObject(n.fame) ? { ...n, fame: { ...n.fame, renown: null, peak: null } } : n)) : null;
     return { ...raw, version: 39, renownTally: null, keepLevel: raw.levelRewarded, ...(region && neighbors ? { region: { ...region, neighbors } } : {}) };
   },
+  // v39 → v40: trade offers seen and accepted are counted (stats.offersSeen, offersAccepted: the
+  // first offers are easy ones, tradeOffers.ts). Both are new and optional, so an older save
+  // counts as having seen none (its next offers are the easy ones) and only changes version.
+  39: (raw) => ({ ...raw, version: 40 }),
 };
 
 // ---------- Food (v33 → v34) ----------
@@ -508,6 +513,8 @@ function migrateBridgesV15(raw: RawSave, content: Content): RawSave {
 // ---------- Frozen v2 map rules (for the v1 → v2 migration only) ----------
 
 /** The v2 map: river in column 0, land in 1..8, forest in 9..10, plaza at (5, 0), rows from -3. */
+/** The building order the v1 → v2 migration placed in (content order before the toolbar was reordered). */
+const LEGACY_V2_ORDER = ["bahay-kubo", "gabihan", "kaingin", "sagingan", "niyugan", "palayan", "lumbia", "woodcutter-camp", "babaylan-hut", "dambana", "libingan", "kamalig", "tulay", "bantayan", "suyak", "kuta", "fishing-dock", "pangangalap", "pangangaso", "babuyan", "balangay-dock", "asinan", "baklad", "bahay-ng-datu"];
 const LEGACY_V2 = { width: 11, riverColumns: 1, forestColumns: 2, plaza: { x: 5, y: 0 }, minRadius: 3 };
 
 function legacyV2Terrain(x: number, y: number): "river" | "forest" | "plaza" | "land" | null {
@@ -1004,6 +1011,8 @@ function parsePeople(data: RawSave, content: Content, state: GameState, isPlayer
     ...(count(st.pistas) > 0 ? { pistas: count(st.pistas) } : {}),
     ...(count(st.kainginRested) > 0 ? { kainginRested: count(st.kainginRested) } : {}),
     ...(count(st.foraged) > 0 ? { foraged: count(st.foraged) } : {}),
+    ...(count(st.offersSeen) > 0 ? { offersSeen: count(st.offersSeen) } : {}),
+    ...(count(st.offersAccepted) > 0 ? { offersAccepted: count(st.offersAccepted) } : {}),
   };
   if (!isPlayer) return;
   const quests = new Set(content.quests.map((q) => q.id));

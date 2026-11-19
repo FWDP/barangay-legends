@@ -59,14 +59,14 @@ export function Hud(props: {
     fill(h.working[lang], { working, free }),
     state.sick.length > 0 ? fill(h.sick[lang], { n: state.sick.length }) : "",
   ].filter(Boolean).join(" · ");
-  const showGold = state.resources.gold > 0 || r.net.gold !== 0;
-  const showSalt = state.resources.salt > 0 || r.net.salt !== 0;
-  const showWine = state.resources.wine > 0;
-  const salt = showSalt && <ResourceChip resource="salt" amount={state.resources.salt} rates={r} note={null} cap={foodCaps(state, content).salt} full={props.full} />;
-  const wine = showWine && <ResourceChip resource="wine" amount={state.resources.wine} rates={r} note={null} />;
+  // Every resource shows, even at 0 (dimmed): its tip says how to get it.
+  const how = (res: Resource) => ({ how: game.howToGet[res][lang], empty: game.howToGet.empty[lang] });
+  const salt = <ResourceChip resource="salt" amount={state.resources.salt} rates={r} note={null} cap={foodCaps(state, content).salt} full={props.full} {...how("salt")} />;
+  const wine = <ResourceChip resource="wine" amount={state.resources.wine} rates={r} note={null} {...how("wine")} />;
 
+  // Above the map's notices (z-30), so a resource's tip isn't hidden under a boat or raid bar.
   return (
-    <header className="wood-panel relative z-30 flex flex-wrap items-center gap-x-1 gap-y-1 border-b-2 border-amber-950/60 px-1.5 py-1 sm:gap-x-2 sm:px-3 sm:py-1.5 min-[1920px]:flex-nowrap">
+    <header className="wood-panel relative z-[35] flex flex-wrap items-center gap-x-1 gap-y-1 border-b-2 border-amber-950/60 px-1.5 py-1 sm:gap-x-2 sm:px-3 sm:py-1.5 min-[1920px]:flex-nowrap">
       {/* Who and when. */}
       <div className="order-1 flex min-w-0 flex-1 items-center gap-1 sm:gap-1.5 min-[1920px]:flex-none">
         <NameChip state={state} content={content} game={game} lang={lang} />
@@ -76,10 +76,10 @@ export function Hud(props: {
       {/* Resources and people (their own row under 1920px), then the secondary chips from lg. */}
       <div className="order-3 flex min-w-0 basis-full items-center gap-1 sm:gap-1.5 min-[1920px]:order-2 min-[1920px]:basis-auto min-[1920px]:flex-1">
         <div className="flex min-w-0 flex-1 items-center gap-1 sm:gap-1.5 md:flex-none [&>*]:max-md:min-w-0 [&>*]:max-md:flex-1">
-          <ResourceChip resource="food" amount={state.resources.food} rates={r} note={n.food} extra={props.food ? <FoodTip state={state} content={content} text={props.food} /> : null} />
-          <ResourceChip resource="rice" amount={state.resources.rice} rates={r} note={n.rice} cap={riceCap(state, content)} full={props.full} />
-          <ResourceChip resource="wood" amount={state.resources.wood} rates={r} note={n.wood} soft={softCap(state, content, "wood")} stop={stopCap(state, content, "wood")} stockpile={props.stockpile} />
-          {showGold && <ResourceChip resource="gold" amount={state.resources.gold} rates={r} note={n.gold} soft={softCap(state, content, "gold")} stop={stopCap(state, content, "gold")} stockpile={props.stockpile} />}
+          <ResourceChip resource="food" amount={state.resources.food} rates={r} note={n.food} {...how("food")} extra={props.food ? <FoodTip state={state} content={content} text={props.food} /> : null} />
+          <ResourceChip resource="rice" amount={state.resources.rice} rates={r} note={n.rice} {...how("rice")} cap={riceCap(state, content)} full={props.full} />
+          <ResourceChip resource="wood" amount={state.resources.wood} rates={r} note={n.wood} {...how("wood")} soft={softCap(state, content, "wood")} stop={stopCap(state, content, "wood")} stockpile={props.stockpile} />
+          <ResourceChip resource="gold" amount={state.resources.gold} rates={r} note={n.gold} soft={softCap(state, content, "gold")} stop={stopCap(state, content, "gold")} stockpile={props.stockpile} {...how("gold")} />
           <Chip
             icon="👥"
             label={`${peopleTip} · ${happinessText(state, content, mood)}`}
@@ -400,8 +400,23 @@ export interface StockpileText {
   tip: (cap: string, stop: string, over: boolean, stopped: boolean) => string;
 }
 
-function ResourceChip(props: { resource: Resource; amount: number; rates: Rates; note: string | null; cap?: number; full?: FullText; soft?: number; stop?: number; stockpile?: StockpileText; extra?: ReactNode }) {
+function ResourceChip(props: {
+  resource: Resource;
+  amount: number;
+  rates: Rates;
+  note: string | null;
+  cap?: number;
+  full?: FullText;
+  soft?: number;
+  stop?: number;
+  stockpile?: StockpileText;
+  extra?: ReactNode;
+  /** How to get it (content/ui.json howToGet), and the words for having none. */
+  how?: string;
+  empty?: string;
+}) {
   const { resource, amount, rates, note, cap, soft, stop, stockpile } = props;
+  const none = amount < 0.5 && rates.net[resource] === 0;
   const slow = soft !== undefined && Number.isFinite(soft) && amount >= soft;
   const stopped = slow && stop !== undefined && amount >= stop;
   const words = props.full ?? { label: "full", tip: "Full: raise a Kamalig to store more, or spend rice." };
@@ -415,7 +430,7 @@ function ResourceChip(props: { resource: Resource; amount: number; rates: Rates;
     <div className="group relative" data-resource={resource}>
       <button
         type="button"
-        className="flex h-9 w-full cursor-help items-center justify-center gap-1 rounded-lg bg-black/25 px-1 text-amber-50 shadow-inner sm:h-10 sm:gap-1.5 sm:px-2 md:min-w-[5.5rem] md:justify-start"
+        className={`flex h-9 w-full cursor-help items-center justify-center gap-1 rounded-lg bg-black/25 px-1 text-amber-50 shadow-inner sm:h-10 sm:gap-1.5 sm:px-2 md:min-w-[5.5rem] md:justify-start ${none ? "opacity-55" : ""}`}
         aria-label={`${RESOURCE_LABEL[resource]}: ${formatAmount(amount)}${cap !== undefined ? ` of ${formatAmount(cap)}` : ""}, ${formatRate(net)}`}
         aria-expanded={open}
         aria-describedby={tipId}
@@ -442,8 +457,9 @@ function ResourceChip(props: { resource: Resource; amount: number; rates: Rates;
         <span className="block font-semibold md:hidden">
           {RESOURCE_LABEL[resource]} {formatAmount(amount)}
         </span>
-        {formatBreakdown(rates, resource)}
+        {none && props.empty ? <span className="block text-amber-200/80">{props.empty}</span> : formatBreakdown(rates, resource)}
         {note && <span className="block text-amber-300">{note}</span>}
+        {props.how && <span className="mt-1 block whitespace-normal text-amber-100/90 sm:max-w-72">💡 {props.how}</span>}
         {props.extra}
         {cap !== undefined && (
           <span className={`block ${full ? "text-amber-300" : "text-amber-100/80"}`}>

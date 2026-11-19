@@ -3,7 +3,7 @@
   "name": "Lumbia",
   "description": "A stand of sago palms. Felling a palm and washing the starch from its pith is hard work, but one palm gives a great deal of sago flour, which keeps well.",
   "icon": "🌴",
-  "order": 2.5,
+  "order": 2.05,
   "category": "pagkain",
   "cost": {
     "wood": 25

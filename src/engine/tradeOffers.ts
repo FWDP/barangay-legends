@@ -57,55 +57,132 @@ function goodsId(content: Content, kind: TradeKind | null, r: Resource, second: 
   return list?.length ? list[second % list.length] : r;
 }
 
+/** Does the player make this resource yet: by hand (Gather), in a building they own, or rice wine from their own Palay? */
+export function canProduce(content: Content, player: GameState, r: Resource): boolean {
+  if (content.rules.gatherable.includes(r)) return true;
+  const owned = new Set(player.buildings.map((b) => b.type));
+  const makes = (res: Resource) => content.buildings.some((d) => owned.has(d.id) && (d.produces?.[res] ?? 0) > 0);
+  return makes(r) || (r === "wine" && makes("rice"));
+}
+
+/** Does the player have a building that makes Asin (an Asinan)? */
+export const makesSalt = (content: Content, player: GameState) => player.buildings.some((b) => (content.buildings.find((d) => d.id === b.type)?.produces?.salt ?? 0) > 0);
+
+/** Does the player catch fish (a fishing building), or is fresh Pagkain spoiling? Then salt is worth offering. */
+export function wantsSalt(content: Content, player: GameState): boolean {
+  if (makesSalt(content, player)) return false;
+  const fishing = player.buildings.some((b) => content.buildings.find((d) => d.id === b.type)?.foodGroup === "fish");
+  return fishing || (player.foodStore?.fresh ?? 0) >= content.rules.diplomacy.offers.salt.spoilingFresh;
+}
+
+/** Is this one of the first, easy offers of the player's game? */
+export const learningOffer = (content: Content, player: GameState) => (player.stats.offersSeen ?? 0) < content.rules.diplomacy.offers.learning.firstOffers;
+
+/** When an offer's boat set out (older saves: worked out from its expiry, at the usual wait). */
+export const offerSetOut = (content: Content, offer: Pick<TradeOffer, "at" | "expiresAt">) => offer.at ?? offer.expiresAt - content.rules.diplomacy.offers.expireSeconds;
+
+/** How much the player is short to accept an offer (what they'd give), or null when they can pay. */
+export function offerShortfall(player: GameState, offer: Pick<TradeOffer, "want">): { resource: Resource; missing: number } | null {
+  const missing = Math.ceil(offer.want.amount - player.resources[offer.want.resource]);
+  return missing > 0 ? { resource: offer.want.resource, missing } : null;
+}
+
 /**
  * The offer this neighbor would make now, or null if it has nothing to spare. They give the
  * surplus they hold most of (by value) among what their kind trades; they ask for food when
  * short of it, otherwise for what they lack most. Palay is given only from a large surplus and
  * for more than its value; given to them, it brings more than its value back.
+ *
+ * With the player's state: early in a game they never ask for what the player can't produce
+ * yet (learning.earlySeconds); the first offers (learning.firstOffers) ask only for what the
+ * player has plenty of, at most maxSharePercent of it, and give something the player doesn't
+ * make; and a coastal barangay gives Asin first to a player with no Asinan.
  */
-export function makeOffer(content: Content, region: Pick<RegionState, "islands" | "places">, n: NeighborState, second: number): TradeOffer | null {
+export function makeOffer(content: Content, region: Pick<RegionState, "islands" | "places">, n: NeighborState, second: number, player?: GameState): TradeOffer | null {
   const o = content.rules.diplomacy.offers;
   const td = content.rules.diplomacy.tradeDecision;
   const s = n.state;
   const kind = tradeKind(content, region, n);
   const hungry = needsFood(content, s);
+  const first = player !== undefined && learningOffer(content, player);
+  const early = player !== undefined && (first || second - player.foundedAt < o.learning.earlySeconds);
+  const produces = (r: Resource) => !player || canProduce(content, player, r);
   // What they could give: their kind's goods, Palay only from a large surplus, never food while hungry.
   const palay = s.villagers > 0 && s.resources.rice / s.villagers >= o.palaySurplusPerVillager;
-  const can = [...o.kinds[kind].give, ...(palay ? (["rice"] as Resource[]) : [])].filter((r) => !(hungry && (r === "food" || r === "rice")));
+  const can = [...o.kinds[kind].give, ...(palay ? (["rice"] as Resource[]) : [])].filter((r) => !(hungry && (r === "food" || r === "rice")) && Math.floor(surplus(content, s, r)) >= td.minAmount);
+  // Asin first for a player with no Asinan; on the first offers, something the player doesn't make.
+  const saltFirst = player !== undefined && kind === "coastal" && !makesSalt(content, player) && can.includes("salt");
+  const useful = first ? can.filter((r) => !produces(r)) : [];
+  const pool = saltFirst ? ["salt" as Resource] : useful.length ? useful : can;
   let give: Resource | null = null;
   let best = 0;
-  for (const r of can) {
+  for (const r of pool) {
     const v = tradeValue(content, r, Math.floor(surplus(content, s, r)));
-    if (v > best && Math.floor(surplus(content, s, r)) >= td.minAmount) {
+    if (v > best) {
       give = r;
       best = v;
     }
   }
   if (!give) return null;
-  const target = Math.round((o.worthGold * unitValue(content, "gold")) / unitValue(content, give));
-  const amount = Math.min(target, Math.floor(surplus(content, s, give)), td.maxAmount);
+  let amount = Math.min(Math.round((o.worthGold * unitValue(content, "gold")) / unitValue(content, give)), Math.floor(surplus(content, s, give)), td.maxAmount);
   // What they ask for: food when hungry, otherwise the first thing they lack, else the first they take.
-  const wants = hungry ? (["food"] as Resource[]) : o.kinds[kind].want.filter((r) => r !== give);
+  // Early on, only what the player can make; on the first offers, only what the player has plenty of.
+  let wants = (hungry ? (["food"] as Resource[]) : o.kinds[kind].want).filter((r) => r !== give && (!early || produces(r)));
+  if (first) {
+    const share = o.learning.maxSharePercent / 100;
+    const plenty = (r: Resource) => player!.resources[r] * share;
+    // The player's own plenty (Pagkain, wood) when what they'd ask for is short.
+    const extra = (["food", "wood"] as Resource[]).filter((r) => r !== give && !wants.includes(r));
+    wants = [...wants, ...extra].filter((r) => plenty(r) >= 1).sort((a, b) => tradeValue(content, b, plenty(b)) - tradeValue(content, a, plenty(a)));
+  }
   const lacking = wants.find((r) => s.resources[r] < o.keepPerVillager[r] * s.villagers);
-  const want = hungry ? "food" : (lacking ?? wants[0]);
+  const want = first ? wants[0] : hungry ? (wants[0] ?? null) : (lacking ?? wants[0]);
   if (!want || want === give) return null;
-  const value = tradeValue(content, give, amount);
   // Palay costs more than its value; anything else they let go for a little less than it's worth.
-  const wantAmount =
-    give === "rice"
-      ? Math.ceil((value * o.palayPremiumPercent) / 100 / unitValue(content, want))
-      : Math.max(1, Math.floor((value * 100) / o.receivePercent / unitValue(content, want)));
+  const ask = (giveAmount: number) => {
+    const value = tradeValue(content, give!, giveAmount);
+    return give === "rice" ? Math.ceil((value * o.palayPremiumPercent) / 100 / unitValue(content, want)) : Math.max(1, Math.floor((value * 100) / o.receivePercent / unitValue(content, want)));
+  };
+  let wantAmount = ask(amount);
+  if (first) {
+    // Small enough to afford with plenty left: scale the whole offer down.
+    const most = Math.floor((player!.resources[want] * o.learning.maxSharePercent) / 100);
+    if (wantAmount > most) {
+      amount = Math.floor((amount * most) / wantAmount);
+      if (amount < 1) return null;
+      wantAmount = Math.min(most, ask(amount));
+    }
+    if (wantAmount < 1 || wantAmount > most) return null;
+  }
   const other: TradeKind = kind === "coastal" ? "upriver" : "coastal";
   const reason: OfferReason = hungry ? (wasFlooded(content, n, second) ? "flooded" : "hungry") : kind;
+  const lesson = first ? "first" : saltFirst && give === "salt" ? "salt" : undefined;
   return {
     from: n.id,
     give: { resource: give, amount },
     want: { resource: want, amount: wantAmount },
-    expiresAt: second + o.expireSeconds,
+    expiresAt: second + (first ? o.learning.expireSeconds : o.expireSeconds),
+    at: second,
     reason,
     goods: { give: goodsId(content, kind, give, second), want: hungry ? want : goodsId(content, other, want, second) },
+    ...(lesson ? { lesson } : {}),
   };
 }
+
+/**
+ * How much more (or less) often this neighbor brings an offer to the player: coastal barangays
+ * come more to a barangay with no Asinan (much more once it fishes or its food spoils, until it
+ * has had an Asin offer), and less once it makes its own salt.
+ */
+export function offerChanceFactor(content: Content, region: Pick<RegionState, "islands" | "places">, n: NeighborState, player: GameState): number {
+  if (tradeKind(content, region, n) !== "coastal") return 1;
+  const c = content.rules.diplomacy.offers.salt;
+  if (makesSalt(content, player)) return c.ownAsinanMultiplier;
+  return wantsSalt(content, player) && !player.flags.includes(SALT_OFFERED) ? c.saltPromptMultiplier : c.noCoastMultiplier;
+}
+
+/** Flag set once a coastal barangay has offered Asin to a player with no Asinan. */
+export const SALT_OFFERED = "salt-offered";
 
 /** Coastal barangays make Asin and upriver ones pan gold, a second's worth (per villager). */
 export function tradeIncome(content: Content, region: Pick<RegionState, "islands" | "places">, n: NeighborState): NeighborState {

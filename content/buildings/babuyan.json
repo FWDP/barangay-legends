@@ -3,7 +3,7 @@
   "name": "Babuyan",
   "description": "A small pen near the houses for pigs and chickens (only chickens where the tradition keeps no pigs).",
   "icon": "🐖",
-  "order": 7.45,
+  "order": 2.1,
   "category": "pagkain",
   "cost": {
     "wood": 18

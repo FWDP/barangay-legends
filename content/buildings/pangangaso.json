@@ -3,7 +3,7 @@
   "name": "Pangangaso",
   "description": "A hunters' camp at the forest's edge, for wild boar and deer. Hunting the same woods too hard thins the game for a while. Hunters nearby also keep boar out of the fields.",
   "icon": "🐗",
-  "order": 7.4,
+  "order": 2.09,
   "category": "pagkain",
   "cost": {
     "wood": 20

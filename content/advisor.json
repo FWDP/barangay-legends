@@ -1,5 +1,5 @@
 {
-  "_comment": "The datu's elder adviser. 'portrait' is an emoji, or an image in public/art written as '/art/<file>.png'. The tutorial runs in order; a step is done when its 'done' condition holds: {\"event\": \"gather\" | \"menu\" | \"rehiyon\"} (the player gathered, opened a building's menu, opened the Rehiyon map) or {\"built\": \"<building id>\"} (more of that building than the barangay started with). Tips: each line has an id, a trigger id and text in every language. Triggers: dambana (a Babaylan's Hut stands, no Dambana yet), forest-restless (Forest Balance below stage 1), forest-angry (below stage 2), aklat (the first 5 entries aren't found yet), rice-low (Pagkain will run out soon), food-workers, unstaffed, event-typhoon, event-fire, event-sickness, trade-offer, refused-raids, raid-warning, blood-debt (the first time a feud with the player begins: someone died in a raid), idle, unlocked, no-path, old-paths, roads, borrowing, rice-full (the Palay store is full), bantayan-shore (the last raid landed where no Bantayan watched, and still none watches any landing point), defense-rework (once, after an old save's Kutas were split into Bantayan and Kuta). Text may use {building}, {neighbor}, {datu}, {seconds}, {direction}, {percent}, {farmers} and {villagers} where the trigger provides them. A line may set \"max\" (1-3) to be shown fewer times. Add more lines for a trigger and the adviser rotates through them; each line is shown at most 3 times.",
+  "_comment": "The datu's elder adviser. 'portrait' is an emoji, or an image in public/art written as '/art/<file>.png'. The tutorial runs in order; a step is done when its 'done' condition holds: {\"event\": \"gather\" | \"menu\" | \"rehiyon\"} (the player gathered, opened a building's menu, opened the Rehiyon map) or {\"built\": \"<building id>\"} (more of that building than the barangay started with). Tips: each line has an id, a trigger id and text in every language. Triggers: dambana (a Babaylan's Hut stands, no Dambana yet), forest-restless (Forest Balance below stage 1), forest-angry (below stage 2), aklat (the first 5 entries aren't found yet), rice-low (Pagkain will run out soon), food-workers, unstaffed, event-typhoon, event-fire, event-sickness, first-offer (one of a new game's first, easy trade offers, not yet accepted: what is traded, its worth in gold, how to Accept or decline), salt-offer (a coastal barangay offers Asin to a barangay with no Asinan), trade-offer (any other offer), refused-raids, raid-warning, blood-debt (the first time a feud with the player begins: someone died in a raid), idle, unlocked, no-path, old-paths, roads, borrowing, rice-full (the Palay store is full), bantayan-shore (the last raid landed where no Bantayan watched, and still none watches any landing point), defense-rework (once, after an old save's Kutas were split into Bantayan and Kuta). Text may use {building}, {neighbor}, {datu}, {seconds}, {direction}, {percent}, {farmers}, {villagers}, {give}, {want} and {gold} where the trigger provides them. A line may set \"max\" (1-3) to be shown fewer times. Add more lines for a trigger and the adviser rotates through them; each line is shown at most 3 times.",
   "name": "Dalisay",
   "title": {
     "en": "Elder adviser to the datu",
@@ -301,6 +301,24 @@
       "text": {
         "en": "Datu, we have changed how we keep the barangay safe. The Kutas by the water are now Bantayan, watchtowers whose lookouts see raiders coming and raise the alarm. The others are palisaded Kutas near our houses: there the Mandirigma rally, and the families take refuge.",
         "fil": "Datu, binago natin kung paano iniingatan ang barangay. Ang mga Kutang malapit sa tubig ay Bantayan na ngayon, mga bantayang nakakikita ng paparating na mananalakay at nagtataas ng hudyat. Ang iba ay mga nababakurang Kuta malapit sa ating mga bahay: doon nagtitipon ang mga Mandirigma, at kumakanlong ang mga pamilya."
+      }
+    },
+    {
+      "id": "first-offer-1",
+      "trigger": "first-offer",
+      "max": 2,
+      "text": {
+        "en": "A boat from {neighbor} offers you a trade: {give} for {want} of yours, worth about {gold} gold (gold is how we measure value). Open the boat's offer and tap Accept to trade, or No thanks to let it sail on. Fair trades build trust.",
+        "fil": "May bangka mula sa {neighbor} na nag-aalok ng palitan: {give} kapalit ng {want} mo, na halagang mga {gold} ginto (ginto ang sukatan natin ng halaga). Buksan ang alok ng bangka at pindutin ang Tanggapin para makipagpalitan, o Huwag na para hayaan itong umalis. Ang patas na kalakalan ay nagpapatibay ng tiwala."
+      }
+    },
+    {
+      "id": "salt-offer-1",
+      "trigger": "salt-offer",
+      "max": 2,
+      "text": {
+        "en": "Barangays by the sea make salt. Trade for it to keep your fish from spoiling.",
+        "fil": "Gumagawa ng asin ang mga barangay sa tabi ng dagat. Makipagpalitan para rito upang hindi masira ang inyong isda."
       }
     }
   ]

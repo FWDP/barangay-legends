@@ -3,7 +3,7 @@
   "name": "Gabihan",
   "description": "A taro patch on wet ground by the river. The gabi stays in the soil until it's needed: it doesn't spoil, and a typhoon can't reach it.",
   "icon": "🥔",
-  "order": 1.6,
+  "order": 2.01,
   "category": "pagkain",
   "cost": {
     "wood": 12

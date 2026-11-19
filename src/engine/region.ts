@@ -11,7 +11,7 @@ import { apply, canAfford, asCost, buildingCost, housing, newGame, owned, placeA
 import { autoPlaceTile } from "./map";
 import { nearestClearable } from "./clearing";
 import { Rng } from "./rng";
-import { makeOffer, tradeIncome, type OfferReason } from "./tradeOffers";
+import { makeOffer, offerChanceFactor, SALT_OFFERED, tradeIncome, type OfferReason } from "./tradeOffers";
 import { proposeTrade, type CounterOffer, type Proposal } from "./trading";
 import { chooseLanding, raidLanding, raidWindow, sheltered } from "./border";
 import { lootableFood } from "./food";
@@ -123,6 +123,10 @@ export interface TradeOffer {
   reason?: OfferReason;
   /** How each side shows (ui.json trade.goods ids: dried fish, root crops, hardwood…); missing in older saves. */
   goods?: { give: string; want: string };
+  /** One of the first, easy offers of a game (the adviser explains it), or Asin for a barangay with no Asinan. */
+  lesson?: "first" | "salt";
+  /** When the boat set out (moved on with the clock while it waits out a raid, like expiresAt); missing in older saves. */
+  at?: number;
 }
 
 /** A raid on its way: who, when, and where they'll land (chosen when the raid starts). */
@@ -736,8 +740,10 @@ export function acceptOffer(state: GameState, content: Content): GameState {
     if (state.resources[offer.want.resource] < offer.want.amount || n.state.resources[offer.give.resource] < offer.give.amount) return null;
     let [player, them] = moveGoods(cleared, n.state, { [offer.want.resource]: offer.want.amount });
     [them, player] = moveGoods(them, player, { [offer.give.resource]: offer.give.amount });
-    // Their offer counts as a trade with them today, like the player's own.
-    const weight = dailyFactor(state, content, n, "trades");
+    player = { ...player, stats: { ...player.stats, offersAccepted: (player.stats.offersAccepted ?? 0) + 1 } };
+    // Their offer counts as a trade with them today, like the player's own, and like it is
+    // worth its value: a small offer brings less trust and influence than a large one.
+    const weight = tradeValueFactor(content, offer.want.amount * (content.rules.diplomacy.tradeDecision.values[offer.want.resource] ?? 1)) * dailyFactor(state, content, n, "trades");
     let next: NeighborState = { ...counted(state, content, n, "trades"), state: them, trust: addTrust(n, t.trust * weight, traitOf(content, n.id)) };
     if (next.status === "tributary") next = { ...next, loyalty: clamp100(next.loyalty + t.loyalty * weight) };
     let r = addPath(region, "trade");
@@ -942,7 +948,7 @@ function onRegionSecond(state: GameState, content: Content, second: number, rng:
   // Trade offers: one at a time, from neighbors that still trust the player a little. During a
   // raid none come, and a waiting offer's time stands still (its expiry moves on with the clock).
   if (region.incomingRaid) {
-    if (region.offer) region = { ...region, offer: { ...region.offer, expiresAt: region.offer.expiresAt + 1 } };
+    if (region.offer) region = { ...region, offer: { ...region.offer, expiresAt: region.offer.expiresAt + 1, ...(region.offer.at !== undefined ? { at: region.offer.at + 1 } : {}) } };
     return { ...s, region };
   }
   if (region.offer && second >= region.offer.expiresAt) region = { ...region, offer: null };
@@ -951,13 +957,20 @@ function onRegionSecond(state: GameState, content: Content, second: number, rng:
       if (n.trust < 10) continue;
       // A grudge makes offers rarer; at the embargo line there are none. (The roll is made either way, so the sequence stays the same.)
       const willing = Math.max(0, 1 - n.grudge / d.grudge.embargoAt);
-      if (rng.next() >= d.offers.chancePerSecond * traitOf(content, n.id).offerChanceMultiplier * willing) continue;
+      // Coastal barangays come more to a barangay with no salt of its own, less once it has some.
+      const salt = content.ai ? 1 : offerChanceFactor(content, region, n, s);
+      if (rng.next() >= d.offers.chancePerSecond * traitOf(content, n.id).offerChanceMultiplier * willing * salt) continue;
       // None in a new barangay's first day (the roll is still made above, to keep the sequence).
       if (second < d.offers.startsAfterSeconds) continue;
-      // What they have to spare, for what they lack (coast and upriver, food after a bad season).
-      const offer = makeOffer(content, region, n, second);
+      // What they have to spare, for what they lack (coast and upriver, food after a bad season);
+      // the first offers of a game are easy ones (tradeOffers.ts).
+      const offer = makeOffer(content, region, n, second, content.ai ? undefined : s);
       if (!offer) continue;
       region = { ...region, offer };
+      if (!content.ai) {
+        s = { ...s, stats: { ...s.stats, offersSeen: (s.stats.offersSeen ?? 0) + 1 } };
+        if (offer.lesson === "salt" && !s.flags.includes(SALT_OFFERED)) s = { ...s, flags: [...s.flags, SALT_OFFERED] };
+      }
       break;
     }
   }

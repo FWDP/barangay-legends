@@ -1,8 +1,9 @@
+import { offerSetOut } from "../engine/tradeOffers";
 import { Bolo } from "./Bolo";
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import type { Resource } from "../engine/content";
 import { bayanihanBlocker, calledToArms, buildingCost, canAfford, canMove, moveCost, owned, repairCost, roadCost, unreachableWorkplaces, withoutBuilding } from "../engine/game";
-import { buildingAt, canPlace, isUnlocked, tileAt } from "../engine/map";
+import { buildingAt, canPlace, isUnlocked, nearestCoast, tileAt, type Point } from "../engine/map";
 import { activeJobs, affordableTiles, borrowedWorkers, canSelect, clearingCrews, jobSeconds, orderSelection, riceIsSafe, selectionCost, workforce } from "../engine/clearing";
 import { BarangayMap } from "./BarangayMap";
 import { BuildingMenu, DemolishDialog, UndoBar, type MenuTarget } from "./BuildingActions";
@@ -386,6 +387,8 @@ export function App() {
   const [view, setViewRaw] = useState<"barangay" | "rehiyon">("barangay");
   // The Defense map (Depensa tab): every landing point and the Kutas' cover on the map.
   const [defenseMap, setDefenseMap] = useState(false);
+  // Where the map was asked to look (the coast, from a locked card); n changes to pan again.
+  const [lookAt, setLookAt] = useState<{ at: Point; n: number } | null>(null);
   // Bisitahin: the barangay being visited, over whichever view it was opened from.
   const [visiting, setVisiting] = useState<string | null>(null);
   // Panoorin: the expedition being watched (by record id), over everything else.
@@ -480,7 +483,7 @@ export function App() {
   const offer = state.region?.offer ?? null;
   const offerKey = offer ? `${offer.from}@${offer.expiresAt}` : "";
   useEffect(() => setOfferOpen(false), [offerKey]);
-  const sailing = !!offer && !reducedMotion && state.time - (offer.expiresAt - content.rules.diplomacy.offers.expireSeconds) < SAIL_SECONDS;
+  const sailing = !!offer && !reducedMotion && state.time - offerSetOut(content, offer) < SAIL_SECONDS;
 
   // Trading pauses from the raid warning until the waiting bangka is back at the dock (after the
   // clash, and the boat's way back: the same timing as on the map).
@@ -1073,6 +1076,7 @@ export function App() {
           />
         ) : (
         <BarangayMap
+          lookAt={lookAt}
           state={state}
           content={content}
           placing={placing}
@@ -1282,6 +1286,10 @@ export function App() {
         <BuildToolbar
           state={state}
           content={content}
+          onShowCoast={() => {
+            const at = nearestCoast(state.map);
+            if (at) setLookAt((l) => ({ at, n: (l?.n ?? 0) + 1 }));
+          }}
           showConnections={settings.showConnections}
           onShowConnections={(on) => updateSettings({ showConnections: on })}
           game={ui.game}

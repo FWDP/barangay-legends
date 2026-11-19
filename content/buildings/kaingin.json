@@ -3,7 +3,7 @@
   "name": "Kaingin",
   "description": "A swidden plot at the forest's edge growing ube, tugi and dawa. After several harvests the soil tires: rest it, let the forest grow back, and clear a new plot.",
   "icon": "🌿",
-  "order": 1.7,
+  "order": 2.02,
   "category": "pagkain",
   "cost": {
     "wood": 10

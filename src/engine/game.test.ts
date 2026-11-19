@@ -134,7 +134,8 @@ describe("workers and production", () => {
       bantayan: 0,
     });
     const few = withState({ villagers: 3, buildings: [...plain, at("palayan", 6, 6)] });
-    expect(assignWorkers(few, content)).toMatchObject({ palayan: 2, "woodcutter-camp": 1, "fishing-dock": 0, bantayan: 0 });
+    // One short: round-robin in menu order, where the valued Palayan comes after the work buildings.
+    expect(assignWorkers(few, content)).toMatchObject({ palayan: 1, "woodcutter-camp": 2, "fishing-dock": 0, bantayan: 0 });
   });
 
   it("produces 0.5 rice/s and 0.4 wood/s per worker; villagers eat 0.1 Pagkain/s, the datu's household a little Palay", () => {

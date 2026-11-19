@@ -23,6 +23,19 @@ describe("help and adviser content", () => {
     expect(ui.advisor.tutorial.length).toBeGreaterThan(0);
   });
 
+  it("every build menu group has a label and a reason, and every resource says how to get it", () => {
+    const ui = loadUiContent(content);
+    const build = ui.game.build as Record<string, Record<string, string> | undefined>;
+    for (const g of new Set(content.buildings.map((b) => b.menuGroup).filter(Boolean))) {
+      expect(build[g!]?.en).toBeTruthy();
+      expect(build[`${g}Tip`]?.fil).toBeTruthy();
+    }
+    for (const r of ["food", "rice", "wood", "gold", "salt", "wine"] as const) expect(ui.game.howToGet[r].en).toBeTruthy();
+    // The adviser explains the first trade offer and why Asin is worth trading for.
+    expect(ui.advisor.lines.some((l) => l.trigger === "first-offer")).toBe(true);
+    expect(ui.advisor.lines.find((l) => l.trigger === "salt-offer")?.text.en).toBe("Barangays by the sea make salt. Trade for it to keep your fish from spoiling.");
+  });
+
   it("covers the help topics, renown included", () => {
     const ui = loadUiContent(content);
     expect(ui.help.en.sections.map((s) => s.id)).toEqual(["goal", "resources", "buildings", "seasons", "rehiyon", "renown"]);

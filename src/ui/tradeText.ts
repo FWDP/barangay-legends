@@ -3,7 +3,8 @@
 // gold, the measure of value. Presentation only (engine/tradeOffers.ts makes the offers).
 import type { Content } from "../engine/content";
 import type { TradeOffer } from "../engine/region";
-import { worthInGold } from "../engine/tradeOffers";
+import { offerShortfall, worthInGold } from "../engine/tradeOffers";
+import type { GameState } from "../engine/game";
 import { RESOURCE_ICON } from "./format";
 import type { Lang } from "./settings";
 import { fill, type GameText } from "./uiContent";
@@ -28,4 +29,21 @@ export function offerText(offer: TradeOffer, content: Content, game: GameText, l
   const round = (n: number) => (n >= 10 ? String(Math.round(n)) : String(Math.round(n * 10) / 10));
   const worth = fill(t.worth[lang], { give: round(worthInGold(content, offer.give)), want: round(worthInGold(content, offer.want)) });
   return { reason, deal, worth };
+}
+
+/**
+ * What the player would give and how much of it they have ("You give 9 Asin · you have 0"),
+ * short when they can't pay; and the Accept button's words: "Accept", or what's missing
+ * ("Need 9 more Asin") so it is never silently disabled.
+ */
+export function offerPayment(offer: TradeOffer, state: GameState, game: GameText, lang: Lang): { youGive: string; short: boolean; accept: string } {
+  const t = game.offer;
+  const name = goodsName(game, offer.want.resource, lang);
+  const have = Math.floor(state.resources[offer.want.resource]);
+  const gap = offerShortfall(state, offer);
+  return {
+    youGive: fill(t.youGive[lang], { amount: offer.want.amount, name, have }),
+    short: gap !== null,
+    accept: gap ? fill(t.need[lang], { amount: gap.missing, name }) : t.accept[lang],
+  };
 }

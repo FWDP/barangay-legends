@@ -1,11 +1,12 @@
 {
   "id": "first-trade",
   "text": {
-    "en": "Make your first trade with a neighbor",
-    "fil": "Makipagpalitan sa isang kapitbahay"
+    "en": "Propose a trade to a neighbor (from the Rehiyon map or a visit)",
+    "fil": "Mag-alok ng palitan sa isang kapitbahay (mula sa mapa ng Rehiyon o sa pagdalaw)"
   },
   "condition": {
-    "type": "traded"
+    "type": "tradesProposed",
+    "count": 1
   },
   "reward": {
     "resources": {

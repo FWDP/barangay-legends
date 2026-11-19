@@ -84,6 +84,8 @@ export interface BuildingDef {
   order?: number;
   /** The build menu tab it appears under (presentation only); unknown or missing goes under "Iba pa". */
   category?: string;
+  /** A labelled group within its tab (ui.json game.build.groups), shown after a divider: "valued" goods (Palay, Asin). */
+  menuGroup?: string;
   cost: ResourceAmounts;
   /** What it costs to fix after a fire or typhoon damages it. */
   repairCost: ResourceAmounts;
@@ -565,9 +567,12 @@ export type QuestCondition =
   | { type: "kutaNearDatu"; count: number }
   /** Kaingin rested, feasts held (food.ts). */
   | { type: "rested"; count: number }
-  | { type: "pistas"; count: number };
+  | { type: "pistas"; count: number }
+  /** Trade offers from a neighbor's boat accepted; trades the player proposed themselves (and a neighbor took). */
+  | { type: "offersAccepted"; count: number }
+  | { type: "tradesProposed"; count: number };
 
-export const QUEST_CONDITIONS = ["built", "villagers", "tilesCleared", "connected", "survivedSeason", "traded", "warriors", "raidsDefended", "tributaries", "aklat", "replanted", "permittedClears", "datuLevel", "voyages", "leadBloc", "blocMembers", "paramount", "shoreWatched", "kutaNearDatu", "rested", "pistas", "foraged"] as const;
+export const QUEST_CONDITIONS = ["built", "villagers", "tilesCleared", "connected", "survivedSeason", "traded", "warriors", "raidsDefended", "tributaries", "aklat", "replanted", "permittedClears", "datuLevel", "voyages", "leadBloc", "blocMembers", "paramount", "shoreWatched", "kutaNearDatu", "rested", "pistas", "foraged", "offersAccepted", "tradesProposed"] as const;
 
 /** One of the Mga Gawain: a task in a chain, with a reward (resources and/or a title for the datu). */
 export interface QuestDef {
@@ -944,6 +949,19 @@ export interface OfferRules {
   kinds: Record<TradeKind, { give: Resource[]; want: Resource[] }>;
   /** How a resource shows in an offer from each kind (ui.json trade.goods ids): Pagkain as dried fish or root crops, wood as hardwood. */
   goods: Record<TradeKind, Partial<Record<Resource, string[]>>>;
+  /**
+   * Learning to trade: the first `firstOffers` offers of a game ask only for what the player has
+   * plenty of (at most maxSharePercent of their stock) and wait expireSeconds; for earlySeconds
+   * from the founding, offers never ask for goods the player can't produce yet.
+   */
+  learning: { firstOffers: number; maxSharePercent: number; expireSeconds: number; earlySeconds: number };
+  /**
+   * Salt by trade: coastal barangays offer to a barangay with no Asinan noCoastMultiplier times
+   * as often, and saltPromptMultiplier times as often (until the first such offer) once it has a
+   * fishing building or fresh Pagkain spoiling (at least spoilingFresh); with its own Asinan,
+   * ownAsinanMultiplier times as often, and they no longer favor Asin.
+   */
+  salt: { noCoastMultiplier: number; saltPromptMultiplier: number; spoilingFresh: number; ownAsinanMultiplier: number };
 }
 
 /** A lore note: short text with at least one source. */
@@ -1152,6 +1170,7 @@ export function validateBuilding(raw: unknown, file = "building"): BuildingDef {
   }
   if (raw.order !== undefined && !Number.isFinite(raw.order)) throw new Error(`${file}: "order" must be a number`);
   if (raw.category !== undefined && (typeof raw.category !== "string" || raw.category === "")) throw new Error(`${file}: "category" must be a non-empty string`);
+  if (raw.menuGroup !== undefined && (typeof raw.menuGroup !== "string" || !/^[a-z0-9-]+$/.test(raw.menuGroup))) throw new Error(`${file}: "menuGroup" must be an id (a-z, 0-9, "-")`);
   checkAmounts(raw.cost, `${file}: cost`);
   checkAmounts(raw.repairCost, `${file}: repairCost`);
   if (raw.heals !== undefined && (!isObject(raw.heals) || !isNonNegNumber(raw.heals.percentFaster))) {
@@ -1534,6 +1553,10 @@ function validateFoodRules(food: unknown, pests: unknown) {
 
 function validateOffers(o: Record<string, unknown>) {
   const where = "rules: diplomacy.offers";
+  if (!isObject(o.learning)) throw new Error(`${where}: missing "learning"`);
+  checkNumbers(o.learning, ["firstOffers", "maxSharePercent", "expireSeconds", "earlySeconds"], `${where}.learning`);
+  if (!isObject(o.salt)) throw new Error(`${where}: missing "salt"`);
+  checkNumbers(o.salt, ["noCoastMultiplier", "saltPromptMultiplier", "spoilingFresh", "ownAsinanMultiplier"], `${where}.salt`);
   const isRes = (r: unknown) => (RESOURCES as readonly unknown[]).includes(r);
   if (!Array.isArray(o.uplandTraditions) || !o.uplandTraditions.every((t) => typeof t === "string")) throw new Error(`${where}.uplandTraditions must list tradition ids`);
   if (!isObject(o.keepPerVillager)) throw new Error(`${where}: missing "keepPerVillager"`);

@@ -3,7 +3,7 @@
   "name": "Kamalig",
   "description": "A raised storehouse for grains and dried goods only: Palay, dawa, dried fish, sago flour and Asin, kept off the ground away from rats and damp. Raise it to level 3 to hold more.",
   "icon": "🌾",
-  "order": 4.5,
+  "order": 2.3,
   "category": "pagkain",
   "cost": {
     "wood": 30
